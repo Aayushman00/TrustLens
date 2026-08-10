@@ -1,0 +1,186 @@
+# =============================================================================
+# TrustLens — root .gitignore
+# Stack: Python (FastAPI/Celery) + React/Vite + Docker + PostgreSQL/Redis/MinIO
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Secrets & local environment (never commit)
+# -----------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+secrets/
+credentials.json
+service-account*.json
+
+# -----------------------------------------------------------------------------
+# Python — backend, worker, shared
+# -----------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Packaging / build
+build/
+dist/
+*.egg
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+*.manifest
+*.spec
+
+# Test & type tooling
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.pytype/
+.dmypy.json
+dmypy.json
+.hypothesis/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+
+# Jupyter (if used for experiments)
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# -----------------------------------------------------------------------------
+# Node / frontend (Vite + React + TypeScript)
+# -----------------------------------------------------------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Vite / build output
+frontend/dist/
+frontend/dist-ssr/
+*.local
+
+# Frontend test / tooling caches
+frontend/.vite/
+frontend/coverage/
+
+# -----------------------------------------------------------------------------
+# Docker & local infrastructure data (Phase 2+)
+# -----------------------------------------------------------------------------
+docker-compose.override.yml
+.docker/
+postgres-data/
+redis-data/
+minio-data/
+pgdata/
+data/postgres/
+data/redis/
+data/minio/
+
+# -----------------------------------------------------------------------------
+# TrustLens runtime artifacts (evaluations, evidence, reports)
+# -----------------------------------------------------------------------------
+artifacts/
+evidence/
+reports/generated/
+storage/
+tmp/
+temp/
+.cache/
+uploads/
+downloads/
+
+# Hugging Face & ML model caches (large; use HF_HOME outside repo)
+.huggingface/
+hf_cache/
+model_cache/
+checkpoints/
+*.pt
+*.pth
+*.onnx
+*.safetensors
+*.bin
+!shared/scoring/fixtures/*.json
+
+# WeasyPrint / PDF temp files
+*.pdf.tmp
+
+# -----------------------------------------------------------------------------
+# Logs
+# -----------------------------------------------------------------------------
+*.log
+logs/
+log/
+
+# -----------------------------------------------------------------------------
+# Editors & IDEs
+# -----------------------------------------------------------------------------
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json.example
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
+
+# Cursor — ignore local machine state; keep project plans/docs tracked
+.cursor/*
+!.cursor/plans/
+
+# -----------------------------------------------------------------------------
+# OS files
+# -----------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# -----------------------------------------------------------------------------
+# Misc
+# -----------------------------------------------------------------------------
+*.bak
+*.tmp
+*.temp
+.sass-cache/
+
+# Local experiment outputs (keep structured results in git only if intentional)
+experiment_runs/
+benchmark_outputs/
+
+
+# -----------------------------------------------------------------------------
+# Research notes & non-code docs (keep repo code-only)
+# -----------------------------------------------------------------------------
+FRIES_Visual_Guide.md
+FRIES_Trust_Score_Notes.md
+document.md
+papers/
+implementation/
+scripts/
+

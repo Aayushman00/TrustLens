@@ -1,0 +1,166 @@
+{
+  "schema_version": "phase0-fixtures-v1",
+  "description": "Frozen original FRIES test vectors from implementation/phase0. Data only — no runtime scoring in Phase 1. For Phase 16+ unit tests.",
+  "notes": [
+    "O/S/D use paper convention: higher = safer (0-10).",
+    "Risk score Pi = cbrt(O*S*D).",
+    "Metric to O/S/D mapping is UNRESOLVED research — not encoded here.",
+    "FRIES2 formulas are PROPOSED and intentionally absent."
+  ],
+  "test_cases": [
+    {
+      "id": 1,
+      "name": "Single middling risk",
+      "inputs": { "O": 5, "S": 5, "D": 5 },
+      "expected": { "Pi": 5.0, "aspect_Ti": 5.0 }
+    },
+    {
+      "id": 2,
+      "name": "Golden Fairness risk",
+      "inputs": { "O": 4, "S": 4, "D": 8 },
+      "expected": {
+        "Pi_exact": 5.0396841996,
+        "Pi_paper_round": 5.04
+      }
+    },
+    {
+      "id": 3,
+      "name": "Veto on Occurrence",
+      "inputs": { "O": 0, "S": 9, "D": 9 },
+      "expected": { "Pi": 0, "aspect_Ti": 0 }
+    },
+    {
+      "id": 4,
+      "name": "Veto on Detection",
+      "inputs": { "O": 8, "S": 8, "D": 0 },
+      "expected": { "Pi": 0, "aspect_Ti": 0 }
+    },
+    {
+      "id": 5,
+      "name": "All tens optimal candidate",
+      "inputs": { "O": 10, "S": 10, "D": 10 },
+      "expected": { "Pi": 10, "aspect_Ti": 10 },
+      "notes": "Provisional optimal rule: O=S=D=10"
+    },
+    {
+      "id": 6,
+      "name": "Two-risk average golden Robustness",
+      "inputs": {
+        "risks": [
+          { "O": 4, "S": 8, "D": 9 },
+          { "O": 7, "S": 4, "D": 5 }
+        ]
+      },
+      "expected": {
+        "Pi1_exact": 6.6038544978,
+        "Pi1_paper_round": 6.6,
+        "Pi2_exact": 5.1924941019,
+        "Pi2_paper_round": 5.19,
+        "aspect_mean_paper": 5.89
+      }
+    },
+    {
+      "id": 7,
+      "name": "Full golden reference Table 8",
+      "source": "implementation/phase0/golden_reference.md",
+      "inputs": {
+        "weights": {
+          "Fairness": 0.2,
+          "Robustness": 0.2,
+          "Integrity": 0.2,
+          "Explainability": 0.3,
+          "Safety": 0.1
+        },
+        "risks": [
+          {
+            "aspect": "Fairness",
+            "name": "Inputs requested in a biased manner",
+            "O": 4,
+            "S": 4,
+            "D": 8
+          },
+          {
+            "aspect": "Robustness",
+            "name": "Model inversion attack risk",
+            "O": 4,
+            "S": 8,
+            "D": 9
+          },
+          {
+            "aspect": "Robustness",
+            "name": "Adversarial attack risk",
+            "O": 7,
+            "S": 4,
+            "D": 5
+          },
+          {
+            "aspect": "Integrity",
+            "name": "Model not open source",
+            "O": 3,
+            "S": 9,
+            "D": 2
+          },
+          {
+            "aspect": "Explainability",
+            "name": "Illusion of Explanatory Depth",
+            "O": 8,
+            "S": 4,
+            "D": 5
+          },
+          {
+            "aspect": "Safety",
+            "name": "Decisions reveal sensitive info",
+            "O": 6,
+            "S": 3,
+            "D": 6
+          }
+        ]
+      },
+      "expected": {
+        "aspect_scores_paper": {
+          "Fairness": 5.04,
+          "Robustness": 5.89,
+          "Integrity": 3.78,
+          "Explainability": 5.43,
+          "Safety": 4.76
+        },
+        "weighted_contributions_paper": {
+          "Fairness": 1.01,
+          "Robustness": 1.18,
+          "Integrity": 0.76,
+          "Explainability": 1.63,
+          "Safety": 0.48
+        },
+        "T_paper": 5.06,
+        "T_exact_approx": 5.0483952154,
+        "rounding_policy": "Paper Table 8 2-decimal pipeline freezes T=5.06"
+      }
+    },
+    {
+      "id": 8,
+      "name": "Equal-weight sanity",
+      "inputs": {
+        "Ti": [8.0, 8.0, 8.0, 8.0, 8.0],
+        "wi": [0.2, 0.2, 0.2, 0.2, 0.2]
+      },
+      "expected": { "T": 8.0 }
+    },
+    {
+      "id": 9,
+      "name": "Weight emphasis with zeroed aspect",
+      "inputs": {
+        "Ti": [10, 10, 10, 0, 10],
+        "wi": [0.2, 0.2, 0.2, 0.2, 0.2]
+      },
+      "expected": { "T": 8.0 },
+      "notes": "Original paper behavior: averaging can hide a zeroed aspect"
+    },
+    {
+      "id": 10,
+      "name": "Minimum weight floor",
+      "inputs": { "omega_S": 0 },
+      "expected": { "valid": false },
+      "notes": "Paper constraint omega_i >= 0.1; treat as validation error until CLI confirmed"
+    }
+  ]
+}
