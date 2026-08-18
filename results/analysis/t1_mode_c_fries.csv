@@ -1,0 +1,7 @@
+model,short,n_runs,fries_mean,fries_std,fries_mean_pm_std,robustness,fairness
+philschmid/tiny-bert-sst2-distilled,TinyBERT SST-2,3,6.4095,0.1605,6.41 ± 0.16,ran,proxy-ran
+distilbert-base-uncased-finetuned-sst-2-english,DistilBERT SST-2,3,6.3599,0.2166,6.36 ± 0.22,ran,proxy-ran
+google/vit-base-patch16-224,ViT-B/16,3,5.5667,0.0786,5.57 ± 0.08,skipped,proxy-ran
+textattack/bert-base-uncased-ag-news,BERT AG News,3,5.3091,0.0787,5.31 ± 0.08,ran,proxy-ran
+textattack/roberta-base-SST-2,RoBERTa SST-2,3,5.2344,0.106,5.23 ± 0.11,ran,proxy-ran
+prajjwal1/bert-tiny,BERT-tiny LM,3,4.236,0.0786,4.24 ± 0.08,skipped,proxy-ran

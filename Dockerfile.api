@@ -1,0 +1,31 @@
+# TrustLens API image (Python 3.11)
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /app
+
+# libpango/harfbuzz/fonts: WeasyPrint (Phase 19 PDF reports) system libraries
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        libpq5 curl \
+        libpango-1.0-0 libpangoft2-1.0-0 \
+        libharfbuzz0b libharfbuzz-subset0 \
+        fonts-dejavu-core shared-mime-info \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY backend/pyproject.toml backend/README.md backend/alembic.ini ./
+COPY backend/app ./app
+COPY backend/alembic ./alembic
+COPY configs/datasets_v1.yaml ./configs/datasets_v1.yaml
+
+ENV DATASETS_CONFIG_PATH=/app/configs/datasets_v1.yaml
+
+RUN pip install --upgrade pip \
+    && pip install .
+
+EXPOSE 8000
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

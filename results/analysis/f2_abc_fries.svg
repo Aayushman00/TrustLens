@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="380" viewBox="0 0 720 380" role="img">
+<title>F2 Mode A vs C vs B FRIES</title>
+<rect width="100%" height="100%" fill="#ffffff"/>
+<text x="360.0" y="28.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="16" text-anchor="middle" font-weight="bold" fill="#111827">F2. Mode A vs C vs B FRIES on overlapping models</text>
+<line x1="70" y1="310" x2="690" y2="310" stroke="#6b7280"/>
+<line x1="70" y1="50" x2="70" y2="310" stroke="#6b7280"/>
+<line x1="70" y1="310.0" x2="690" y2="310.0" stroke="#e5e7eb"/>
+<text x="62.0" y="314.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11" text-anchor="end" font-weight="normal" fill="#6b7280">0</text>
+<line x1="70" y1="277.5" x2="690" y2="277.5" stroke="#e5e7eb"/>
+<text x="62.0" y="281.5" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11" text-anchor="end" font-weight="normal" fill="#6b7280">1</text>
+<line x1="70" y1="245.0" x2="690" y2="245.0" stroke="#e5e7eb"/>
+<text x="62.0" y="249.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11" text-anchor="end" font-weight="normal" fill="#6b7280">2</text>
+<line x1="70" y1="212.5" x2="690" y2="212.5" stroke="#e5e7eb"/>
+<text x="62.0" y="216.5" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11" text-anchor="end" font-weight="normal" fill="#6b7280">3</text>
+<line x1="70" y1="180.0" x2="690" y2="180.0" stroke="#e5e7eb"/>
+<text x="62.0" y="184.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11" text-anchor="end" font-weight="normal" fill="#6b7280">4</text>
+<line x1="70" y1="147.5" x2="690" y2="147.5" stroke="#e5e7eb"/>
+<text x="62.0" y="151.5" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11" text-anchor="end" font-weight="normal" fill="#6b7280">5</text>
+<line x1="70" y1="115.0" x2="690" y2="115.0" stroke="#e5e7eb"/>
+<text x="62.0" y="119.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11" text-anchor="end" font-weight="normal" fill="#6b7280">6</text>
+<line x1="70" y1="82.5" x2="690" y2="82.5" stroke="#e5e7eb"/>
+<text x="62.0" y="86.5" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11" text-anchor="end" font-weight="normal" fill="#6b7280">7</text>
+<line x1="70" y1="50.0" x2="690" y2="50.0" stroke="#e5e7eb"/>
+<text x="62.0" y="54.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11" text-anchor="end" font-weight="normal" fill="#6b7280">8</text>
+<rect x="94.8" y="140.0" width="45.5" height="170.0" fill="#4b5563"/>
+<text x="117.5" y="136.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="9" text-anchor="middle" font-weight="normal" fill="#374151">5.23</text>
+<rect x="144.3" y="109.5" width="45.5" height="200.5" fill="#2563eb"/>
+<text x="167.0" y="105.5" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="9" text-anchor="middle" font-weight="normal" fill="#374151">6.17</text>
+<rect x="193.7" y="109.5" width="45.5" height="200.5" fill="#d97706"/>
+<text x="216.5" y="105.5" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="9" text-anchor="middle" font-weight="normal" fill="#374151">6.17</text>
+<text x="173.3" y="332.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" text-anchor="middle" font-weight="normal" fill="#111827">DistilBERT SST-2</text>
+<rect x="301.5" y="161.5" width="45.5" height="148.5" fill="#4b5563"/>
+<text x="324.2" y="157.5" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="9" text-anchor="middle" font-weight="normal" fill="#374151">4.57</text>
+<rect x="350.9" y="173.8" width="45.5" height="136.2" fill="#2563eb"/>
+<text x="373.7" y="169.8" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="9" text-anchor="middle" font-weight="normal" fill="#374151">4.19</text>
+<rect x="400.4" y="143.5" width="45.5" height="166.5" fill="#d97706"/>
+<text x="423.1" y="139.5" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="9" text-anchor="middle" font-weight="normal" fill="#374151">5.12</text>
+<text x="380.0" y="332.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" text-anchor="middle" font-weight="normal" fill="#111827">BERT-tiny LM</text>
+<rect x="508.1" y="163.4" width="45.5" height="146.6" fill="#4b5563"/>
+<text x="530.9" y="159.4" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="9" text-anchor="middle" font-weight="normal" fill="#374151">4.51</text>
+<rect x="557.6" y="138.9" width="45.5" height="171.1" fill="#2563eb"/>
+<text x="580.3" y="134.9" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="9" text-anchor="middle" font-weight="normal" fill="#374151">5.26</text>
+<rect x="607.1" y="110.1" width="45.5" height="199.9" fill="#d97706"/>
+<text x="629.8" y="106.1" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="9" text-anchor="middle" font-weight="normal" fill="#374151">6.15</text>
+<text x="586.7" y="332.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" text-anchor="middle" font-weight="normal" fill="#111827">BERT AG News</text>
+<rect x="70" y="352" width="12" height="12" fill="#4b5563"/>
+<text x="86.0" y="362.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11" text-anchor="start" font-weight="normal" fill="#111827">Mode A (manual)</text>
+<rect x="300" y="352" width="12" height="12" fill="#2563eb"/>
+<text x="316.0" y="362.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11" text-anchor="start" font-weight="normal" fill="#111827">Mode C (autonomous, seed 42)</text>
+<rect x="530" y="352" width="12" height="12" fill="#d97706"/>
+<text x="546.0" y="362.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11" text-anchor="start" font-weight="normal" fill="#111827">Mode B (assisted, approved)</text>
+</svg>

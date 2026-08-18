@@ -1,0 +1,27 @@
+{
+  "description": "Hand-calculated Phase 12 fairness toy (2 groups × 5 samples).",
+  "sensitive_attribute": "sex",
+  "positive_class": 1,
+  "rows": [
+    {"y_true": 1, "y_pred": 1, "sex": "Male"},
+    {"y_true": 1, "y_pred": 1, "sex": "Male"},
+    {"y_true": 1, "y_pred": 1, "sex": "Male"},
+    {"y_true": 0, "y_pred": 0, "sex": "Male"},
+    {"y_true": 0, "y_pred": 0, "sex": "Male"},
+    {"y_true": 1, "y_pred": 1, "sex": "Female"},
+    {"y_true": 1, "y_pred": 0, "sex": "Female"},
+    {"y_true": 0, "y_pred": 0, "sex": "Female"},
+    {"y_true": 0, "y_pred": 0, "sex": "Female"},
+    {"y_true": 0, "y_pred": 0, "sex": "Female"}
+  ],
+  "expected": {
+    "demographic_parity_difference": 0.4,
+    "equalized_odds_difference": 0.5,
+    "subgroup_f1_spread": 0.333333,
+    "groups": {
+      "Male": {"n": 5, "f1": 1.0, "positive_rate": 0.6, "tpr": 1.0, "fpr": 0.0},
+      "Female": {"n": 5, "f1": 0.666667, "positive_rate": 0.2, "tpr": 0.5, "fpr": 0.0}
+    }
+  },
+  "notes": "Male PR=3/5, Female PR=1/5 → DP=0.4; TPR 1.0 vs 0.5 → EO=0.5; F1 1.0 vs 2/3 → spread=1/3."
+}

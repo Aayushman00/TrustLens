@@ -1,0 +1,4 @@
+model,short,mode_a_fries,mode_c_seed42_fries,mode_c_mean_fries,mode_b_fries,delta_c_minus_a,delta_b_minus_a,delta_b_minus_c
+distilbert-base-uncased-finetuned-sst-2-english,DistilBERT SST-2,5.23,6.1681,6.3599,6.1681,0.9381,0.9381,0.0
+prajjwal1/bert-tiny,BERT-tiny LM,4.57,4.1906,4.236,5.1234,-0.3794,0.5534,0.9328
+textattack/bert-base-uncased-ag-news,BERT AG News,4.51,5.2637,5.3091,6.152,0.7537,1.642,0.8883

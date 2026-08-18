@@ -1,0 +1,27 @@
+# Pinned Hugging Face datasets for TrustLens FRIES probes (Phase 9).
+# Revisions are full git SHAs — do not float on "main" / "latest".
+# Phase 25: canonical ids (glue, ag_news, cifar10) re-pinned to their namespaced
+# homes — newer `datasets`/Hub reject non-namespaced repo ids. ag_news/cifar10
+# SHAs are unchanged (same repos); SST-2 moved from glue to stanfordnlp/sst2.
+schema_version: v1
+datasets:
+  sentiment_fairness:
+    hf_path: stanfordnlp/sst2
+    revision: 8d51e7e4887a4caaa95b3fbebbf53c0490b58bbb
+    modality: nlp
+    notes: SST-2 — no protected attribute; do NOT use for DP/EO (Phase 12 uses adult_fairness)
+  adult_fairness:
+    hf_path: scikit-learn/adult-census-income
+    revision: fbeef6ec0e6fd88a5028b94683144000a6b380d5
+    modality: tabular
+    notes: Adult census; default sensitive_attribute=sex; income class as label
+  ag_news_robustness:
+    hf_path: fancyzhx/ag_news
+    revision: eb185aade064a813bc0b7f42de02595523103ca4
+    modality: nlp
+    notes: News classification; attack budget reserved for Phase 11
+  cifar10_subset:
+    hf_path: uoft-cs/cifar10
+    revision: 0b2714987fa478483af9968de7c934580d0bb9a2
+    modality: vision
+    notes: Vision placeholder for future multimodal probes

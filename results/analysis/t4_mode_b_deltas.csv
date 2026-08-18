@@ -1,0 +1,16 @@
+model,short,aspect,agent_O,agent_S,agent_D,approved_O,approved_S,approved_D,dO,dS,dD,l1_delta,changed
+distilbert-base-uncased-finetuned-sst-2-english,DistilBERT SST-2,FAIRNESS,7,7,8,7,7,8,0,0,0,0,False
+distilbert-base-uncased-finetuned-sst-2-english,DistilBERT SST-2,ROBUSTNESS,9,6,6,9,6,6,0,0,0,0,False
+distilbert-base-uncased-finetuned-sst-2-english,DistilBERT SST-2,INTEGRITY,9,9,8,9,9,8,0,0,0,0,False
+distilbert-base-uncased-finetuned-sst-2-english,DistilBERT SST-2,EXPLAINABILITY,6,6,6,6,6,6,0,0,0,0,False
+distilbert-base-uncased-finetuned-sst-2-english,DistilBERT SST-2,SAFETY,2,2,2,2,2,2,0,0,0,0,False
+prajjwal1/bert-tiny,BERT-tiny LM,FAIRNESS,7,7,8,7,7,8,0,0,0,0,False
+prajjwal1/bert-tiny,BERT-tiny LM,ROBUSTNESS,4,4,3,4,4,3,0,0,0,0,False
+prajjwal1/bert-tiny,BERT-tiny LM,INTEGRITY,8,8,8,8,8,8,0,0,0,0,False
+prajjwal1/bert-tiny,BERT-tiny LM,EXPLAINABILITY,1,1,1,3,5,3,2,4,2,8,True
+prajjwal1/bert-tiny,BERT-tiny LM,SAFETY,1,1,1,3,5,2,2,4,1,7,True
+textattack/bert-base-uncased-ag-news,BERT AG News,FAIRNESS,7,7,8,7,7,8,0,0,0,0,False
+textattack/bert-base-uncased-ag-news,BERT AG News,ROBUSTNESS,9,9,9,9,9,9,0,0,0,0,False
+textattack/bert-base-uncased-ag-news,BERT AG News,INTEGRITY,8,8,8,8,8,8,0,0,0,0,False
+textattack/bert-base-uncased-ag-news,BERT AG News,EXPLAINABILITY,1,1,1,3,4,2,2,3,1,6,True
+textattack/bert-base-uncased-ag-news,BERT AG News,SAFETY,1,1,1,3,5,3,2,4,2,8,True

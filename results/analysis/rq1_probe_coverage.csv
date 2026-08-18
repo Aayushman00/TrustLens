@@ -1,0 +1,7 @@
+probe,runs,produced_metrics,skipped,skip_rate,note
+FAIRNESS,18,18,0,0.0,Always ran; proxy LR on Adult — metrics are model-independent.
+ROBUSTNESS,18,12,6,0.333,4/6 models are text-classifiers; others soft-skip.
+INTEGRITY (card),18,18,0,0.0,Card/metadata checks; always a numeric pass-rate.
+EXPLAINABILITY (card),18,18,0,0.0,"Header-coverage heuristic; 0.00 coverage is still a metric, not a skip."
+SAFETY (card),18,18,0,0.0,Same coverage heuristic as explainability.
+_ALL_SLOTS_,90,84,6,0.067,5 dimensions × 6 models × 3 seeds. Only robustness actually skips.

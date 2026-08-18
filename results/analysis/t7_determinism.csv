@@ -1,0 +1,2 @@
+model,short,seed,det_evaluation_id,base_evaluation_id,verdict,n_keys_compared,n_diffs,diff_keys,fries_det,fries_seed42
+philschmid/tiny-bert-sst2-distilled,TinyBERT SST-2,42,baff7bf1-f640-4781-8f42-8d5bb05fc8c4,a097ccb4-0f94-4d4d-b336-a032962fdf87,identical,22,0,,6.3168,6.3168

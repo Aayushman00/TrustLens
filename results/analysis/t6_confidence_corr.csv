@@ -1,0 +1,4 @@
+pair,n,pearson,spearman,note
+overall_confidence vs explainability+safety mean (n=6),6,0.897,0.8454,Tautological-ish: overall confidence is an aggregate of aspect confidences.
+"overall_confidence vs robustness_skipped (point-biserial, n=6)",6,-0.3884,-0.4201,Negative expected if skips lower confidence. Descriptive only.
+card-like confidence vs Mode B edit L1 (n=3 overlap),3,-0.9982,-0.866,"Thin-card models were the ones edited; n=3, not inferential."

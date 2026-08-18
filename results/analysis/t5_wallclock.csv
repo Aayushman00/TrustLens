@@ -1,0 +1,7 @@
+model,short,mode_c_wall_s_mean,mode_c_wall_s_warm_mean,mode_c_wall_s_min,mode_c_wall_s_max,mode_a_minutes,mode_b_pipeline_wall_s,mode_b_review_minutes,notes
+distilbert-base-uncased-finetuned-sst-2-english,DistilBERT SST-2,18.54,10.15,10.15,35.31,15.0,10.12,,Mode B review duration was not instrumented; pipeline wall is create→AWAITING_REVIEW only. Mode A minutes are rubric-pass estimates.
+google/vit-base-patch16-224,ViT-B/16,5.09,5.08,5.08,5.09,,,,Mode C only; first/max wall includes HF download.
+philschmid/tiny-bert-sst2-distilled,TinyBERT SST-2,15.6,5.55,5.11,35.68,,,,Mode C only; first/max wall includes HF download.
+prajjwal1/bert-tiny,BERT-tiny LM,5.14,5.1,5.09,5.21,12.0,5.1,,Mode B review duration was not instrumented; pipeline wall is create→AWAITING_REVIEW only. Mode A minutes are rubric-pass estimates.
+textattack/bert-base-uncased-ag-news,BERT AG News,40.54,15.34,15.29,90.94,13.0,20.25,,Mode B review duration was not instrumented; pipeline wall is create→AWAITING_REVIEW only. Mode A minutes are rubric-pass estimates.
+textattack/roberta-base-SST-2,RoBERTa SST-2,32.03,12.71,10.2,70.66,,,,Mode C only; first/max wall includes HF download.

@@ -1,0 +1,92 @@
+# TrustLens Phase 25 — benchmark experiment configuration (Mode B/C runs).
+# Single machine-readable source consumed by:
+#   backend/app/scripts/run_experiments.py      (creates + polls evaluations)
+#   backend/app/scripts/export_experiment_results.py (joins manifest with DB)
+# Human protocol + rationale: docs/experiments_runbook.md — change both together.
+schema_version: v1
+
+api_base_url: http://127.0.0.1:8000
+trustlens_version: 0.20.1   # stamped onto evaluations.trustlens_version
+
+# One Mode C (AI_AUTONOMOUS) run per seed per model. Seeds feed
+# probe_config.extra.seed (dataset shuffle + fairness LR random_state +
+# robustness char-swap RNG). Std across seeds = seed sensitivity;
+# the determinism check re-runs one (model, seed) pair to show fixed-seed
+# repeatability (expected: identical O/S/D and FRIES).
+seeds: [42, 1337, 2025]
+determinism_check:
+  hf_repo_id: philschmid/tiny-bert-sst2-distilled
+  seed: 42
+
+# Base probe_config for every evaluation; the runner injects extra.seed and
+# per-model dataset overrides. Values equal the probe defaults on purpose —
+# pinned here so the experiment does not float if defaults ever change.
+# extra.max_samples is intentionally NOT set: fairness uses its own default
+# (256 Adult rows), robustness its own (64 text rows).
+probe_config_template:
+  schema_version: v1
+  datasets:
+    fairness: adult_fairness        # tabular proxy-LR probe (model-independent)
+    robustness: ag_news_robustness  # per-model override below when labels differ
+  attack_budget: 0.03
+  slice_definitions:
+    sensitive_attribute: sex
+
+# Model set (6). robustness_dataset overrides datasets.robustness so dataset
+# labels match the model head (binary SST-2 heads scored on AG News 4-class
+# labels would be meaningless). expected_* fields document the skip matrix
+# asserted during the pilot; they are not consumed by code.
+models:
+  - hf_repo_id: distilbert-base-uncased-finetuned-sst-2-english
+    task: sentiment
+    dataset: sst2
+    robustness_dataset: sentiment_fairness   # SST-2 (nlp) — binary labels match
+    expected_fairness: proxy-runs
+    expected_robustness: runs
+  - hf_repo_id: philschmid/tiny-bert-sst2-distilled
+    task: sentiment
+    dataset: sst2
+    robustness_dataset: sentiment_fairness
+    expected_fairness: proxy-runs
+    expected_robustness: runs
+  - hf_repo_id: textattack/roberta-base-SST-2
+    task: sentiment
+    dataset: sst2
+    robustness_dataset: sentiment_fairness
+    expected_fairness: proxy-runs
+    expected_robustness: runs
+  - hf_repo_id: textattack/bert-base-uncased-ag-news
+    task: news-classification
+    dataset: ag_news
+    robustness_dataset: ag_news_robustness   # 4-class labels match
+    expected_fairness: proxy-runs
+    expected_robustness: runs
+  - hf_repo_id: prajjwal1/bert-tiny
+    task: fill-mask
+    dataset: null
+    robustness_dataset: null                  # keep default; probe skips earlier
+    expected_fairness: proxy-runs
+    expected_robustness: skip (not text-classification)
+  - hf_repo_id: google/vit-base-patch16-224
+    task: image-classification
+    dataset: null
+    robustness_dataset: null
+    expected_fairness: proxy-runs
+    expected_robustness: skip (not text-classification)
+
+# Mode B (AI_ASSISTED): one run per listed model at mode_b.seed, then a
+# reviewer pass (accept_all or documented per-aspect edits) + finalize.
+# Same three models are the Mode A manual-rubric subset for A/B/C comparison.
+mode_b:
+  seed: 42
+  models:
+    - hf_repo_id: distilbert-base-uncased-finetuned-sst-2-english
+      review: accept_all
+    - hf_repo_id: textattack/bert-base-uncased-ag-news
+      review: edit
+    - hf_repo_id: prajjwal1/bert-tiny
+      review: edit
+
+runner:
+  poll_interval_s: 5
+  timeout_s: 1800   # per evaluation; first run per model includes HF download

@@ -1,0 +1,7 @@
+model,short,overall_confidence,FAIRNESS_confidence,ROBUSTNESS_confidence,INTEGRITY_confidence,EXPLAINABILITY_confidence,SAFETY_confidence,robustness_skipped,card_like_conf_mean,mode_b_edited,mode_b_edit_l1_sum
+distilbert-base-uncased-finetuned-sst-2-english,DistilBERT SST-2,0.8676,0.983,1.0,1.0,0.7958,0.5593,False,0.6775,False,0
+philschmid/tiny-bert-sst2-distilled,TinyBERT SST-2,0.8676,0.983,1.0,1.0,0.7958,0.5593,False,0.6775,,
+google/vit-base-patch16-224,ViT-B/16,0.7805,0.983,0.5646,1.0,0.7958,0.5593,True,0.6775,,
+textattack/bert-base-uncased-ag-news,BERT AG News,0.7291,0.983,1.0,0.941,0.3302,0.3915,False,0.3609,True,14
+textattack/roberta-base-SST-2,RoBERTa SST-2,0.6707,0.983,1.0,0.7937,0.2884,0.2884,False,0.2884,,
+prajjwal1/bert-tiny,BERT-tiny LM,0.6421,0.983,0.5646,0.941,0.3302,0.3915,True,0.3609,True,15

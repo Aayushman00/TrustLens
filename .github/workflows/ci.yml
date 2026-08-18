@@ -1,0 +1,102 @@
+# TrustLens minimal CI (Phase 24) — unit + API tests green on every push/PR.
+#
+# Scope (deliberate): backend ruff+pytest with a Postgres service, worker
+# ruff+pytest with a slim install, frontend type-check+build. No Redis/MinIO/
+# WeasyPrint services — tests fake the evidence/report stores, monkeypatch the
+# Redis enqueue, and PDF rendering degrades gracefully (see backend/tests/README.md).
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (ruff + pytest, Postgres)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: trustlens
+          POSTGRES_PASSWORD: trustlens
+          POSTGRES_DB: trustlens
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U trustlens"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg2://trustlens:trustlens@127.0.0.1:5432/trustlens
+      APP_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
+      - name: Install backend (+dev tools)
+        run: pip install -e ".[dev]"
+      - name: Ruff
+        run: python -m ruff check app tests
+      # Live-Hub tests are opt-in (TRUSTLENS_LIVE_TESTS=1) and deselected here;
+      # everything else, including the DB-backed lifecycle pack and the slow
+      # migration round-trip, runs against the fresh service database.
+      - name: Pytest (unit + API + lifecycle)
+        run: python -m pytest -q -m "not integration"
+
+  worker:
+    name: Worker (ruff + pytest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: worker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: worker/pyproject.toml
+      - name: Install test deps (slim)
+        # Not `pip install -e ".[dev]"`: worker runtime deps pull the multi-GB
+        # torch/transformers stack, but its native unit tests only import
+        # celery/redis/pydantic-settings — the torch-heavy pipeline modules are
+        # vendored into the Docker image and mocked in these tests.
+        run: >-
+          pip install pytest ruff "celery>=5.4.0" "redis>=5.0.0"
+          "pydantic>=2.9.0" "pydantic-settings>=2.6.0" "python-dotenv>=1.0.0"
+      - name: Ruff
+        run: python -m ruff check app tests
+      - name: Pytest
+        run: python -m pytest -q
+
+  frontend:
+    name: Frontend (tsc + vite build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install
+        run: npm ci
+      - name: Build
+        run: npm run build

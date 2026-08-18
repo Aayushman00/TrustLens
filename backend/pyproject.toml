@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "trustlens-backend"
-version = "0.1.0"
-description = "TrustLens API — Phase 1 repository bootstrap (health only)"
+version = "0.20.1"
+description = "TrustLens API — Phase 24 testing hardening (lifecycle pack + expired-token smoke + CI)"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -14,16 +14,33 @@ dependencies = [
   "pydantic>=2.9.0",
   "pydantic-settings>=2.6.0",
   "python-dotenv>=1.0.0",
+  "sqlalchemy>=2.0.0",
+  "psycopg2-binary>=2.9.0",
+  "alembic>=1.14.0",
+  "redis>=5.0.0",
+  "boto3>=1.35.0",
+  "PyJWT>=2.9.0",
+  "bcrypt>=4.1.0",
+  "huggingface_hub>=0.26.0",
+  "celery>=5.4.0",
+  "pyyaml>=6.0.0",
+  "jinja2>=3.1.0",
+  "weasyprint>=61.0",
 ]
 
 [project.optional-dependencies]
-# Listed for later phases — do NOT import/connect in Phase 1
-future = [
-  "sqlalchemy>=2.0.0",
-  "celery>=5.4.0",
-  "redis>=5.0.0",
-  "psycopg2-binary>=2.9.0",
-  "huggingface_hub>=0.26.0",
+# Listed for later phases — do NOT import/connect until those phases
+future = []
+robustness = [
+  "torch>=2.2.0",
+  "transformers>=4.44.0",
+  "datasets>=2.21.0",
+]
+fairness = [
+  "fairlearn>=0.10.0",
+  "scikit-learn>=1.5.0",
+  "numpy>=1.26.0",
+  "datasets>=2.21.0",
 ]
 dev = [
   "pytest>=8.3.0",
@@ -35,10 +52,28 @@ dev = [
 where = ["."]
 include = ["app*"]
 
+[tool.setuptools.package-data]
+"app.reports" = ["templates/*.html"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+markers = [
+  "slow: migration / destructive database tests",
+  "lifecycle: end-to-end API journey regression pack (Phase 24; needs Postgres)",
+  "integration: hits live external services — opt in with TRUSTLENS_LIVE_TESTS=1",
+]
 
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+
+[tool.ruff.lint]
+# Pin to the classic default rules so lint is identical across ruff versions
+# (newer ruff majors widened their defaults) and across machines/CI.
+# Known debt outside this set (B008 Depends(...) style, etc.) is documented
+# in tests/README.md and intentionally not addressed wholesale.
+select = ["E4", "E7", "E9", "F"]
+# E741: `O` is the FRIES paper's Occurrence dimension and a public API field
+# name (O/S/D) — renaming it would break the schema, not improve clarity.
+ignore = ["E741"]

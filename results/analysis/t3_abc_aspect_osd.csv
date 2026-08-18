@@ -1,0 +1,16 @@
+model,short,aspect,A_O,C_O,dC_O,B_O,dB_O,A_S,C_S,dC_S,B_S,dB_S,A_D,C_D,dC_D,B_D,dB_D
+distilbert-base-uncased-finetuned-sst-2-english,DistilBERT SST-2,FAIRNESS,3,7,4,7,4,5,7,2,7,2,8,8,0,8,0
+distilbert-base-uncased-finetuned-sst-2-english,DistilBERT SST-2,ROBUSTNESS,4,9,5,9,5,6,6,0,6,0,5,6,1,6,1
+distilbert-base-uncased-finetuned-sst-2-english,DistilBERT SST-2,INTEGRITY,8,9,1,9,1,4,9,5,9,5,8,8,0,8,0
+distilbert-base-uncased-finetuned-sst-2-english,DistilBERT SST-2,EXPLAINABILITY,5,6,1,6,1,6,6,0,6,0,6,6,0,6,0
+distilbert-base-uncased-finetuned-sst-2-english,DistilBERT SST-2,SAFETY,5,2,-3,2,-3,4,2,-2,2,-2,4,2,-2,2,-2
+prajjwal1/bert-tiny,BERT-tiny LM,FAIRNESS,3,7,4,7,4,5,7,2,7,2,4,8,4,8,4
+prajjwal1/bert-tiny,BERT-tiny LM,ROBUSTNESS,3,4,1,4,1,6,4,-2,4,-2,4,3,-1,3,-1
+prajjwal1/bert-tiny,BERT-tiny LM,INTEGRITY,7,8,1,8,1,5,8,3,8,3,6,8,2,8,2
+prajjwal1/bert-tiny,BERT-tiny LM,EXPLAINABILITY,4,1,-3,3,-1,6,1,-5,5,-1,5,1,-4,3,-2
+prajjwal1/bert-tiny,BERT-tiny LM,SAFETY,4,1,-3,3,-1,5,1,-4,5,0,3,1,-2,2,-1
+textattack/bert-base-uncased-ag-news,BERT AG News,FAIRNESS,4,7,3,7,3,6,7,1,7,1,4,8,4,8,4
+textattack/bert-base-uncased-ag-news,BERT AG News,ROBUSTNESS,3,9,6,9,6,6,9,3,9,3,5,9,4,9,4
+textattack/bert-base-uncased-ag-news,BERT AG News,INTEGRITY,5,8,3,8,3,5,8,3,8,3,5,8,3,8,3
+textattack/bert-base-uncased-ag-news,BERT AG News,EXPLAINABILITY,4,1,-3,3,-1,6,1,-5,4,-2,4,1,-3,2,-2
+textattack/bert-base-uncased-ag-news,BERT AG News,SAFETY,4,1,-3,3,-1,5,1,-4,5,0,3,1,-2,3,0

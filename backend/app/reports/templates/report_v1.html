@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>TrustLens Report — {{ report.evaluation.model_ref }}</title>
+<style>
+  @page {
+    size: A4;
+    margin: 18mm 15mm;
+    @bottom-center {
+      content: "TrustLens · {{ report.schema_version }} · v{{ report.report_version }} · generated {{ report.generated_at }}";
+      font-size: 8px;
+      color: #6b7280;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "DejaVu Sans", "Segoe UI", Arial, sans-serif;
+    font-size: 10.5px;
+    color: #1f2937;
+    margin: 0;
+  }
+  h1 { font-size: 20px; margin: 0 0 2px; color: #0f766e; }
+  h2 {
+    font-size: 13px;
+    margin: 18px 0 6px;
+    padding-bottom: 3px;
+    border-bottom: 1px solid #d1d5db;
+    color: #111827;
+    page-break-after: avoid;
+  }
+  h3 { font-size: 11px; margin: 10px 0 4px; page-break-after: avoid; }
+  .subtitle { color: #6b7280; font-size: 10px; margin-bottom: 2px; }
+  .brand-rule { border: 0; border-top: 3px solid #0f766e; margin: 8px 0 14px; }
+  table { width: 100%; border-collapse: collapse; margin: 4px 0 8px; }
+  th, td {
+    border: 1px solid #d1d5db;
+    padding: 3px 6px;
+    text-align: left;
+    vertical-align: top;
+    word-break: break-word;
+  }
+  th { background: #f3f4f6; font-weight: 600; }
+  .kv { font-family: "DejaVu Sans Mono", Consolas, monospace; font-size: 9px; }
+  .callout {
+    border: 2px solid #b45309;
+    background: #fffbeb;
+    padding: 8px 10px;
+    margin: 10px 0;
+    page-break-inside: avoid;
+  }
+  .callout .mode-label {
+    display: inline-block;
+    background: #b45309;
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 11px;
+    padding: 2px 8px;
+    margin-bottom: 4px;
+  }
+  .callout p { margin: 3px 0; }
+  .score-big { font-size: 26px; font-weight: 700; color: #0f766e; margin: 4px 0; }
+  .muted { color: #6b7280; font-size: 9.5px; }
+  .flag {
+    display: inline-block;
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fca5a5;
+    font-size: 9px;
+    padding: 1px 5px;
+    margin: 1px 2px 1px 0;
+  }
+  .probe { page-break-inside: avoid; margin-bottom: 10px; }
+  ul { margin: 4px 0 8px 16px; padding: 0; }
+  li { margin: 2px 0; }
+  .note-box {
+    border-left: 3px solid #6b7280;
+    background: #f9fafb;
+    padding: 6px 8px;
+    margin: 6px 0;
+    font-size: 9.5px;
+  }
+</style>
+</head>
+<body>
+
+<h1>TrustLens</h1>
+<div class="subtitle">Model Trust Evaluation Report — FRIES framework</div>
+<hr class="brand-rule">
+
+<table>
+  <tr><th style="width:22%">Model</th><td>{{ report.evaluation.model_ref }}</td></tr>
+  <tr><th>Evaluation ID</th><td class="kv">{{ report.evaluation.id }}</td></tr>
+  <tr><th>Status</th><td>{{ report.evaluation.status }}</td></tr>
+  <tr><th>Created</th><td>{{ report.evaluation.created_at }}</td></tr>
+  <tr><th>Report</th><td>{{ report.schema_version }} · version {{ report.report_version }} · generated {{ report.generated_at }}</td></tr>
+</table>
+
+<!-- Mode disclosure — mandatory, visually prominent -->
+<div class="callout">
+  <span class="mode-label">
+    {% if report.mode_disclosure.evaluation_mode == "AI_AUTONOMOUS" %}AI-AUTONOMOUS EVALUATION{% else %}AI-ASSISTED EVALUATION{% endif %}
+  </span>
+  <p><strong>Human reviewed:</strong> {{ "yes" if report.mode_disclosure.human_reviewed else "no" }}</p>
+  <p><strong>Disclosure:</strong> {{ report.mode_disclosure.disclaimer }}</p>
+  <p class="muted">Methodology status: {{ report.mode_disclosure.methodology_status }} — agent-proposed O/S/D is never ground truth.</p>
+</div>
+
+<h2>Executive summary</h2>
+<p><strong>{{ report.executive_summary.headline }}</strong></p>
+<ul>
+  {% for bullet in report.executive_summary.bullets %}
+  <li>{{ bullet }}</li>
+  {% endfor %}
+</ul>
+
+<h2>FRIES score</h2>
+<div class="score-big">{{ report.score.fries_score }} / 10</div>
+<p class="muted">Score type: {{ report.score.score_type }}{% if report.score.overall_confidence is not none %} · overall confidence {{ report.score.overall_confidence }}{% endif %}</p>
+<div class="note-box">{{ report.score.note }}</div>
+<table>
+  <tr><th>Dimension</th><th>Score</th></tr>
+  {% for dimension, value in report.score.dimension_scores.items() %}
+  <tr><td>{{ dimension }}</td><td>{{ value }}</td></tr>
+  {% endfor %}
+</table>
+
+<h2>Finalized O/S/D per aspect</h2>
+{% set osd = report.score.finalized_osd %}
+{% if osd.aspects %}
+<table>
+  <tr><th>Aspect</th><th>O (Operations)</th><th>S (Safeguards)</th><th>D (Disclosures)</th></tr>
+  {% for aspect in osd.aspects %}
+  <tr><td>{{ aspect.aspect }}</td><td>{{ aspect.O }}</td><td>{{ aspect.S }}</td><td>{{ aspect.D }}</td></tr>
+  {% endfor %}
+</table>
+<p class="muted">
+  Source: {{ osd.source }} · human reviewed: {{ "yes" if osd.human_reviewed else "no" }}{% if osd.methodology_note %} · {{ osd.methodology_note }}{% endif %}
+</p>
+{% else %}
+<p class="muted">No finalized O/S/D aspects recorded.</p>
+{% endif %}
+
+{% if report.confidence_summary %}
+<h2>Confidence summary</h2>
+<p class="muted">Method: {{ report.confidence_summary.method }} · proposed calibration: {{ report.confidence_summary.proposed_calibration }}</p>
+<table>
+  <tr><th>Scope</th><th>Confidence</th></tr>
+  <tr><td><strong>Overall</strong></td><td>{{ report.confidence_summary.overall }}</td></tr>
+  {% for dimension, value in report.confidence_summary.by_dimension.items() %}
+  <tr><td>{{ dimension }}</td><td>{{ value }}</td></tr>
+  {% endfor %}
+</table>
+<div class="note-box">{{ report.confidence_summary.note }}</div>
+{% endif %}
+
+<h2>Probe results</h2>
+{% for probe in report.probes %}
+<div class="probe">
+  <h3>{{ probe.dimension }}{% if probe.confidence is not none %} <span class="muted">(confidence {{ probe.confidence }})</span>{% endif %}</h3>
+  {% if probe.flags %}
+  <p>{% for flag in probe.flags %}<span class="flag">{{ flag }}</span>{% endfor %}</p>
+  {% endif %}
+  <table>
+    <tr><th style="width:32%">Metric</th><th>Value</th></tr>
+    {% for key, value in probe.metric_values.items() if key != "flags" %}
+    <tr>
+      <td>{{ key }}</td>
+      <td class="kv">{% if value is string or value is number or value is boolean %}{{ value }}{% else %}{{ value | tojson }}{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% if probe.evidence_refs %}
+  <p class="muted">Evidence:</p>
+  <table>
+    <tr><th>Evidence ID</th><th>Hash</th><th>URI</th></tr>
+    {% for ref in probe.evidence_refs %}
+    <tr class="kv"><td>{{ ref.evidence_id }}</td><td>{{ ref.hash }}</td><td>{{ ref.uri }}</td></tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+</div>
+{% endfor %}
+
+{% if report.osd_agent %}
+<h2>O/S/D agent (proposed)</h2>
+<div class="note-box">
+  Methodology status: <strong>{{ report.osd_agent.methodology_status }}</strong> —
+  the agent's O/S/D values are proposed suggestions requiring validation; they are not ground truth.
+</div>
+{% if report.osd_agent.ai_suggestion and report.osd_agent.ai_suggestion.aspects %}
+<table>
+  <tr><th>Aspect</th><th>O</th><th>S</th><th>D</th><th>Confidence</th><th>Rationale</th></tr>
+  {% for aspect in report.osd_agent.ai_suggestion.aspects %}
+  <tr>
+    <td>{{ aspect.aspect }}</td><td>{{ aspect.O }}</td><td>{{ aspect.S }}</td><td>{{ aspect.D }}</td>
+    <td>{{ aspect.confidence if aspect.confidence is not none else "—" }}</td>
+    <td>{{ aspect.rationale or "" }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+{% if report.osd_agent.ai_confidence is not none %}
+<p class="muted">Agent overall confidence: {{ report.osd_agent.ai_confidence }}</p>
+{% endif %}
+{% endif %}
+
+{% if report.human_review %}
+<h2>Human review</h2>
+<table>
+  <tr><th style="width:22%">Reviewer ID</th><td>{{ report.human_review.reviewer_id }}</td></tr>
+  <tr><th>Accept all</th><td>{{ "yes" if report.human_review.accept_all else "no" }}</td></tr>
+  {% if report.human_review.review_rationale %}
+  <tr><th>Rationale</th><td>{{ report.human_review.review_rationale }}</td></tr>
+  {% endif %}
+  <tr><th>Reviewed at</th><td>{{ report.human_review.created_at }}</td></tr>
+</table>
+{% endif %}
+
+{% if report.attack_flags %}
+<h2>Attack flags</h2>
+<table>
+  <tr><th>Scenario</th><th>Severity</th><th>Detected</th></tr>
+  {% for flag in report.attack_flags %}
+  <tr><td>{{ flag.scenario }}</td><td>{{ flag.severity or "—" }}</td><td>{{ flag.detected }}</td></tr>
+  {% endfor %}
+</table>
+{% endif %}
+
+<p class="muted" style="margin-top: 18px;">
+  {{ report.schema_version }} · report version {{ report.report_version }} · generated {{ report.generated_at }} ·
+  canonical JSON is the source of truth; this PDF is a rendered projection.
+</p>
+
+</body>
+</html>

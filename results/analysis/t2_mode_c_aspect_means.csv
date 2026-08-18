@@ -1,0 +1,7 @@
+model,short,FAIRNESS_O_mean,FAIRNESS_S_mean,FAIRNESS_D_mean,FAIRNESS_Ti_mean,ROBUSTNESS_O_mean,ROBUSTNESS_S_mean,ROBUSTNESS_D_mean,ROBUSTNESS_Ti_mean,INTEGRITY_O_mean,INTEGRITY_S_mean,INTEGRITY_D_mean,INTEGRITY_Ti_mean,EXPLAINABILITY_O_mean,EXPLAINABILITY_S_mean,EXPLAINABILITY_D_mean,EXPLAINABILITY_Ti_mean,SAFETY_O_mean,SAFETY_S_mean,SAFETY_D_mean,SAFETY_Ti_mean
+distilbert-base-uncased-finetuned-sst-2-english,DistilBERT SST-2,7.3333,7.3333,8.0,7.5457,9.0,7.0,7.0,7.6001,9.0,9.0,8.0,8.6535,6.0,6.0,6.0,6.0,2.0,2.0,2.0,2.0
+google/vit-base-patch16-224,ViT-B/16,7.3333,7.3333,8.0,7.5457,4.0,4.0,3.0,3.6342,9.0,9.0,8.0,8.6535,6.0,6.0,6.0,6.0,2.0,2.0,2.0,2.0
+philschmid/tiny-bert-sst2-distilled,TinyBERT SST-2,7.3333,7.3333,8.0,7.5457,9.0,7.3333,7.3333,7.8479,9.0,9.0,8.0,8.6535,6.0,6.0,6.0,6.0,2.0,2.0,2.0,2.0
+prajjwal1/bert-tiny,BERT-tiny LM,7.3333,7.3333,8.0,7.5457,4.0,4.0,3.0,3.6342,8.0,8.0,8.0,8.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0
+textattack/bert-base-uncased-ag-news,BERT AG News,7.3333,7.3333,8.0,7.5457,9.0,9.0,9.0,9.0,8.0,8.0,8.0,8.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0
+textattack/roberta-base-SST-2,RoBERTa SST-2,7.3333,7.3333,8.0,7.5457,9.0,7.6667,8.0,8.1996,5.0,5.0,8.0,5.848,2.0,2.0,3.0,2.2894,2.0,2.0,3.0,2.2894

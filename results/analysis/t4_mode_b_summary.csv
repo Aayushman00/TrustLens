@@ -1,0 +1,5 @@
+model,short,reviewer_label,accept_all,human_changed,aspects_changed,aspects_total,override_rate,agent_fries,approved_fries,delta_fries,mean_l1_osd_delta
+distilbert-base-uncased-finetuned-sst-2-english,DistilBERT SST-2,ai-provisional,True,False,0,5,0.0,6.1681,6.1681,0.0,0
+prajjwal1/bert-tiny,BERT-tiny LM,ai-provisional,False,True,2,5,0.4,4.1906,5.1234,0.9328,3
+textattack/bert-base-uncased-ag-news,BERT AG News,ai-provisional,False,True,2,5,0.4,5.2637,6.152,0.8883,2.8
+_OVERALL_,overall,,,,4,15,0.267,,,,

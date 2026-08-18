@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="460" viewBox="0 0 860 460" role="img">
+<title>F3 Mode B overrides</title>
+<rect width="100%" height="100%" fill="#ffffff"/>
+<text x="430.0" y="26.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="15" text-anchor="middle" font-weight="bold" fill="#111827">F3. Mode B: agent vs approved FRIES and per-aspect |ΔO|+|ΔS|+|ΔD|</text>
+<rect x="50" y="86.6" width="40" height="123.4" fill="#2563eb"/>
+<text x="70.0" y="82.6" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="10" text-anchor="middle" font-weight="normal" fill="#111827">6.17</text>
+<rect x="100" y="86.6" width="40" height="123.4" fill="#d97706"/>
+<text x="120.0" y="82.6" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="10" text-anchor="middle" font-weight="normal" fill="#111827">6.17</text>
+<text x="95.0" y="228.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" text-anchor="middle" font-weight="normal" fill="#111827">DistilBERT SST-2</text>
+<text x="95.0" y="244.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" font-weight="normal" fill="#6b7280">accept-all</text>
+<rect x="290" y="126.2" width="40" height="83.8" fill="#2563eb"/>
+<text x="310.0" y="122.2" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="10" text-anchor="middle" font-weight="normal" fill="#111827">4.19</text>
+<rect x="340" y="107.5" width="40" height="102.5" fill="#d97706"/>
+<text x="360.0" y="103.5" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="10" text-anchor="middle" font-weight="normal" fill="#111827">5.12</text>
+<text x="335.0" y="228.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" text-anchor="middle" font-weight="normal" fill="#111827">BERT-tiny LM</text>
+<text x="335.0" y="244.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" font-weight="normal" fill="#6b7280">edited</text>
+<rect x="530" y="104.7" width="40" height="105.3" fill="#2563eb"/>
+<text x="550.0" y="100.7" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="10" text-anchor="middle" font-weight="normal" fill="#111827">5.26</text>
+<rect x="580" y="87.0" width="40" height="123.0" fill="#d97706"/>
+<text x="600.0" y="83.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="10" text-anchor="middle" font-weight="normal" fill="#111827">6.15</text>
+<text x="575.0" y="228.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" text-anchor="middle" font-weight="normal" fill="#111827">BERT AG News</text>
+<text x="575.0" y="244.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" font-weight="normal" fill="#6b7280">edited</text>
+<rect x="50" y="268" width="12" height="12" fill="#2563eb"/>
+<text x="68.0" y="278.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11" text-anchor="start" font-weight="normal" fill="#111827">agent FRIES (before review)</text>
+<rect x="280" y="268" width="12" height="12" fill="#d97706"/>
+<text x="298.0" y="278.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11" text-anchor="start" font-weight="normal" fill="#111827">approved FRIES (after review)</text>
+<text x="80.0" y="302.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" text-anchor="start" font-weight="bold" fill="#111827">Override L1 per aspect (0 = unchanged)</text>
+<text x="246.0" y="324.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="10" text-anchor="middle" font-weight="normal" fill="#6b7280">FAIR</text>
+<text x="298.0" y="324.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="10" text-anchor="middle" font-weight="normal" fill="#6b7280">ROBU</text>
+<text x="350.0" y="324.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="10" text-anchor="middle" font-weight="normal" fill="#6b7280">INTE</text>
+<text x="402.0" y="324.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="10" text-anchor="middle" font-weight="normal" fill="#6b7280">EXPL</text>
+<text x="454.0" y="324.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="10" text-anchor="middle" font-weight="normal" fill="#6b7280">SAFE</text>
+<text x="210.0" y="350.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11" text-anchor="end" font-weight="normal" fill="#111827">DistilBERT SST-2</text>
+<rect x="220" y="332" width="46" height="42" fill="rgb(254,242,242)" stroke="#e5e7eb"/>
+<text x="243.0" y="356.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" text-anchor="middle" font-weight="normal" fill="#111827">0</text>
+<rect x="272" y="332" width="46" height="42" fill="rgb(254,242,242)" stroke="#e5e7eb"/>
+<text x="295.0" y="356.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" text-anchor="middle" font-weight="normal" fill="#111827">0</text>
+<rect x="324" y="332" width="46" height="42" fill="rgb(254,242,242)" stroke="#e5e7eb"/>
+<text x="347.0" y="356.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" text-anchor="middle" font-weight="normal" fill="#111827">0</text>
+<rect x="376" y="332" width="46" height="42" fill="rgb(254,242,242)" stroke="#e5e7eb"/>
+<text x="399.0" y="356.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" text-anchor="middle" font-weight="normal" fill="#111827">0</text>
+<rect x="428" y="332" width="46" height="42" fill="rgb(254,242,242)" stroke="#e5e7eb"/>
+<text x="451.0" y="356.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" text-anchor="middle" font-weight="normal" fill="#111827">0</text>
+<text x="210.0" y="402.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11" text-anchor="end" font-weight="normal" fill="#111827">BERT-tiny LM</text>
+<rect x="220" y="384" width="46" height="42" fill="rgb(254,242,242)" stroke="#e5e7eb"/>
+<text x="243.0" y="408.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" text-anchor="middle" font-weight="normal" fill="#111827">0</text>
+<rect x="272" y="384" width="46" height="42" fill="rgb(254,242,242)" stroke="#e5e7eb"/>
+<text x="295.0" y="408.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" text-anchor="middle" font-weight="normal" fill="#111827">0</text>
+<rect x="324" y="384" width="46" height="42" fill="rgb(254,242,242)" stroke="#e5e7eb"/>
+<text x="347.0" y="408.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" text-anchor="middle" font-weight="normal" fill="#111827">0</text>
+<rect x="376" y="384" width="46" height="42" fill="rgb(134,108,188)" stroke="#e5e7eb"/>
+<text x="399.0" y="408.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" text-anchor="middle" font-weight="normal" fill="#111827">8</text>
+<rect x="428" y="384" width="46" height="42" fill="rgb(149,125,195)" stroke="#e5e7eb"/>
+<text x="451.0" y="408.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" text-anchor="middle" font-weight="normal" fill="#111827">7</text>
+<text x="210.0" y="454.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11" text-anchor="end" font-weight="normal" fill="#111827">BERT AG News</text>
+<rect x="220" y="436" width="46" height="42" fill="rgb(254,242,242)" stroke="#e5e7eb"/>
+<text x="243.0" y="460.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" text-anchor="middle" font-weight="normal" fill="#111827">0</text>
+<rect x="272" y="436" width="46" height="42" fill="rgb(254,242,242)" stroke="#e5e7eb"/>
+<text x="295.0" y="460.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" text-anchor="middle" font-weight="normal" fill="#111827">0</text>
+<rect x="324" y="436" width="46" height="42" fill="rgb(254,242,242)" stroke="#e5e7eb"/>
+<text x="347.0" y="460.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" text-anchor="middle" font-weight="normal" fill="#111827">0</text>
+<rect x="376" y="436" width="46" height="42" fill="rgb(164,142,202)" stroke="#e5e7eb"/>
+<text x="399.0" y="460.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" text-anchor="middle" font-weight="normal" fill="#111827">6</text>
+<rect x="428" y="436" width="46" height="42" fill="rgb(134,108,188)" stroke="#e5e7eb"/>
+<text x="451.0" y="460.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" text-anchor="middle" font-weight="normal" fill="#111827">8</text>
+</svg>

@@ -1,0 +1,5 @@
+comparison,n,pearson,spearman,mae,note
+"A vs C (FRIES, seed-42, n=3 models)",3,0.7973,0.5,0.69,"Single Mode A rater, ai-provisional. n=3 — descriptive only, not significance."
+"A vs B (FRIES, n=3 models)",3,0.4456,0.5,1.044,Mode B also ai-provisional. Cohen's kappa omitted (one rater; no band discretization).
+A vs C (mean |Δ| over O/S/D cells),45,,,2.6,15 aspects × 3 components on 3 models.
+A vs B (mean |Δ| over O/S/D cells),45,,,1.956,Approved Mode B O/S/D vs Mode A rubric.

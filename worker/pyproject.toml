@@ -4,17 +4,32 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "trustlens-worker"
-version = "0.1.0"
-description = "TrustLens worker — Phase 1 shell only"
+version = "0.20.1"
+description = "TrustLens worker — Phase 24 (testing hardening; worker behavior unchanged)"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
   "pydantic>=2.9.0",
   "pydantic-settings>=2.6.0",
   "python-dotenv>=1.0.0",
+  "redis>=5.0.0",
+  "boto3>=1.35.0",
+  "celery>=5.4.0",
+  "sqlalchemy>=2.0.0",
+  "psycopg2-binary>=2.9.0",
+  "pyyaml>=6.0.0",
+  # Phase 11 NLP robustness (CPU wheels from default PyPI are fine for MVP)
+  "torch>=2.2.0",
+  "transformers>=4.44.0",
+  "datasets>=2.21.0",
+  # Phase 12 fairness (Adult tabular + proxy LR; metrics helpers stay stdlib)
+  "fairlearn>=0.10.0",
+  "scikit-learn>=1.5.0",
+  "numpy>=1.26.0",
 ]
 
 [project.optional-dependencies]
+future = []
 dev = [
   "pytest>=8.3.0",
   "ruff>=0.7.0",
@@ -31,3 +46,7 @@ pythonpath = ["."]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+
+[tool.ruff.lint]
+# Pinned to the classic default rules — see backend/pyproject.toml for rationale.
+select = ["E4", "E7", "E9", "F"]

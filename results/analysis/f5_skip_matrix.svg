@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="408" viewBox="0 0 600 408" role="img">
+<title>F5 skip matrix</title>
+<rect width="100%" height="100%" fill="#ffffff"/>
+<text x="300.0" y="28.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14" text-anchor="middle" font-weight="bold" fill="#111827">F5. Probe skip matrix (seeded Mode C runs; identical across seeds)</text>
+<text x="260.0" y="58.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" text-anchor="middle" font-weight="bold" fill="#111827">Fairness</text>
+<text x="460.0" y="58.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" text-anchor="middle" font-weight="bold" fill="#111827">Robustness</text>
+<text x="150.0" y="98.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" text-anchor="end" font-weight="normal" fill="#111827">DistilBERT SST-2</text>
+<rect x="160" y="70" width="192" height="40" rx="4" fill="#fde68a" stroke="#e5e7eb"/>
+<text x="256.0" y="96.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" text-anchor="middle" font-weight="normal" fill="#111827">proxy ran</text>
+<rect x="360" y="70" width="192" height="40" rx="4" fill="#bbf7d0" stroke="#e5e7eb"/>
+<text x="456.0" y="96.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" text-anchor="middle" font-weight="normal" fill="#111827">ran</text>
+<text x="150.0" y="146.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" text-anchor="end" font-weight="normal" fill="#111827">ViT-B/16</text>
+<rect x="160" y="118" width="192" height="40" rx="4" fill="#fde68a" stroke="#e5e7eb"/>
+<text x="256.0" y="144.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" text-anchor="middle" font-weight="normal" fill="#111827">proxy ran</text>
+<rect x="360" y="118" width="192" height="40" rx="4" fill="#fecaca" stroke="#e5e7eb"/>
+<text x="456.0" y="144.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" text-anchor="middle" font-weight="normal" fill="#111827">skipped</text>
+<text x="150.0" y="194.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" text-anchor="end" font-weight="normal" fill="#111827">TinyBERT SST-2</text>
+<rect x="160" y="166" width="192" height="40" rx="4" fill="#fde68a" stroke="#e5e7eb"/>
+<text x="256.0" y="192.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" text-anchor="middle" font-weight="normal" fill="#111827">proxy ran</text>
+<rect x="360" y="166" width="192" height="40" rx="4" fill="#bbf7d0" stroke="#e5e7eb"/>
+<text x="456.0" y="192.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" text-anchor="middle" font-weight="normal" fill="#111827">ran</text>
+<text x="150.0" y="242.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" text-anchor="end" font-weight="normal" fill="#111827">BERT-tiny LM</text>
+<rect x="160" y="214" width="192" height="40" rx="4" fill="#fde68a" stroke="#e5e7eb"/>
+<text x="256.0" y="240.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" text-anchor="middle" font-weight="normal" fill="#111827">proxy ran</text>
+<rect x="360" y="214" width="192" height="40" rx="4" fill="#fecaca" stroke="#e5e7eb"/>
+<text x="456.0" y="240.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" text-anchor="middle" font-weight="normal" fill="#111827">skipped</text>
+<text x="150.0" y="290.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" text-anchor="end" font-weight="normal" fill="#111827">BERT AG News</text>
+<rect x="160" y="262" width="192" height="40" rx="4" fill="#fde68a" stroke="#e5e7eb"/>
+<text x="256.0" y="288.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" text-anchor="middle" font-weight="normal" fill="#111827">proxy ran</text>
+<rect x="360" y="262" width="192" height="40" rx="4" fill="#bbf7d0" stroke="#e5e7eb"/>
+<text x="456.0" y="288.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" text-anchor="middle" font-weight="normal" fill="#111827">ran</text>
+<text x="150.0" y="338.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" text-anchor="end" font-weight="normal" fill="#111827">RoBERTa SST-2</text>
+<rect x="160" y="310" width="192" height="40" rx="4" fill="#fde68a" stroke="#e5e7eb"/>
+<text x="256.0" y="336.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" text-anchor="middle" font-weight="normal" fill="#111827">proxy ran</text>
+<rect x="360" y="310" width="192" height="40" rx="4" fill="#bbf7d0" stroke="#e5e7eb"/>
+<text x="456.0" y="336.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" text-anchor="middle" font-weight="normal" fill="#111827">ran</text>
+</svg>

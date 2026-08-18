@@ -1,0 +1,42 @@
+# TrustLens worker image (Python 3.11) — Celery consumer (Phase 7+)
+# Vendors shared ORM/pipeline/evidence modules from backend/ at build time.
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /app
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl libpq5 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY worker/pyproject.toml worker/README.md ./
+COPY worker/app ./app
+
+# Shared single-source modules from backend (Option A — no package-name collision).
+# Phase 11: probes/robustness*.py + datasets/loader.py are included via COPY below.
+# First robustness eval may download HF models/datasets — mount HF cache in Compose.
+COPY backend/app/db ./app/db
+COPY backend/app/core/db.py ./app/core/db.py
+COPY backend/app/core/s3.py ./app/core/s3.py
+COPY backend/app/schemas/internal.py ./app/schemas/internal.py
+COPY backend/app/schemas/evidence.py ./app/schemas/evidence.py
+COPY backend/app/schemas/probe_config.py ./app/schemas/probe_config.py
+COPY backend/app/schemas/modes.py ./app/schemas/modes.py
+COPY backend/app/storage ./app/storage
+COPY backend/app/datasets ./app/datasets
+COPY backend/app/probes ./app/probes
+COPY backend/app/confidence ./app/confidence
+COPY backend/app/osd ./app/osd
+COPY backend/app/scoring ./app/scoring
+COPY backend/app/tasks/evaluate_pipeline.py ./app/tasks/evaluate_pipeline.py
+COPY configs/datasets_v1.yaml ./configs/datasets_v1.yaml
+
+ENV DATASETS_CONFIG_PATH=/app/configs/datasets_v1.yaml
+
+RUN pip install --upgrade pip \
+    && pip install .
+
+CMD ["celery", "-A", "app.celery_app", "worker", "--loglevel=INFO", "-Q", "trustlens"]
