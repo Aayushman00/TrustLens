@@ -145,7 +145,7 @@ These are the main deviations from the target architecture:
 The research experiment CSVs under `results/` were produced under this older methodology. They must not be silently rewritten.
 
 ## Target architecture
-
+```mermaid
 flowchart TD
     TL["TrustLens"]
 
@@ -189,7 +189,7 @@ flowchart TD
 
     SCORE --> HR["Human Review"]
     HR --> OUT["Finalized Audit Report"]
-
+```
 Local Hugging Face execution is the intended default. Hosted inference is not required for the core system. Compatibility must treat **disk, RAM, and VRAM as separate constraints** (reference machine in the spec: RTX 4060 Laptop, 8 GB VRAM, 16 GB RAM). Parameter-count heuristics are estimates with safety margin, not hard guarantees.
 
 ## Roadmap
