@@ -146,30 +146,28 @@ The research experiment CSVs under `results/` were produced under this older met
 
 ## Target architecture
 
-```text
-                 TRUSTLENS
-                     │
-           ┌─────────┴─────────┐
-     Model analyzer      Dataset analyzer
-           └─────────┬─────────┘
-                     ↓
-              Resource checker
-                ╱           ╲
-         Compatible      Unsupported → SKIP (no download)
-                ↓
-           Benchmark (50–100 samples) → runtime estimate → user confirm
-                ↓
-           Local inference → predictions / artifacts
-                ↓
-     Fairness / Robustness / Safety probes
-                ↓
-     Integrity / Explainability evidence
-                ↓
-     Risk detection → relevant FRIES risks → O/S/D
-                ↓
-     T_risk → aspect scores → weighted FRIES
-                ↓
-     Human review → finalized report
+```flowchart TB
+    TL[TrustLens]
+    TL --> MA[Model analyzer]
+    TL --> DA[Dataset analyzer]
+    MA --> RC[Resource checker]
+    DA --> RC
+
+    RC --> COMP[Compatible]
+    RC --> UNSUP[Unsupported]
+
+    UNSUP --> SKIP[SKIP: no download]
+
+    COMP --> BM[Benchmark 50–100 samples]
+    BM --> RT[Runtime estimate]
+    RT --> UC[User confirmation]
+    UC --> LI[Local inference]
+    LI --> PA[Predictions / artifacts]
+    PA --> FRS[Fairness / Robustness / Safety probes]
+    FRS --> IE[Integrity / Explainability evidence]
+    IE --> RD[Risk detection → relevant FRIES risks → O/S/D]
+    RD --> SCORE[T_risk → aspect scores → weighted FRIES]
+    SCORE --> OUT[Human review → finalized report]
 ```
 
 Local Hugging Face execution is the intended default. Hosted inference is not required for the core system. Compatibility must treat **disk, RAM, and VRAM as separate constraints** (reference machine in the spec: RTX 4060 Laptop, 8 GB VRAM, 16 GB RAM). Parameter-count heuristics are estimates with safety margin, not hard guarantees.
