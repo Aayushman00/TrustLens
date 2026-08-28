@@ -146,29 +146,49 @@ The research experiment CSVs under `results/` were produced under this older met
 
 ## Target architecture
 
-```flowchart TB
-    TL[TrustLens]
-    TL --> MA[Model analyzer]
-    TL --> DA[Dataset analyzer]
-    MA --> RC[Resource checker]
+flowchart TD
+    TL["TrustLens"]
+
+    TL --> MA["Model Analyzer"]
+    TL --> DA["Dataset Analyzer"]
+
+    MA --> RC["Resource Checker"]
     DA --> RC
 
-    RC --> COMP[Compatible]
-    RC --> UNSUP[Unsupported]
+    RC -->|Compatible| COMP["Compatible"]
+    RC -->|Unsupported| UNSUP["Unsupported"]
 
-    UNSUP --> SKIP[SKIP: no download]
+    UNSUP --> SKIP["SKIP: No Download"]
 
-    COMP --> BM[Benchmark 50–100 samples]
-    BM --> RT[Runtime estimate]
-    RT --> UC[User confirmation]
-    UC --> LI[Local inference]
-    LI --> PA[Predictions / artifacts]
-    PA --> FRS[Fairness / Robustness / Safety probes]
-    FRS --> IE[Integrity / Explainability evidence]
-    IE --> RD[Risk detection → relevant FRIES risks → O/S/D]
-    RD --> SCORE[T_risk → aspect scores → weighted FRIES]
-    SCORE --> OUT[Human review → finalized report]
-```
+    COMP --> RT["Runtime Estimator"]
+    RT --> UC{"User Confirmation"}
+
+    UC -->|No| STOP["Stop Evaluation"]
+    UC -->|Yes| BM["Benchmark<br/>50–100 Samples"]
+
+    BM --> LI["Local Inference"]
+    LI --> PA["Predictions / Artifacts"]
+
+    PA --> FRS["FRIES Evaluation"]
+
+    FRS --> FAIR["Fairness Probes"]
+    FRS --> ROB["Robustness Probes"]
+    FRS --> SAFE["Safety Probes"]
+
+    FAIR --> IE["Integrity / Explainability Evidence"]
+    ROB --> IE
+    SAFE --> IE
+
+    IE --> RD["Risk Detection"]
+
+    RD --> RISKS["Relevant FRIES Risks<br/>+ O / S / D"]
+
+    RISKS --> TR["T_risk"]
+    TR --> AS["Aspect Scores"]
+    AS --> SCORE["Weighted FRIES Score"]
+
+    SCORE --> HR["Human Review"]
+    HR --> OUT["Finalized Audit Report"]
 
 Local Hugging Face execution is the intended default. Hosted inference is not required for the core system. Compatibility must treat **disk, RAM, and VRAM as separate constraints** (reference machine in the spec: RTX 4060 Laptop, 8 GB VRAM, 16 GB RAM). Parameter-count heuristics are estimates with safety margin, not hard guarantees.
 
