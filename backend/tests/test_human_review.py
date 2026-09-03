@@ -32,6 +32,11 @@ from app.tasks.evaluate_pipeline import run_evaluation_pipeline
 from tests.conftest import auth_headers_for
 from tests.fakes import FakeEvidenceStore
 
+
+@pytest.fixture(autouse=True)
+def _complete_robustness(evaluated_robustness: None) -> None:
+    return
+
 # ---------------------------------------------------------------------------
 # Pure helpers — no DB
 # ---------------------------------------------------------------------------

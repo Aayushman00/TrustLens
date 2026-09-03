@@ -23,6 +23,11 @@ from tests.fakes import FakeEvidenceStore
 
 
 @pytest.fixture(autouse=True)
+def _complete_robustness(evaluated_robustness: None) -> None:
+    return
+
+
+@pytest.fixture(autouse=True)
 def _skip_enqueue(monkeypatch: pytest.MonkeyPatch) -> None:
     """Avoid Redis during API create; tests invoke the pipeline directly."""
     monkeypatch.setattr(

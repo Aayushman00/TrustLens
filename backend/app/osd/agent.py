@@ -12,12 +12,12 @@ Band rules (documented, unit-testable):
 - FAIRNESS: gap = max(|demographic_parity_difference|, |equalized_odds_difference|).
   O = S = scale(1 − gap) (−1 each when the observed min group is below the
   configured ``min_group_n``); D = 8 when metrics computed (disparities are
-  directly measurable), 7 on thin slices. Metrics skipped → (4, 4, 3).
+  directly measurable), 7 on thin slices. Metrics missing → abstain (None).
 - ROBUSTNESS: O = scale(clean_accuracy), S = scale(robust_accuracy),
   D = scale(degradation_ratio = robust/clean). Attack skipped / accuracies
-  missing → (4, 4, 3).
+  missing → abstain (None).
 - INTEGRITY: pass_rate over metadata checks; O = S = scale(pass_rate),
-  D = 8 (metadata checks are directly auditable). No checks → (4, 4, 3).
+  D = 8 (metadata checks are directly auditable). No checks → abstain (None).
 - EXPLAINABILITY: O = S = D = scale(coverage_ratio); empty card → (2, 2, 3)
   (absence itself is easy to detect).
 - SAFETY: O = S = D = scale(coverage_ratio); high-impact deployment claims
@@ -32,7 +32,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from app.db.enums import FriesDimension
+from app.db.enums import FriesDimension, ProbeEvaluationStatus
 from app.osd.base import (
     METHODOLOGY_STATUS,
     AgentContext,
@@ -45,8 +45,8 @@ logger = logging.getLogger("trustlens.osd")
 
 _PROPOSED_PREFIX = "[PROPOSED / REQUIRES VALIDATION]"
 _PROPOSED_SUFFIX = "Heuristic metric-to-O/S/D mapping — not validated science."
+_ABSTAIN = "agent abstained because evidence is unavailable"
 
-_SKIP_BAND = (4, 4, 3)
 _EMPTY_CARD_BAND = (2, 2, 3)
 _DEFAULT_CONFIDENCE = 0.5
 
@@ -67,10 +67,29 @@ def _num(metric_values: dict[str, Any], key: str) -> float | None:
     return float(raw)
 
 
-def _fairness_band(m: dict[str, Any]) -> tuple[tuple[int, int, int], str]:
+def _is_osd_int(value: object) -> bool:
+    """Match FRIES scorer: O/S/D must be ints, not bools."""
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
+def _osd_complete(band: tuple[int | None, int | None, int | None]) -> bool:
+    return all(_is_osd_int(v) for v in band)
+
+
+def _status_from_metrics(m: dict[str, Any]) -> ProbeEvaluationStatus | None:
+    raw = m.get("probe_status")
+    if not isinstance(raw, str):
+        return None
+    try:
+        return ProbeEvaluationStatus(raw)
+    except ValueError:
+        return None
+
+
+def _fairness_band(m: dict[str, Any]) -> tuple[tuple[int | None, int | None, int | None], str]:
     dp = _num(m, "demographic_parity_difference")
     if dp is None:
-        return _SKIP_BAND, "fairness metrics were skipped; low-mid default band"
+        return (None, None, None), "fairness metrics were skipped"
     eo = _num(m, "equalized_odds_difference")
     gap = max(abs(dp), abs(eo) if eo is not None else 0.0)
     base = _scale(1.0 - min(gap, 1.0))
@@ -84,11 +103,11 @@ def _fairness_band(m: dict[str, Any]) -> tuple[tuple[int, int, int], str]:
     return (o, s, d), detail
 
 
-def _robustness_band(m: dict[str, Any]) -> tuple[tuple[int, int, int], str]:
+def _robustness_band(m: dict[str, Any]) -> tuple[tuple[int | None, int | None, int | None], str]:
     clean = _num(m, "clean_accuracy")
     robust = _num(m, "robust_accuracy")
     if clean is None or robust is None:
-        return _SKIP_BAND, "adversarial attack was skipped; low-mid default band"
+        return (None, None, None), "adversarial attack was skipped"
     degradation = _num(m, "degradation_ratio")
     if degradation is None:
         degradation = robust / clean if clean > 0 else 0.0
@@ -100,7 +119,7 @@ def _robustness_band(m: dict[str, Any]) -> tuple[tuple[int, int, int], str]:
     return band, detail
 
 
-def _integrity_band(m: dict[str, Any]) -> tuple[tuple[int, int, int], str]:
+def _integrity_band(m: dict[str, Any]) -> tuple[tuple[int | None, int | None, int | None], str]:
     pass_count = m.get("pass_count")
     fail_count = m.get("fail_count")
     if isinstance(pass_count, int) and isinstance(fail_count, int):
@@ -109,7 +128,7 @@ def _integrity_band(m: dict[str, Any]) -> tuple[tuple[int, int, int], str]:
     else:
         checks = m.get("checks")
         if not isinstance(checks, dict) or not checks:
-            return _SKIP_BAND, "no integrity checks available; low-mid default band"
+            return (None, None, None), "no integrity checks available"
         passes = sum(1 for c in checks.values() if isinstance(c, dict) and c.get("pass"))
         pass_rate = passes / len(checks)
     base = _scale(pass_rate)
@@ -118,13 +137,13 @@ def _integrity_band(m: dict[str, Any]) -> tuple[tuple[int, int, int], str]:
 
 def _card_band(
     m: dict[str, Any], *, consider_high_impact: bool
-) -> tuple[tuple[int, int, int], str]:
+) -> tuple[tuple[int | None, int | None, int | None], str]:
     card_chars = m.get("card_chars")
     if card_chars == 0:
         return _EMPTY_CARD_BAND, "model card is empty; low default band"
     coverage = _num(m, "coverage_ratio")
     if coverage is None:
-        coverage = 0.5
+        return (None, None, None), "card coverage_ratio unavailable"
     base = _scale(coverage)
     o, s, d = base, base, base
     detail = f"card coverage_ratio={coverage:.2f}"
@@ -149,14 +168,15 @@ class HeuristicOSDAgent:
                 aspects.append(
                     AspectOSD(
                         aspect=dimension,
-                        O=3,
-                        S=3,
-                        D=3,
+                        O=None,
+                        S=None,
+                        D=None,
                         confidence=0.2,
                         rationale=(
                             f"{_PROPOSED_PREFIX} {dimension.value}: no probe result "
-                            f"available; conservative default band. {_PROPOSED_SUFFIX}"
+                            f"available; {_ABSTAIN}. {_PROPOSED_SUFFIX}"
                         ),
+                        status=ProbeEvaluationStatus.INSUFFICIENT_EVIDENCE,
                     )
                 )
                 continue
@@ -174,6 +194,20 @@ class HeuristicOSDAgent:
             confidence = (
                 snap.confidence if snap.confidence is not None else _DEFAULT_CONFIDENCE
             )
+            complete = _osd_complete(band)
+            probe_status = _status_from_metrics(metric_values)
+            if complete:
+                status = probe_status or ProbeEvaluationStatus.EVALUATED
+                rationale = (
+                    f"{_PROPOSED_PREFIX} {dimension.value}: {detail}. "
+                    f"{_PROPOSED_SUFFIX}"
+                )
+            else:
+                status = probe_status or ProbeEvaluationStatus.INSUFFICIENT_EVIDENCE
+                rationale = (
+                    f"{_PROPOSED_PREFIX} {dimension.value}: {detail}; "
+                    f"{_ABSTAIN}. {_PROPOSED_SUFFIX}"
+                )
             aspects.append(
                 AspectOSD(
                     aspect=dimension,
@@ -181,11 +215,9 @@ class HeuristicOSDAgent:
                     S=band[1],
                     D=band[2],
                     confidence=round(float(confidence), 4),
-                    rationale=(
-                        f"{_PROPOSED_PREFIX} {dimension.value}: {detail}. "
-                        f"{_PROPOSED_SUFFIX}"
-                    ),
+                    rationale=rationale,
                     evidence_refs=list(snap.evidence_refs or []),
+                    status=status,
                 )
             )
         overall = round(sum(a.confidence for a in aspects) / len(aspects), 4)

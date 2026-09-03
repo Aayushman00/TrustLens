@@ -10,7 +10,7 @@ from typing import Any
 import pytest
 
 from app.datasets.loader import DatasetLoadError, normalize_fairness_row
-from app.db.enums import FriesDimension
+from app.db.enums import FriesDimension, ProbeEvaluationStatus
 from app.probes.base import ProbeContext
 from app.probes.fairness import FairnessProbe
 from app.probes.fairness_metrics import (
@@ -109,6 +109,7 @@ def test_probe_toy_output_and_needs_human_review() -> None:
     assert out.metric_values["subgroup_f1_spread"] == pytest.approx(1 / 3, abs=1e-5)
     assert "insufficient_slice_size" in out.flags
     assert out.confidence < 0.85
+    assert out.status is ProbeEvaluationStatus.EVALUATED
     assert len(store.puts) == 1
     assert store.puts[0].probe_name == "fairness"
 
@@ -143,6 +144,9 @@ def test_unsupported_modality_skips_sentiment_fairness() -> None:
     out = FairnessProbe().run(ctx)
     assert "unsupported_modality" in out.flags
     assert "metrics_skipped" in out.flags
+    assert out.status is ProbeEvaluationStatus.NOT_APPLICABLE
+    assert out.status_reason
+    assert out.metric_values["probe_status"] == "NOT_APPLICABLE"
     assert out.metric_values["demographic_parity_difference"] is None
     assert out.metric_values["proposed_mapping"] is False
     assert out.metric_values["needs_human_review"] is False
@@ -154,6 +158,8 @@ def test_unknown_dataset_skips() -> None:
     out = FairnessProbe().run(ctx)
     assert "dataset_load_failed" in out.flags
     assert out.metric_values["skip_reason"]
+    assert out.status is ProbeEvaluationStatus.FAILED
+    assert out.status_reason
 
 
 def test_loader_failure_soft_skip() -> None:
@@ -166,6 +172,8 @@ def test_loader_failure_soft_skip() -> None:
     out = FairnessProbe(loader=_boom).run(ctx)
     assert "dataset_load_failed" in out.flags
     assert "metrics_skipped" in out.flags
+    assert out.status is ProbeEvaluationStatus.FAILED
+    assert out.status_reason
     assert len(out.evidence_refs) == 1
     assert len(store.puts) == 1
 
@@ -180,9 +188,28 @@ def test_missing_sensitive_flag() -> None:
     out = FairnessProbe(loader=_boom).run(ctx)
     assert "missing_sensitive_attribute" in out.flags
     assert "dataset_load_failed" in out.flags
+    assert out.status is ProbeEvaluationStatus.FAILED
+    assert out.status_reason
 
 
-def test_evidence_store_error_propagates() -> None:
+def test_predictor_failure_is_failed() -> None:
+    def _boom(_rows, *, seed: int):
+        raise RuntimeError("sklearn missing")
+
+    ctx, _ = _ctx(
+        probe_config=ProbeConfigV1(datasets={"fairness": "adult_fairness"}),
+    )
+    out = FairnessProbe(
+        loader=lambda *_a, **_k: [
+            {"label": 1, "sensitive": "A", "features": {"x": 1.0}},
+            {"label": 0, "sensitive": "B", "features": {"x": 0.0}},
+        ],
+        predictor=_boom,
+    ).run(ctx)
+    assert "predictor_failed" in out.flags
+    assert "metrics_skipped" in out.flags
+    assert out.status is ProbeEvaluationStatus.FAILED
+    assert out.metric_values["probe_status"] == "FAILED"
     ctx, _ = _ctx(
         store=_BoomStore(),
         probe_config=ProbeConfigV1(datasets={"fairness": "adult_fairness"}),

@@ -13,7 +13,7 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any, Literal, Protocol
 
-from app.db.enums import FriesDimension
+from app.db.enums import FriesDimension, ProbeEvaluationStatus
 
 METHODOLOGY_STATUS: Literal["PROPOSED_REQUIRES_VALIDATION"] = (
     "PROPOSED_REQUIRES_VALIDATION"
@@ -39,17 +39,22 @@ class AgentContext:
     confidence_summary: dict[str, Any] | None = None
 
 
-@dataclass
+@dataclass(kw_only=True)
 class AspectOSD:
-    """Proposed O/S/D for one FRIES dimension (0..10 ints, higher = safer)."""
+    """Proposed O/S/D for one FRIES dimension (0..10 ints, higher = safer).
+
+    O/S/D are integers when evidence supports a heuristic band, or ``None``
+    when the agent abstains (missing/skipped evidence — never a fake triple).
+    """
 
     aspect: FriesDimension
-    O: int
-    S: int
-    D: int
     confidence: float
     rationale: str
+    O: int | None = None
+    S: int | None = None
+    D: int | None = None
     evidence_refs: list[dict[str, Any]] = field(default_factory=list)
+    status: ProbeEvaluationStatus | None = None
 
 
 @dataclass

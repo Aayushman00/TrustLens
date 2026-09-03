@@ -10,6 +10,39 @@ from app.schemas.evidence import EvidenceRef
 from app.storage.evidence_store import EvidenceStoreError, format_sha256, hashes_equal
 
 
+def patch_evaluated_robustness(monkeypatch: object) -> None:
+    """Make RobustnessProbe produce EVALUATED metrics without torch/Hub.
+
+    Default pipeline models have no text-classification metadata, so robustness
+    is NOT_APPLICABLE and Autonomous FRIES is withheld. Suites that still need
+    a complete five-aspect FRIES (reports, leaderboard, review) opt into this.
+    """
+    from app.probes.robustness_nlp import RobustnessRunResult
+
+    monkeypatch.setattr(  # type: ignore[union-attr]
+        "app.probes.robustness._is_text_classification",
+        lambda _meta: True,
+    )
+    monkeypatch.setattr(  # type: ignore[union-attr]
+        "app.probes.robustness.load_pinned_subset",
+        lambda *_a, **_k: [{"text": "hello", "label": 0}] * 16,
+    )
+
+    def _run(self, **kwargs):  # noqa: ANN001, ANN003
+        return RobustnessRunResult(
+            clean_accuracy=0.9,
+            robust_accuracy=0.8,
+            attack_success_rate=0.1,
+            n_samples=16,
+            n_evaluated=16,
+        )
+
+    monkeypatch.setattr(  # type: ignore[union-attr]
+        "app.probes.robustness.TransformersCharSwapRunner.run",
+        _run,
+    )
+
+
 class FakeEvidenceStore:
     """Minimal store matching EvidenceStore.put/get/verify for unit tests."""
 

@@ -13,7 +13,7 @@ from typing import Any, Protocol
 
 from app.datasets.loader import DatasetLoadError, load_fairness_subset
 from app.datasets.registry import get_dataset_spec
-from app.db.enums import FriesDimension
+from app.db.enums import FriesDimension, ProbeEvaluationStatus
 from app.probes.base import ProbeContext, ProbeOutput
 from app.probes.fairness_metrics import compute_fairness_bundle
 from app.storage.evidence_store import EvidenceStoreError
@@ -179,14 +179,14 @@ class FairnessProbe:
             spec = get_dataset_spec(logical_key)
         except KeyError:
             flags.extend(["dataset_load_failed", "metrics_skipped"])
+            skip_reason = f"unknown dataset logical_key={logical_key}"
             return self._finish(
                 ctx,
-                metrics={
-                    **base_metrics,
-                    "skip_reason": f"unknown dataset logical_key={logical_key}",
-                },
+                metrics={**base_metrics, "skip_reason": skip_reason},
                 flags=flags,
                 confidence=0.35,
+                status=ProbeEvaluationStatus.FAILED,
+                status_reason=skip_reason,
             )
 
         dataset_info.update(
@@ -200,17 +200,17 @@ class FairnessProbe:
 
         if spec.modality not in {"tabular", "other"}:
             flags.extend(["unsupported_modality", "metrics_skipped"])
+            skip_reason = (
+                f"modality={spec.modality} "
+                "(tabular Adult path only; SST-2 is not used for DP/EO)"
+            )
             return self._finish(
                 ctx,
-                metrics={
-                    **base_metrics,
-                    "skip_reason": (
-                        f"modality={spec.modality} "
-                        "(tabular Adult path only; SST-2 is not used for DP/EO)"
-                    ),
-                },
+                metrics={**base_metrics, "skip_reason": skip_reason},
                 flags=flags,
                 confidence=0.4,
+                status=ProbeEvaluationStatus.NOT_APPLICABLE,
+                status_reason=skip_reason,
             )
 
         try:
@@ -232,15 +232,20 @@ class FairnessProbe:
                 metrics={**base_metrics, "skip_reason": str(exc)},
                 flags=flags,
                 confidence=0.35,
+                status=ProbeEvaluationStatus.FAILED,
+                status_reason=str(exc),
             )
 
         if not rows:
             flags.extend(["dataset_load_failed", "metrics_skipped"])
+            skip_reason = "empty fairness subset"
             return self._finish(
                 ctx,
-                metrics={**base_metrics, "skip_reason": "empty fairness subset"},
+                metrics={**base_metrics, "skip_reason": skip_reason},
                 flags=flags,
                 confidence=0.35,
+                status=ProbeEvaluationStatus.FAILED,
+                status_reason=skip_reason,
             )
 
         y_true = [int(r["label"]) for r in rows]
@@ -259,19 +264,24 @@ class FairnessProbe:
                 },
                 flags=flags,
                 confidence=0.35,
+                status=ProbeEvaluationStatus.FAILED,
+                status_reason=str(exc),
             )
 
         if len(y_pred) != len(rows):
             flags.extend(["predictor_failed", "metrics_skipped"])
+            skip_reason = "predictor returned wrong length"
             return self._finish(
                 ctx,
                 metrics={
                     **base_metrics,
                     "n_samples": len(rows),
-                    "skip_reason": "predictor returned wrong length",
+                    "skip_reason": skip_reason,
                 },
                 flags=flags,
                 confidence=0.35,
+                status=ProbeEvaluationStatus.FAILED,
+                status_reason=skip_reason,
             )
 
         try:
@@ -287,6 +297,8 @@ class FairnessProbe:
                 },
                 flags=flags,
                 confidence=0.4,
+                status=ProbeEvaluationStatus.FAILED,
+                status_reason=str(exc),
             )
 
         if int(bundle["min_group_n_observed"]) < min_group_n:
@@ -303,7 +315,13 @@ class FairnessProbe:
             "needs_human_review": True,
         }
         confidence = 0.75 if "insufficient_slice_size" in flags else 0.85
-        return self._finish(ctx, metrics=metrics, flags=flags, confidence=confidence)
+        return self._finish(
+            ctx,
+            metrics=metrics,
+            flags=flags,
+            confidence=confidence,
+            status=ProbeEvaluationStatus.EVALUATED,
+        )
 
     def _finish(
         self,
@@ -312,6 +330,8 @@ class FairnessProbe:
         metrics: dict[str, Any],
         flags: list[str],
         confidence: float,
+        status: ProbeEvaluationStatus = ProbeEvaluationStatus.EVALUATED,
+        status_reason: str | None = None,
     ) -> ProbeOutput:
         artifact = {
             "probe": "fairness",
@@ -337,6 +357,8 @@ class FairnessProbe:
             "proposed_mapping": False,
             "needs_human_review": bool(metrics.get("needs_human_review")),
             "note": _NOTE,
+            "probe_status": status.value,
+            "probe_status_reason": status_reason,
         }
         try:
             ref = ctx.evidence_store.put_artifact(
@@ -347,10 +369,17 @@ class FairnessProbe:
             )
         except EvidenceStoreError:
             raise
+        persisted = {
+            **metrics,
+            "probe_status": status.value,
+            "probe_status_reason": status_reason,
+        }
         return ProbeOutput(
             dimension=FriesDimension.FAIRNESS,
-            metric_values=metrics,
+            metric_values=persisted,
             confidence=confidence,
             evidence_refs=[ref],
             flags=flags,
+            status=status,
+            status_reason=status_reason,
         )

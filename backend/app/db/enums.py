@@ -32,3 +32,12 @@ class FriesDimension(str, enum.Enum):
     INTEGRITY = "INTEGRITY"
     EXPLAINABILITY = "EXPLAINABILITY"
     SAFETY = "SAFETY"
+
+
+class ProbeEvaluationStatus(str, enum.Enum):
+    EVALUATED = "EVALUATED"
+    INSUFFICIENT_EVIDENCE = "INSUFFICIENT_EVIDENCE"
+    NOT_APPLICABLE = "NOT_APPLICABLE"
+    SKIPPED = "SKIPPED"
+    FAILED = "FAILED"
+    PROXY = "PROXY"

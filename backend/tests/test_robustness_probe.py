@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from app.db.enums import FriesDimension
+from app.db.enums import FriesDimension, ProbeEvaluationStatus
 from app.probes.base import ProbeContext
 from app.probes.robustness import RobustnessProbe
 from app.probes.robustness_nlp import RobustnessRunResult
@@ -92,6 +92,7 @@ def test_fake_runner_accuracies_and_degradation(monkeypatch: pytest.MonkeyPatch)
     assert store.puts[0].probe_name == "robustness"
     assert runner.calls and runner.calls[0]["max_changes"] == 3
     assert runner.calls[0]["seed"] == 42
+    assert out.status is ProbeEvaluationStatus.EVALUATED
 
 
 def test_unsupported_modality_skips() -> None:
@@ -99,6 +100,9 @@ def test_unsupported_modality_skips() -> None:
     out = RobustnessProbe(runner=_FakeRunner()).run(ctx)
     assert "unsupported_modality" in out.flags
     assert "attack_skipped" in out.flags
+    assert out.status is ProbeEvaluationStatus.NOT_APPLICABLE
+    assert out.status_reason
+    assert out.metric_values["probe_status"] == "NOT_APPLICABLE"
     assert out.confidence <= 0.5
     assert out.metric_values["clean_accuracy"] is None
     assert out.metric_values["proposed_mapping"] is False
@@ -112,6 +116,7 @@ def test_vision_dataset_unsupported() -> None:
     )
     out = RobustnessProbe(runner=_FakeRunner()).run(ctx)
     assert "unsupported_modality" in out.flags
+    assert out.status is ProbeEvaluationStatus.NOT_APPLICABLE
     assert out.metric_values["dataset"]["logical_key"] == "cifar10_subset"
 
 
@@ -125,6 +130,20 @@ def test_attack_budget_flows_into_metrics(monkeypatch: pytest.MonkeyPatch) -> No
     assert out.metric_values["epsilon"] == 0.05
     assert out.metric_values["max_changes"] == 5
     assert out.metric_values["seed"] == 7
+
+
+def test_model_load_failure_is_failed(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "app.probes.robustness.load_pinned_subset",
+        lambda *_a, **_k: [{"text": "x", "label": 0}] * 10,
+    )
+    ctx, _ = _ctx()
+    out = RobustnessProbe(runner=_FakeRunner(error=RuntimeError("no weights"))).run(ctx)
+    assert "model_load_failed" in out.flags
+    assert "attack_skipped" in out.flags
+    assert out.status is ProbeEvaluationStatus.FAILED
+    assert out.metric_values["probe_status"] == "FAILED"
+    assert out.metric_values["clean_accuracy"] is None
 
 
 def test_evidence_store_error_propagates(monkeypatch: pytest.MonkeyPatch) -> None:

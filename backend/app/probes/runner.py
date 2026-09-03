@@ -97,10 +97,14 @@ def run_all_probes(
             flags=output.flags,
             evidence_refs=output.evidence_refs,
         )
-        output.metric_values = {
+        persisted_metrics = {
             **output.metric_values,
             "confidence_factors": dim_conf.factors.model_dump(),
+            "probe_status": output.status.value,
         }
+        if output.status_reason:
+            persisted_metrics["probe_status_reason"] = output.status_reason
+        output.metric_values = persisted_metrics
         output.confidence = dim_conf.confidence
         probes_repo.create(
             evaluation_id=payload.evaluation_id,

@@ -18,6 +18,12 @@ from tests.fakes import FakeEvidenceStore
 
 
 @pytest.fixture(autouse=True)
+def _complete_robustness(evaluated_robustness: None) -> None:
+    """These journeys assert a full FRIES number; supply EVALUATED robustness."""
+    return
+
+
+@pytest.fixture(autouse=True)
 def _skip_enqueue(monkeypatch: pytest.MonkeyPatch) -> None:
     """Avoid Redis during API create; lifecycle tests invoke the pipeline directly."""
     monkeypatch.setattr(

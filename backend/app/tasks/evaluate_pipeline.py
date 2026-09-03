@@ -9,8 +9,12 @@ science) and persists ``osd_agent_outputs``. Mode branch:
 
 - ``AI_ASSISTED``  → AWAITING_REVIEW; **no** ``final_scores`` (human finalize
   is Phase 18).
-- ``AI_AUTONOMOUS`` → agent O/S/D treated as finalized for the product path →
-  pure FRIESScorer → upsert ``final_scores`` → FINALIZED.
+- ``AI_AUTONOMOUS`` → when all five aspects have complete O/S/D, treat the
+  agent output as finalized → pure FRIESScorer → upsert ``final_scores`` →
+  FINALIZED. If any aspect abstained (null O/S/D), scoring is withheld:
+  no ``final_scores`` row and no overall FRIES number; the evaluation still
+  reaches FINALIZED so the run is complete. Partial/withheld is recorded on
+  ``osd_agent_outputs.ai_suggestion``.
 
 Logic errors anywhere (missing eval, model_ref mismatch, probe/agent/scorer
 failure) set FAILED and return without raising so Celery does not retry them.
@@ -33,6 +37,7 @@ from app.db.repositories.probe_result import ProbeResultRepository
 from app.osd.agent import HeuristicOSDAgent
 from app.osd.base import AgentContext, AgentResult, ProbeSnapshot
 from app.osd.serialize import (
+    FRIES_ASPECT_COUNT,
     to_ai_suggestion,
     to_evidence_used,
     to_finalized_osd,
@@ -225,10 +230,25 @@ def run_evaluation_pipeline(
         )
         return
 
-    # Autonomous: agent suggestion becomes the finalized O/S/D for the product
-    # path (still labeled PROPOSED_REQUIRES_VALIDATION) → pure FRIES scorer.
+    # Autonomous: complete O/S/D → FRIES; incomplete evidence → withhold score.
     try:
         finalized_osd = to_finalized_osd(agent_result)
+        complete_n = int(finalized_osd.get("complete_aspect_count") or 0)
+        if complete_n < FRIES_ASPECT_COUNT:
+            evals.transition_status(
+                payload.evaluation_id,
+                expected=EvaluationStatus.AGENT_COMPLETED,
+                new=EvaluationStatus.FINALIZED,
+            )
+            logger.info(
+                "pipeline_fries_scoring_withheld evaluation_id=%s "
+                "complete_aspects=%s/%s probe_count=%s",
+                payload.evaluation_id,
+                complete_n,
+                FRIES_ASPECT_COUNT,
+                len(outputs),
+            )
+            return
         fries = score_from_finalized_osd(finalized_osd)
         FinalScoreRepository(session).upsert(
             evaluation_id=payload.evaluation_id,

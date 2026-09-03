@@ -10,7 +10,7 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
-from app.db.enums import FriesDimension
+from app.db.enums import FriesDimension, ProbeEvaluationStatus
 from app.schemas.evidence import EvidenceRef
 from app.schemas.probe_config import ProbeConfigV1
 from app.storage.evidence_store import EvidenceStore
@@ -43,6 +43,9 @@ class ProbeOutput:
     confidence: float
     evidence_refs: list[EvidenceRef]
     flags: list[str] = field(default_factory=list)
+    status: ProbeEvaluationStatus = ProbeEvaluationStatus.EVALUATED
+    status_reason: str | None = None
+    error_message: str | None = None
 
 
 class Probe(Protocol):

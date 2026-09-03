@@ -12,7 +12,7 @@ from typing import Any
 
 from app.datasets.loader import DatasetLoadError, load_pinned_subset
 from app.datasets.registry import get_dataset_spec
-from app.db.enums import FriesDimension
+from app.db.enums import FriesDimension, ProbeEvaluationStatus
 from app.probes.base import ProbeContext, ProbeOutput
 from app.probes.robustness_nlp import RobustnessRunner, TransformersCharSwapRunner
 from app.storage.evidence_store import EvidenceStoreError
@@ -129,14 +129,14 @@ class RobustnessProbe:
             spec = get_dataset_spec(logical_key)
         except KeyError:
             flags.extend(["dataset_load_failed", "attack_skipped"])
+            skip_reason = f"unknown dataset logical_key={logical_key}"
             return self._finish(
                 ctx,
-                metrics={
-                    **base_metrics,
-                    "skip_reason": f"unknown dataset logical_key={logical_key}",
-                },
+                metrics={**base_metrics, "skip_reason": skip_reason},
                 flags=flags,
                 confidence=0.35,
+                status=ProbeEvaluationStatus.FAILED,
+                status_reason=skip_reason,
             )
 
         dataset_info.update(
@@ -150,27 +150,27 @@ class RobustnessProbe:
 
         if spec.modality != "nlp":
             flags.extend(["unsupported_modality", "attack_skipped"])
+            skip_reason = f"modality={spec.modality} (NLP path only)"
             return self._finish(
                 ctx,
-                metrics={
-                    **base_metrics,
-                    "skip_reason": f"modality={spec.modality} (NLP path only)",
-                },
+                metrics={**base_metrics, "skip_reason": skip_reason},
                 flags=flags,
                 confidence=0.4,
+                status=ProbeEvaluationStatus.NOT_APPLICABLE,
+                status_reason=skip_reason,
             )
 
         meta = ctx.model_metadata or {}
         if not _is_text_classification(meta):
             flags.extend(["unsupported_modality", "attack_skipped"])
+            skip_reason = "model is not text-classification / sentiment"
             return self._finish(
                 ctx,
-                metrics={
-                    **base_metrics,
-                    "skip_reason": "model is not text-classification / sentiment",
-                },
+                metrics={**base_metrics, "skip_reason": skip_reason},
                 flags=flags,
                 confidence=0.4,
+                status=ProbeEvaluationStatus.NOT_APPLICABLE,
+                status_reason=skip_reason,
             )
 
         try:
@@ -185,6 +185,8 @@ class RobustnessProbe:
                 metrics={**base_metrics, "skip_reason": str(exc)},
                 flags=flags,
                 confidence=0.35,
+                status=ProbeEvaluationStatus.FAILED,
+                status_reason=str(exc),
             )
 
         if len(samples) < 8:
@@ -208,6 +210,8 @@ class RobustnessProbe:
                 metrics={**base_metrics, "n_samples": len(samples), "skip_reason": str(exc)},
                 flags=flags,
                 confidence=0.35,
+                status=ProbeEvaluationStatus.FAILED,
+                status_reason=str(exc),
             )
 
         clean = round(result.clean_accuracy, 4)
@@ -224,7 +228,13 @@ class RobustnessProbe:
         confidence = 0.85
         if "thin_sample" in flags:
             confidence = 0.7
-        return self._finish(ctx, metrics=metrics, flags=flags, confidence=confidence)
+        return self._finish(
+            ctx,
+            metrics=metrics,
+            flags=flags,
+            confidence=confidence,
+            status=ProbeEvaluationStatus.EVALUATED,
+        )
 
     def _hf_token(self) -> str | None:
         try:
@@ -241,6 +251,8 @@ class RobustnessProbe:
         metrics: dict[str, Any],
         flags: list[str],
         confidence: float,
+        status: ProbeEvaluationStatus = ProbeEvaluationStatus.EVALUATED,
+        status_reason: str | None = None,
     ) -> ProbeOutput:
         artifact = {
             "probe": "robustness",
@@ -274,10 +286,17 @@ class RobustnessProbe:
             )
         except EvidenceStoreError:
             raise
+        persisted = {
+            **metrics,
+            "probe_status": status.value,
+            "probe_status_reason": status_reason,
+        }
         return ProbeOutput(
             dimension=FriesDimension.ROBUSTNESS,
-            metric_values=metrics,
+            metric_values=persisted,
             confidence=confidence,
             evidence_refs=[ref],
             flags=flags,
+            status=status,
+            status_reason=status_reason,
         )

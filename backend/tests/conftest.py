@@ -27,6 +27,7 @@ from app.core.security import hash_password
 from app.db.enums import UserRole
 from app.db.models import User
 from app.db.repositories.user import UserRepository
+from tests.fakes import patch_evaluated_robustness
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 
@@ -149,6 +150,12 @@ def auth_headers_for(api_client: "TestClient", email: str, password: str) -> dic
     response = api_client.post("/v1/auth/login", json={"email": email, "password": password})
     assert response.status_code == 200, response.text
     return {"Authorization": f"Bearer {response.json()['access_token']}"}
+
+
+@pytest.fixture
+def evaluated_robustness(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Opt-in: robustness probe emits EVALUATED accuracies (complete FRIES path)."""
+    patch_evaluated_robustness(monkeypatch)
 
 
 @pytest.fixture
