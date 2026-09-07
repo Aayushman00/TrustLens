@@ -1,8 +1,8 @@
 """Report v1 schemas (Phase 19, ADR 0009) — canonical JSON + API response.
 
 The JSON document is the canonical report; the PDF is a projection rendered
-from the same JSON. Every report is mode-labeled and reuses the locked
-Phase 17/18 disclaimer wording — AI-proposed O/S/D is never ground truth.
+from the same JSON. Provenance language must match the assessment engine
+(deterministic abstention vs legacy heuristic) — not an implied LLM.
 """
 
 from __future__ import annotations
@@ -15,14 +15,12 @@ from pydantic import BaseModel, Field
 
 from app.db.enums import EvaluationMode, EvaluationStatus, FriesDimension
 from app.schemas.confidence import ConfidenceSummary
-from app.schemas.modes import ModeDisclosure
+from app.schemas.modes import ModeDisclosure, SCORE_NOTE_LEGACY
 
 REPORT_SCHEMA_VERSION = "report_v1"
 SCORE_TYPE_ORIGINAL_FRIES = "original_FRIES"
-SCORE_NOTE = (
-    "Original FRIES computed from finalized O/S/D — not FRIES2; AI-proposed "
-    "O/S/D is not ground truth."
-)
+# Default note is the legacy-heuristic wording; builder overrides from engine.
+SCORE_NOTE = SCORE_NOTE_LEGACY
 
 
 class ReportEvaluation(BaseModel):

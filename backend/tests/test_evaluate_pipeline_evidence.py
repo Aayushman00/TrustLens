@@ -77,7 +77,9 @@ def test_pipeline_writes_evidence_ref(db_session: Session) -> None:
         assert row.confidence == factors["combined"]
         if expected_dim.value == "INTEGRITY":
             assert "checks" in row.metric_values
-            assert "integrity_score_0_10" in row.metric_values
+            assert "integrity_score_0_10" not in row.metric_values
+            assert row.metric_values.get("proposed_mapping") is False
+            assert row.metric_values.get("osd_proposals") == []
             assert row.metric_values.get("stub") is not True
         elif expected_dim.value == "ROBUSTNESS":
             assert row.metric_values.get("stub") is not True

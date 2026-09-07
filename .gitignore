@@ -183,4 +183,5 @@ document.md
 papers/
 implementation/
 scripts/
-
+docs/TRUSTLENS_*.md
+configs/supported_*.yaml

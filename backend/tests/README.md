@@ -8,20 +8,14 @@ when available, and tests that need it **skip cleanly** when it is not.
 
 | What | Command | Needs |
 |------|---------|-------|
-| Unit-only (DB tests auto-skip) | `python -m pytest -q` | nothing |
-| Full suite (unit + API + lifecycle) | set `DATABASE_URL`, then `python -m pytest -q` | Postgres |
+| Unit-only (DB tests auto-skip) | `python -m pytest -q -m "not integration and not lifecycle and not slow"` | venv + `pip install -e ".[dev]"` |
+| Full suite (unit + API + lifecycle) | `python -m pytest -q -m "not integration"` | Postgres + root `.env` |
 | Skip destructive migration tests | `python -m pytest -q -m "not slow"` | Postgres |
 | Lifecycle regression pack only | `python -m pytest -q -m lifecycle` | Postgres |
 | Live Hub import (network) | `$env:TRUSTLENS_LIVE_TESTS='1'; python -m pytest -q -m integration` | network + Postgres |
 | What CI runs | `python -m pytest -q -m "not integration"` | Postgres service |
 
-Against the Compose Postgres from the host (conftest rewrites `@postgres:` to
-`@127.0.0.1:` automatically):
-
-```powershell
-$env:DATABASE_URL = 'postgresql+psycopg2://trustlens:trustlens@127.0.0.1:5432/trustlens'
-cd backend; python -m pytest -q
-```
+Pytest loads the repo-root `.env` automatically and rewrites `@postgres:` → `@127.0.0.1:` for host-side runs. See [docs/LOCAL_DEVELOPMENT.md](../../docs/LOCAL_DEVELOPMENT.md).
 
 ## Markers
 

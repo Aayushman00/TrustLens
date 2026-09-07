@@ -155,8 +155,9 @@ export default function ModelDetailPage() {
                   onChange={() => setMode("AI_AUTONOMOUS")}
                 />
                 <span>
-                  AI-Autonomous — finalizes automatically from agent O/S/D; results are
-                  marked <em>not human-reviewed</em>.
+                  Auto-finalize (no human review) — pipeline completes without a
+                  reviewer. Default engine is deterministic: O/S/D are not generated
+                  and FRIES is withheld. Results are marked <em>not human-reviewed</em>.
                 </span>
               </label>
               <label className="radio-row">
@@ -167,8 +168,10 @@ export default function ModelDetailPage() {
                   onChange={() => setMode("AI_ASSISTED")}
                 />
                 <span>
-                  AI-Assisted — pauses at <em>awaiting review</em>; a reviewer accepts or
-                  edits the agent O/S/D before finalize.
+                  Human review before finalize — pauses at <em>awaiting review</em>.
+                  A reviewer records human-controlled S (deterministic) or edits
+                  heuristic O/S/D (legacy admin path) before finalize. This is not
+                  LLM interpretation.
                 </span>
               </label>
             </div>
@@ -196,7 +199,8 @@ export default function ModelDetailPage() {
               {creating ? "Creating…" : "Create evaluation"}
             </button>
             <span className="field-hint">
-              Probe config uses server defaults; all five FRIES probes run.
+              Probe config uses server defaults (deterministic). All five probes run
+              as evidence, not as a FRIES score.
             </span>
           </form>
         </div>

@@ -109,7 +109,8 @@ def test_probe_toy_output_and_needs_human_review() -> None:
     assert out.metric_values["subgroup_f1_spread"] == pytest.approx(1 / 3, abs=1e-5)
     assert "insufficient_slice_size" in out.flags
     assert out.confidence < 0.85
-    assert out.status is ProbeEvaluationStatus.EVALUATED
+    assert out.status is ProbeEvaluationStatus.PROXY
+    assert "proxy_lr" in out.flags
     assert len(store.puts) == 1
     assert store.puts[0].probe_name == "fairness"
 
@@ -239,3 +240,18 @@ def test_normalize_fairness_row_adult_shape() -> None:
     assert "sex" not in normalized["features"]
     assert "class" not in normalized["features"]
     assert normalized["features"]["age"] == 39
+
+
+def test_default_fairness_labels_proxy_lr() -> None:
+    rows = [
+        {"label": 1, "sensitive": "A", "features": {"x": 1.0}},
+        {"label": 0, "sensitive": "B", "features": {"x": 0.0}},
+    ]
+    ctx, _ = _ctx(probe_config=ProbeConfigV1(datasets={"fairness": "adult_fairness"}))
+    out = FairnessProbe(
+        loader=lambda *_a, **_k: rows,
+        predictor=lambda _r, *, seed: [1, 0],
+    ).run(ctx)
+    assert out.metric_values["fairness_mode"] == "proxy_lr"
+    assert out.metric_values["predictor"] == "sklearn_logistic_regression"
+    assert out.status is ProbeEvaluationStatus.PROXY

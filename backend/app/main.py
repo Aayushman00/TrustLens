@@ -54,15 +54,13 @@ def create_app() -> FastAPI:
         title="TrustLens API",
         version="0.20.1",
         description=(
-            "Phase 22 — Opt-in leaderboard (ADR 0013): evaluations are private by "
-            "default; POST /v1/evaluations/{id}/publish (owner/admin, FINALIZED "
-            "only, idempotent) opts a result in and /unpublish revokes it — "
-            "finalize never auto-publishes. GET /v1/leaderboard lists only "
-            "published finals sorted by original FRIES score, with task/dataset/"
-            "evaluation_mode filters, cursor pagination, report URIs, and a "
-            "non-comparability note when no task filter is given (no universal "
-            "cross-task trust ranking). Next: Phase 23 frontend demo UI; "
-            "Phases 20-21 attack sim are post-MVP."
+            "TrustLens v1 API — local-first ML evaluation. Default assessment "
+            "engine is deterministic: probes emit evidence; O/S/D are not generated "
+            "without a validated mapping; FRIES is withheld unless complete O/S/D "
+            "exist (legacy_heuristic is admin-only). Evaluation modes AI_AUTONOMOUS "
+            "and AI_ASSISTED are human-review workflow flags, not LLM interpretation. "
+            "GET /v1/leaderboard lists only published evaluations that have an original "
+            "FRIES score (not a universal trust ranking)."
         ),
         lifespan=lifespan,
     )

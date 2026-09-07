@@ -3,9 +3,9 @@
 No Celery dependency. The worker task wraps this; backend tests call it directly.
 Does not download HF weights.
 
-Phase 16: after PROBES_COMPLETED the HeuristicOSDAgent proposes per-aspect
-O/S/D (**PROPOSED / REQUIRES VALIDATION** — never presented as validated
-science) and persists ``osd_agent_outputs``. Mode branch:
+Phase 16+: after PROBES_COMPLETED the O/S/D mapper proposes per-aspect
+representation. Default ``assessment_engine=deterministic`` abstains O/S/D;
+``legacy_heuristic`` uses HeuristicOSDAgent (versioned legacy).
 
 - ``AI_ASSISTED``  → AWAITING_REVIEW; **no** ``final_scores`` (human finalize
   is Phase 18).
@@ -36,6 +36,7 @@ from app.db.repositories.osd_agent_output import OsdAgentOutputRepository
 from app.db.repositories.probe_result import ProbeResultRepository
 from app.osd.agent import HeuristicOSDAgent
 from app.osd.base import AgentContext, AgentResult, ProbeSnapshot
+from app.osd.deterministic import DeterministicOSDMapper, resolve_assessment_engine
 from app.osd.serialize import (
     FRIES_ASPECT_COUNT,
     to_ai_suggestion,
@@ -57,8 +58,9 @@ def _run_osd_agent(
     payload: EvaluateModelPayload,
     *,
     model_metadata: dict,
+    probe_config: dict | None = None,
 ) -> AgentResult:
-    """Propose PROPOSED O/S/D from persisted probe rows and persist the row."""
+    """Propose O/S/D representation from persisted probe rows and persist."""
     probe_rows = ProbeResultRepository(session).list_for_evaluation(payload.evaluation_id)
     snapshots = [
         ProbeSnapshot(
@@ -76,7 +78,9 @@ def _run_osd_agent(
         if probe_rows
         else None
     )
-    result = HeuristicOSDAgent().propose(
+    engine = resolve_assessment_engine(probe_config)
+    mapper = HeuristicOSDAgent() if engine == "legacy_heuristic" else DeterministicOSDMapper()
+    result = mapper.propose(
         AgentContext(
             evaluation_id=payload.evaluation_id,
             model_ref=payload.model_ref,
@@ -189,12 +193,16 @@ def run_evaluation_pipeline(
         new=EvaluationStatus.PROBES_COMPLETED,
     )
 
+    session.refresh(evaluation)
+    osd_probe_config = payload.probe_config or evaluation.probe_config or {}
+
     # Phase 16: O/S/D agent stage — persists a PROPOSED suggestion row.
     try:
         agent_result = _run_osd_agent(
             session,
             payload,
             model_metadata=model.model_metadata or {},
+            probe_config=osd_probe_config,
         )
     except Exception:
         logger.exception(

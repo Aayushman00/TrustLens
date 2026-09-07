@@ -33,7 +33,9 @@ def create_evaluation(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> EvaluationRead:
-    row = EvaluationService(db).create_evaluation(body, created_by=current_user.id)
+    row = EvaluationService(db).create_evaluation(
+        body, created_by=current_user.id, creator=current_user
+    )
     return EvaluationRead.model_validate(row)
 
 

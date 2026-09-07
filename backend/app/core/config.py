@@ -1,18 +1,32 @@
 """Application settings loaded from environment variables."""
 
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 JWT_SECRET_PLACEHOLDER = "change-me-phase5-placeholder"
 
+_BACKEND_ROOT = Path(__file__).resolve().parents[2]
+_REPO_ROOT = _BACKEND_ROOT.parent
+
+
+def _settings_env_files() -> tuple[str, ...]:
+    """Load repo-root ``.env`` first so native runs work from ``backend/``."""
+    candidates = (
+        _REPO_ROOT / ".env",
+        _BACKEND_ROOT / ".env",
+        Path.cwd() / ".env",
+    )
+    return tuple(str(path) for path in candidates if path.is_file())
+
 
 class Settings(BaseSettings):
     """Phase 5 settings — DB / Redis / S3 / JWT auth config."""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=_settings_env_files(),
         env_file_encoding="utf-8",
         extra="ignore",
     )

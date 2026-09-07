@@ -51,19 +51,29 @@ class ReportService:
                 "Evaluation not found",
                 details={"evaluation_id": str(evaluation_id)},
             )
-        if (
-            evaluation.status != EvaluationStatus.FINALIZED
-            or self._final_scores.get_for_evaluation(evaluation.id) is None
-        ):
+        if evaluation.status != EvaluationStatus.FINALIZED:
             raise AppError(
                 "NOT_FINALIZED",
-                "Reports are available only for FINALIZED evaluations with a final "
-                "score — finalize the evaluation first",
+                "Reports are available only after the evaluation reaches FINALIZED.",
                 status_code=409,
                 details={
                     "evaluation_id": str(evaluation.id),
                     "status": evaluation.status.value,
                     "evaluation_mode": evaluation.evaluation_mode.value,
+                },
+            )
+        if self._final_scores.get_for_evaluation(evaluation.id) is None:
+            raise AppError(
+                "NOT_FINALIZED",
+                "This evaluation is FINALIZED but FRIES scoring is withheld "
+                "because complete O/S/D are unavailable. A FRIES report cannot "
+                "be generated.",
+                status_code=409,
+                details={
+                    "evaluation_id": str(evaluation.id),
+                    "status": evaluation.status.value,
+                    "evaluation_mode": evaluation.evaluation_mode.value,
+                    "scoring_withheld": True,
                 },
             )
         return evaluation

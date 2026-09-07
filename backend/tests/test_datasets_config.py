@@ -20,6 +20,7 @@ def test_load_datasets_v1_yaml() -> None:
         "sentiment_fairness",
         "adult_fairness",
         "ag_news_robustness",
+        "sst2_robustness",
         "cifar10_subset",
     ):
         spec = cfg.datasets[key]
@@ -44,6 +45,33 @@ def test_adult_fairness_pin() -> None:
     assert spec.hf_path == "scikit-learn/adult-census-income"
     assert spec.modality == "tabular"
     assert len(spec.revision) == 40
+
+
+def test_hatexplain_fairness_pin() -> None:
+    cfg = load_datasets_config(YAML_PATH)
+    spec = get_dataset_spec("hatexplain_fairness", config=cfg)
+    assert spec.hf_path == "Hate-speech-CNERG/hatexplain"
+    assert spec.modality == "nlp"
+    assert spec.task_type == "multiclass_classification"
+    assert spec.fairness is not None
+    assert spec.fairness.default_sensitive_attribute == "target_community"
+    assert len(spec.revision) == 40
+
+
+def test_sst2_robustness_pin() -> None:
+    cfg = load_datasets_config(YAML_PATH)
+    spec = get_dataset_spec("sst2_robustness", config=cfg)
+    assert spec.hf_path == "stanfordnlp/sst2"
+    assert spec.modality == "nlp"
+    assert spec.task_type == "binary_classification"
+    assert spec.evaluation_domain == "sentiment"
+
+
+def test_ag_news_robustness_has_domain() -> None:
+    cfg = load_datasets_config(YAML_PATH)
+    spec = get_dataset_spec("ag_news_robustness", config=cfg)
+    assert spec.task_type == "multiclass_classification"
+    assert spec.evaluation_domain == "news"
 
 
 def test_get_unknown_dataset_spec() -> None:

@@ -101,7 +101,7 @@ _CARD_DATA_FALLBACKS: dict[str, tuple[str, ...]] = {
     "training_data": ("datasets", "dataset", "train_data"),
     "evaluation": ("model-index", "model_index", "eval_results", "metrics"),
     "examples": ("widget", "widget_data", "inference"),
-    "architecture": ("model_name", "base_model", "pipeline_tag"),
+    "architecture": ("model_name", "base_model"),
 }
 
 _OPEN_CLAIM_PHRASES: tuple[str, ...] = (

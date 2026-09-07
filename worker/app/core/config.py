@@ -1,13 +1,26 @@
 """Worker settings — Phase 2 Redis / S3 connectivity (no Celery tasks yet)."""
 
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_WORKER_ROOT = Path(__file__).resolve().parents[2]
+_REPO_ROOT = _WORKER_ROOT.parent
+
+
+def _settings_env_files() -> tuple[str, ...]:
+    candidates = (
+        _REPO_ROOT / ".env",
+        _WORKER_ROOT / ".env",
+        Path.cwd() / ".env",
+    )
+    return tuple(str(path) for path in candidates if path.is_file())
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=_settings_env_files(),
         env_file_encoding="utf-8",
         extra="ignore",
     )

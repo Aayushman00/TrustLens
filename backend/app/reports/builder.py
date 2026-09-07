@@ -16,6 +16,7 @@ from app.db.enums import EvaluationMode
 from app.db.models import Evaluation
 from app.db.repositories.final_score import FinalScoreRepository
 from app.db.repositories.probe_result import ProbeResultRepository
+from app.schemas.modes import osd_provenance_bullet, score_note_for
 from app.schemas.reports import (
     ExecutiveSummary,
     ReportEvaluation,
@@ -41,10 +42,12 @@ def build_executive_summary(
     dimension_scores: dict[str, Any],
     probe_flags: list[str],
     model_ref: str,
+    assessment_engine: str | None = None,
+    methodology_status: str | None = None,
 ) -> ExecutiveSummary:
     label = MODE_LABELS[mode]
     reviewed_phrase = (
-        "human-reviewed (accept/edit of agent suggestions)"
+        "human-reviewed (accept/edit of O/S/D representation)"
         if human_reviewed
         else "not human-reviewed"
     )
@@ -53,12 +56,12 @@ def build_executive_summary(
         f"({label}, {reviewed_phrase})"
     )
     bullets = [
-        f"Evaluation mode: {label}",
+        f"Evaluation mode: {label} (workflow — not LLM interpretation)",
         f"Original FRIES score: {fries_score}/10 (not FRIES2)",
         (
             "Human reviewed: yes — finalized O/S/D was human accepted/edited"
             if human_reviewed
-            else "Human reviewed: no — automated agent output, not human-reviewed"
+            else "Human reviewed: no"
         ),
     ]
     vetoed = sorted(
@@ -72,8 +75,10 @@ def build_executive_summary(
         suffix = ", …" if len(unique_flags) > len(shown) else ""
         bullets.append(f"Probe flags: {', '.join(shown)}{suffix}")
     bullets.append(
-        "AI-proposed O/S/D is not ground truth "
-        "(methodology PROPOSED_REQUIRES_VALIDATION)."
+        osd_provenance_bullet(
+            assessment_engine=assessment_engine,
+            methodology_status=methodology_status,
+        )
     )
     return ExecutiveSummary(headline=headline, bullets=bullets)
 
@@ -140,6 +145,10 @@ def build_report_json(
             dimension_scores=final_row.dimension_scores or {},
             finalized_osd=final_row.finalized_osd or {},
             overall_confidence=final_row.overall_confidence,
+            note=score_note_for(
+                assessment_engine=disclosure.assessment_engine,
+                methodology_status=disclosure.methodology_status,
+            ),
         ),
         confidence_summary=confidence_summary,
         probes=probes,
@@ -161,6 +170,8 @@ def build_report_json(
             dimension_scores=final_row.dimension_scores or {},
             probe_flags=all_flags,
             model_ref=evaluation.model.hf_repo_id,
+            assessment_engine=disclosure.assessment_engine,
+            methodology_status=disclosure.methodology_status,
         ),
     )
     return report.model_dump(mode="json")

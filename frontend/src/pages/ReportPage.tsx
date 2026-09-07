@@ -18,9 +18,20 @@ function dimensionScores(report: ReportRead): Record<string, number> | null {
   return null;
 }
 
-function executiveSummary(report: ReportRead): string | null {
+function executiveSummary(
+  report: ReportRead,
+): { headline: string; bullets: string[] } | null {
   const summary = report.report_json.executive_summary;
-  return typeof summary === "string" ? summary : null;
+  if (summary == null || typeof summary !== "object") return null;
+  const headline = (summary as { headline?: unknown }).headline;
+  const bullets = (summary as { bullets?: unknown }).bullets;
+  if (typeof headline !== "string") return null;
+  return {
+    headline,
+    bullets: Array.isArray(bullets)
+      ? bullets.filter((item): item is string => typeof item === "string")
+      : [],
+  };
 }
 
 function scoreNote(report: ReportRead): string | null {
@@ -85,9 +96,13 @@ export default function ReportPage() {
 
   if (error != null && report == null) {
     if (error instanceof ApiError && error.code === "NOT_FINALIZED") {
+      const withheld =
+        error.details.scoring_withheld === true || error.details.status === "FINALIZED";
       return (
         <div className="notice notice-info">
-          Reports exist only for finalized evaluations — this one is not finalized yet.{" "}
+          {withheld
+            ? "This evaluation is finalized, but FRIES is withheld or unavailable, so a FRIES report cannot be generated."
+            : "Reports are available only after the evaluation reaches FINALIZED."}{" "}
           <Link to={`/evaluations/${evaluationId}`}>Back to the evaluation</Link>.
         </div>
       );
@@ -145,7 +160,14 @@ export default function ReportPage() {
       {summary ? (
         <div className="card">
           <h2>Executive summary</h2>
-          <p>{summary}</p>
+          <p>{summary.headline}</p>
+          {summary.bullets.length > 0 ? (
+            <ul>
+              {summary.bullets.map((bullet) => (
+                <li key={bullet}>{bullet}</li>
+              ))}
+            </ul>
+          ) : null}
         </div>
       ) : null}
 

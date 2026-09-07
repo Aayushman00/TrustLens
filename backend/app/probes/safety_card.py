@@ -7,7 +7,8 @@ Mandatory coverage evidence (not keyword stuffing / not FRIES2 caps / not O/S/D)
 Matcher: ATX headings via ``card_markdown`` + safety-specific alias tables.
 ``ethical_considerations`` alone does **not** satisfy ``misuse_risks``.
 
-High-impact phrase ids (``detect_high_impact_claims``):
+High-impact phrase ids (``detect_high_impact_claims``) — lexical documentation
+metadata flags only; not evidence of model risk, unsafety, or harm:
 - production_ready ← production ready / production-ready / ready for production
 - healthcare ← healthcare / medical / clinical
 - finance ← finance / financial / banking
@@ -168,7 +169,7 @@ def checks_present_count(checks: dict[str, dict[str, Any]]) -> int:
 
 
 def detect_high_impact_claims(card_text: str) -> list[str]:
-    """Return matched high-impact claim ids (MVP heuristics, not NLP)."""
+    """Return matched phrase ids as lexical documentation evidence (not NLP)."""
     lower = (card_text or "").lower()
     if not lower.strip():
         return []

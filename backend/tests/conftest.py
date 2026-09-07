@@ -12,7 +12,33 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from dotenv import load_dotenv
+
 import pytest
+
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _bootstrap_test_env() -> None:
+    """Load repo-root ``.env`` and normalize Compose hostnames for host-side pytest."""
+    env_path = _REPO_ROOT / ".env"
+    if env_path.is_file():
+        load_dotenv(env_path, override=False)
+
+    db_url = os.environ.get("DATABASE_URL")
+    if db_url and "@postgres:" in db_url:
+        os.environ["DATABASE_URL"] = db_url.replace("@postgres:", "@127.0.0.1:")
+
+    redis_url = os.environ.get("REDIS_URL")
+    if redis_url and "redis://redis:" in redis_url:
+        os.environ["REDIS_URL"] = redis_url.replace("redis://redis:", "redis://127.0.0.1:")
+
+    s3_endpoint = os.environ.get("S3_ENDPOINT")
+    if s3_endpoint and "http://minio:" in s3_endpoint:
+        os.environ["S3_ENDPOINT"] = s3_endpoint.replace("http://minio:", "http://127.0.0.1:")
+
+
+_bootstrap_test_env()
 from alembic import command
 from alembic.config import Config
 from sqlalchemy import text
@@ -27,9 +53,40 @@ from app.core.security import hash_password
 from app.db.enums import UserRole
 from app.db.models import User
 from app.db.repositories.user import UserRepository
-from tests.fakes import patch_evaluated_robustness
+from tests.fakes import patch_evaluated_fairness, patch_evaluated_robustness
+
+LEGACY_HEURISTIC_PROBE_CONFIG = {
+    "schema_version": "v1",
+    "assessment_engine": "legacy_heuristic",
+}
+
+# Enough Hub metadata for Layer A Integrity/E/S so the legacy heuristic can
+# emit complete O/S/D (empty models abstain Integrity → FRIES withheld).
+def fries_complete_model_payload(hf_repo_id: str) -> dict:
+    return {
+        "hf_repo_id": hf_repo_id,
+        "revision": "a" * 40,
+        "checksum": "a" * 40,
+        "model_metadata": {
+            "license": "apache-2.0",
+            "card_text": (
+                "Model card. Intended use for research. Limitations listed. "
+                "Training data described. Evaluation on a public benchmark. "
+                "Ethical considerations. Privacy. Security. Misuse guidance."
+            ),
+            "card_data": {"license": "apache-2.0"},
+            "files": [
+                "config.json",
+                "model.safetensors",
+                "tokenizer.json",
+                "README.md",
+            ],
+        },
+    }
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
+
+get_settings.cache_clear()
 
 
 def resolve_database_url() -> str | None:
@@ -159,7 +216,20 @@ def evaluated_robustness(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture
+def evaluated_fairness(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Opt-in: fairness probe emits EVALUATED disparity metrics (complete FRIES path)."""
+    patch_evaluated_fairness(monkeypatch)
+
+
+@pytest.fixture
 def auth_headers(api_client: "TestClient", seeded_users: dict[str, tuple[User, str]]) -> dict[str, str]:
     """Bearer header for the seeded researcher — the default authenticated caller."""
     user, password = seeded_users["researcher"]
+    return auth_headers_for(api_client, user.email, password)
+
+
+@pytest.fixture
+def admin_headers(api_client: "TestClient", seeded_users: dict[str, tuple[User, str]]) -> dict[str, str]:
+    """Bearer header for the seeded admin (legacy_heuristic create path)."""
+    user, password = seeded_users["admin"]
     return auth_headers_for(api_client, user.email, password)

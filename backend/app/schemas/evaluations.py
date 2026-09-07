@@ -8,7 +8,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.db.enums import EvaluationMode, EvaluationStatus
+from app.db.enums import EvaluationMode, EvaluationStatus, FriesDimension
 from app.schemas.common import CursorPage
 from app.schemas.confidence import ConfidenceSummary
 from app.schemas.modes import ModeDisclosure
@@ -33,14 +33,36 @@ class EvaluationStatusUpdate(BaseModel):
 
 
 class ProbeProgress(BaseModel):
-    """FRIES probe completion counter (total=5 dimensions; Phase 9 stubs → 5/5)."""
+    """Probe completion counter (total=5 dimensions)."""
 
     completed: int
     total: int = 5
 
 
+class ProbeEvidenceRead(BaseModel):
+    """Layer A probe snapshot for evaluation detail — existing persisted fields only."""
+
+    dimension: FriesDimension
+    status: str | None = None
+    status_reason: str | None = None
+    methodology_version: str | None = None
+    gates: list[str] | None = None
+    risks_triggered: list[str] | None = None
+    aspect_scoring: str | None = None
+    scored_risk_id: str | None = None
+    claim_boundary: dict[str, Any] | None = None
+    limitations: list[str] | None = None
+    flags: list[str] | None = None
+    coverage_ratio: float | None = None
+    n_evaluated: int | None = None
+    fairness_mode: str | None = None
+    pairing_id: str | None = None
+    confidence: float | None = None
+    evidence_refs: list[dict[str, Any]] = Field(default_factory=list)
+
+
 class OsdAgentRead(BaseModel):
-    """Latest PROPOSED O/S/D suggestion (Phase 16) — not ground truth."""
+    """Latest O/S/D representation (deterministic abstention or legacy heuristic)."""
 
     ai_suggestion: dict[str, Any]
     ai_confidence: float | None = None
@@ -49,7 +71,7 @@ class OsdAgentRead(BaseModel):
 
 
 class FinalScoreRead(BaseModel):
-    """Original FRIES result from finalized O/S/D (Autonomous path in Phase 16)."""
+    """Original FRIES result from finalized O/S/D."""
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -57,7 +79,6 @@ class FinalScoreRead(BaseModel):
     dimension_scores: dict[str, Any]
     overall_confidence: float | None = None
     evaluation_mode: EvaluationMode
-    # Phase 17: denormalized disclosure for clients (from finalized_osd + mode).
     human_reviewed: bool = False
     disclaimer: str | None = None
 
@@ -81,15 +102,11 @@ class EvaluationRead(BaseModel):
     created_at: datetime
     updated_at: datetime
     probe_progress: ProbeProgress | None = None
-    # Phase 15: populated on detail reads only (list omits); evidence strength, not correctness.
+    probes: list[ProbeEvidenceRead] | None = None
     confidence_summary: ConfidenceSummary | None = None
-    # Phase 16: detail reads only (list omits). osd_agent is PROPOSED, not truth;
-    # final_score exists only once O/S/D is finalized (Autonomous this phase).
     osd_agent: OsdAgentRead | None = None
     final_score: FinalScoreRead | None = None
-    # Phase 17: mandatory mode/provenance disclosure on detail + finalize reads.
     mode_disclosure: ModeDisclosure | None = None
-    # Phase 18: latest human review (Assisted accept/edit); detail reads only.
     human_review: HumanReviewRead | None = None
 
 

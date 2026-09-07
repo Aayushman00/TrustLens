@@ -5,9 +5,9 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from app.db.enums import FriesDimension
+from app.db.enums import FriesDimension, ProbeEvaluationStatus
 from app.osd.agent import HeuristicOSDAgent
-from app.osd.base import METHODOLOGY_STATUS, AgentContext, ProbeSnapshot
+from app.osd.base import LEGACY_HEURISTIC_METHODOLOGY_STATUS, AgentContext, ProbeSnapshot
 from app.osd.serialize import (
     to_ai_suggestion,
     to_evidence_used,
@@ -83,7 +83,7 @@ def _full_context() -> AgentContext:
 def test_output_shape_and_labeling() -> None:
     result = HeuristicOSDAgent().propose(_full_context())
 
-    assert result.methodology_status == METHODOLOGY_STATUS
+    assert result.methodology_status == LEGACY_HEURISTIC_METHODOLOGY_STATUS
     assert result.model_ref == "org/model"
     assert [a.aspect for a in result.aspects] == list(FriesDimension)
     for aspect in result.aspects:
@@ -176,6 +176,42 @@ def test_skipped_probes_abstain_from_osd() -> None:
     assert all(a["O"] is not None for a in finalized["aspects"])
 
 
+def test_fairness_proxy_abstains_osd_even_with_metrics() -> None:
+    ctx = AgentContext(
+        evaluation_id=uuid.uuid4(),
+        model_ref="org/model",
+        model_metadata={},
+        probe_results=[
+            _snap(
+                FriesDimension.FAIRNESS,
+                {
+                    "demographic_parity_difference": 0.08,
+                    "equalized_odds_difference": 0.05,
+                    "min_group_n": 30,
+                    "min_group_n_observed": 45,
+                    "probe_status": ProbeEvaluationStatus.PROXY.value,
+                    "fairness_mode": "proxy_lr",
+                },
+                0.85,
+            ),
+            _snap(
+                FriesDimension.INTEGRITY,
+                {
+                    "checks": {n: {"pass": True} for n in "abcdef"},
+                    "pass_count": 6,
+                    "fail_count": 0,
+                },
+                1.0,
+            ),
+        ],
+    )
+    result = HeuristicOSDAgent().propose(ctx)
+    fairness = next(a for a in result.aspects if a.aspect == FriesDimension.FAIRNESS)
+    assert fairness.O is None and fairness.S is None and fairness.D is None
+    assert fairness.status is ProbeEvaluationStatus.SKIPPED
+    assert "fairness status is PROXY" in fairness.rationale
+
+
 def test_safety_high_impact_with_gaps_lowers_severity_and_detection() -> None:
     ctx = AgentContext(
         evaluation_id=uuid.uuid4(),
@@ -244,7 +280,8 @@ def test_serialization_shapes() -> None:
     result = HeuristicOSDAgent().propose(_full_context())
 
     suggestion = to_ai_suggestion(result)
-    assert suggestion["methodology_status"] == "PROPOSED_REQUIRES_VALIDATION"
+    assert suggestion["methodology_status"] == LEGACY_HEURISTIC_METHODOLOGY_STATUS
+    assert suggestion["assessment_engine"] == "legacy_heuristic"
     assert suggestion["schema_version"] == "osd-agent-v1"
     assert len(suggestion["aspects"]) == 5
     assert {a["aspect"] for a in suggestion["aspects"]} == {
@@ -256,14 +293,14 @@ def test_serialization_shapes() -> None:
     assert all(isinstance(a["O"], int) for a in suggestion["aspects"])
 
     rationale = to_rationale(result)
-    assert "PROPOSED / REQUIRES VALIDATION" in rationale
+    assert "LEGACY HEURISTIC" in rationale
 
     evidence = to_evidence_used(result)
     assert len(evidence) == 5
     assert all("aspect" in ref and "evidence_id" in ref for ref in evidence)
 
     finalized = to_finalized_osd(result)
-    assert finalized["methodology_status"] == "PROPOSED_REQUIRES_VALIDATION"
+    assert finalized["methodology_status"] == LEGACY_HEURISTIC_METHODOLOGY_STATUS
     assert finalized["source"] == "osd_agent_autonomous"
     # Phase 17: mode disclosure persists with the finalized document.
     assert finalized["human_reviewed"] is False

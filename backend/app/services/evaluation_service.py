@@ -5,15 +5,16 @@ from __future__ import annotations
 import logging
 import uuid
 from datetime import UTC, datetime
+from typing import Any
 
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
-from app.api.errors import AppError, NotFoundError, ValidationAppError
+from app.api.errors import AppError, ForbiddenError, NotFoundError, ValidationAppError
 from app.confidence.engine import ConfidenceSummary, summarize
 from app.datasets.registry import validate_probe_config_datasets
-from app.db.enums import EvaluationMode, EvaluationStatus
-from app.db.models import Evaluation, HumanReview, User
+from app.db.enums import EvaluationMode, EvaluationStatus, UserRole
+from app.db.models import Evaluation, HumanReview, ProbeResult, User
 from app.db.repositories.evaluation import EvaluationRepository
 from app.db.repositories.final_score import FinalScoreRepository
 from app.db.repositories.human_review import HumanReviewRepository
@@ -30,6 +31,7 @@ from app.schemas.evaluations import (
     EvaluationRead,
     FinalScoreRead,
     OsdAgentRead,
+    ProbeEvidenceRead,
     ProbeProgress,
 )
 from app.schemas.internal import EvaluateModelPayload
@@ -38,6 +40,8 @@ from app.schemas.modes import (
     ModeDisclosure,
     build_mode_disclosure,
     disclaimer_for,
+    engine_from_osd_payload,
+    fries_status_for,
 )
 from app.schemas.probe_config import parse_probe_config
 from app.schemas.reviews import HumanReviewRead, HumanReviewRequest
@@ -47,6 +51,66 @@ from app.tasks.celery_client import enqueue_evaluate_model
 logger = logging.getLogger("trustlens.api")
 
 FRIES_PROBE_TOTAL = 5
+
+
+def _optional_str(value: Any) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return value
+    return str(value)
+
+
+def _probe_evidence_from_row(row: ProbeResult) -> ProbeEvidenceRead:
+    metrics = row.metric_values or {}
+    reliability = metrics.get("reliability")
+    failed_gates = None
+    if isinstance(reliability, dict):
+        raw_gates = reliability.get("failed_gates")
+        if isinstance(raw_gates, list):
+            failed_gates = [str(g) for g in raw_gates]
+    flags_raw = metrics.get("flags")
+    flags = [str(f) for f in flags_raw] if isinstance(flags_raw, list) else None
+    risks_raw = metrics.get("risks_triggered")
+    risks = [str(r) for r in risks_raw] if isinstance(risks_raw, list) else None
+    limitations_raw = metrics.get("limitations")
+    limitations = (
+        [str(item) for item in limitations_raw] if isinstance(limitations_raw, list) else None
+    )
+    claim = metrics.get("claim_boundary")
+    pairing = metrics.get("pairing")
+    pairing_id = None
+    if isinstance(pairing, dict) and pairing.get("id") is not None:
+        pairing_id = str(pairing.get("id"))
+    elif isinstance(metrics.get("pairing_id"), str):
+        pairing_id = metrics.get("pairing_id")
+    n_evaluated = metrics.get("n_evaluated")
+    if not isinstance(n_evaluated, (int, float)):
+        n_evaluated = None
+    coverage = metrics.get("coverage_ratio")
+    if not isinstance(coverage, (int, float)):
+        coverage = None
+    return ProbeEvidenceRead(
+        dimension=row.dimension,
+        status=_optional_str(metrics.get("probe_status") or metrics.get("status")),
+        status_reason=_optional_str(
+            metrics.get("probe_status_reason") or metrics.get("status_reason")
+        ),
+        methodology_version=_optional_str(metrics.get("methodology_version")),
+        gates=failed_gates,
+        risks_triggered=risks,
+        aspect_scoring=_optional_str(metrics.get("aspect_scoring")),
+        scored_risk_id=_optional_str(metrics.get("scored_risk_id")),
+        claim_boundary=claim if isinstance(claim, dict) else None,
+        limitations=limitations,
+        flags=flags,
+        coverage_ratio=float(coverage) if coverage is not None else None,
+        n_evaluated=int(n_evaluated) if n_evaluated is not None else None,
+        fairness_mode=_optional_str(metrics.get("fairness_mode")),
+        pairing_id=pairing_id,
+        confidence=row.confidence,
+        evidence_refs=list(row.evidence_refs or []),
+    )
 
 
 class EvaluationService:
@@ -64,6 +128,7 @@ class EvaluationService:
         data: EvaluationCreate,
         *,
         created_by: int | None = None,
+        creator: User | None = None,
     ) -> Evaluation:
         model = self._models.get_by_id(data.model_id)
         if model is None:
@@ -85,6 +150,15 @@ class EvaluationService:
                 details={"probe_config": data.probe_config},
             ) from exc
         probe_config = probe_cfg.model_dump(mode="json")
+        if probe_config.get("assessment_engine") is None:
+            probe_config["assessment_engine"] = "deterministic"
+        if probe_config.get("assessment_engine") == "legacy_heuristic":
+            role = creator.role if creator is not None else None
+            if role != UserRole.ADMIN:
+                raise ForbiddenError(
+                    "legacy_heuristic assessment_engine is restricted to admin users",
+                    details={"assessment_engine": "legacy_heuristic"},
+                )
         row = self._evals.create(
             model_id=data.model_id,
             evaluation_mode=data.evaluation_mode,
@@ -124,6 +198,12 @@ class EvaluationService:
     def get_probe_progress(self, evaluation_id: uuid.UUID) -> ProbeProgress:
         completed = self._probes.count_for_evaluation(evaluation_id)
         return ProbeProgress(completed=completed, total=FRIES_PROBE_TOTAL)
+
+    def get_probe_evidence(self, evaluation_id: uuid.UUID) -> list[ProbeEvidenceRead]:
+        """Detail-only probe summaries from persisted rows (insertion order)."""
+        return [
+            _probe_evidence_from_row(row) for row in self._probes.list_for_evaluation(evaluation_id)
+        ]
 
     def get_confidence_summary(self, evaluation_id: uuid.UUID) -> ConfidenceSummary | None:
         """Phase 15: aggregate persisted probe confidences; None until ≥1 probe row."""
@@ -228,7 +308,9 @@ class EvaluationService:
                 status_code=409,
                 details=details,
             )
-        edits = [edit.model_dump(mode="json") for edit in body.aspects or []]
+        edits = [
+            edit.model_dump(mode="json", exclude_none=True) for edit in body.aspects or []
+        ]
         try:
             approved, human_changed = merge_review_aspects(
                 suggestion, edits, accept_all=body.accept_all
@@ -268,7 +350,11 @@ class EvaluationService:
         # Pre-Phase-17 rows lack disclosure keys — derive from mode with .get fallbacks.
         human_reviewed = bool(finalized.get("human_reviewed", False))
         disclaimer = finalized.get("disclaimer") or disclaimer_for(
-            row.evaluation_mode, human_reviewed=human_reviewed
+            row.evaluation_mode,
+            human_reviewed=human_reviewed,
+            assessment_engine=engine_from_osd_payload(finalized),
+            methodology_status=str(finalized.get("methodology_status") or "") or None,
+            scoring_withheld=finalized.get("scoring_withheld"),
         )
         read = FinalScoreRead.model_validate(row)
         return read.model_copy(
@@ -284,15 +370,30 @@ class EvaluationService:
             else False
         )
         osd_row = self._osd_outputs.latest_for_evaluation(evaluation.id)
+        suggestion = (osd_row.ai_suggestion or {}) if osd_row else {}
         methodology_status = str(
-            ((osd_row.ai_suggestion or {}) if osd_row else {}).get(
-                "methodology_status", METHODOLOGY_STATUS_PROPOSED
-            )
+            suggestion.get("methodology_status", METHODOLOGY_STATUS_PROPOSED)
         )
+        assessment_engine = engine_from_osd_payload(suggestion)
+        if assessment_engine is None:
+            cfg = evaluation.probe_config or {}
+            raw_engine = cfg.get("assessment_engine")
+            assessment_engine = raw_engine if isinstance(raw_engine, str) else None
+        scoring_withheld = suggestion.get("scoring_withheld")
+        if scoring_withheld is None and evaluation.status == EvaluationStatus.FINALIZED:
+            scoring_withheld = final_row is None
+        has_score = final_row is not None
         return build_mode_disclosure(
             evaluation_mode=evaluation.evaluation_mode,
             human_reviewed=human_reviewed,
             methodology_status=methodology_status,
+            assessment_engine=assessment_engine,
+            scoring_withheld=bool(scoring_withheld) if scoring_withheld is not None else None,
+            fries_status=fries_status_for(
+                scoring_withheld=bool(scoring_withheld) if scoring_withheld is not None else None,
+                has_final_score=has_score,
+                osd_present=bool(suggestion),
+            ),
         )
 
     def build_detail(self, evaluation: Evaluation) -> EvaluationRead:
@@ -301,6 +402,7 @@ class EvaluationService:
         return read.model_copy(
             update={
                 "probe_progress": self.get_probe_progress(evaluation.id),
+                "probes": self.get_probe_evidence(evaluation.id),
                 "confidence_summary": self.get_confidence_summary(evaluation.id),
                 "osd_agent": self.get_osd_agent(evaluation.id),
                 "final_score": self.get_final_score(evaluation.id),
@@ -327,7 +429,7 @@ class EvaluationService:
             "evaluation_mode": evaluation.evaluation_mode.value,
         }
         final_row = self._final_scores.get_for_evaluation(evaluation.id)
-        if evaluation.status == EvaluationStatus.FINALIZED and final_row is not None:
+        if evaluation.status == EvaluationStatus.FINALIZED:
             return evaluation
         if evaluation.status == EvaluationStatus.FAILED:
             raise AppError(
@@ -373,11 +475,9 @@ class EvaluationService:
         *,
         details: dict[str, str],
     ) -> Evaluation:
-        """Phase 18: human-approved O/S/D → FRIES → final_scores → FINALIZED."""
+        """Phase 18: human-approved O/S/D → FRIES when complete → FINALIZED."""
         approved = ((review.overrides or {}).get("approved_osd") or {}).get("aspects")
-        if not approved:
-            # Legacy/malformed review row (pre-Phase-18 shape) — a new structured
-            # review is the remedy, so surface the same code as "no review yet".
+        if approved is None:
             raise AppError(
                 "REVIEW_REQUIRED",
                 "Latest human review has no structured approved O/S/D — submit a "
@@ -389,14 +489,30 @@ class EvaluationService:
                     "next": f"POST /v1/evaluations/{evaluation.id}/human-review",
                 },
             )
+        agent_row = self._osd_outputs.latest_for_evaluation(evaluation.id)
+        agent_suggestion = (agent_row.ai_suggestion or {}) if agent_row else {}
         finalized_osd = to_finalized_osd_assisted(
             approved,
             human_review_id=review.id,
             reviewer_id=review.reviewer_id,
             human_changed=review.human_changed,
+            agent_suggestion=agent_suggestion,
         )
+        if finalized_osd.get("scoring_withheld"):
+            self._evals.transition_status(
+                evaluation.id,
+                expected=EvaluationStatus.AWAITING_REVIEW,
+                new=EvaluationStatus.FINALIZED,
+            )
+            logger.info(
+                "evaluation_finalized_assisted_scoring_withheld evaluation_id=%s "
+                "human_review_id=%s complete_aspects=%s",
+                evaluation.id,
+                review.id,
+                finalized_osd.get("complete_aspect_count"),
+            )
+            return self.get_evaluation(evaluation.id)
         result = score_from_finalized_osd(finalized_osd)
-        agent_row = self._osd_outputs.latest_for_evaluation(evaluation.id)
         self._final_scores.upsert(
             evaluation_id=evaluation.id,
             fries_score=result.fries_score,
@@ -411,8 +527,6 @@ class EvaluationService:
             new=EvaluationStatus.FINALIZED,
         )
         if row is None:
-            # Race: another finalize won between our status check and the
-            # transition — re-read; FINALIZED + score row is the idempotent result.
             row = self.get_evaluation(evaluation.id)
         logger.info(
             "evaluation_finalized_assisted evaluation_id=%s human_review_id=%s "

@@ -15,14 +15,17 @@ from sqlalchemy.orm import Session
 from app.db.enums import EvaluationMode
 from app.db.models import User
 from app.schemas.internal import EvaluateModelPayload
-from app.schemas.modes import ASSISTED_REVIEWED_DISCLAIMER, AUTONOMOUS_DISCLAIMER
+from app.schemas.modes import ASSISTED_REVIEWED_LEGACY_DISCLAIMER, LEGACY_AUTONOMOUS_DISCLAIMER
 from app.tasks.evaluate_pipeline import run_evaluation_pipeline
-from tests.conftest import auth_headers_for
+from tests.conftest import LEGACY_HEURISTIC_PROBE_CONFIG, auth_headers_for, fries_complete_model_payload
 from tests.fakes import FakeEvidenceStore, FakeReportStore
 
 
 @pytest.fixture(autouse=True)
-def _complete_robustness(evaluated_robustness: None) -> None:
+def _complete_fries_probes(
+    evaluated_robustness: None,
+    evaluated_fairness: None,
+) -> None:
     return
 
 
@@ -47,21 +50,25 @@ def report_store(monkeypatch: pytest.MonkeyPatch) -> FakeReportStore:
 
 def _create_and_run(
     api_client: TestClient,
-    auth_headers: dict[str, str],
+    admin_headers: dict[str, str],
     db_session: Session,
     *,
     mode: str,
 ) -> str:
     model = api_client.post(
         "/v1/models",
-        json={"hf_repo_id": f"org/report-api-{uuid.uuid4().hex[:8]}"},
-        headers=auth_headers,
+        json=fries_complete_model_payload(f"org/report-api-{uuid.uuid4().hex[:8]}"),
+        headers=admin_headers,
     )
     assert model.status_code == 201, model.text
     created = api_client.post(
         "/v1/evaluations",
-        json={"model_id": model.json()["id"], "evaluation_mode": mode},
-        headers=auth_headers,
+        json={
+            "model_id": model.json()["id"],
+            "evaluation_mode": mode,
+            "probe_config": LEGACY_HEURISTIC_PROBE_CONFIG,
+        },
+        headers=admin_headers,
     )
     assert created.status_code == 201, created.text
     eval_id = created.json()["id"]
@@ -69,6 +76,7 @@ def _create_and_run(
         evaluation_id=uuid.UUID(eval_id),
         model_ref=model.json()["hf_repo_id"],
         evaluation_mode=EvaluationMode(mode),
+        probe_config=LEGACY_HEURISTIC_PROBE_CONFIG,
     )
     run_evaluation_pipeline(db_session, payload, evidence_store=FakeEvidenceStore())
     db_session.flush()
@@ -111,11 +119,12 @@ def test_report_unknown_evaluation_404(
 def test_report_not_finalized_409(
     api_client: TestClient,
     auth_headers: dict[str, str],
+    admin_headers: dict[str, str],
     db_session: Session,
     report_store: FakeReportStore,
 ) -> None:
     # Assisted stops at AWAITING_REVIEW — no final_scores row yet.
-    eval_id = _create_and_run(api_client, auth_headers, db_session, mode="AI_ASSISTED")
+    eval_id = _create_and_run(api_client, admin_headers, db_session, mode="AI_ASSISTED")
 
     for method, url in (
         ("GET", f"/v1/reports/{eval_id}"),
@@ -132,10 +141,11 @@ def test_report_not_finalized_409(
 def test_autonomous_get_auto_generates_v1(
     api_client: TestClient,
     auth_headers: dict[str, str],
+    admin_headers: dict[str, str],
     db_session: Session,
     report_store: FakeReportStore,
 ) -> None:
-    eval_id = _create_and_run(api_client, auth_headers, db_session, mode="AI_AUTONOMOUS")
+    eval_id = _create_and_run(api_client, admin_headers, db_session, mode="AI_AUTONOMOUS")
 
     response = api_client.get(f"/v1/reports/{eval_id}", headers=auth_headers)
     assert response.status_code == 200, response.text
@@ -154,7 +164,7 @@ def test_autonomous_get_auto_generates_v1(
     assert report["report_version"] == 1
     assert report["mode_disclosure"]["evaluation_mode"] == "AI_AUTONOMOUS"
     assert report["mode_disclosure"]["human_reviewed"] is False
-    assert report["mode_disclosure"]["disclaimer"] == AUTONOMOUS_DISCLAIMER
+    assert report["mode_disclosure"]["disclaimer"] == LEGACY_AUTONOMOUS_DISCLAIMER
     assert report["score"]["score_type"] == "original_FRIES"
     assert len(report["probes"]) == 5
 
@@ -173,11 +183,12 @@ def test_autonomous_get_auto_generates_v1(
 def test_assisted_report_has_reviewed_disclosure(
     api_client: TestClient,
     auth_headers: dict[str, str],
+    admin_headers: dict[str, str],
     db_session: Session,
     seeded_users: dict[str, tuple[User, str]],
     report_store: FakeReportStore,
 ) -> None:
-    eval_id = _create_and_run(api_client, auth_headers, db_session, mode="AI_ASSISTED")
+    eval_id = _create_and_run(api_client, admin_headers, db_session, mode="AI_ASSISTED")
     _review_and_finalize(api_client, seeded_users, eval_id)
 
     response = api_client.get(f"/v1/reports/{eval_id}", headers=auth_headers)
@@ -185,7 +196,7 @@ def test_assisted_report_has_reviewed_disclosure(
     body = response.json()
     assert body["mode_disclosure"]["evaluation_mode"] == "AI_ASSISTED"
     assert body["mode_disclosure"]["human_reviewed"] is True
-    assert body["mode_disclosure"]["disclaimer"] == ASSISTED_REVIEWED_DISCLAIMER
+    assert body["mode_disclosure"]["disclaimer"] == ASSISTED_REVIEWED_LEGACY_DISCLAIMER
     report = body["report_json"]
     assert report["human_review"] is not None
     assert report["score"]["finalized_osd"]["source"] == "human_review_assisted"
@@ -194,10 +205,11 @@ def test_assisted_report_has_reviewed_disclosure(
 def test_post_generate_bumps_version_append_only(
     api_client: TestClient,
     auth_headers: dict[str, str],
+    admin_headers: dict[str, str],
     db_session: Session,
     report_store: FakeReportStore,
 ) -> None:
-    eval_id = _create_and_run(api_client, auth_headers, db_session, mode="AI_AUTONOMOUS")
+    eval_id = _create_and_run(api_client, admin_headers, db_session, mode="AI_AUTONOMOUS")
 
     first = api_client.get(f"/v1/reports/{eval_id}", headers=auth_headers)
     assert first.status_code == 200
@@ -224,10 +236,11 @@ def test_post_generate_bumps_version_append_only(
 def test_storage_unconfigured_503(
     api_client: TestClient,
     auth_headers: dict[str, str],
+    admin_headers: dict[str, str],
     db_session: Session,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    eval_id = _create_and_run(api_client, auth_headers, db_session, mode="AI_AUTONOMOUS")
+    eval_id = _create_and_run(api_client, admin_headers, db_session, mode="AI_AUTONOMOUS")
     monkeypatch.setattr(
         "app.services.report_service.get_report_store", lambda settings: None
     )

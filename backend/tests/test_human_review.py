@@ -24,17 +24,20 @@ from app.osd.review import (
 from app.schemas.internal import EvaluateModelPayload
 from app.schemas.modes import (
     ASSISTED_AWAITING_DISCLAIMER,
-    ASSISTED_REVIEWED_DISCLAIMER,
+    ASSISTED_REVIEWED_LEGACY_DISCLAIMER,
 )
 from app.schemas.reviews import HumanReviewRequest
 from app.scoring.fries import score_from_finalized_osd
 from app.tasks.evaluate_pipeline import run_evaluation_pipeline
-from tests.conftest import auth_headers_for
+from tests.conftest import LEGACY_HEURISTIC_PROBE_CONFIG, auth_headers_for, fries_complete_model_payload
 from tests.fakes import FakeEvidenceStore
 
 
 @pytest.fixture(autouse=True)
-def _complete_robustness(evaluated_robustness: None) -> None:
+def _complete_fries_probes(
+    evaluated_robustness: None,
+    evaluated_fairness: None,
+) -> None:
     return
 
 # ---------------------------------------------------------------------------
@@ -43,7 +46,8 @@ def _complete_robustness(evaluated_robustness: None) -> None:
 
 AGENT_SUGGESTION = {
     "schema_version": "osd-agent-v1",
-    "methodology_status": "PROPOSED_REQUIRES_VALIDATION",
+    "methodology_status": "LEGACY_HEURISTIC_OSD_V1",
+    "assessment_engine": "legacy_heuristic",
     "overall_confidence": 0.62,
     "aspects": [
         {"aspect": "FAIRNESS", "O": 4, "S": 5, "D": 6, "confidence": 0.5, "rationale": "r"},
@@ -132,7 +136,11 @@ def test_to_finalized_osd_assisted_disclosure() -> None:
         AGENT_SUGGESTION, [{"aspect": "FAIRNESS", "O": 0, "S": 5, "D": 6}], accept_all=False
     )
     finalized = to_finalized_osd_assisted(
-        approved, human_review_id=7, reviewer_id=3, human_changed=human_changed
+        approved,
+        human_review_id=7,
+        reviewer_id=3,
+        human_changed=human_changed,
+        agent_suggestion=AGENT_SUGGESTION,
     )
     assert finalized["human_reviewed"] is True
     assert finalized["human_changed"] is True
@@ -140,8 +148,8 @@ def test_to_finalized_osd_assisted_disclosure() -> None:
     assert finalized["reviewer_id"] == 3
     assert finalized["source"] == "human_review_assisted"
     assert finalized["evaluation_mode"] == "AI_ASSISTED"
-    assert finalized["disclaimer"] == ASSISTED_REVIEWED_DISCLAIMER
-    assert finalized["methodology_status"] == "PROPOSED_REQUIRES_VALIDATION"
+    assert finalized["disclaimer"] == ASSISTED_REVIEWED_LEGACY_DISCLAIMER
+    assert finalized["methodology_status"] == "LEGACY_HEURISTIC_OSD_V1"
     assert "human approved/edited" in finalized["methodology_note"]
     assert len(finalized["aspects"]) == 5
 
@@ -186,7 +194,7 @@ def _create_evaluation(
 ) -> str:
     model = api_client.post(
         "/v1/models",
-        json={"hf_repo_id": f"org/review-{uuid.uuid4().hex[:8]}"},
+        json=fries_complete_model_payload(f"org/review-{uuid.uuid4().hex[:8]}"),
         headers=headers,
     )
     assert model.status_code == 201, model.text
@@ -205,16 +213,23 @@ def _create_and_run(
     db_session: Session,
     *,
     mode: str,
+    probe_config: dict | None = LEGACY_HEURISTIC_PROBE_CONFIG,
 ) -> str:
     model = api_client.post(
         "/v1/models",
-        json={"hf_repo_id": f"org/review-{uuid.uuid4().hex[:8]}"},
+        json=fries_complete_model_payload(f"org/review-{uuid.uuid4().hex[:8]}"),
         headers=auth_headers,
     )
     assert model.status_code == 201, model.text
+    create_payload: dict = {
+        "model_id": model.json()["id"],
+        "evaluation_mode": mode,
+    }
+    if probe_config is not None:
+        create_payload["probe_config"] = probe_config
     created = api_client.post(
         "/v1/evaluations",
-        json={"model_id": model.json()["id"], "evaluation_mode": mode},
+        json=create_payload,
         headers=auth_headers,
     )
     assert created.status_code == 201, created.text
@@ -223,6 +238,7 @@ def _create_and_run(
         evaluation_id=uuid.UUID(eval_id),
         model_ref=model.json()["hf_repo_id"],
         evaluation_mode=EvaluationMode(mode),
+        probe_config=probe_config or {},
     )
     run_evaluation_pipeline(db_session, payload, evidence_store=FakeEvidenceStore())
     db_session.flush()
@@ -245,10 +261,11 @@ def _osd_triples(aspects: list[dict]) -> list[dict]:
 def test_accept_all_review_then_finalize(
     api_client: TestClient,
     auth_headers: dict[str, str],
+    admin_headers: dict[str, str],
     db_session: Session,
     seeded_users: dict[str, tuple[User, str]],
 ) -> None:
-    eval_id = _create_and_run(api_client, auth_headers, db_session, mode="AI_ASSISTED")
+    eval_id = _create_and_run(api_client, admin_headers, db_session, mode="AI_ASSISTED")
     reviewer, reviewer_headers = _reviewer_headers(api_client, seeded_users)
 
     detail = api_client.get(f"/v1/evaluations/{eval_id}", headers=auth_headers).json()
@@ -288,10 +305,10 @@ def test_accept_all_review_then_finalize(
         assert fin["status"] == "FINALIZED"
         assert fin["final_score"]["fries_score"] == expected.fries_score
         assert fin["final_score"]["human_reviewed"] is True
-        assert fin["final_score"]["disclaimer"] == ASSISTED_REVIEWED_DISCLAIMER
+        assert fin["final_score"]["disclaimer"] == ASSISTED_REVIEWED_LEGACY_DISCLAIMER
         assert fin["final_score"]["evaluation_mode"] == "AI_ASSISTED"
         assert fin["mode_disclosure"]["human_reviewed"] is True
-        assert fin["mode_disclosure"]["disclaimer"] == ASSISTED_REVIEWED_DISCLAIMER
+        assert fin["mode_disclosure"]["disclaimer"] == ASSISTED_REVIEWED_LEGACY_DISCLAIMER
         assert fin["human_review"]["id"] == body["id"]
 
     row = FinalScoreRepository(db_session).get_for_evaluation(uuid.UUID(eval_id))
@@ -301,17 +318,18 @@ def test_accept_all_review_then_finalize(
     assert row.finalized_osd["human_changed"] is False
     assert row.finalized_osd["human_review_id"] == body["id"]
     assert row.finalized_osd["reviewer_id"] == reviewer.id
-    assert row.finalized_osd["disclaimer"] == ASSISTED_REVIEWED_DISCLAIMER
+    assert row.finalized_osd["disclaimer"] == ASSISTED_REVIEWED_LEGACY_DISCLAIMER
     assert _osd_triples(row.finalized_osd["aspects"]) == agent_aspects
 
 
 def test_edit_veto_changes_score_and_marks_human_changed(
     api_client: TestClient,
     auth_headers: dict[str, str],
+    admin_headers: dict[str, str],
     db_session: Session,
     seeded_users: dict[str, tuple[User, str]],
 ) -> None:
-    eval_id = _create_and_run(api_client, auth_headers, db_session, mode="AI_ASSISTED")
+    eval_id = _create_and_run(api_client, admin_headers, db_session, mode="AI_ASSISTED")
     _, reviewer_headers = _reviewer_headers(api_client, seeded_users)
 
     detail = api_client.get(f"/v1/evaluations/{eval_id}", headers=auth_headers).json()
@@ -354,10 +372,11 @@ def test_edit_veto_changes_score_and_marks_human_changed(
 def test_second_review_supersedes_first(
     api_client: TestClient,
     auth_headers: dict[str, str],
+    admin_headers: dict[str, str],
     db_session: Session,
     seeded_users: dict[str, tuple[User, str]],
 ) -> None:
-    eval_id = _create_and_run(api_client, auth_headers, db_session, mode="AI_ASSISTED")
+    eval_id = _create_and_run(api_client, admin_headers, db_session, mode="AI_ASSISTED")
     _, reviewer_headers = _reviewer_headers(api_client, seeded_users)
 
     detail = api_client.get(f"/v1/evaluations/{eval_id}", headers=auth_headers).json()
@@ -396,6 +415,7 @@ def test_second_review_supersedes_first(
 def test_review_conflicts(
     api_client: TestClient,
     auth_headers: dict[str, str],
+    admin_headers: dict[str, str],
     db_session: Session,
     seeded_users: dict[str, tuple[User, str]],
 ) -> None:
@@ -404,7 +424,7 @@ def test_review_conflicts(
 
     # Autonomous evaluations never take a human review.
     autonomous_id = _create_and_run(
-        api_client, auth_headers, db_session, mode="AI_AUTONOMOUS"
+        api_client, admin_headers, db_session, mode="AI_AUTONOMOUS"
     )
     response = api_client.post(
         f"/v1/evaluations/{autonomous_id}/human-review",
@@ -434,7 +454,7 @@ def test_review_conflicts(
 
     # After finalize the approved O/S/D is locked → ALREADY_FINALIZED.
     finalized_id = _create_and_run(
-        api_client, auth_headers, db_session, mode="AI_ASSISTED"
+        api_client, admin_headers, db_session, mode="AI_ASSISTED"
     )
     assert (
         api_client.post(
@@ -471,3 +491,74 @@ def test_review_conflicts(
     )
     assert response.status_code == 422
     assert response.json()["code"] == "VALIDATION_ERROR"
+
+
+def test_deterministic_accept_all_finalizes_without_fries(
+    api_client: TestClient,
+    auth_headers: dict[str, str],
+    admin_headers: dict[str, str],
+    db_session: Session,
+    seeded_users: dict[str, tuple[User, str]],
+) -> None:
+    eval_id = _create_and_run(
+        api_client,
+        auth_headers,
+        db_session,
+        mode="AI_ASSISTED",
+        probe_config={"schema_version": "v1", "assessment_engine": "deterministic"},
+    )
+    _, reviewer_headers = _reviewer_headers(api_client, seeded_users)
+
+    detail = api_client.get(f"/v1/evaluations/{eval_id}", headers=auth_headers).json()
+    assert detail["osd_agent"]["ai_suggestion"]["assessment_engine"] == "deterministic"
+    assert all(a["O"] is None for a in detail["osd_agent"]["ai_suggestion"]["aspects"])
+
+    review = api_client.post(
+        f"/v1/evaluations/{eval_id}/human-review",
+        json={"accept_all": True},
+        headers=reviewer_headers,
+    )
+    assert review.status_code == 201, review.text
+    assert review.json()["approved_osd"]["aspects"] == []
+
+    finalized = api_client.post(
+        f"/v1/evaluations/{eval_id}/finalize", headers=reviewer_headers
+    )
+    assert finalized.status_code == 200, finalized.text
+    fin = finalized.json()
+    assert fin["status"] == "FINALIZED"
+    assert fin["final_score"] is None
+
+
+def test_deterministic_human_s_still_withholds_fries(
+    api_client: TestClient,
+    auth_headers: dict[str, str],
+    admin_headers: dict[str, str],
+    db_session: Session,
+    seeded_users: dict[str, tuple[User, str]],
+) -> None:
+    eval_id = _create_and_run(
+        api_client,
+        auth_headers,
+        db_session,
+        mode="AI_ASSISTED",
+        probe_config={"schema_version": "v1", "assessment_engine": "deterministic"},
+    )
+    _, reviewer_headers = _reviewer_headers(api_client, seeded_users)
+
+    review = api_client.post(
+        f"/v1/evaluations/{eval_id}/human-review",
+        json={"aspects": [{"aspect": "FAIRNESS", "S": 7}]},
+        headers=reviewer_headers,
+    )
+    assert review.status_code == 201, review.text
+    assert review.json()["human_changed"] is True
+    assert review.json()["approved_osd"]["aspects"] == [
+        {"aspect": "FAIRNESS", "O": None, "S": 7, "D": None}
+    ]
+
+    finalized = api_client.post(
+        f"/v1/evaluations/{eval_id}/finalize", headers=reviewer_headers
+    )
+    assert finalized.status_code == 200, finalized.text
+    assert finalized.json()["final_score"] is None

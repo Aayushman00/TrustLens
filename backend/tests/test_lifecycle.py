@@ -29,16 +29,19 @@ from app.db.models import User
 from app.schemas.internal import EvaluateModelPayload
 from app.schemas.modes import (
     ASSISTED_AWAITING_DISCLAIMER,
-    ASSISTED_REVIEWED_DISCLAIMER,
-    AUTONOMOUS_DISCLAIMER,
+    ASSISTED_REVIEWED_LEGACY_DISCLAIMER,
+    LEGACY_AUTONOMOUS_DISCLAIMER,
 )
 from app.tasks.evaluate_pipeline import run_evaluation_pipeline
-from tests.conftest import auth_headers_for
+from tests.conftest import LEGACY_HEURISTIC_PROBE_CONFIG, auth_headers_for
 from tests.fakes import FakeEvidenceStore, FakeReportStore
 
 
 @pytest.fixture(autouse=True)
-def _complete_robustness(evaluated_robustness: None) -> None:
+def _complete_fries_probes(
+    evaluated_robustness: None,
+    evaluated_fairness: None,
+) -> None:
     return
 
 pytestmark = pytest.mark.lifecycle
@@ -90,6 +93,7 @@ def _import_and_create(
     monkeypatch: pytest.MonkeyPatch,
     *,
     mode: str,
+    probe_config: dict | None = LEGACY_HEURISTIC_PROBE_CONFIG,
 ) -> tuple[str, str]:
     """import-hf (mocked Hub) → create evaluation. Returns (eval_id, hf_repo_id)."""
     hf_repo_id = f"org/lifecycle-{uuid.uuid4().hex[:8]}"
@@ -102,9 +106,12 @@ def _import_and_create(
     assert model["hf_repo_id"] == hf_repo_id
     assert model["model_metadata"]["card_text"]
 
+    create_payload: dict = {"model_id": model["id"], "evaluation_mode": mode}
+    if probe_config is not None:
+        create_payload["probe_config"] = probe_config
     created = api_client.post(
         "/v1/evaluations",
-        json={"model_id": model["id"], "evaluation_mode": mode},
+        json=create_payload,
         headers=headers,
     )
     assert created.status_code == 201, created.text
@@ -117,6 +124,7 @@ def _run_pipeline(db_session: Session, eval_id: str, hf_repo_id: str, mode: str)
         evaluation_id=uuid.UUID(eval_id),
         model_ref=hf_repo_id,
         evaluation_mode=EvaluationMode(mode),
+        probe_config=LEGACY_HEURISTIC_PROBE_CONFIG,
     )
     run_evaluation_pipeline(db_session, payload, evidence_store=FakeEvidenceStore())
     db_session.flush()
@@ -135,18 +143,18 @@ def _leaderboard_entries(api_client: TestClient, headers: dict[str, str]) -> dic
 
 def test_autonomous_journey_import_to_leaderboard(
     api_client: TestClient,
-    auth_headers: dict[str, str],
+    admin_headers: dict[str, str],
     db_session: Session,
     monkeypatch: pytest.MonkeyPatch,
     report_store: FakeReportStore,
 ) -> None:
     eval_id, hf_repo_id = _import_and_create(
-        api_client, auth_headers, monkeypatch, mode="AI_AUTONOMOUS"
+        api_client, admin_headers, monkeypatch, mode="AI_AUTONOMOUS"
     )
     _run_pipeline(db_session, eval_id, hf_repo_id, "AI_AUTONOMOUS")
 
     # FINALIZED with score + autonomous (not-human-reviewed) disclosure.
-    detail = api_client.get(f"/v1/evaluations/{eval_id}", headers=auth_headers).json()
+    detail = api_client.get(f"/v1/evaluations/{eval_id}", headers=admin_headers).json()
     assert detail["status"] == "FINALIZED"
     assert detail["probe_progress"] == {"completed": 5, "total": 5}
     assert detail["final_score"] is not None
@@ -154,11 +162,11 @@ def test_autonomous_journey_import_to_leaderboard(
     assert 0.0 <= fries_score <= 10.0
     assert detail["final_score"]["evaluation_mode"] == "AI_AUTONOMOUS"
     assert detail["mode_disclosure"]["human_reviewed"] is False
-    assert detail["mode_disclosure"]["disclaimer"] == AUTONOMOUS_DISCLAIMER
+    assert detail["mode_disclosure"]["disclaimer"] == LEGACY_AUTONOMOUS_DISCLAIMER
     assert detail["is_published"] is False
 
     # First report read auto-generates v1 with the same disclosure.
-    report = api_client.get(f"/v1/reports/{eval_id}", headers=auth_headers)
+    report = api_client.get(f"/v1/reports/{eval_id}", headers=admin_headers)
     assert report.status_code == 200, report.text
     report_body = report.json()
     assert report_body["version"] == 1
@@ -169,12 +177,12 @@ def test_autonomous_journey_import_to_leaderboard(
     assert f"reports/{eval_id}/v1/report.json" in report_store.objects
 
     # Publish (owner) → leaderboard carries the score and the report ref.
-    published = api_client.post(f"/v1/evaluations/{eval_id}/publish", headers=auth_headers)
+    published = api_client.post(f"/v1/evaluations/{eval_id}/publish", headers=admin_headers)
     assert published.status_code == 200, published.text
     assert published.json()["is_published"] is True
     assert published.json()["published_at"] is not None
 
-    entries = _leaderboard_entries(api_client, auth_headers)
+    entries = _leaderboard_entries(api_client, admin_headers)
     assert eval_id in entries
     entry = entries[eval_id]
     assert entry["hf_repo_id"] == hf_repo_id
@@ -186,10 +194,10 @@ def test_autonomous_journey_import_to_leaderboard(
     assert entry["report"]["json_uri"].endswith(f"reports/{eval_id}/v1/report.json")
 
     # Unpublish → private again, off the leaderboard.
-    unpublished = api_client.post(f"/v1/evaluations/{eval_id}/unpublish", headers=auth_headers)
+    unpublished = api_client.post(f"/v1/evaluations/{eval_id}/unpublish", headers=admin_headers)
     assert unpublished.status_code == 200, unpublished.text
     assert unpublished.json()["is_published"] is False
-    assert eval_id not in _leaderboard_entries(api_client, auth_headers)
+    assert eval_id not in _leaderboard_entries(api_client, admin_headers)
 
 
 # ---------------------------------------------------------------------------
@@ -199,6 +207,7 @@ def test_autonomous_journey_import_to_leaderboard(
 
 def test_assisted_journey_review_gate_and_disclosure(
     api_client: TestClient,
+    admin_headers: dict[str, str],
     auth_headers: dict[str, str],
     db_session: Session,
     seeded_users: dict[str, tuple[User, str]],
@@ -206,11 +215,11 @@ def test_assisted_journey_review_gate_and_disclosure(
     report_store: FakeReportStore,
 ) -> None:
     eval_id, hf_repo_id = _import_and_create(
-        api_client, auth_headers, monkeypatch, mode="AI_ASSISTED"
+        api_client, admin_headers, monkeypatch, mode="AI_ASSISTED"
     )
     _run_pipeline(db_session, eval_id, hf_repo_id, "AI_ASSISTED")
 
-    detail = api_client.get(f"/v1/evaluations/{eval_id}", headers=auth_headers).json()
+    detail = api_client.get(f"/v1/evaluations/{eval_id}", headers=admin_headers).json()
     assert detail["status"] == "AWAITING_REVIEW"
     assert detail["final_score"] is None
     assert detail["mode_disclosure"]["disclaimer"] == ASSISTED_AWAITING_DISCLAIMER
@@ -249,18 +258,18 @@ def test_assisted_journey_review_gate_and_disclosure(
     assert fin["final_score"]["human_reviewed"] is True
     assert fin["final_score"]["evaluation_mode"] == "AI_ASSISTED"
     assert fin["mode_disclosure"]["human_reviewed"] is True
-    assert fin["mode_disclosure"]["disclaimer"] == ASSISTED_REVIEWED_DISCLAIMER
+    assert fin["mode_disclosure"]["disclaimer"] == ASSISTED_REVIEWED_LEGACY_DISCLAIMER
 
     # Report and leaderboard both carry the human-reviewed disclosure.
-    report = api_client.get(f"/v1/reports/{eval_id}", headers=auth_headers)
+    report = api_client.get(f"/v1/reports/{eval_id}", headers=admin_headers)
     assert report.status_code == 200, report.text
     assert report.json()["mode_disclosure"]["human_reviewed"] is True
     assert report.json()["report_json"]["human_review"] is not None
 
-    published = api_client.post(f"/v1/evaluations/{eval_id}/publish", headers=auth_headers)
+    published = api_client.post(f"/v1/evaluations/{eval_id}/publish", headers=admin_headers)
     assert published.status_code == 200, published.text
 
-    entries = _leaderboard_entries(api_client, auth_headers)
+    entries = _leaderboard_entries(api_client, admin_headers)
     assert eval_id in entries
     assert entries[eval_id]["evaluation_mode"] == "AI_ASSISTED"
     assert entries[eval_id]["human_reviewed"] is True

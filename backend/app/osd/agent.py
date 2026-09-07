@@ -34,7 +34,7 @@ from typing import Any
 
 from app.db.enums import FriesDimension, ProbeEvaluationStatus
 from app.osd.base import (
-    METHODOLOGY_STATUS,
+    LEGACY_HEURISTIC_METHODOLOGY_STATUS,
     AgentContext,
     AgentResult,
     AspectOSD,
@@ -49,6 +49,31 @@ _ABSTAIN = "agent abstained because evidence is unavailable"
 
 _EMPTY_CARD_BAND = (2, 2, 3)
 _DEFAULT_CONFIDENCE = 0.5
+
+_NON_SCORING_PROBE_STATUSES = frozenset(
+    {
+        ProbeEvaluationStatus.PROXY,
+        ProbeEvaluationStatus.NOT_APPLICABLE,
+        ProbeEvaluationStatus.FAILED,
+        ProbeEvaluationStatus.SKIPPED,
+        ProbeEvaluationStatus.INSUFFICIENT_EVIDENCE,
+    }
+)
+
+
+def _aspect_status_for_probe(
+    probe_status: ProbeEvaluationStatus | None,
+    *,
+    osd_complete: bool,
+) -> ProbeEvaluationStatus:
+    """Map probe lifecycle status to aspect OSD status for serialization/review."""
+    if osd_complete:
+        return probe_status or ProbeEvaluationStatus.EVALUATED
+    if probe_status == ProbeEvaluationStatus.NOT_APPLICABLE:
+        return ProbeEvaluationStatus.NOT_APPLICABLE
+    if probe_status in _NON_SCORING_PROBE_STATUSES:
+        return ProbeEvaluationStatus.SKIPPED
+    return probe_status or ProbeEvaluationStatus.INSUFFICIENT_EVIDENCE
 
 
 def _clamp_band(value: int) -> int:
@@ -87,6 +112,15 @@ def _status_from_metrics(m: dict[str, Any]) -> ProbeEvaluationStatus | None:
 
 
 def _fairness_band(m: dict[str, Any]) -> tuple[tuple[int | None, int | None, int | None], str]:
+    status = _status_from_metrics(m)
+    if status in (
+        ProbeEvaluationStatus.PROXY,
+        ProbeEvaluationStatus.NOT_APPLICABLE,
+        ProbeEvaluationStatus.FAILED,
+        ProbeEvaluationStatus.SKIPPED,
+        ProbeEvaluationStatus.INSUFFICIENT_EVIDENCE,
+    ):
+        return (None, None, None), f"fairness status is {status.value}"
     dp = _num(m, "demographic_parity_difference")
     if dp is None:
         return (None, None, None), "fairness metrics were skipped"
@@ -196,14 +230,13 @@ class HeuristicOSDAgent:
             )
             complete = _osd_complete(band)
             probe_status = _status_from_metrics(metric_values)
+            status = _aspect_status_for_probe(probe_status, osd_complete=complete)
             if complete:
-                status = probe_status or ProbeEvaluationStatus.EVALUATED
                 rationale = (
                     f"{_PROPOSED_PREFIX} {dimension.value}: {detail}. "
                     f"{_PROPOSED_SUFFIX}"
                 )
             else:
-                status = probe_status or ProbeEvaluationStatus.INSUFFICIENT_EVIDENCE
                 rationale = (
                     f"{_PROPOSED_PREFIX} {dimension.value}: {detail}; "
                     f"{_ABSTAIN}. {_PROPOSED_SUFFIX}"
@@ -230,6 +263,7 @@ class HeuristicOSDAgent:
         return AgentResult(
             aspects=aspects,
             overall_confidence=overall,
-            methodology_status=METHODOLOGY_STATUS,
+            methodology_status=LEGACY_HEURISTIC_METHODOLOGY_STATUS,
             model_ref=ctx.model_ref,
+            assessment_engine="legacy_heuristic",
         )

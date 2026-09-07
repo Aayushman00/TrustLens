@@ -18,6 +18,18 @@ from app.db.enums import FriesDimension, ProbeEvaluationStatus
 METHODOLOGY_STATUS: Literal["PROPOSED_REQUIRES_VALIDATION"] = (
     "PROPOSED_REQUIRES_VALIDATION"
 )
+METHODOLOGY_STATUS_DETERMINISTIC: Literal["DETERMINISTIC_OSD_V1"] = (
+    "DETERMINISTIC_OSD_V1"
+)
+LEGACY_HEURISTIC_METHODOLOGY_STATUS: Literal["LEGACY_HEURISTIC_OSD_V1"] = (
+    "LEGACY_HEURISTIC_OSD_V1"
+)
+
+MethodologyStatus = Literal[
+    "PROPOSED_REQUIRES_VALIDATION",
+    "DETERMINISTIC_OSD_V1",
+    "LEGACY_HEURISTIC_OSD_V1",
+]
 
 
 @dataclass
@@ -55,14 +67,19 @@ class AspectOSD:
     D: int | None = None
     evidence_refs: list[dict[str, Any]] = field(default_factory=list)
     status: ProbeEvaluationStatus | None = None
+    O_source: str | None = None
+    S_source: str | None = None
+    D_source: str | None = None
+    osd_metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class AgentResult:
     aspects: list[AspectOSD]
     overall_confidence: float
-    methodology_status: Literal["PROPOSED_REQUIRES_VALIDATION"]
+    methodology_status: MethodologyStatus
     model_ref: str
+    assessment_engine: str = "deterministic"
 
 
 class OSDAgent(Protocol):

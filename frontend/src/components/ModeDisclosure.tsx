@@ -1,7 +1,14 @@
 import type { ModeDisclosure } from "../api/types";
 
 export function modeLabel(mode: "AI_ASSISTED" | "AI_AUTONOMOUS"): string {
-  return mode === "AI_ASSISTED" ? "AI-Assisted" : "AI-Autonomous";
+  return mode === "AI_ASSISTED"
+    ? "Human review before finalize"
+    : "Auto-finalize (no human review)";
+}
+
+export function engineLabel(engine: string | null | undefined): string {
+  if (engine === "legacy_heuristic") return "legacy heuristic";
+  return "deterministic";
 }
 
 /** Mandatory mode/provenance disclosure — reused on detail, review and report pages. */
@@ -18,9 +25,13 @@ export default function ModeDisclosureBanner({
         <span className={`badge ${disclosure.human_reviewed ? "badge-yes" : "badge-no"}`}>
           {disclosure.human_reviewed ? "Human-reviewed" : "Not human-reviewed"}
         </span>
+        <span className="badge">Engine: {engineLabel(disclosure.assessment_engine)}</span>
       </div>
       <p className="notice-disclaimer">{disclosure.disclaimer}</p>
-      <p className="notice-fineprint">Methodology: {disclosure.methodology_status}</p>
+      <p className="notice-fineprint">
+        Methodology: {disclosure.methodology_status}
+        {disclosure.fries_status ? ` · FRIES: ${disclosure.fries_status}` : ""}
+      </p>
     </div>
   );
 }

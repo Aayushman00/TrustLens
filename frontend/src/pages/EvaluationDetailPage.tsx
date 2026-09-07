@@ -5,11 +5,11 @@ import { apiFetch } from "../api/client";
 import { ACTIVE_STATUSES, type EvaluationRead } from "../api/types";
 import { useAuth } from "../auth/AuthContext";
 import ErrorNotice from "../components/ErrorNotice";
-import ModeDisclosureBanner, { modeLabel } from "../components/ModeDisclosure";
+import ModeDisclosureBanner, { engineLabel, modeLabel } from "../components/ModeDisclosure";
 import ScoreBars from "../components/ScoreBars";
 import Spinner from "../components/Spinner";
 import StatusBadge from "../components/StatusBadge";
-import { fmtDateTime, fmtNumber } from "../lib/format";
+import { fmtDateTime, fmtNumber, fmtOsd } from "../lib/format";
 
 const POLL_MS = 2500;
 
@@ -125,11 +125,12 @@ export default function EvaluationDetailPage() {
           {isReviewerRole ? (
             <>
               <p>
-                The agent O/S/D suggestion below is <strong>PROPOSED</strong> — accept or
-                edit it to finalize this evaluation.
+                Probe evidence is ready for human review. O/S/D are a
+                representation of that evidence, not LLM scores. Accept or edit
+                to finalize.
               </p>
               <Link to={`/evaluations/${evaluation.id}/review`} className="btn">
-                Review agent O/S/D
+                Review O/S/D
               </Link>
             </>
           ) : (
@@ -138,6 +139,17 @@ export default function EvaluationDetailPage() {
               review button here.
             </p>
           )}
+        </div>
+      ) : null}
+
+      {evaluation.status === "FINALIZED" && evaluation.final_score == null ? (
+        <div className="card">
+          <h2>Evaluation complete — FRIES score withheld</h2>
+          <p>
+            This run finished. No FRIES score was produced because deterministic
+            O/S/D mapping is not validated or available, so O/S/D were not
+            generated. Absence of FRIES is not a low trust score.
+          </p>
         </div>
       ) : null}
 
@@ -152,8 +164,7 @@ export default function EvaluationDetailPage() {
               original FRIES (0–10) ·{" "}
               {evaluation.final_score.human_reviewed
                 ? "human-reviewed"
-                : "not human-reviewed"}{" "}
-              · confidence {fmtNumber(evaluation.final_score.overall_confidence)}
+                : "not human-reviewed"}
             </span>
           </div>
           <ScoreBars scores={evaluation.final_score.dimension_scores} />
@@ -204,9 +215,12 @@ export default function EvaluationDetailPage() {
 
       {evaluation.osd_agent ? (
         <div className="card">
-          <h2>Agent O/S/D suggestion</h2>
+          <h2>
+            {evaluation.osd_agent.ai_suggestion.assessment_engine === "legacy_heuristic"
+              ? "Legacy heuristic O/S/D (proposed)"
+              : "Deterministic O/S/D representation"}
+          </h2>
           <div className="notice notice-warning">
-            <strong>PROPOSED — not ground truth.</strong>{" "}
             {evaluation.osd_agent.ai_suggestion.note}
           </div>
           <div className="table-wrap">
@@ -214,10 +228,10 @@ export default function EvaluationDetailPage() {
               <thead>
                 <tr>
                   <th>Aspect</th>
-                  <th className="num">O</th>
-                  <th className="num">S</th>
-                  <th className="num">D</th>
-                  <th className="num">Confidence</th>
+                  <th className="num">O (Occurrence)</th>
+                  <th className="num">S (Severity)</th>
+                  <th className="num">D (Detection)</th>
+                  <th className="num">Evidence strength</th>
                   <th>Rationale</th>
                 </tr>
               </thead>
@@ -225,9 +239,9 @@ export default function EvaluationDetailPage() {
                 {evaluation.osd_agent.ai_suggestion.aspects.map((aspect) => (
                   <tr key={aspect.aspect}>
                     <td>{aspect.aspect.toLowerCase()}</td>
-                    <td className="num">{aspect.O}</td>
-                    <td className="num">{aspect.S}</td>
-                    <td className="num">{aspect.D}</td>
+                    <td className="num">{fmtOsd(aspect.O)}</td>
+                    <td className="num">{fmtOsd(aspect.S)}</td>
+                    <td className="num">{fmtOsd(aspect.D)}</td>
                     <td className="num">{fmtNumber(aspect.confidence)}</td>
                     <td className="muted">{aspect.rationale ?? "—"}</td>
                   </tr>
@@ -236,18 +250,61 @@ export default function EvaluationDetailPage() {
             </table>
           </div>
           <p className="field-hint">
-            Agent confidence: {fmtNumber(evaluation.osd_agent.ai_confidence)} · status:{" "}
-            {evaluation.osd_agent.methodology_status}
+            Engine: {engineLabel(evaluation.osd_agent.ai_suggestion.assessment_engine)} ·
+            status: {evaluation.osd_agent.methodology_status}
+            {evaluation.osd_agent.ai_suggestion.scoring_withheld
+              ? " · FRIES withheld"
+              : ""}
           </p>
+        </div>
+      ) : null}
+
+      {evaluation.probes && evaluation.probes.length > 0 ? (
+        <div className="card">
+          <h2>Probe evidence</h2>
+          {evaluation.probes.map((probe) => (
+            <div key={probe.dimension} className="probe-evidence-block">
+              <h3>{probe.dimension.toLowerCase()}</h3>
+              <dl className="kv">
+                <dt>Status</dt>
+                <dd>{probe.status ?? "—"}</dd>
+                <dt>Methodology</dt>
+                <dd>{probe.methodology_version ?? "—"}</dd>
+                <dt>Claim boundary</dt>
+                <dd>
+                  {probe.claim_boundary
+                    ? JSON.stringify(probe.claim_boundary)
+                    : "—"}
+                </dd>
+                <dt>Limitations</dt>
+                <dd>{probe.limitations?.length ? probe.limitations.join(", ") : "—"}</dd>
+                <dt>Flags</dt>
+                <dd>{probe.flags?.length ? probe.flags.join(", ") : "—"}</dd>
+                <dt>Named risks</dt>
+                <dd>
+                  {probe.risks_triggered?.length
+                    ? probe.risks_triggered.join(", ")
+                    : "—"}
+                  {probe.scored_risk_id ? ` · scored_risk_id: ${probe.scored_risk_id}` : ""}
+                </dd>
+              </dl>
+              {probe.status_reason ? (
+                <p className="field-hint">{probe.status_reason}</p>
+              ) : null}
+            </div>
+          ))}
         </div>
       ) : null}
 
       {evaluation.confidence_summary ? (
         <div className="card">
-          <h2>Evidence confidence</h2>
+          <h2>Evidence strength (uncalibrated)</h2>
           <p>
             Overall <strong>{fmtNumber(evaluation.confidence_summary.overall)}</strong>{" "}
             <span className="muted">({evaluation.confidence_summary.method})</span>
+            {evaluation.confidence_summary.proposed_calibration
+              ? " · proposed_calibration: true"
+              : ""}
           </p>
           <div className="table-wrap">
             <table>
@@ -282,8 +339,8 @@ export default function EvaluationDetailPage() {
             <dt>Decision</dt>
             <dd>
               {evaluation.human_review.accept_all
-                ? "Accepted agent suggestion as-is"
-                : "Edited agent suggestion"}
+                ? "Accepted recorded O/S/D as-is"
+                : "Edited recorded O/S/D"}
               {evaluation.human_review.human_changed ? " (values changed)" : ""}
             </dd>
             <dt>Notes</dt>

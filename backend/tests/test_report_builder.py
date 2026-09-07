@@ -22,8 +22,8 @@ from app.reports.builder import build_executive_summary, build_report_json
 from app.reports.render import render_html, render_pdf
 from app.schemas.internal import EvaluateModelPayload
 from app.schemas.modes import (
-    ASSISTED_REVIEWED_DISCLAIMER,
-    AUTONOMOUS_DISCLAIMER,
+    ASSISTED_REVIEWED_LEGACY_DISCLAIMER,
+    LEGACY_AUTONOMOUS_DISCLAIMER,
     build_mode_disclosure,
 )
 from app.schemas.reports import (
@@ -34,12 +34,15 @@ from app.schemas.reports import (
     ReportV1,
 )
 from app.tasks.evaluate_pipeline import run_evaluation_pipeline
-from tests.conftest import auth_headers_for
+from tests.conftest import LEGACY_HEURISTIC_PROBE_CONFIG, auth_headers_for, fries_complete_model_payload
 from tests.fakes import FakeEvidenceStore
 
 
 @pytest.fixture(autouse=True)
-def _complete_robustness(evaluated_robustness: None) -> None:
+def _complete_fries_probes(
+    evaluated_robustness: None,
+    evaluated_fairness: None,
+) -> None:
     return
 
 # ---------------------------------------------------------------------------
@@ -76,7 +79,7 @@ def test_executive_summary_assisted_reviewed() -> None:
         model_ref="org/model",
     )
     assert "AI-ASSISTED" in summary.headline
-    assert "human-reviewed (accept/edit of agent suggestions)" in summary.headline
+    assert "human-reviewed (accept/edit of O/S/D representation)" in summary.headline
     assert any("Human reviewed: yes" in bullet for bullet in summary.bullets)
 
 
@@ -98,7 +101,10 @@ def _sample_report(*, mode: EvaluationMode, human_reviewed: bool) -> dict[str, A
             created_at=datetime.now(UTC),
         ),
         mode_disclosure=build_mode_disclosure(
-            evaluation_mode=mode, human_reviewed=human_reviewed
+            evaluation_mode=mode,
+            human_reviewed=human_reviewed,
+            assessment_engine="legacy_heuristic",
+            methodology_status="LEGACY_HEURISTIC_OSD_V1",
         ),
         score=ReportScore(
             fries_score=4.05,
@@ -134,8 +140,9 @@ def _sample_report(*, mode: EvaluationMode, human_reviewed: bool) -> dict[str, A
 
 def test_render_html_autonomous_smoke() -> None:
     html = render_html(_sample_report(mode=EvaluationMode.AI_AUTONOMOUS, human_reviewed=False))
-    assert "AI-AUTONOMOUS EVALUATION" in html
-    assert AUTONOMOUS_DISCLAIMER in html
+    assert "AUTO-FINALIZE (NO HUMAN REVIEW)" in html
+    assert LEGACY_AUTONOMOUS_DISCLAIMER in html
+    assert "O (Occurrence)" in html
     assert "4.05" in html
     assert "original_FRIES" in html
     assert "ev-smoke-123" in html  # evidence IDs surface in the PDF projection
@@ -145,8 +152,8 @@ def test_render_html_autonomous_smoke() -> None:
 
 def test_render_html_assisted_smoke() -> None:
     html = render_html(_sample_report(mode=EvaluationMode.AI_ASSISTED, human_reviewed=True))
-    assert "AI-ASSISTED EVALUATION" in html
-    assert ASSISTED_REVIEWED_DISCLAIMER in html
+    assert "HUMAN REVIEW BEFORE FINALIZE" in html
+    assert ASSISTED_REVIEWED_LEGACY_DISCLAIMER in html
     assert "Human reviewed:</strong> yes" in html
 
 
@@ -193,13 +200,17 @@ def _create_and_run(
 ) -> str:
     model = api_client.post(
         "/v1/models",
-        json={"hf_repo_id": f"org/report-{uuid.uuid4().hex[:8]}"},
+        json=fries_complete_model_payload(f"org/report-{uuid.uuid4().hex[:8]}"),
         headers=auth_headers,
     )
     assert model.status_code == 201, model.text
     created = api_client.post(
         "/v1/evaluations",
-        json={"model_id": model.json()["id"], "evaluation_mode": mode},
+        json={
+            "model_id": model.json()["id"],
+            "evaluation_mode": mode,
+            "probe_config": LEGACY_HEURISTIC_PROBE_CONFIG,
+        },
         headers=auth_headers,
     )
     assert created.status_code == 201, created.text
@@ -208,6 +219,7 @@ def _create_and_run(
         evaluation_id=uuid.UUID(eval_id),
         model_ref=model.json()["hf_repo_id"],
         evaluation_mode=EvaluationMode(mode),
+        probe_config=LEGACY_HEURISTIC_PROBE_CONFIG,
     )
     run_evaluation_pipeline(db_session, payload, evidence_store=FakeEvidenceStore())
     db_session.flush()
@@ -233,10 +245,10 @@ def _review_and_finalize(
 
 def test_autonomous_report_json(
     api_client: TestClient,
-    auth_headers: dict[str, str],
+    admin_headers: dict[str, str],
     db_session: Session,
 ) -> None:
-    eval_id = _create_and_run(api_client, auth_headers, db_session, mode="AI_AUTONOMOUS")
+    eval_id = _create_and_run(api_client, admin_headers, db_session, mode="AI_AUTONOMOUS")
     evaluation = EvaluationRepository(db_session).get_by_id(uuid.UUID(eval_id))
     assert evaluation is not None
 
@@ -249,7 +261,7 @@ def test_autonomous_report_json(
     assert report["evaluation"]["status"] == "FINALIZED"
     assert report["evaluation"]["model_ref"].startswith("org/report-")
     assert report["mode_disclosure"]["human_reviewed"] is False
-    assert report["mode_disclosure"]["disclaimer"] == AUTONOMOUS_DISCLAIMER
+    assert report["mode_disclosure"]["disclaimer"] == LEGACY_AUTONOMOUS_DISCLAIMER
     assert report["score"]["score_type"] == "original_FRIES"
     assert "not FRIES2" in report["score"]["note"]
     assert "not ground truth" in report["score"]["note"]
@@ -268,7 +280,7 @@ def test_autonomous_report_json(
         assert isinstance(probe["flags"], list)
 
     assert report["osd_agent"] is not None
-    assert report["osd_agent"]["methodology_status"] == "PROPOSED_REQUIRES_VALIDATION"
+    assert report["osd_agent"]["methodology_status"] == "LEGACY_HEURISTIC_OSD_V1"
     assert report["human_review"] is None
     assert report["attack_flags"] == []
     assert "AI-AUTONOMOUS" in report["executive_summary"]["headline"]
@@ -276,11 +288,11 @@ def test_autonomous_report_json(
 
 def test_assisted_report_after_review_differs_from_autonomous(
     api_client: TestClient,
-    auth_headers: dict[str, str],
+    admin_headers: dict[str, str],
     db_session: Session,
     seeded_users: dict[str, tuple[User, str]],
 ) -> None:
-    eval_id = _create_and_run(api_client, auth_headers, db_session, mode="AI_ASSISTED")
+    eval_id = _create_and_run(api_client, admin_headers, db_session, mode="AI_ASSISTED")
     _review_and_finalize(api_client, seeded_users, eval_id)
     evaluation = EvaluationRepository(db_session).get_by_id(uuid.UUID(eval_id))
     assert evaluation is not None
@@ -290,7 +302,7 @@ def test_assisted_report_after_review_differs_from_autonomous(
 
     assert report["evaluation"]["evaluation_mode"] == "AI_ASSISTED"
     assert report["mode_disclosure"]["human_reviewed"] is True
-    assert report["mode_disclosure"]["disclaimer"] == ASSISTED_REVIEWED_DISCLAIMER
+    assert report["mode_disclosure"]["disclaimer"] == ASSISTED_REVIEWED_LEGACY_DISCLAIMER
     assert report["score"]["finalized_osd"]["source"] == "human_review_assisted"
     assert report["human_review"] is not None
     assert report["human_review"]["accept_all"] is True
@@ -300,10 +312,10 @@ def test_assisted_report_after_review_differs_from_autonomous(
 
 def test_builder_requires_final_scores(
     api_client: TestClient,
-    auth_headers: dict[str, str],
+    admin_headers: dict[str, str],
     db_session: Session,
 ) -> None:
-    eval_id = _create_and_run(api_client, auth_headers, db_session, mode="AI_ASSISTED")
+    eval_id = _create_and_run(api_client, admin_headers, db_session, mode="AI_ASSISTED")
     evaluation = EvaluationRepository(db_session).get_by_id(uuid.UUID(eval_id))
     assert evaluation is not None
     assert evaluation.status.value == "AWAITING_REVIEW"

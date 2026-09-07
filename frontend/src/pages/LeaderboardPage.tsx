@@ -68,8 +68,8 @@ export default function LeaderboardPage() {
         <div>
           <h1>Leaderboard</h1>
           <p className="muted">
-            Only evaluations their owners explicitly published — finalized, with original
-            FRIES scores.
+            Only published evaluations that have an original FRIES score. FRIES-withheld
+            runs are not ranked here; absence of FRIES is not a low-trust score.
           </p>
         </div>
       </div>
@@ -98,8 +98,8 @@ export default function LeaderboardPage() {
             onChange={(e) => setModeInput(e.target.value as EvaluationMode | "")}
           >
             <option value="">All modes</option>
-            <option value="AI_ASSISTED">AI-Assisted</option>
-            <option value="AI_AUTONOMOUS">AI-Autonomous</option>
+            <option value="AI_ASSISTED">Human review before finalize</option>
+            <option value="AI_AUTONOMOUS">Auto-finalize (no human review)</option>
           </select>
         </label>
         <button type="submit" className="btn btn-secondary">
@@ -113,8 +113,9 @@ export default function LeaderboardPage() {
       <div className="card">
         {items.length === 0 && !loading ? (
           <p className="empty">
-            No published evaluations match — publish a finalized evaluation from its
-            detail page to list it here.
+            No published FRIES scores match these filters. Evaluations without a FRIES
+            score (including withheld scoring) do not appear — that is not a low-trust
+            ranking.
           </p>
         ) : null}
         {items.length > 0 ? (

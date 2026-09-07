@@ -3,12 +3,12 @@
 Each FRIES dimension gets three factors in [0, 1]:
 
 - ``data_quality`` — input/data adequacy (fairness group sizes, robustness
-  ``n_samples``, integrity check pass fraction, card ``coverage_ratio``).
+  ``n_evaluated`` / ``n_samples``, integrity identity snapshot richness).
+  Explainability and Safety v1 do **not** use ``coverage_ratio`` for this factor.
 - ``probe_reliability`` — did the intended path run? 1.0 for a full run;
-  ~0.4–0.6 on soft skips (``unsupported_modality`` / ``metrics_skipped`` /
-  ``attack_skipped``); lower on empty cards.
-- ``evidence_completeness`` — evidence_refs present; coverage for E/S;
-  checks dict for Integrity.
+  ~0.4–0.6 on skips / insufficient evidence / mapping blocked.
+- ``evidence_completeness`` — evidence_refs present; checks dict for I/E/S;
+  robustness uses drop CI / mapping state (not card coverage).
 
 Combine: **geometric mean** of the three factors → dimension confidence.
 Overall: **geometric mean** of the five dimension confidences
@@ -29,7 +29,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from app.db.enums import FriesDimension
+from app.db.enums import FriesDimension, ProbeEvaluationStatus
 
 CONFIDENCE_METHOD = "geometric_mean_v1"
 CONFIDENCE_NOTE = "Evidence strength only — not correctness or O/S/D"
@@ -104,12 +104,37 @@ def _fairness_factors(
     metric_values: dict[str, Any], flags: list[str], has_evidence: bool
 ) -> tuple[float, float, float]:
     dp = metric_values.get("demographic_parity_difference")
-    computed = dp is not None
+    gap = metric_values.get("subgroup_worst_group_acc_gap")
+    computed = (
+        dp is not None and dp != "NOT_APPLICABLE"
+    ) or gap is not None
     skip = bool(_FAIRNESS_SKIP_FLAGS & set(flags)) or not computed
+    probe_status = metric_values.get("probe_status")
+    reliability = metric_values.get("reliability")
+    failed_gates = (
+        reliability.get("failed_gates") or []
+        if isinstance(reliability, dict)
+        else []
+    )
+    reliability_blocked = (
+        metric_values.get("aspect_scoring") == "mapping_blocked"
+        or "wide_ci" in flags
+        or "G-FAIR-CI-WIDE" in failed_gates
+    )
+    if probe_status == ProbeEvaluationStatus.INSUFFICIENT_EVIDENCE.value:
+        probe_reliability = 0.45
+    elif skip:
+        probe_reliability = 0.45
+    elif reliability_blocked:
+        probe_reliability = 0.45
+    else:
+        probe_reliability = 1.0
 
     if not computed:
         data_quality = 0.35
-    elif "insufficient_slice_size" in flags:
+    elif "insufficient_slice_size" in flags or "insufficient_total_n" in flags:
+        data_quality = 0.55
+    elif "insufficient_group_n" in flags or "thin_groups_excluded" in flags:
         data_quality = 0.55
     else:
         observed = metric_values.get("min_group_n_observed")
@@ -122,8 +147,6 @@ def _fairness_factors(
             data_quality = 0.55
         else:
             data_quality = 1.0
-
-    probe_reliability = 0.45 if skip else 1.0
 
     evidence = 1.0 if has_evidence else 0.2
     if has_evidence and metric_values.get("needs_human_review") is True:
@@ -138,77 +161,195 @@ def _robustness_factors(
     computed = clean is not None
     skip = bool(_ROBUSTNESS_SKIP_FLAGS & set(flags)) or not computed
 
-    n_samples = metric_values.get("n_samples")
-    if not computed or not isinstance(n_samples, (int, float)):
+    probe_status = metric_values.get("probe_status")
+    reliability = metric_values.get("reliability")
+    failed_gates = (
+        reliability.get("failed_gates") or []
+        if isinstance(reliability, dict)
+        else []
+    )
+    aspect_scoring = metric_values.get("aspect_scoring")
+    reliability_blocked = (
+        aspect_scoring == "mapping_blocked"
+        or "wide_ci" in flags
+        or "uninformative_robustness" in flags
+        or "domain_mismatch" in flags
+        or "G-ROB-CI-WIDE" in failed_gates
+        or "G-ROB-CLEAN-FLOOR" in failed_gates
+    )
+
+    if probe_status == ProbeEvaluationStatus.INSUFFICIENT_EVIDENCE.value:
+        probe_reliability = 0.45
+    elif skip:
+        probe_reliability = 0.45
+    elif reliability_blocked:
+        probe_reliability = 0.45
+    else:
+        probe_reliability = 1.0
+
+    n_evaluated = metric_values.get("n_evaluated") or metric_values.get("n_samples")
+    if not computed or not isinstance(n_evaluated, (int, float)):
         data_quality = 0.4
-    elif n_samples >= 64:
+    elif n_evaluated >= 200:
         data_quality = 1.0
-    elif n_samples >= 16:
+    elif n_evaluated >= 100:
+        data_quality = 0.85
+    elif n_evaluated >= 16:
         data_quality = 0.7
     else:
         data_quality = 0.4
 
-    probe_reliability = 0.45 if skip else 1.0
-    evidence = 1.0 if has_evidence else 0.2
+    uncertainty = metric_values.get("uncertainty")
+    drop_ci = (
+        uncertainty.get("accuracy_drop")
+        if isinstance(uncertainty, dict)
+        else None
+    )
+    has_drop_ci = (
+        isinstance(drop_ci, dict)
+        and drop_ci.get("ci_lower") is not None
+        and drop_ci.get("ci_upper") is not None
+    )
+
+    if not has_evidence:
+        evidence = 0.2
+    elif not computed:
+        evidence = 0.2
+    elif reliability_blocked or not has_drop_ci:
+        evidence = 0.6
+    elif aspect_scoring == "no_material_risk" and has_drop_ci:
+        evidence = 1.0
+    elif aspect_scoring == "scored_risk" and has_drop_ci:
+        evidence = 1.0
+    else:
+        evidence = 0.8 if has_drop_ci else 0.6
+
     return data_quality, probe_reliability, evidence
 
 
 def _integrity_factors(
     metric_values: dict[str, Any], flags: list[str], has_evidence: bool
 ) -> tuple[float, float, float]:
-    checks = metric_values.get("checks")
-    pass_count = metric_values.get("pass_count")
-    fail_count = metric_values.get("fail_count")
-    if isinstance(pass_count, int) and isinstance(fail_count, int):
-        total = pass_count + fail_count
-        data_quality = pass_count / total if total else 0.5
-    elif isinstance(checks, dict) and checks:
-        passes = sum(1 for c in checks.values() if isinstance(c, dict) and c.get("pass"))
-        data_quality = passes / len(checks)
-    else:
-        data_quality = 0.5
+    probe_status = metric_values.get("probe_status")
 
-    probe_reliability = 1.0  # metadata audit always runs its intended path
+    if probe_status == ProbeEvaluationStatus.INSUFFICIENT_EVIDENCE.value:
+        probe_reliability = 0.45
+        data_quality = 0.35
+    elif probe_status == ProbeEvaluationStatus.FAILED.value:
+        probe_reliability = 0.45
+        data_quality = 0.35
+    else:
+        probe_reliability = 1.0
+        identity = metric_values.get("identity")
+        if isinstance(identity, dict):
+            has_files = bool(identity.get("hub_files"))
+            revision_sha_like = identity.get("sha_like") is True
+            disclosure = metric_values.get("disclosure")
+            has_card = (
+                isinstance(disclosure, dict) and disclosure.get("card_present") is True
+            )
+            if has_files or revision_sha_like:
+                data_quality = 1.0
+            elif has_card or identity.get("revision"):
+                data_quality = 0.55
+            else:
+                data_quality = 0.55
+        else:
+            data_quality = 0.55
+
     if not has_evidence:
         evidence = 0.2
-    elif isinstance(checks, dict) and checks:
-        evidence = 1.0
+    elif not isinstance(metric_values.get("checks"), dict) or not metric_values.get(
+        "checks"
+    ):
+        evidence = 0.2
     else:
-        evidence = 0.8
+        identity = metric_values.get("identity")
+        hash_comparison = None
+        if isinstance(identity, dict):
+            hash_comparison = identity.get("hash_comparison")
+        reliability = metric_values.get("reliability")
+        failed_gates = (
+            reliability.get("failed_gates") or []
+            if isinstance(reliability, dict)
+            else []
+        )
+        hash_unverified = hash_comparison == "not_performed" or any(
+            gate in failed_gates
+            for gate in (
+                "I-INT-HASH-UNVERIFIED",
+                "G-INT-HASH-REF-MISSING",
+                "G-INT-HASH-LOCAL-MISSING",
+            )
+        )
+        if hash_unverified and probe_status == ProbeEvaluationStatus.EVALUATED.value:
+            evidence = 0.85
+        else:
+            evidence = 1.0
+
     return data_quality, probe_reliability, evidence
 
 
-def _card_coverage_factors(
-    metric_values: dict[str, Any],
-    flags: list[str],
-    has_evidence: bool,
-    *,
-    high_impact_key: str | None,
+def _explainability_factors(
+    metric_values: dict[str, Any], flags: list[str], has_evidence: bool
 ) -> tuple[float, float, float]:
-    """Shared Explainability/Safety card-coverage factor model."""
-    coverage = _ratio(metric_values, "coverage_ratio")
-    card_chars = metric_values.get("card_chars")
-    empty = "empty_card" in flags or card_chars == 0
+    """Explainability v1 — provisional uncalibrated evidence-strength weights.
 
-    data_quality = 0.0 if empty else (coverage if coverage is not None else 0.5)
+    Not calibrated probabilities and not a function of coverage_ratio.
+    """
+    probe_status = metric_values.get("probe_status")
 
-    if empty:
-        probe_reliability = 0.4
-    elif high_impact_key is not None:
-        high_impact = bool(metric_values.get(high_impact_key))
-        if high_impact and (coverage is None or coverage < 1.0):
-            probe_reliability = 0.5
-        else:
-            probe_reliability = 1.0
-    elif coverage is not None and coverage < 0.4:
-        probe_reliability = 0.6
+    if probe_status in (
+        ProbeEvaluationStatus.INSUFFICIENT_EVIDENCE.value,
+        ProbeEvaluationStatus.FAILED.value,
+    ):
+        probe_reliability = 0.45
+        data_quality = 0.35
     else:
         probe_reliability = 1.0
+        data_quality = 1.0
 
     if not has_evidence:
         evidence = 0.2
+    elif not isinstance(metric_values.get("checks"), dict) or not metric_values.get(
+        "checks"
+    ):
+        evidence = 0.2
     else:
-        evidence = 0.6 + 0.4 * (coverage if coverage is not None else 0.0)
+        evidence = 1.0
+
+    return data_quality, probe_reliability, evidence
+
+
+def _safety_factors(
+    metric_values: dict[str, Any], flags: list[str], has_evidence: bool
+) -> tuple[float, float, float]:
+    """Safety v1 — provisional uncalibrated evidence-strength weights.
+
+    Not calibrated probabilities and not a function of coverage_ratio or
+    high_impact_claims (documentation metadata flags).
+    """
+    probe_status = metric_values.get("probe_status")
+
+    if probe_status in (
+        ProbeEvaluationStatus.INSUFFICIENT_EVIDENCE.value,
+        ProbeEvaluationStatus.FAILED.value,
+    ):
+        probe_reliability = 0.45
+        data_quality = 0.35
+    else:
+        probe_reliability = 1.0
+        data_quality = 1.0
+
+    if not has_evidence:
+        evidence = 0.2
+    elif not isinstance(metric_values.get("checks"), dict) or not metric_values.get(
+        "checks"
+    ):
+        evidence = 0.2
+    else:
+        evidence = 1.0
+
     return data_quality, probe_reliability, evidence
 
 
@@ -234,16 +375,11 @@ def refine(
     elif dimension == FriesDimension.INTEGRITY:
         raw = _integrity_factors(metric_values, flag_list, has_evidence)
     elif dimension == FriesDimension.EXPLAINABILITY:
-        raw = _card_coverage_factors(
-            metric_values, flag_list, has_evidence, high_impact_key=None
-        )
+        raw = _explainability_factors(metric_values, flag_list, has_evidence)
+    elif dimension == FriesDimension.SAFETY:
+        raw = _safety_factors(metric_values, flag_list, has_evidence)
     else:
-        raw = _card_coverage_factors(
-            metric_values,
-            flag_list,
-            has_evidence,
-            high_impact_key="high_impact_claims",
-        )
+        raise ValueError(f"unsupported dimension for confidence refine: {dimension}")
 
     data_quality = round(_factor(raw[0]), 4)
     probe_reliability = round(_factor(raw[1]), 4)

@@ -101,6 +101,7 @@ def run_all_probes(
             **output.metric_values,
             "confidence_factors": dim_conf.factors.model_dump(),
             "probe_status": output.status.value,
+            "flags": list(output.flags),
         }
         if output.status_reason:
             persisted_metrics["probe_status_reason"] = output.status_reason

@@ -1,4 +1,4 @@
-/** Hand-written TS mirror of the backend Pydantic schemas (TrustLens 0.20.0). */
+/** Hand-written TS mirror of the backend Pydantic schemas (TrustLens 0.20.1). */
 
 export type UserRole = "researcher" | "reviewer" | "admin";
 
@@ -91,6 +91,26 @@ export interface ProbeProgress {
   total: number;
 }
 
+export interface ProbeEvidenceRead {
+  dimension: FriesDimension;
+  status: string | null;
+  status_reason: string | null;
+  methodology_version: string | null;
+  gates: string[] | null;
+  risks_triggered: string[] | null;
+  aspect_scoring: string | null;
+  scored_risk_id: string | null;
+  claim_boundary: Record<string, unknown> | null;
+  limitations: string[] | null;
+  flags: string[] | null;
+  coverage_ratio: number | null;
+  n_evaluated: number | null;
+  fairness_mode: string | null;
+  pairing_id: string | null;
+  confidence: number | null;
+  evidence_refs: Record<string, unknown>[];
+}
+
 export interface ConfidenceSummary {
   overall: number;
   by_dimension: Record<string, number>;
@@ -101,9 +121,13 @@ export interface ConfidenceSummary {
 
 export interface OsdAspectSuggestion {
   aspect: FriesDimension;
-  O: number;
-  S: number;
-  D: number;
+  O: number | null;
+  S: number | null;
+  D: number | null;
+  O_source?: string;
+  S_source?: string | null;
+  D_source?: string;
+  osd_metadata?: Record<string, unknown>;
   confidence: number;
   rationale: string | null;
 }
@@ -112,9 +136,12 @@ export interface OsdAspectSuggestion {
 export interface OsdAiSuggestion {
   schema_version: string;
   methodology_status: string;
+  assessment_engine?: string;
   model_ref: string;
   overall_confidence: number | null;
   aspects: OsdAspectSuggestion[];
+  scoring_withheld?: boolean;
+  scoring_complete?: boolean;
   note: string;
 }
 
@@ -139,6 +166,9 @@ export interface ModeDisclosure {
   human_reviewed: boolean;
   disclaimer: string;
   methodology_status: string;
+  assessment_engine?: string | null;
+  scoring_withheld?: boolean | null;
+  fries_status?: "scored" | "withheld" | "not_scored_yet" | null;
 }
 
 export interface HumanReviewRead {
@@ -170,6 +200,7 @@ export interface EvaluationRead {
   created_at: string;
   updated_at: string;
   probe_progress?: ProbeProgress | null;
+  probes?: ProbeEvidenceRead[] | null;
   confidence_summary?: ConfidenceSummary | null;
   osd_agent?: OsdAgentRead | null;
   final_score?: FinalScoreRead | null;
@@ -186,9 +217,9 @@ export interface EvaluationList {
 
 export interface AspectOSDEdit {
   aspect: FriesDimension;
-  O: number;
-  S: number;
-  D: number;
+  O?: number;
+  S?: number;
+  D?: number;
 }
 
 /** accept_all=true → omit aspects; accept_all=false → at least one aspect edit. */

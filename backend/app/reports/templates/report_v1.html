@@ -99,11 +99,14 @@
 <!-- Mode disclosure — mandatory, visually prominent -->
 <div class="callout">
   <span class="mode-label">
-    {% if report.mode_disclosure.evaluation_mode == "AI_AUTONOMOUS" %}AI-AUTONOMOUS EVALUATION{% else %}AI-ASSISTED EVALUATION{% endif %}
+    {% if report.mode_disclosure.evaluation_mode == "AI_AUTONOMOUS" %}AUTO-FINALIZE (NO HUMAN REVIEW){% else %}HUMAN REVIEW BEFORE FINALIZE{% endif %}
   </span>
   <p><strong>Human reviewed:</strong> {{ "yes" if report.mode_disclosure.human_reviewed else "no" }}</p>
+  {% if report.mode_disclosure.assessment_engine %}
+  <p><strong>Assessment engine:</strong> {{ report.mode_disclosure.assessment_engine }}</p>
+  {% endif %}
   <p><strong>Disclosure:</strong> {{ report.mode_disclosure.disclaimer }}</p>
-  <p class="muted">Methodology status: {{ report.mode_disclosure.methodology_status }} — agent-proposed O/S/D is never ground truth.</p>
+  <p class="muted">Methodology status: {{ report.mode_disclosure.methodology_status }}. O = Occurrence, S = Severity, D = Detection (FRIES convention; higher is better/safer).</p>
 </div>
 
 <h2>Executive summary</h2>
@@ -129,9 +132,14 @@
 {% set osd = report.score.finalized_osd %}
 {% if osd.aspects %}
 <table>
-  <tr><th>Aspect</th><th>O (Operations)</th><th>S (Safeguards)</th><th>D (Disclosures)</th></tr>
+  <tr><th>Aspect</th><th>O (Occurrence)</th><th>S (Severity)</th><th>D (Detection)</th></tr>
   {% for aspect in osd.aspects %}
-  <tr><td>{{ aspect.aspect }}</td><td>{{ aspect.O }}</td><td>{{ aspect.S }}</td><td>{{ aspect.D }}</td></tr>
+  <tr>
+    <td>{{ aspect.aspect }}</td>
+    <td>{% if aspect.O is none %}Unavailable{% else %}{{ aspect.O }}{% endif %}</td>
+    <td>{% if aspect.S is none %}Unavailable{% else %}{{ aspect.S }}{% endif %}</td>
+    <td>{% if aspect.D is none %}Unavailable{% else %}{{ aspect.D }}{% endif %}</td>
+  </tr>
   {% endfor %}
 </table>
 <p class="muted">
@@ -183,17 +191,22 @@
 {% endfor %}
 
 {% if report.osd_agent %}
-<h2>O/S/D agent (proposed)</h2>
+<h2>O/S/D representation</h2>
 <div class="note-box">
-  Methodology status: <strong>{{ report.osd_agent.methodology_status }}</strong> —
-  the agent's O/S/D values are proposed suggestions requiring validation; they are not ground truth.
+  Methodology status: <strong>{{ report.osd_agent.methodology_status }}</strong>
+  {% if report.osd_agent.ai_suggestion and report.osd_agent.ai_suggestion.note %}
+  — {{ report.osd_agent.ai_suggestion.note }}
+  {% endif %}
 </div>
 {% if report.osd_agent.ai_suggestion and report.osd_agent.ai_suggestion.aspects %}
 <table>
-  <tr><th>Aspect</th><th>O</th><th>S</th><th>D</th><th>Confidence</th><th>Rationale</th></tr>
+  <tr><th>Aspect</th><th>O (Occurrence)</th><th>S (Severity)</th><th>D (Detection)</th><th>Evidence strength</th><th>Rationale</th></tr>
   {% for aspect in report.osd_agent.ai_suggestion.aspects %}
   <tr>
-    <td>{{ aspect.aspect }}</td><td>{{ aspect.O }}</td><td>{{ aspect.S }}</td><td>{{ aspect.D }}</td>
+    <td>{{ aspect.aspect }}</td>
+    <td>{% if aspect.O is none %}Unavailable{% else %}{{ aspect.O }}{% endif %}</td>
+    <td>{% if aspect.S is none %}Unavailable{% else %}{{ aspect.S }}{% endif %}</td>
+    <td>{% if aspect.D is none %}Unavailable{% else %}{{ aspect.D }}{% endif %}</td>
     <td>{{ aspect.confidence if aspect.confidence is not none else "—" }}</td>
     <td>{{ aspect.rationale or "" }}</td>
   </tr>
@@ -201,7 +214,7 @@
 </table>
 {% endif %}
 {% if report.osd_agent.ai_confidence is not none %}
-<p class="muted">Agent overall confidence: {{ report.osd_agent.ai_confidence }}</p>
+<p class="muted">OSD overall evidence-strength mean: {{ report.osd_agent.ai_confidence }} (not FRIES certainty)</p>
 {% endif %}
 {% endif %}
 

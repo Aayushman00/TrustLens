@@ -8,6 +8,8 @@ from __future__ import annotations
 from typing import Any
 
 from app.datasets.registry import DatasetSpec, get_dataset_spec
+from app.inference.adapters.base import ModelInputAdapter
+from app.inference.adapters.hatexplain import fetch_hatexplain_raw_rows
 
 
 class DatasetLoadError(Exception):
@@ -205,3 +207,70 @@ def load_fairness_subset(
             f"(sensitive={sensitive_attribute!r})"
         )
     return rows
+
+
+def load_pairing_subset(
+    logical_key: str,
+    *,
+    adapter: ModelInputAdapter,
+    n: int,
+    seed: int,
+    spec: DatasetSpec | None = None,
+) -> tuple[list[dict[str, Any]], int]:
+    """Load normalized rows for a supported pairing via the adapter.
+
+    Returns ``(rows, n_dropped)``.
+    """
+    dataset_spec = spec if spec is not None else get_dataset_spec(logical_key)
+    raw_rows = _fetch_raw_rows(dataset_spec, n=n, seed=seed, adapter_id=adapter.adapter_id)
+    normalized: list[dict[str, Any]] = []
+    dropped = 0
+    for raw in raw_rows:
+        row = adapter.normalize_row(raw)
+        if row is None:
+            dropped += 1
+            continue
+        normalized.append(row)
+    if not normalized:
+        raise DatasetLoadError(f"no usable normalized rows in {logical_key}")
+    return normalized, dropped
+
+
+def _fetch_raw_rows(
+    spec: DatasetSpec,
+    *,
+    n: int,
+    seed: int,
+    adapter_id: str,
+) -> list[dict[str, Any]]:
+    fairness = spec.fairness
+    if fairness and fairness.raw_data_urls and adapter_id == "hatexplain_post_tokens_v1":
+        return fetch_hatexplain_raw_rows(n=n, seed=seed)
+
+    try:
+        from datasets import load_dataset  # type: ignore[import-untyped]
+    except ImportError as exc:
+        raise DatasetLoadError(
+            "Hugging Face 'datasets' package is not installed"
+        ) from exc
+
+    kwargs: dict[str, Any] = {
+        "path": spec.hf_path,
+        "revision": spec.revision,
+        "split": "train",
+    }
+    if spec.config_name:
+        kwargs["name"] = spec.config_name
+    try:
+        ds = load_dataset(**kwargs)
+    except Exception as exc:  # noqa: BLE001
+        raise DatasetLoadError(f"failed to load {spec.hf_path}: {exc}") from exc
+
+    try:
+        shuffled = ds.shuffle(seed=seed)
+        take = min(max(n, 0), len(shuffled))
+        subset = shuffled.select(range(take)) if take else shuffled.select([])
+    except Exception as exc:  # noqa: BLE001
+        raise DatasetLoadError(f"failed to sample {spec.hf_path}: {exc}") from exc
+
+    return [dict(item) if not isinstance(item, dict) else item for item in subset]

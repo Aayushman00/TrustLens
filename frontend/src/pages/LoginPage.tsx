@@ -35,7 +35,7 @@ export default function LoginPage() {
     <div className="page-center">
       <div className="card login-card">
         <h1 className="brand-title">TrustLens</h1>
-        <p className="muted">Trustworthy ML benchmarking — sign in to continue.</p>
+        <p className="muted">Local-first ML evaluation — sign in to continue.</p>
         <form onSubmit={handleSubmit} className="form">
           <label>
             Email
