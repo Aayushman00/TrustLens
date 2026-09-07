@@ -121,6 +121,22 @@ def _cached_default_pairings() -> SupportedPairingsConfigV1:
     return load_pairings_config()
 
 
+def get_pairing_by_id(
+    pairing_id: str,
+    *,
+    config: SupportedPairingsConfigV1 | None = None,
+) -> SupportedPairing | None:
+    """Return the pairing with this exact ``id``, or ``None`` if unknown."""
+    cfg = config if config is not None else _cached_default_pairings()
+    pid = (pairing_id or "").strip()
+    if not pid:
+        return None
+    for pairing in cfg.pairings:
+        if pairing.id == pid:
+            return pairing
+    return None
+
+
 def resolve_pairing(
     model_ref: str,
     *,

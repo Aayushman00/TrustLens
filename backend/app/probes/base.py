@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from typing import Any, Protocol
 
 from app.db.enums import FriesDimension, ProbeEvaluationStatus
+from app.schemas.evaluation_contract import EvaluationContractV1
 from app.schemas.evidence import EvidenceRef
 from app.schemas.probe_config import ProbeConfigV1
 from app.storage.evidence_store import EvidenceStore
@@ -34,6 +35,8 @@ class ProbeContext:
     # From Model ORM columns (Phase 6); not inside metadata JSONB.
     model_revision: str | None = None
     model_checksum: str | None = None
+    # Phase 7: frozen evaluation contract (not yet consumed by probe logic).
+    evaluation_contract: EvaluationContractV1 | None = None
 
 
 @dataclass

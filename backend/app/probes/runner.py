@@ -12,6 +12,7 @@ from app.db.repositories.probe_result import ProbeResultRepository
 from app.probes.base import Probe, ProbeContext, ProbeOutput
 from app.probes.errors import ProbeError
 from app.probes.registry import ProbeRegistry, default_registry
+from app.schemas.evaluation_contract import EvaluationContractV1
 from app.schemas.internal import EvaluateModelPayload
 from app.schemas.probe_config import parse_probe_config
 from app.storage.evidence_store import EvidenceStore, EvidenceStoreError
@@ -61,6 +62,11 @@ def run_all_probes(
     probe_config = parse_probe_config(payload.probe_config)
     reg = registry if registry is not None else default_registry()
     probes_repo = ProbeResultRepository(session)
+    contract = (
+        EvaluationContractV1.model_validate(payload.evaluation_contract)
+        if payload.evaluation_contract
+        else None
+    )
     ctx = ProbeContext(
         evaluation_id=payload.evaluation_id,
         model_ref=payload.model_ref,
@@ -69,6 +75,7 @@ def run_all_probes(
         evidence_store=evidence_store,
         model_revision=model_revision,
         model_checksum=model_checksum,
+        evaluation_contract=contract,
     )
     outputs: list[ProbeOutput] = []
     for probe in reg.all_ordered():

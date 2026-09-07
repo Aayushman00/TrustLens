@@ -25,6 +25,14 @@ class EvaluationCreate(BaseModel):
     model_revision: str | None = None
     trustlens_version: str | None = None
 
+    # Phase 7 evaluation contract selection. pairing_id, dataset_key, and
+    # contract_kind="proxy_lr" are mutually exclusive (enforced in
+    # build_evaluation_contract); proxy_lr additionally requires admin.
+    # Nothing selected resolves to kind="documentation_only" — never Adult.
+    contract_kind: str | None = None
+    pairing_id: str | None = None
+    dataset_key: str | None = None
+
 
 class EvaluationStatusUpdate(BaseModel):
     """Internal / service use — no public route in Phase 4."""

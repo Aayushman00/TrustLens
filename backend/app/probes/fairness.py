@@ -14,7 +14,7 @@ from app.inference.adapters import get_adapter
 from app.inference.base import InferenceConfig, InferenceBackend, TaskType
 from app.inference.errors import InferenceError
 from app.inference.local_hf import LocalHFBackend
-from app.inference.pairing import SupportedPairing, resolve_pairing
+from app.inference.pairing import SupportedPairing, get_pairing_by_id
 from app.probes.base import ProbeContext, ProbeOutput
 from app.probes.fairness_metrics import compute_fairness_bundle
 from app.probes.fairness_multiclass import MulticlassFairnessResult, evaluate_multiclass_fairness
@@ -23,7 +23,7 @@ from app.storage.evidence_store import EvidenceStoreError
 
 logger = logging.getLogger("trustlens.probes.fairness")
 
-_DEFAULT_DATASET_KEY = "adult_fairness"
+_PROXY_LR_DATASET_KEY = "adult_fairness"
 _DEFAULT_SENSITIVE = "sex"
 _DEFAULT_MIN_GROUP_N = 30
 _DEFAULT_MAX_SAMPLES = 256
@@ -198,6 +198,11 @@ class FairnessProbe:
         return self._inference if self._inference is not None else LocalHFBackend()
 
     def run(self, ctx: ProbeContext) -> ProbeOutput:
+        """Dispatch strictly on ``ctx.evaluation_contract`` (Phase 7).
+
+        There is no implicit dataset fallback: an evaluation with no pairing
+        and no explicit admin ``proxy_lr`` contract never runs Adult LR.
+        """
         cfg = ctx.probe_config
         extra = cfg.extra or {}
         seed = _extra_int(extra, "seed", _DEFAULT_SEED)
@@ -208,8 +213,20 @@ class FairnessProbe:
         if min_group_n < 1:
             min_group_n = _DEFAULT_MIN_GROUP_N
 
-        pairing = resolve_pairing(ctx.model_ref, revision=ctx.model_revision)
-        if pairing is not None:
+        contract = ctx.evaluation_contract
+        kind = contract.kind if contract is not None else None
+
+        if kind == "pairing":
+            pairing = get_pairing_by_id(contract.pairing_id) if contract.pairing_id else None
+            if pairing is None:
+                return self._run_no_contract(
+                    ctx,
+                    contract=contract,
+                    reason=(
+                        f"evaluation contract references unknown "
+                        f"pairing_id={contract.pairing_id!r}"
+                    ),
+                )
             spec_for_pairing = get_dataset_spec(pairing.dataset)
             fairness_cfg = spec_for_pairing.fairness
             min_total_n = fairness_cfg.min_total_n if fairness_cfg else 200
@@ -230,15 +247,75 @@ class FairnessProbe:
                 min_total_n=min_total_n,
             )
 
-        logical_key = cfg.datasets.get("fairness") or _DEFAULT_DATASET_KEY
-        sensitive_attribute = _resolve_sensitive(cfg, extra, None)
-        return self._run_legacy(
+        if kind == "proxy_lr":
+            if contract.dataset_key != _PROXY_LR_DATASET_KEY:
+                return self._run_no_contract(
+                    ctx,
+                    contract=contract,
+                    reason=(
+                        "proxy_lr evaluation contract requires "
+                        f"dataset_key={_PROXY_LR_DATASET_KEY!r}, got "
+                        f"{contract.dataset_key!r}"
+                    ),
+                )
+            sensitive_attribute = _resolve_sensitive(cfg, extra, None)
+            return self._run_legacy(
+                ctx,
+                logical_key=_PROXY_LR_DATASET_KEY,
+                sensitive_attribute=sensitive_attribute,
+                seed=seed,
+                max_samples=max_samples,
+                min_group_n=min_group_n,
+            )
+
+        # kind in {None, "documentation_only", "registry"}, or any other
+        # value that does not authorize Fairness: no Adult fallback, ever.
+        reason = (
+            "no fairness evaluation contract (pairing or explicit admin "
+            "proxy_lr) was selected for this evaluation"
+            if contract is None
+            else (
+                f"evaluation contract kind={contract.kind!r} does not "
+                "authorize a Fairness run"
+            )
+        )
+        return self._run_no_contract(ctx, contract=contract, reason=reason)
+
+    def _run_no_contract(
+        self,
+        ctx: ProbeContext,
+        *,
+        contract: Any,
+        reason: str,
+    ) -> ProbeOutput:
+        """No pairing / no explicit proxy_lr: NOT_APPLICABLE, never Adult."""
+        metrics: dict[str, Any] = {
+            "fairness_mode": "not_applicable",
+            "predictor": None,
+            "demographic_parity_difference": None,
+            "equalized_odds_difference": None,
+            "subgroup_f1_spread": None,
+            "groups": None,
+            "proposed_mapping": False,
+            "needs_human_review": False,
+            "note": _NOTE,
+            "skip_reason": reason,
+            "model_ref": ctx.model_ref,
+            "model_revision": ctx.model_revision,
+            "dataset_key": contract.dataset_key if contract is not None else None,
+            "dataset_revision": contract.dataset_revision if contract is not None else None,
+            "pairing_id": contract.pairing_id if contract is not None else None,
+            "evaluation_class": contract.kind if contract is not None else "missing",
+            "inference_executed": False,
+        }
+        flags = ["no_fairness_contract", "metrics_skipped"]
+        return self._finish(
             ctx,
-            logical_key=logical_key,
-            sensitive_attribute=sensitive_attribute,
-            seed=seed,
-            max_samples=max_samples,
-            min_group_n=min_group_n,
+            metrics=metrics,
+            flags=flags,
+            confidence=0.4,
+            status=ProbeEvaluationStatus.NOT_APPLICABLE,
+            status_reason=reason,
         )
 
     def _run_pairing_faithful(
@@ -326,9 +403,14 @@ class FairnessProbe:
                     pairing.output_decoding.binary_threshold
                 ),
             )
+            contract = ctx.evaluation_contract
+            load_model_ref = contract.model_ref if contract is not None else pairing.model_ref
+            load_model_revision = (
+                contract.model_revision if contract is not None else pairing.model_revision
+            )
             loaded = backend.load(
-                pairing.model_ref,
-                revision=pairing.model_revision,
+                load_model_ref,
+                revision=load_model_revision,
                 config=config,
             )
             pairing.check_loaded_model(loaded, id2label=loaded.id2label)
@@ -413,6 +495,12 @@ class FairnessProbe:
                 "adapter_id": pairing.input_adapter,
                 "inference": inference_meta,
                 "evaluation_rows_sample": aligned[:5],
+                "model_ref": ctx.model_ref,
+                "model_revision": ctx.model_revision,
+                "dataset_key": pairing.dataset,
+                "dataset_revision": spec.revision,
+                "evaluation_class": "pairing",
+                "inference_executed": True,
             }
             y_true = [r["label"] for r in rows]
             sensitive = [r["sensitive"] for r in rows]
@@ -493,8 +581,14 @@ class FairnessProbe:
         aspect_scoring: str,
         confidence: float,
     ) -> ProbeOutput:
+        # Never claim model_faithful unless the pinned model actually loaded
+        # and produced predictions — a validation/load/inference failure
+        # before that point is not a faithful result.
+        fairness_mode = (
+            "model_faithful" if status != ProbeEvaluationStatus.FAILED else "not_evaluated"
+        )
         metrics: dict[str, Any] = {
-            "fairness_mode": "model_faithful",
+            "fairness_mode": fairness_mode,
             "predictor": "inference_backend",
             "task_type": pairing.task_type,
             "pairing_id": pairing.id,
@@ -512,6 +606,12 @@ class FairnessProbe:
             "needs_human_review": True,
             "aspect_scoring": aspect_scoring,
             "osd_proposals": [],
+            "model_ref": ctx.model_ref,
+            "model_revision": ctx.model_revision,
+            "dataset_key": pairing.dataset,
+            "dataset_revision": spec.revision,
+            "evaluation_class": "pairing",
+            "inference_executed": inference_meta is not None,
         }
         uncertainty: dict[str, Any] = {}
         reliability: dict[str, Any] = {"gates_passed": True, "failed_gates": []}
@@ -627,6 +727,12 @@ class FairnessProbe:
             "predictor": "sklearn_logistic_regression",
             "note": _NOTE,
             "proxy_limitation": _PROXY_NOTE,
+            "model_ref": ctx.model_ref,
+            "model_revision": ctx.model_revision,
+            "dataset_key": logical_key,
+            "pairing_id": None,
+            "evaluation_class": "proxy_lr",
+            "inference_executed": False,
         }
 
         try:

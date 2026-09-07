@@ -15,6 +15,7 @@ from app.confidence.engine import ConfidenceSummary, summarize
 from app.datasets.registry import validate_probe_config_datasets
 from app.db.enums import EvaluationMode, EvaluationStatus, UserRole
 from app.db.models import Evaluation, HumanReview, ProbeResult, User
+from app.inference.evaluation_contract import build_evaluation_contract
 from app.db.repositories.evaluation import EvaluationRepository
 from app.db.repositories.final_score import FinalScoreRepository
 from app.db.repositories.human_review import HumanReviewRepository
@@ -159,6 +160,18 @@ class EvaluationService:
                     "legacy_heuristic assessment_engine is restricted to admin users",
                     details={"assessment_engine": "legacy_heuristic"},
                 )
+        if data.contract_kind == "proxy_lr":
+            role = creator.role if creator is not None else None
+            if role != UserRole.ADMIN:
+                raise ForbiddenError(
+                    "proxy_lr evaluation contract (Adult LR proxy) is restricted to "
+                    "admin users",
+                    details={"contract_kind": "proxy_lr"},
+                )
+        # Phase 7: resolve + freeze the evaluation contract from the Model row
+        # (never the client-supplied revision, which may have drifted).
+        contract = build_evaluation_contract(model, data)
+        probe_config["evaluation_contract"] = contract.model_dump(mode="json")
         row = self._evals.create(
             model_id=data.model_id,
             evaluation_mode=data.evaluation_mode,
@@ -167,7 +180,7 @@ class EvaluationService:
             task=data.task,
             dataset=data.dataset,
             config=data.config,
-            model_revision=data.model_revision,
+            model_revision=model.revision,
             trustlens_version=data.trustlens_version,
             created_by=created_by,
         )
@@ -176,6 +189,8 @@ class EvaluationService:
             model_ref=model.hf_repo_id,
             evaluation_mode=row.evaluation_mode,
             probe_config=row.probe_config or {},
+            model_revision=row.model_revision,
+            evaluation_contract=contract.model_dump(mode="json"),
         )
         task_id = enqueue_evaluate_model(payload)
         logger.info(

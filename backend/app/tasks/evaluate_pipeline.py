@@ -172,7 +172,9 @@ def run_evaluation_pipeline(
             payload,
             model_metadata=model.model_metadata or {},
             evidence_store=store,
-            model_revision=model.revision,
+            # Phase 7: the evaluation's frozen revision is authoritative — never
+            # re-read the (possibly re-imported/drifted) live Model row here.
+            model_revision=payload.model_revision,
             model_checksum=model.checksum,
         )
     except (ProbeError, EvidenceStoreError):

@@ -8,11 +8,13 @@ import uuid
 import pytest
 
 from app.db.enums import ProbeEvaluationStatus
+from app.inference.pairing import get_pairing_by_id
 from app.probes.base import ProbeContext
 from app.probes.fairness import FairnessProbe, _validate_sensitive_attribute
 from app.probes.fairness_multiclass import evaluate_multiclass_fairness
 from app.probes.fairness_stats import perf_trigger_fires
 from app.datasets.registry import get_dataset_spec
+from app.schemas.evaluation_contract import EvaluationContractV1
 from app.schemas.probe_config import ProbeConfigV1
 from tests.fakes import FakeEvidenceStore, FakeInferenceBackend
 
@@ -202,6 +204,24 @@ def test_validate_sensitive_attribute_hatexplain() -> None:
     assert _validate_sensitive_attribute("not_declared", spec) is not None
 
 
+def _hatexplain_contract() -> EvaluationContractV1:
+    """Frozen contract an evaluation create would have produced for this pairing."""
+    pairing = get_pairing_by_id("hatexplain_bert_v1")
+    assert pairing is not None
+    return EvaluationContractV1(
+        kind="pairing",
+        pairing_id=pairing.id,
+        dataset_key=pairing.dataset,
+        dataset_revision=pairing.dataset_revision,
+        model_ref=_HATEXPLAIN_MODEL,
+        model_revision=_HATEXPLAIN_REV,
+        task_type=pairing.task_type,
+        label_space=pairing.output_decoding.label_space,
+        modality=pairing.modality,
+        input_adapter=pairing.input_adapter,
+    )
+
+
 def _ctx(
     *,
     probe_config: ProbeConfigV1 | None = None,
@@ -215,6 +235,7 @@ def _ctx(
         model_metadata={"pipeline_tag": "text-classification"},
         probe_config=probe_config or ProbeConfigV1(datasets={"fairness": "hatexplain_fairness"}),
         evidence_store=evidence,  # type: ignore[arg-type]
+        evaluation_contract=_hatexplain_contract(),
     )
     return ctx, evidence
 

@@ -25,6 +25,7 @@ COPY backend/app/schemas/internal.py ./app/schemas/internal.py
 COPY backend/app/schemas/evidence.py ./app/schemas/evidence.py
 COPY backend/app/schemas/probe_config.py ./app/schemas/probe_config.py
 COPY backend/app/schemas/modes.py ./app/schemas/modes.py
+COPY backend/app/schemas/evaluation_contract.py ./app/schemas/evaluation_contract.py
 COPY backend/app/storage ./app/storage
 COPY backend/app/datasets ./app/datasets
 COPY backend/app/probes ./app/probes

@@ -19,9 +19,17 @@ from app.probes.fairness_metrics import (
     equalized_odds_difference,
     subgroup_f1_spread,
 )
+from app.schemas.evaluation_contract import EvaluationContractV1
 from app.schemas.probe_config import ProbeConfigV1
 from app.storage.evidence_store import EvidenceStoreError
 from tests.fakes import FakeEvidenceStore
+
+_PROXY_LR_CONTRACT = EvaluationContractV1(
+    kind="proxy_lr",
+    dataset_key="adult_fairness",
+    model_ref="org/any-model",
+    model_revision="a" * 40,
+)
 
 _FIXTURE = Path(__file__).parent / "fixtures" / "fairness_toy.json"
 
@@ -39,6 +47,7 @@ def _ctx(
     *,
     probe_config: ProbeConfigV1 | None = None,
     store: FakeEvidenceStore | None = None,
+    evaluation_contract: EvaluationContractV1 | None = None,
 ) -> tuple[ProbeContext, FakeEvidenceStore]:
     evidence = store or FakeEvidenceStore()
     ctx = ProbeContext(
@@ -48,6 +57,7 @@ def _ctx(
         probe_config=probe_config or ProbeConfigV1(),
         evidence_store=evidence,  # type: ignore[arg-type]
         model_revision="a" * 40,
+        evaluation_contract=evaluation_contract,
     )
     return ctx, evidence
 
@@ -96,9 +106,9 @@ def test_probe_toy_output_and_needs_human_review() -> None:
 
     ctx, store = _ctx(
         probe_config=ProbeConfigV1(
-            datasets={"fairness": "adult_fairness"},
             extra={"seed": 1, "max_samples": 64, "min_group_n": 30},
-        )
+        ),
+        evaluation_contract=_PROXY_LR_CONTRACT,
     )
     out = FairnessProbe(loader=_loader, predictor=_predictor).run(ctx)
     assert out.dimension == FriesDimension.FAIRNESS
@@ -125,9 +135,9 @@ def test_thin_groups_flag_and_lower_confidence() -> None:
 
     ctx, _ = _ctx(
         probe_config=ProbeConfigV1(
-            datasets={"fairness": "adult_fairness"},
             extra={"min_group_n": 10},
-        )
+        ),
+        evaluation_contract=_PROXY_LR_CONTRACT,
     )
     out = FairnessProbe(
         loader=lambda *_a, **_k: rows,
@@ -138,11 +148,20 @@ def test_thin_groups_flag_and_lower_confidence() -> None:
     assert out.metric_values["needs_human_review"] is True
 
 
+# These four tests exercise ``_run_legacy``'s preserved skip/failure math
+# directly. Under Phase 7, ``.run()`` only reaches this path via an explicit
+# admin proxy_lr contract (dataset_key="adult_fairness"); calling the method
+# directly keeps the science under test without needing that whole path.
 def test_unsupported_modality_skips_sentiment_fairness() -> None:
-    ctx, store = _ctx(
-        probe_config=ProbeConfigV1(datasets={"fairness": "sentiment_fairness"})
+    ctx, store = _ctx()
+    out = FairnessProbe()._run_legacy(
+        ctx,
+        logical_key="sentiment_fairness",
+        sensitive_attribute="sex",
+        seed=42,
+        max_samples=256,
+        min_group_n=30,
     )
-    out = FairnessProbe().run(ctx)
     assert "unsupported_modality" in out.flags
     assert "metrics_skipped" in out.flags
     assert out.status is ProbeEvaluationStatus.NOT_APPLICABLE
@@ -155,8 +174,15 @@ def test_unsupported_modality_skips_sentiment_fairness() -> None:
 
 
 def test_unknown_dataset_skips() -> None:
-    ctx, _ = _ctx(probe_config=ProbeConfigV1(datasets={"fairness": "no_such_pin"}))
-    out = FairnessProbe().run(ctx)
+    ctx, _ = _ctx()
+    out = FairnessProbe()._run_legacy(
+        ctx,
+        logical_key="no_such_pin",
+        sensitive_attribute="sex",
+        seed=42,
+        max_samples=256,
+        min_group_n=30,
+    )
     assert "dataset_load_failed" in out.flags
     assert out.metric_values["skip_reason"]
     assert out.status is ProbeEvaluationStatus.FAILED
@@ -167,10 +193,15 @@ def test_loader_failure_soft_skip() -> None:
     def _boom(*_a, **_k):
         raise DatasetLoadError("failed to load adult_fairness: boom")
 
-    ctx, store = _ctx(
-        probe_config=ProbeConfigV1(datasets={"fairness": "adult_fairness"})
+    ctx, store = _ctx()
+    out = FairnessProbe(loader=_boom)._run_legacy(
+        ctx,
+        logical_key="adult_fairness",
+        sensitive_attribute="sex",
+        seed=42,
+        max_samples=256,
+        min_group_n=30,
     )
-    out = FairnessProbe(loader=_boom).run(ctx)
     assert "dataset_load_failed" in out.flags
     assert "metrics_skipped" in out.flags
     assert out.status is ProbeEvaluationStatus.FAILED
@@ -186,7 +217,14 @@ def test_missing_sensitive_flag() -> None:
         )
 
     ctx, _ = _ctx()
-    out = FairnessProbe(loader=_boom).run(ctx)
+    out = FairnessProbe(loader=_boom)._run_legacy(
+        ctx,
+        logical_key="adult_fairness",
+        sensitive_attribute="sex",
+        seed=42,
+        max_samples=256,
+        min_group_n=30,
+    )
     assert "missing_sensitive_attribute" in out.flags
     assert "dataset_load_failed" in out.flags
     assert out.status is ProbeEvaluationStatus.FAILED
@@ -197,24 +235,26 @@ def test_predictor_failure_is_failed() -> None:
     def _boom(_rows, *, seed: int):
         raise RuntimeError("sklearn missing")
 
-    ctx, _ = _ctx(
-        probe_config=ProbeConfigV1(datasets={"fairness": "adult_fairness"}),
-    )
+    ctx, _ = _ctx()
     out = FairnessProbe(
         loader=lambda *_a, **_k: [
             {"label": 1, "sensitive": "A", "features": {"x": 1.0}},
             {"label": 0, "sensitive": "B", "features": {"x": 0.0}},
         ],
         predictor=_boom,
-    ).run(ctx)
+    )._run_legacy(
+        ctx,
+        logical_key="adult_fairness",
+        sensitive_attribute="sex",
+        seed=42,
+        max_samples=256,
+        min_group_n=30,
+    )
     assert "predictor_failed" in out.flags
     assert "metrics_skipped" in out.flags
     assert out.status is ProbeEvaluationStatus.FAILED
     assert out.metric_values["probe_status"] == "FAILED"
-    ctx, _ = _ctx(
-        store=_BoomStore(),
-        probe_config=ProbeConfigV1(datasets={"fairness": "adult_fairness"}),
-    )
+    ctx, _ = _ctx(store=_BoomStore())
     with pytest.raises(EvidenceStoreError):
         FairnessProbe(
             loader=lambda *_a, **_k: [
@@ -222,7 +262,14 @@ def test_predictor_failure_is_failed() -> None:
                 {"label": 0, "sensitive": "B", "features": {"x": 0.0}},
             ],
             predictor=lambda _r, *, seed: [1, 0],
-        ).run(ctx)
+        )._run_legacy(
+            ctx,
+            logical_key="adult_fairness",
+            sensitive_attribute="sex",
+            seed=42,
+            max_samples=256,
+            min_group_n=30,
+        )
 
 
 def test_normalize_fairness_row_adult_shape() -> None:
@@ -247,7 +294,7 @@ def test_default_fairness_labels_proxy_lr() -> None:
         {"label": 1, "sensitive": "A", "features": {"x": 1.0}},
         {"label": 0, "sensitive": "B", "features": {"x": 0.0}},
     ]
-    ctx, _ = _ctx(probe_config=ProbeConfigV1(datasets={"fairness": "adult_fairness"}))
+    ctx, _ = _ctx(evaluation_contract=_PROXY_LR_CONTRACT)
     out = FairnessProbe(
         loader=lambda *_a, **_k: rows,
         predictor=lambda _r, *, seed: [1, 0],
