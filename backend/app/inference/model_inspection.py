@@ -46,11 +46,24 @@ def inspect_model_config(
             ) from exc
         raise ModelInspectionError(MODEL_LOAD_ERROR, f"failed to inspect model config for {model_ref}: {exc}") from exc
 
+    # Primary check: ensure model has a sequence-classification architecture
+    architectures = getattr(config, "architectures", None) or []
+    is_classifier = any(
+        arch.endswith("ForSequenceClassification")
+        for arch in (architectures if architectures else [])
+    )
+    if not is_classifier:
+        raise ModelInspectionError(
+            MODEL_LOAD_ERROR,
+            f"{model_ref} does not have a sequence-classification architecture (found: {architectures})",
+        )
+
+    # Secondary sanity checks for classification metadata
     num_labels = getattr(config, "num_labels", None)
     id2label_raw = getattr(config, "id2label", None)
     if not num_labels or not isinstance(id2label_raw, dict):
         raise ModelInspectionError(
-            MODEL_LOAD_ERROR, f"{model_ref} has no sequence-classification head (num_labels={num_labels})"
+            MODEL_LOAD_ERROR, f"{model_ref} has no classification metadata (num_labels={num_labels})"
         )
     resolved_sha = getattr(config, "_commit_hash", None) or (revision or "")
     return ModelLabelSnapshot(
