@@ -8,6 +8,10 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 
+class CreateDraftRequest(BaseModel):
+    model_id: int
+
+
 class DimensionConfigUpdate(BaseModel):
     dataset_content_id: uuid.UUID
     text_column: str

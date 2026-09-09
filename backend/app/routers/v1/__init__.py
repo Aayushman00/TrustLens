@@ -9,6 +9,7 @@ from app.routers.v1 import (
     datasets,
     documentation,
     evaluation_actions,
+    evaluation_drafts,
     evaluations,
     import_hf,
     models,
@@ -24,4 +25,5 @@ api_router.include_router(dataset_content.router)
 api_router.include_router(dataset_content.content_router)
 api_router.include_router(evaluations.router)
 api_router.include_router(evaluation_actions.router)
+api_router.include_router(evaluation_drafts.router)
 api_router.include_router(reports.router)
