@@ -6,10 +6,9 @@ never re-implements it."""
 from __future__ import annotations
 
 import csv
-import io
 from dataclasses import dataclass, field
 
-from app.datasets.user_dataset import UserDatasetError, discover_group_values
+from app.datasets.user_dataset import UserDatasetError, _decode, discover_group_values
 from app.inference.model_inspection import ModelLabelSnapshot
 
 _MISSING_TOKENS = {"", "na", "n/a", "null", "nan", "none"}
@@ -33,11 +32,18 @@ class RobustnessValidationResult:
 
 def _validate_label_mapping(label_mapping: list[dict], target_values: set[str], snapshot: ModelLabelSnapshot) -> list[str]:
     errors: list[str] = []
-    mapped_values = {entry["dataset_value"] for entry in label_mapping}
+    valid_entries = []
+    for entry in label_mapping:
+        if "dataset_value" not in entry or "model_label_index" not in entry:
+            errors.append(f"label_mapping entry {entry!r} is missing required keys")
+            continue
+        valid_entries.append(entry)
+
+    mapped_values = {entry["dataset_value"] for entry in valid_entries}
     missing = target_values - mapped_values
     if missing:
         errors.append(f"label_mapping is missing entries for observed target values: {sorted(missing)}")
-    for entry in label_mapping:
+    for entry in valid_entries:
         idx = entry["model_label_index"]
         if idx not in snapshot.id2label:
             errors.append(f"label_mapping entry {entry!r} references unknown model_label_index={idx}")
@@ -45,7 +51,7 @@ def _validate_label_mapping(label_mapping: list[dict], target_values: set[str], 
 
 
 def _observed_target_values(data: bytes, target_column: str) -> set[str]:
-    reader = csv.DictReader(io.StringIO(data.decode("utf-8-sig")))
+    reader = csv.DictReader(_decode(data))
     if reader.fieldnames is None or target_column not in reader.fieldnames:
         raise UserDatasetError(f"column {target_column!r} not found in dataset")
     values: set[str] = set()
@@ -110,8 +116,15 @@ def validate_robustness_config(
 
     errors = _validate_label_mapping(label_mapping, target_values, model_label_snapshot)
 
-    reader = csv.DictReader(io.StringIO(dataset_bytes.decode("utf-8-sig")))
-    mapped = {entry["dataset_value"]: entry["model_label_index"] for entry in label_mapping}
+    try:
+        reader = csv.DictReader(_decode(dataset_bytes))
+    except UserDatasetError as exc:
+        return RobustnessValidationResult(ok=False, errors=errors + [f"could not read dataset: {exc}"])
+    mapped = {
+        entry["dataset_value"]: entry["model_label_index"]
+        for entry in label_mapping
+        if "dataset_value" in entry and "model_label_index" in entry
+    }
     total = 0
     compatible = 0
     for row in reader:

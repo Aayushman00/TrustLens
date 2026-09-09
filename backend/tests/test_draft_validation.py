@@ -77,6 +77,59 @@ def test_fairness_validation_reports_missing_target_column_clearly():
     assert any("does_not_exist" in e and "not found" in e for e in result.errors)
 
 
+def test_fairness_validation_rejects_malformed_label_mapping_entry():
+    result = validate_fairness_config(
+        dataset_bytes=CSV,
+        text_column="text",
+        target_column="label",
+        sensitive_column="group",
+        label_mapping=[{"dataset_value": "pos"}, {"dataset_value": "neg", "model_label_index": 0}],
+        model_label_snapshot=SNAPSHOT,
+        min_group_n=1,
+    )
+    assert not result.ok
+    assert any("missing required keys" in e for e in result.errors)
+
+
+def test_fairness_validation_reports_non_utf8_bytes_as_clean_error():
+    result = validate_fairness_config(
+        dataset_bytes=b"\xff\xfe\x00\x01not valid utf-8",
+        text_column="text",
+        target_column="label",
+        sensitive_column="group",
+        label_mapping=[{"dataset_value": "pos", "model_label_index": 1}, {"dataset_value": "neg", "model_label_index": 0}],
+        model_label_snapshot=SNAPSHOT,
+        min_group_n=1,
+    )
+    assert not result.ok
+    assert result.errors
+    assert all("utf-8" in e.lower() or "UnicodeDecodeError" not in e for e in result.errors)
+
+
+def test_robustness_validation_rejects_malformed_label_mapping_entry():
+    result = validate_robustness_config(
+        dataset_bytes=CSV,
+        text_column="text",
+        target_column="label",
+        label_mapping=[{"model_label_index": 1}, {"dataset_value": "neg", "model_label_index": 0}],
+        model_label_snapshot=SNAPSHOT,
+    )
+    assert not result.ok
+    assert any("missing required keys" in e for e in result.errors)
+
+
+def test_robustness_validation_reports_non_utf8_bytes_as_clean_error():
+    result = validate_robustness_config(
+        dataset_bytes=b"\xff\xfe\x00\x01not valid utf-8",
+        text_column="text",
+        target_column="label",
+        label_mapping=[{"dataset_value": "pos", "model_label_index": 1}, {"dataset_value": "neg", "model_label_index": 0}],
+        model_label_snapshot=SNAPSHOT,
+    )
+    assert not result.ok
+    assert result.errors
+
+
 def test_robustness_validation_reports_missing_target_column_clearly():
     result = validate_robustness_config(
         dataset_bytes=CSV,
