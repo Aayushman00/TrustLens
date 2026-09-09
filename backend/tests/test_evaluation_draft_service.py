@@ -107,3 +107,40 @@ def test_update_dimension_twice_revalidates_and_reclears_confirmation(
     read = draft_service.get(draft.id)
     assert not read.fairness_confirmed  # re-editing cleared this dimension's confirmation
     assert read.robustness_confirmed  # ...but never touched the other one
+
+
+@pytest.mark.parametrize("bad_min_group_n", [0, -5])
+def test_update_dimension_rejects_non_positive_min_group_n(
+    draft_service, seeded_model, seeded_dataset_content, bad_min_group_n
+):
+    """min_group_n must be a positive int (Global Constraint) — 0 or a
+    negative value must be rejected outright, never silently coerced to the
+    default (falsy-0 -> 30) and never passed through unvalidated (a
+    negative threshold would make every group count "meet" it, producing a
+    false-positive ok=True)."""
+    draft = draft_service.create(seeded_model.id)
+    with patch("app.services.evaluation_draft_service.inspect_model_config", return_value=FAKE_SNAPSHOT):
+        with pytest.raises(ValidationAppError):
+            draft_service.update_dimension(
+                draft.id,
+                "FAIRNESS",
+                {"dataset_content_id": seeded_dataset_content.id, **{**FAIRNESS_BODY, "min_group_n": bad_min_group_n}},
+            )
+
+
+def test_update_dimension_raises_when_storage_not_configured(
+    draft_service, seeded_model, seeded_dataset_content, monkeypatch
+):
+    """An unconfigured S3/MinIO environment must fail cleanly with a
+    ValidationAppError, not a bare AttributeError on a None store."""
+    import app.services.evaluation_draft_service as draft_service_module
+
+    monkeypatch.setattr(draft_service_module, "get_dataset_content_store", lambda settings: None)
+    draft = draft_service.create(seeded_model.id)
+    with patch("app.services.evaluation_draft_service.inspect_model_config", return_value=FAKE_SNAPSHOT):
+        with pytest.raises(ValidationAppError, match="not configured"):
+            draft_service.update_dimension(
+                draft.id,
+                "FAIRNESS",
+                {"dataset_content_id": seeded_dataset_content.id, **FAIRNESS_BODY},
+            )
