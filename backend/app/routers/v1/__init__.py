@@ -10,7 +10,6 @@ from app.routers.v1 import (
     evaluation_actions,
     evaluations,
     import_hf,
-    leaderboard,
     models,
     reports,
 )
@@ -23,4 +22,3 @@ api_router.include_router(datasets.router)
 api_router.include_router(evaluations.router)
 api_router.include_router(evaluation_actions.router)
 api_router.include_router(reports.router)
-api_router.include_router(leaderboard.router)

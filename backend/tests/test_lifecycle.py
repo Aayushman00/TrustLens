@@ -7,7 +7,7 @@ the Celery pipeline invoked inline. Where the endpoint suites test one route
 at a time, this file asserts the *sequence* holds together end to end:
 
 - Autonomous: import-hf → create → pipeline → FINALIZED → report v1 →
-  publish → leaderboard entry → unpublish → gone.
+  publish → unpublish.
 - Assisted: pipeline → AWAITING_REVIEW → review → finalize → human_reviewed
   disclosure everywhere.
 - Optional live-Hub import (``integration`` marker), skipped unless
@@ -129,18 +129,12 @@ def _run_pipeline(db_session: Session, eval_id: str, hf_repo_id: str, mode: str)
     db_session.flush()
 
 
-def _leaderboard_entries(api_client: TestClient, headers: dict[str, str]) -> dict[str, dict]:
-    board = api_client.get("/v1/leaderboard", headers=headers)
-    assert board.status_code == 200, board.text
-    return {entry["evaluation_id"]: entry for entry in board.json()["items"]}
-
-
 # ---------------------------------------------------------------------------
 # Journey 1 — Autonomous: import → FINALIZED → report → publish → unpublish
 # ---------------------------------------------------------------------------
 
 
-def test_autonomous_journey_import_to_leaderboard(
+def test_autonomous_journey_import_to_publish(
     api_client: TestClient,
     admin_headers: dict[str, str],
     db_session: Session,
@@ -175,28 +169,16 @@ def test_autonomous_journey_import_to_leaderboard(
     assert report_body["report_json"]["mode_disclosure"]["human_reviewed"] is False
     assert f"reports/{eval_id}/v1/report.json" in report_store.objects
 
-    # Publish (owner) → leaderboard carries the score and the report ref.
+    # Publish (owner) → marks the evaluation published.
     published = api_client.post(f"/v1/evaluations/{eval_id}/publish", headers=admin_headers)
     assert published.status_code == 200, published.text
     assert published.json()["is_published"] is True
     assert published.json()["published_at"] is not None
 
-    entries = _leaderboard_entries(api_client, admin_headers)
-    assert eval_id in entries
-    entry = entries[eval_id]
-    assert entry["hf_repo_id"] == hf_repo_id
-    assert entry["fries_score"] == fries_score
-    assert entry["evaluation_mode"] == "AI_AUTONOMOUS"
-    assert entry["human_reviewed"] is False
-    assert entry["report"] is not None
-    assert entry["report"]["version"] == 1
-    assert entry["report"]["json_uri"].endswith(f"reports/{eval_id}/v1/report.json")
-
-    # Unpublish → private again, off the leaderboard.
+    # Unpublish → private again.
     unpublished = api_client.post(f"/v1/evaluations/{eval_id}/unpublish", headers=admin_headers)
     assert unpublished.status_code == 200, unpublished.text
     assert unpublished.json()["is_published"] is False
-    assert eval_id not in _leaderboard_entries(api_client, admin_headers)
 
 
 # ---------------------------------------------------------------------------
@@ -244,7 +226,7 @@ def test_assisted_journey_review_gate_and_disclosure(
     assert fin["mode_disclosure"]["human_reviewed"] is True
     assert fin["mode_disclosure"]["disclaimer"] == ASSISTED_REVIEWED_LEGACY_DISCLAIMER
 
-    # Report and leaderboard both carry the human-reviewed disclosure.
+    # Report carries the human-reviewed disclosure.
     report = api_client.get(f"/v1/reports/{eval_id}", headers=admin_headers)
     assert report.status_code == 200, report.text
     assert report.json()["mode_disclosure"]["human_reviewed"] is True
@@ -252,11 +234,7 @@ def test_assisted_journey_review_gate_and_disclosure(
 
     published = api_client.post(f"/v1/evaluations/{eval_id}/publish", headers=admin_headers)
     assert published.status_code == 200, published.text
-
-    entries = _leaderboard_entries(api_client, admin_headers)
-    assert eval_id in entries
-    assert entries[eval_id]["evaluation_mode"] == "AI_ASSISTED"
-    assert entries[eval_id]["human_reviewed"] is True
+    assert published.json()["is_published"] is True
 
 
 # ---------------------------------------------------------------------------

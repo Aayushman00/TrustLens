@@ -276,7 +276,7 @@ export default function EvaluationDetailPage() {
                       disabled={acting}
                       onClick={() => void publishAction("publish")}
                     >
-                      {acting ? "Working…" : "Publish to leaderboard"}
+                      {acting ? "Working…" : "Publish"}
                     </button>
                   )
                 ) : (

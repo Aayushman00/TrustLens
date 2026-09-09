@@ -531,37 +531,6 @@ export interface ReportRead {
   report_json: ReportV1;
 }
 
-// ---- leaderboard ----
-
-export interface LeaderboardReportRef {
-  version: number;
-  json_uri: string | null;
-  pdf_uri: string | null;
-}
-
-export interface LeaderboardEntry {
-  evaluation_id: string;
-  model_id: number;
-  hf_repo_id: string;
-  model_revision: string | null;
-  evaluation_mode: EvaluationMode;
-  human_reviewed: boolean;
-  task: string | null;
-  dataset: string | null;
-  config: string | null;
-  trustlens_version: string | null;
-  fries_score: number;
-  overall_confidence: number | null;
-  published_at: string | null;
-  report: LeaderboardReportRef | null;
-}
-
-export interface LeaderboardList {
-  items: LeaderboardEntry[];
-  next_cursor: string | null;
-  note: string | null;
-}
-
 // ---- errors ----
 
 /** Backend error envelope (app/api/errors.py). */
