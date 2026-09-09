@@ -261,3 +261,46 @@ def auth_headers() -> dict[str, str]:
 def admin_headers() -> dict[str, str]:
     """No-op — TrustLens is a single-user local app with no auth headers."""
     return {}
+
+
+class FakeS3Client:
+    """Minimal in-memory S3/boto3 client for storage tests."""
+
+    def __init__(self) -> None:
+        self.objects: dict[tuple[str, str], bytes] = {}
+
+    def put_object(
+        self,
+        *,
+        Bucket: str,
+        Key: str,
+        Body: bytes,
+        ContentType: str | None = None,
+        Metadata: dict[str, str] | None = None,
+    ) -> dict:
+        """Store an object in memory."""
+        self.objects[(Bucket, Key)] = Body
+        return {}
+
+    def get_object(self, *, Bucket: str, Key: str) -> dict:
+        """Retrieve an object from memory."""
+        if (Bucket, Key) not in self.objects:
+            from botocore.exceptions import NoSuchKey
+
+            raise NoSuchKey(
+                error_response={"Error": {"Code": "NoSuchKey", "Message": "Not found"}},
+                operation_name="GetObject",
+            )
+        data = self.objects[(Bucket, Key)]
+
+        class FakeBody:
+            def read(self) -> bytes:
+                return data
+
+        return {"Body": FakeBody()}
+
+
+@pytest.fixture
+def fake_s3_client() -> FakeS3Client:
+    """In-memory S3 client for storage tests."""
+    return FakeS3Client()

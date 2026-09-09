@@ -324,3 +324,58 @@ def get_dataset_store(settings: Settings | _SettingsLike) -> DatasetStore | None
         config=_STORE_BOTO_CONFIG,
     )
     return DatasetStore(client, settings.s3_bucket)
+
+
+class DatasetContentStore:
+    """Content-addressed storage for DatasetContent bytes.
+
+    Key is derived purely from the SHA-256 of the bytes — never from a
+    client-supplied filename or the source URL. Same bytes always resolve
+    to the same key; puts are idempotent.
+    """
+
+    def __init__(self, client: BaseClient, bucket: str) -> None:
+        self._client = client
+        self._bucket = bucket
+
+    def _object_key(self, content_hash: str) -> str:
+        return f"datasets/{content_hash.removeprefix('sha256:')}"
+
+    def put(self, data: bytes, *, format: str) -> tuple[str, str]:
+        digest = format_sha256(data)
+        key = self._object_key(digest)
+        try:
+            self._client.put_object(
+                Bucket=self._bucket,
+                Key=key,
+                Body=data,
+                ContentType=f"text/{format}" if format else "application/octet-stream",
+            )
+        except Exception as exc:
+            raise EvidenceStoreError(f"Failed to put dataset content key={key}: {exc}") from exc
+        return f"s3://{self._bucket}/{key}", digest
+
+    def get(self, storage_uri: str) -> bytes:
+        parsed = urlparse(storage_uri)
+        if parsed.scheme != "s3" or parsed.netloc != self._bucket:
+            raise EvidenceStoreError(f"Unsupported/mismatched dataset content URI: {storage_uri}")
+        key = parsed.path.lstrip("/")
+        try:
+            response = self._client.get_object(Bucket=self._bucket, Key=key)
+            return bytes(response["Body"].read())
+        except Exception as exc:
+            raise EvidenceStoreError(f"Failed to get dataset content key={key}: {exc}") from exc
+
+
+def get_dataset_content_store(settings: Settings | _SettingsLike) -> DatasetContentStore | None:
+    if not settings.s3_endpoint or not settings.s3_access_key or not settings.s3_secret_key:
+        return None
+    client: BaseClient = boto3.client(
+        "s3",
+        endpoint_url=settings.s3_endpoint,
+        aws_access_key_id=settings.s3_access_key,
+        aws_secret_access_key=settings.s3_secret_key,
+        region_name=settings.s3_region,
+        config=_STORE_BOTO_CONFIG,
+    )
+    return DatasetContentStore(client, settings.s3_bucket)
