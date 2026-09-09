@@ -263,6 +263,24 @@ def admin_headers() -> dict[str, str]:
     return {}
 
 
+@pytest.fixture
+def seeded_model(db_session: Session) -> Any:
+    """Create and return a test Model row for FK relationships in tests."""
+    import uuid
+
+    from app.db.models import Model
+
+    model = Model(
+        hf_repo_id=f"org/model-{uuid.uuid4().hex[:8]}",
+        model_metadata={"source": "test"},
+        checksum="sha256:deadbeef",
+        revision="main",
+    )
+    db_session.add(model)
+    db_session.flush()
+    return model
+
+
 class FakeS3Client:
     """Minimal in-memory S3/boto3 client for storage tests."""
 
