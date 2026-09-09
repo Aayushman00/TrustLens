@@ -145,7 +145,7 @@ log/
 *.swo
 *~
 
-# Cursor — ignore local machine state; keep project plans/docs tracked
+# Cursor
 .cursor/*
 .claude/
 .codegraph/
