@@ -147,7 +147,6 @@ log/
 
 # Cursor — ignore local machine state; keep project plans/docs tracked
 .cursor/*
-!.cursor/plans/
 .claude/
 .codegraph/
 
