@@ -153,6 +153,47 @@ class DatasetFetchEvent(Base):
     content: Mapped[DatasetContent | None] = relationship()
 
 
+class EvaluationDraft(Base):
+    __tablename__ = "evaluation_draft"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    model_id: Mapped[int] = mapped_column(Integer, ForeignKey("models.id", ondelete="RESTRICT"), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, server_default="incomplete")
+    resolved_model_sha: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    model_label_snapshot: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    dimensions: Mapped[list[DraftDimensionConfig]] = relationship(
+        back_populates="draft", cascade="all, delete-orphan"
+    )
+
+
+class DraftDimensionConfig(Base):
+    __tablename__ = "draft_dimension_config"
+    __table_args__ = (UniqueConstraint("draft_id", "dimension", name="uq_draft_dimension"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    draft_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("evaluation_draft.id", ondelete="CASCADE"), nullable=False
+    )
+    dimension: Mapped[str] = mapped_column(String(16), nullable=False)
+    dataset_content_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("dataset_content.id", ondelete="RESTRICT"), nullable=True
+    )
+    text_column: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    target_column: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    sensitive_column: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    label_mapping: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB, nullable=True)
+    min_group_n: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    validated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    draft: Mapped[EvaluationDraft] = relationship(back_populates="dimensions")
+
+
 class DocumentationSource(Base, TimestampMixin):
     """First-class documentation evidence for a model (Explainability/Safety Track 1).
 
