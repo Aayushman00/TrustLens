@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from typing import Any, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class DimensionConfigUpdate(BaseModel):
@@ -14,7 +14,7 @@ class DimensionConfigUpdate(BaseModel):
     target_column: str
     sensitive_column: str | None = None
     label_mapping: list[dict[str, Any]]
-    min_group_n: int | None = None
+    min_group_n: int | None = Field(default=None, gt=0)
 
 
 class DimensionValidationRead(BaseModel):

@@ -29,6 +29,8 @@ from __future__ import annotations
 import datetime as dt
 import uuid
 
+from pydantic import ValidationError
+
 from app.api.errors import NotFoundError, ValidationAppError
 from app.core.config import get_settings
 from app.db.repositories.dataset_content import DatasetContentRepository
@@ -79,7 +81,10 @@ class EvaluationDraftService:
         if dimension not in _DIMENSIONS:
             raise ValidationAppError(f"unknown dimension {dimension!r}")
 
-        update = DimensionConfigUpdate.model_validate(body)
+        try:
+            update = DimensionConfigUpdate.model_validate(body)
+        except ValidationError as exc:
+            raise ValidationAppError("Invalid dimension config", details={"errors": exc.errors()}) from exc
         self._ensure_model_snapshot(draft)
 
         content = self._contents.get_by_id(update.dataset_content_id)
@@ -89,6 +94,8 @@ class EvaluationDraftService:
                 details={"dataset_content_id": str(update.dataset_content_id)},
             )
         store = get_dataset_content_store(get_settings())
+        if store is None:
+            raise ValidationAppError("Dataset content storage is not configured")
         data = store.get(content.storage_uri)
 
         snapshot = ModelLabelSnapshot(
@@ -97,7 +104,7 @@ class EvaluationDraftService:
             resolved_sha=draft.resolved_model_sha,
         )
 
-        effective_min_group_n = update.min_group_n or _DEFAULT_MIN_GROUP_N
+        effective_min_group_n = update.min_group_n if update.min_group_n is not None else _DEFAULT_MIN_GROUP_N
 
         if dimension == "FAIRNESS":
             if not update.sensitive_column:
