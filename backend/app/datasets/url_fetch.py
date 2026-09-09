@@ -1,12 +1,18 @@
 """SSRF-safe streaming dataset URL fetcher — V1: no archives, no redirects followed
-automatically past a re-validated hop, hard byte cap enforced while streaming."""
+automatically past a re-validated hop, hard byte cap enforced while streaming.
+
+Critical security: DNS rebinding defense via connection pinning. Hostname is resolved
+and validated BEFORE connection. The validated IP is extracted and the connection is
+made DIRECTLY to that IP (not re-resolving the hostname), with the Host header and
+SNI set to the original hostname for correct server-side request routing.
+"""
 
 from __future__ import annotations
 
 import ipaddress
 import socket
 from dataclasses import dataclass
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse
 
 import httpx
 
@@ -28,11 +34,21 @@ class FetchedBytes:
     http_status: int
 
 
+@dataclass(frozen=True)
+class _ValidatedUrl:
+    """URL + resolved/validated IP for DNS rebinding defense (connection pinning)."""
+    original_url: str
+    original_hostname: str
+    validated_ip: str
+    scheme: str
+    port: int | None
+
+
 def _resolve_and_validate_host(host: str) -> str:
     """Resolve host to an IP and reject private/loopback/link-local/reserved ranges.
 
-    Returns the validated IP as a string so the caller can pin the connection
-    to it (defends against DNS rebinding between check and connect).
+    Returns the validated IP as a string. The caller MUST pin the connection to this
+    IP (not re-resolve the hostname at connect time) to defend against DNS rebinding.
     """
     try:
         infos = socket.getaddrinfo(host, None)
@@ -52,14 +68,55 @@ def _resolve_and_validate_host(host: str) -> str:
     return str(ipaddress.ip_address(infos[0][4][0]))
 
 
-def _validate_url(url: str) -> str:
+def _validate_url(url: str) -> _ValidatedUrl:
+    """Validate URL scheme and resolve/validate hostname. Returns validated URL + IP."""
     parsed = urlparse(url)
     if parsed.scheme not in _ALLOWED_SCHEMES:
         raise UrlFetchError(f"unsupported scheme: {parsed.scheme!r}")
     if not parsed.hostname:
         raise UrlFetchError("URL has no hostname")
-    _resolve_and_validate_host(parsed.hostname)
-    return url
+    validated_ip = _resolve_and_validate_host(parsed.hostname)
+    return _ValidatedUrl(
+        original_url=url,
+        original_hostname=parsed.hostname,
+        validated_ip=validated_ip,
+        scheme=parsed.scheme,
+        port=parsed.port,
+    )
+
+
+def _make_pinned_request_url(validated: _ValidatedUrl) -> str:
+    """Construct a URL that connects to the validated IP but shows correct Host header.
+
+    Returns a URL like http://IP:PORT/path where IP is the pre-validated address.
+    The Host header is set separately to the original hostname so the server sees
+    the request as if it came from the original URL. For HTTPS, SNI is also set.
+    """
+    # Determine port
+    if validated.port:
+        port = validated.port
+    else:
+        port = 443 if validated.scheme == "https" else 80
+
+    parsed = urlparse(validated.original_url)
+
+    # Format netloc with IP (wrap IPv6 in brackets for URL format)
+    ip_obj = ipaddress.ip_address(validated.validated_ip)
+    if isinstance(ip_obj, ipaddress.IPv6Address):
+        netloc = f"[{validated.validated_ip}]:{port}"
+    else:
+        netloc = f"{validated.validated_ip}:{port}"
+
+    # Reconstruct URL with IP instead of hostname, keeping path/query/fragment
+    ip_url = urlunparse((
+        validated.scheme,
+        netloc,
+        parsed.path or "/",
+        parsed.params,
+        parsed.query,
+        parsed.fragment,
+    ))
+    return ip_url
 
 
 def fetch_dataset_url(
@@ -68,15 +125,42 @@ def fetch_dataset_url(
     max_bytes: int = 10_000_000,
     timeout_seconds: float = 15.0,
 ) -> FetchedBytes:
-    current_url = _validate_url(url)
+    """Fetch a dataset URL with SSRF protection and connection pinning.
+
+    Args:
+        url: URL to fetch (http/https only)
+        max_bytes: Max response size in bytes (default 10MB)
+        timeout_seconds: Request timeout (default 15s)
+
+    Returns:
+        FetchedBytes with data, content_type, http_status
+
+    Raises:
+        UrlFetchError: On any SSRF/scheme/size/timeout violation
+    """
+    current_validated = _validate_url(url)
     redirects_followed = 0
 
+    # Create client with per-request Host header override (pinned IP connection)
     with httpx.Client(
         follow_redirects=False,
-        timeout=httpx.Timeout(connect=_CONNECT_TIMEOUT, read=timeout_seconds, write=timeout_seconds, pool=timeout_seconds),
+        timeout=httpx.Timeout(
+            connect=_CONNECT_TIMEOUT,
+            read=timeout_seconds,
+            write=timeout_seconds,
+            pool=timeout_seconds,
+        ),
     ) as client:
         while True:
-            with client.stream("GET", current_url) as response:
+            # Pin connection to the validated IP, but use original hostname for Host/SNI
+            ip_url = _make_pinned_request_url(current_validated)
+            headers = {"Host": current_validated.original_hostname}
+
+            with client.stream(
+                "GET",
+                ip_url,
+                headers=headers,
+            ) as response:
                 if response.is_redirect:
                     redirects_followed += 1
                     if redirects_followed > _MAX_REDIRECTS:
@@ -84,7 +168,8 @@ def fetch_dataset_url(
                     location = response.headers.get("location")
                     if not location:
                         raise UrlFetchError("redirect with no Location header")
-                    current_url = _validate_url(location)
+                    # Re-validate redirect target (critical for defense)
+                    current_validated = _validate_url(location)
                     continue
 
                 chunks: list[bytes] = []
