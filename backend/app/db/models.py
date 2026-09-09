@@ -37,6 +37,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    func,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -114,6 +115,42 @@ class UserDataset(Base, TimestampMixin):
         server_default="ready",
     )
     status_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class DatasetContent(Base):
+    """Immutable content-addressed dataset snapshot. Never updated after insert."""
+
+    __tablename__ = "dataset_content"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    content_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    storage_uri: Mapped[str] = mapped_column(Text, nullable=False)
+    byte_size: Mapped[int] = mapped_column(Integer, nullable=False)
+    format: Mapped[str] = mapped_column(String(32), nullable=False)
+    row_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    columns: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False)
+    schema_sniff_version: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class DatasetFetchEvent(Base):
+    """Append-only provenance record — one row per fetch attempt, written once terminal."""
+
+    __tablename__ = "dataset_fetch_event"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    source_url: Mapped[str] = mapped_column(Text, nullable=False)
+    requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    http_status: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    content_type: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source_revision: Mapped[str | None] = mapped_column(Text, nullable=True)
+    resolved_content_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("dataset_content.id", ondelete="RESTRICT"), nullable=True
+    )
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    content: Mapped[DatasetContent | None] = relationship()
 
 
 class DocumentationSource(Base, TimestampMixin):
