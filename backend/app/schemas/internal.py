@@ -18,3 +18,7 @@ class EvaluateModelPayload(BaseModel):
     model_ref: str
     evaluation_mode: EvaluationMode
     probe_config: dict[str, Any] = Field(default_factory=dict)
+    # Phase 7: frozen at create time — the worker must not re-derive these
+    # from a possibly-drifted ``Model`` row.
+    model_revision: str | None = None
+    evaluation_contract: dict[str, Any] = Field(default_factory=dict)

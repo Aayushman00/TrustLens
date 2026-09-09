@@ -15,6 +15,24 @@ from app.schemas.probe_config import ProbeConfigV1
 _DEFAULT_RELATIVE = Path("configs") / "datasets_v1.yaml"
 
 
+class FairnessSensitiveAttribute(BaseModel):
+    name: str
+    type: str = "categorical"
+    values: list[str] | None = None
+    pooling_policy: str | None = None
+
+
+class FairnessDatasetConfig(BaseModel):
+    sensitive_attributes: list[FairnessSensitiveAttribute] = Field(default_factory=list)
+    label_field: str = "label"
+    input_field: str = "text"
+    min_total_n: int = 200
+    min_group_n: int = 50
+    stratify_on: list[str] = Field(default_factory=list)
+    default_sensitive_attribute: str | None = None
+    raw_data_urls: dict[str, str] = Field(default_factory=dict)
+
+
 class DatasetSpec(BaseModel):
     hf_path: str
     revision: str
@@ -22,6 +40,12 @@ class DatasetSpec(BaseModel):
     config_name: str | None = None
     checksum: str | None = None
     notes: str | None = None
+    task_type: (
+        Literal["binary_classification", "multiclass_classification", "regression"] | None
+    ) = None
+    evaluation_domain: str | None = None
+    fairness: FairnessDatasetConfig | None = None
+    provenance: str | None = None
 
 
 class DatasetsConfigV1(BaseModel):

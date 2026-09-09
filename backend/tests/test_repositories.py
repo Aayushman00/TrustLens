@@ -6,22 +6,13 @@ import uuid
 
 from sqlalchemy.orm import Session
 
-from app.db.enums import EvaluationMode, EvaluationStatus, UserRole
-from app.db.repositories import EvaluationRepository, ModelRepository, UserRepository
+from app.db.enums import EvaluationMode, EvaluationStatus
+from app.db.repositories import EvaluationRepository, ModelRepository
 
 
-def test_user_model_evaluation_repositories(db_session: Session) -> None:
-    users = UserRepository(db_session)
+def test_model_evaluation_repositories(db_session: Session) -> None:
     models = ModelRepository(db_session)
     evaluations = EvaluationRepository(db_session)
-
-    user = users.create(
-        email=f"researcher-{uuid.uuid4().hex[:8]}@example.com",
-        password_hash="placeholder",
-        role=UserRole.RESEARCHER,
-    )
-    assert users.get_by_id(user.id) is not None
-    assert users.get_by_email(user.email) is not None
 
     model = models.create(
         hf_repo_id=f"org/repo-{uuid.uuid4().hex[:8]}",
@@ -40,9 +31,20 @@ def test_user_model_evaluation_repositories(db_session: Session) -> None:
     assert evaluation.status is EvaluationStatus.PENDING
     assert evaluations.get_by_id(evaluation.id) is not None
 
-    updated = evaluations.update_status(evaluation.id, EvaluationStatus.RUNNING)
+    updated = evaluations.transition_status(
+        evaluation.id, expected=EvaluationStatus.PENDING, new=EvaluationStatus.RUNNING
+    )
     assert updated is not None
     assert updated.status is EvaluationStatus.RUNNING
+
+    # CAS rejects a transition from a status that no longer matches (the
+    # evaluation is now RUNNING, not PENDING) — the only lifecycle status
+    # mutation path is the atomic CAS, never an unconditional write.
+    stale = evaluations.transition_status(
+        evaluation.id, expected=EvaluationStatus.PENDING, new=EvaluationStatus.FAILED
+    )
+    assert stale is None
+    assert evaluations.get_by_id(evaluation.id).status is EvaluationStatus.RUNNING
 
     pending = evaluations.list_by_status(EvaluationStatus.PENDING)
     running = evaluations.list_by_status(EvaluationStatus.RUNNING)

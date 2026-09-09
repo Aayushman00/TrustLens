@@ -13,11 +13,23 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any, Literal, Protocol
 
-from app.db.enums import FriesDimension
+from app.db.enums import FriesDimension, ProbeEvaluationStatus
 
 METHODOLOGY_STATUS: Literal["PROPOSED_REQUIRES_VALIDATION"] = (
     "PROPOSED_REQUIRES_VALIDATION"
 )
+METHODOLOGY_STATUS_DETERMINISTIC: Literal["DETERMINISTIC_OSD_V1"] = (
+    "DETERMINISTIC_OSD_V1"
+)
+LEGACY_HEURISTIC_METHODOLOGY_STATUS: Literal["LEGACY_HEURISTIC_OSD_V1"] = (
+    "LEGACY_HEURISTIC_OSD_V1"
+)
+
+MethodologyStatus = Literal[
+    "PROPOSED_REQUIRES_VALIDATION",
+    "DETERMINISTIC_OSD_V1",
+    "LEGACY_HEURISTIC_OSD_V1",
+]
 
 
 @dataclass
@@ -39,25 +51,35 @@ class AgentContext:
     confidence_summary: dict[str, Any] | None = None
 
 
-@dataclass
+@dataclass(kw_only=True)
 class AspectOSD:
-    """Proposed O/S/D for one FRIES dimension (0..10 ints, higher = safer)."""
+    """Proposed O/S/D for one FRIES dimension (0..10 ints, higher = safer).
+
+    O/S/D are integers when evidence supports a heuristic band, or ``None``
+    when the agent abstains (missing/skipped evidence — never a fake triple).
+    """
 
     aspect: FriesDimension
-    O: int
-    S: int
-    D: int
     confidence: float
     rationale: str
+    O: int | None = None
+    S: int | None = None
+    D: int | None = None
     evidence_refs: list[dict[str, Any]] = field(default_factory=list)
+    status: ProbeEvaluationStatus | None = None
+    O_source: str | None = None
+    S_source: str | None = None
+    D_source: str | None = None
+    osd_metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class AgentResult:
     aspects: list[AspectOSD]
     overall_confidence: float
-    methodology_status: Literal["PROPOSED_REQUIRES_VALIDATION"]
+    methodology_status: MethodologyStatus
     model_ref: str
+    assessment_engine: str = "deterministic"
 
 
 class OSDAgent(Protocol):

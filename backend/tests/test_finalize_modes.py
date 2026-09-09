@@ -9,17 +9,24 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.db.enums import EvaluationMode
-from app.db.models import User
 from app.db.repositories.final_score import FinalScoreRepository
 from app.schemas.internal import EvaluateModelPayload
 from app.schemas.modes import (
     ASSISTED_AWAITING_DISCLAIMER,
-    ASSISTED_REVIEWED_DISCLAIMER,
-    AUTONOMOUS_DISCLAIMER,
+    ASSISTED_REVIEWED_LEGACY_DISCLAIMER,
+    LEGACY_AUTONOMOUS_DISCLAIMER,
 )
 from app.tasks.evaluate_pipeline import run_evaluation_pipeline
-from tests.conftest import auth_headers_for
+from tests.conftest import LEGACY_HEURISTIC_PROBE_CONFIG, fries_complete_model_payload
 from tests.fakes import FakeEvidenceStore
+
+
+@pytest.fixture(autouse=True)
+def _complete_fries_probes(
+    evaluated_robustness: None,
+    evaluated_fairness: None,
+) -> None:
+    return
 
 
 @pytest.fixture(autouse=True)
@@ -40,13 +47,17 @@ def _create_and_run(
 ) -> str:
     model = api_client.post(
         "/v1/models",
-        json={"hf_repo_id": f"org/fin-{uuid.uuid4().hex[:8]}"},
+        json=fries_complete_model_payload(f"org/fin-{uuid.uuid4().hex[:8]}"),
         headers=auth_headers,
     )
     assert model.status_code == 201, model.text
     created = api_client.post(
         "/v1/evaluations",
-        json={"model_id": model.json()["id"], "evaluation_mode": mode},
+        json={
+            "model_id": model.json()["id"],
+            "evaluation_mode": mode,
+            "probe_config": LEGACY_HEURISTIC_PROBE_CONFIG,
+        },
         headers=auth_headers,
     )
     assert created.status_code == 201, created.text
@@ -55,6 +66,7 @@ def _create_and_run(
         evaluation_id=uuid.UUID(eval_id),
         model_ref=model.json()["hf_repo_id"],
         evaluation_mode=EvaluationMode(mode),
+        probe_config=LEGACY_HEURISTIC_PROBE_CONFIG,
     )
     run_evaluation_pipeline(db_session, payload, evidence_store=FakeEvidenceStore())
     db_session.flush()
@@ -63,27 +75,27 @@ def _create_and_run(
 
 def test_autonomous_finalize_idempotent_with_disclosure(
     api_client: TestClient,
-    auth_headers: dict[str, str],
+    admin_headers: dict[str, str],
     db_session: Session,
 ) -> None:
-    eval_id = _create_and_run(api_client, auth_headers, db_session, mode="AI_AUTONOMOUS")
+    eval_id = _create_and_run(api_client, admin_headers, db_session, mode="AI_AUTONOMOUS")
 
     for _ in range(2):  # idempotent — same 200 on repeat
         response = api_client.post(
-            f"/v1/evaluations/{eval_id}/finalize", headers=auth_headers
+            f"/v1/evaluations/{eval_id}/finalize", headers=admin_headers
         )
         assert response.status_code == 200, response.text
         body = response.json()
         assert body["status"] == "FINALIZED"
         assert body["final_score"] is not None
         assert body["final_score"]["human_reviewed"] is False
-        assert body["final_score"]["disclaimer"] == AUTONOMOUS_DISCLAIMER
+        assert body["final_score"]["disclaimer"] == LEGACY_AUTONOMOUS_DISCLAIMER
         assert body["mode_disclosure"]["evaluation_mode"] == "AI_AUTONOMOUS"
         assert body["mode_disclosure"]["human_reviewed"] is False
-        assert body["mode_disclosure"]["disclaimer"] == AUTONOMOUS_DISCLAIMER
+        assert body["mode_disclosure"]["disclaimer"] == LEGACY_AUTONOMOUS_DISCLAIMER
         assert (
             body["mode_disclosure"]["methodology_status"]
-            == "PROPOSED_REQUIRES_VALIDATION"
+            == "LEGACY_HEURISTIC_OSD_V1"
         )
 
     # Persisted finalized_osd carries the disclosure (Phase 17).
@@ -91,10 +103,10 @@ def test_autonomous_finalize_idempotent_with_disclosure(
     assert row is not None
     assert row.finalized_osd["human_reviewed"] is False
     assert row.finalized_osd["evaluation_mode"] == "AI_AUTONOMOUS"
-    assert row.finalized_osd["disclaimer"] == AUTONOMOUS_DISCLAIMER
+    assert row.finalized_osd["disclaimer"] == LEGACY_AUTONOMOUS_DISCLAIMER
 
-    detail = api_client.get(f"/v1/evaluations/{eval_id}", headers=auth_headers)
-    assert detail.json()["mode_disclosure"]["disclaimer"] == AUTONOMOUS_DISCLAIMER
+    detail = api_client.get(f"/v1/evaluations/{eval_id}", headers=admin_headers)
+    assert detail.json()["mode_disclosure"]["disclaimer"] == LEGACY_AUTONOMOUS_DISCLAIMER
 
 
 def test_autonomous_finalize_failed_evaluation_409(
@@ -128,22 +140,20 @@ def test_autonomous_finalize_failed_evaluation_409(
 
 def test_assisted_finalize_review_required_then_writes(
     api_client: TestClient,
-    auth_headers: dict[str, str],
+    admin_headers: dict[str, str],
     db_session: Session,
-    seeded_users: dict[str, tuple[User, str]],
 ) -> None:
-    eval_id = _create_and_run(api_client, auth_headers, db_session, mode="AI_ASSISTED")
+    eval_id = _create_and_run(api_client, admin_headers, db_session, mode="AI_ASSISTED")
 
     # Detail carries the awaiting disclaimer while unreviewed.
-    detail = api_client.get(f"/v1/evaluations/{eval_id}", headers=auth_headers)
+    detail = api_client.get(f"/v1/evaluations/{eval_id}", headers=admin_headers)
     disclosure = detail.json()["mode_disclosure"]
     assert detail.json()["status"] == "AWAITING_REVIEW"
     assert detail.json()["final_score"] is None
     assert disclosure["human_reviewed"] is False
     assert disclosure["disclaimer"] == ASSISTED_AWAITING_DISCLAIMER
 
-    reviewer, reviewer_pw = seeded_users["reviewer"]
-    reviewer_headers = auth_headers_for(api_client, reviewer.email, reviewer_pw)
+    reviewer_headers = admin_headers
 
     response = api_client.post(
         f"/v1/evaluations/{eval_id}/finalize", headers=reviewer_headers
@@ -168,6 +178,6 @@ def test_assisted_finalize_review_required_then_writes(
     body = response.json()
     assert body["status"] == "FINALIZED"
     assert body["final_score"]["human_reviewed"] is True
-    assert body["final_score"]["disclaimer"] == ASSISTED_REVIEWED_DISCLAIMER
+    assert body["final_score"]["disclaimer"] == ASSISTED_REVIEWED_LEGACY_DISCLAIMER
     assert body["mode_disclosure"]["human_reviewed"] is True
-    assert body["mode_disclosure"]["disclaimer"] == ASSISTED_REVIEWED_DISCLAIMER
+    assert body["mode_disclosure"]["disclaimer"] == ASSISTED_REVIEWED_LEGACY_DISCLAIMER

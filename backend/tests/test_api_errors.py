@@ -1,4 +1,4 @@
-"""Structured error shape tests (401 / 404 / 409 / 422 / 501)."""
+"""Structured error shape tests (404 / 409 / 422 / 501)."""
 
 from __future__ import annotations
 
@@ -9,31 +9,18 @@ from fastapi.testclient import TestClient
 from app.main import create_app
 
 
-def test_login_missing_body_returns_422() -> None:
-    client = TestClient(create_app())
-    response = client.post("/v1/auth/login")
-    assert response.status_code == 422
-    assert response.headers.get("X-Request-ID")
-    body = response.json()
-    assert body["code"] == "VALIDATION_ERROR"
-    assert "message" in body
-
-
-def test_import_hf_without_token_401() -> None:
-    """POST /v1/models/import-hf (Phase 6, live) still enforces auth first."""
+def test_import_hf_without_body_422() -> None:
+    """POST /v1/models/import-hf requires no auth — a missing body is a 422."""
     client = TestClient(create_app())
     response = client.post("/v1/models/import-hf")
-    assert response.status_code == 401
+    assert response.status_code == 422
     assert response.headers.get("X-Request-ID")
-    body = response.json()
-    assert body["code"] == "UNAUTHORIZED"
 
 
-def test_not_found_model_without_token_401() -> None:
-    """Protected routes reject unauthenticated requests before touching the DB."""
-    client = TestClient(create_app())
-    response = client.get("/v1/models/999999")
-    assert response.status_code == 401
+def test_not_found_model_without_auth_404(api_client: TestClient) -> None:
+    """Single-user local instance — no auth required; an unknown id still 404s."""
+    response = api_client.get("/v1/models/999999")
+    assert response.status_code == 404
     body = response.json()
     assert "code" in body and "message" in body and "details" in body
     assert response.headers.get("X-Request-ID")

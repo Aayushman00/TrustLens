@@ -5,12 +5,6 @@ from __future__ import annotations
 import enum
 
 
-class UserRole(str, enum.Enum):
-    RESEARCHER = "researcher"
-    REVIEWER = "reviewer"
-    ADMIN = "admin"
-
-
 class EvaluationStatus(str, enum.Enum):
     PENDING = "PENDING"
     RUNNING = "RUNNING"
@@ -32,3 +26,12 @@ class FriesDimension(str, enum.Enum):
     INTEGRITY = "INTEGRITY"
     EXPLAINABILITY = "EXPLAINABILITY"
     SAFETY = "SAFETY"
+
+
+class ProbeEvaluationStatus(str, enum.Enum):
+    EVALUATED = "EVALUATED"
+    INSUFFICIENT_EVIDENCE = "INSUFFICIENT_EVIDENCE"
+    NOT_APPLICABLE = "NOT_APPLICABLE"
+    SKIPPED = "SKIPPED"
+    FAILED = "FAILED"
+    PROXY = "PROXY"

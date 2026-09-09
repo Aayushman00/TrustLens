@@ -7,7 +7,7 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.enums import EvaluationMode, FriesDimension
+from app.db.enums import EvaluationMode, FriesDimension, ProbeEvaluationStatus
 from app.db.models import ProbeResult
 from app.db.repositories.evaluation import EvaluationRepository
 from app.db.repositories.model import ModelRepository
@@ -91,8 +91,12 @@ def test_run_all_probes_inserts_five_rows(db_session: Session) -> None:
             )
         elif row.dimension == FriesDimension.ROBUSTNESS:
             assert row.metric_values.get("proposed_mapping") is False
-            assert row.metric_values.get("attack") == "char_swap"
-            assert "unsupported_modality" in (outputs[1].flags or [])
+            rob_flags = outputs[1].flags or []
+            assert outputs[1].status is ProbeEvaluationStatus.NOT_APPLICABLE
+            assert (
+                "no_compatible_dataset" in rob_flags
+                or "unsupported_modality" in rob_flags
+            )
         elif row.dimension == FriesDimension.EXPLAINABILITY:
             assert row.metric_values.get("proposed_mapping") is False
             assert "coverage_ratio" in row.metric_values
@@ -105,7 +109,8 @@ def test_run_all_probes_inserts_five_rows(db_session: Session) -> None:
         else:
             assert row.dimension == FriesDimension.INTEGRITY
             assert "checks" in row.metric_values
-            assert "integrity_score_0_10" in row.metric_values
+            assert row.metric_values.get("proposed_mapping") is False
+            assert "integrity_score_0_10" not in row.metric_values
             assert 0.0 <= (row.confidence or 0) <= 1.0
 
     # Skipped robustness (unsupported modality) must score below metadata integrity.

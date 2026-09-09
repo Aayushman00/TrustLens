@@ -7,10 +7,12 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.enums import EvaluationMode
+from app.db.enums import EvaluationMode, EvaluationStatus
 from app.db.models import ProbeResult
 from app.db.repositories.evaluation import EvaluationRepository
+from app.db.repositories.final_score import FinalScoreRepository
 from app.db.repositories.model import ModelRepository
+from app.db.repositories.osd_agent_output import OsdAgentOutputRepository
 from app.probes.base import FRIES_PROBE_ORDER
 from app.schemas.internal import EvaluateModelPayload
 from app.storage.evidence_store import format_sha256
@@ -75,7 +77,9 @@ def test_pipeline_writes_evidence_ref(db_session: Session) -> None:
         assert row.confidence == factors["combined"]
         if expected_dim.value == "INTEGRITY":
             assert "checks" in row.metric_values
-            assert "integrity_score_0_10" in row.metric_values
+            assert "integrity_score_0_10" not in row.metric_values
+            assert row.metric_values.get("proposed_mapping") is False
+            assert row.metric_values.get("osd_proposals") == []
             assert row.metric_values.get("stub") is not True
         elif expected_dim.value == "ROBUSTNESS":
             assert row.metric_values.get("stub") is not True
@@ -99,6 +103,28 @@ def test_pipeline_writes_evidence_ref(db_session: Session) -> None:
             assert "checks" in row.metric_values
         else:
             raise AssertionError(f"unexpected dimension {expected_dim}")
+        assert row.metric_values.get("probe_status")
+
+    evaluation = evals.get_by_id(evaluation.id)
+    assert evaluation is not None
+    assert evaluation.status == EvaluationStatus.FINALIZED
+    # No contract was selected (documentation_only) so neither Fairness nor
+    # Robustness invoked LocalHFBackend — execution_metadata must stay None,
+    # never a fabricated/guessed device.
+    assert evaluation.execution_metadata is None
+    osd_row = OsdAgentOutputRepository(db_session).latest_for_evaluation(evaluation.id)
+    assert osd_row is not None
+    suggestion = osd_row.ai_suggestion
+    assert suggestion["scoring_withheld"] is True
+    assert suggestion["scoring_complete"] is False
+    assert suggestion["complete_aspect_count"] < 5
+    robustness_aspect = next(
+        a for a in suggestion["aspects"] if a["aspect"] == "ROBUSTNESS"
+    )
+    assert robustness_aspect["O"] is None
+    assert robustness_aspect["S"] is None
+    assert robustness_aspect["D"] is None
+    assert FinalScoreRepository(db_session).get_for_evaluation(evaluation.id) is None
 
 
 def test_pipeline_fails_without_evidence_store(db_session: Session) -> None:

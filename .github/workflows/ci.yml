@@ -1,9 +1,10 @@
 # TrustLens minimal CI (Phase 24) — unit + API tests green on every push/PR.
 #
 # Scope (deliberate): backend ruff+pytest with a Postgres service, worker
-# ruff+pytest with a slim install, frontend type-check+build. No Redis/MinIO/
-# WeasyPrint services — tests fake the evidence/report stores, monkeypatch the
-# Redis enqueue, and PDF rendering degrades gracefully (see backend/tests/README.md).
+# ruff+pytest with a slim install, frontend test+type-check+build. No Redis/
+# MinIO/WeasyPrint services — tests fake the evidence/report stores,
+# monkeypatch the Redis enqueue, and PDF rendering degrades gracefully (see
+# backend/tests/README.md).
 name: CI
 
 on:
@@ -29,7 +30,11 @@ jobs:
         env:
           POSTGRES_USER: trustlens
           POSTGRES_PASSWORD: trustlens
-          POSTGRES_DB: trustlens
+          # Distinctly-named from the "trustlens" dev/Compose database so this
+          # ephemeral CI database can never collide with — or be confused for
+          # — a real development database (audit P1-2; see
+          # tests/conftest.py::resolve_test_database_url).
+          POSTGRES_DB: trustlens_test
         ports:
           - 5432:5432
         options: >-
@@ -38,7 +43,10 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     env:
-      DATABASE_URL: postgresql+psycopg2://trustlens:trustlens@127.0.0.1:5432/trustlens
+      # TEST_DATABASE_URL only — DB-backed tests (including the destructive
+      # migration round-trip) refuse to run without it and never fall back to
+      # DATABASE_URL. This ephemeral service container is CI's only Postgres.
+      TEST_DATABASE_URL: postgresql+psycopg2://trustlens:trustlens@127.0.0.1:5432/trustlens_test
       APP_ENV: test
     steps:
       - uses: actions/checkout@v4
@@ -84,7 +92,7 @@ jobs:
         run: python -m pytest -q
 
   frontend:
-    name: Frontend (tsc + vite build)
+    name: Frontend (test + tsc + vite build)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -93,10 +101,16 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # 22 (not 20) — `npm test`'s first step runs
+          # `node --experimental-strip-types`, which only exists from Node
+          # 22.6+. CI never ran `npm test` before (build-only), so this was
+          # latent until now (audit P1-3).
+          node-version: 22
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - name: Install
         run: npm ci
+      - name: Test
+        run: npm test
       - name: Build
         run: npm run build

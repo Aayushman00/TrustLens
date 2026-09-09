@@ -23,14 +23,12 @@ class HumanReviewRepository:
         self,
         *,
         evaluation_id: uuid.UUID,
-        reviewer_id: int,
         overrides: dict[str, Any],
         human_changed: bool,
         notes: str | None = None,
     ) -> HumanReview:
         row = HumanReview(
             evaluation_id=evaluation_id,
-            reviewer_id=reviewer_id,
             overrides=overrides,
             human_changed=human_changed,
             notes=notes,

@@ -1,11 +1,13 @@
-"""Compose verify (Phase 19): reports for Autonomous + Assisted, versioning, MinIO PDF."""
+"""Compose verify (Phase 19): reports for Autonomous + Assisted, versioning, MinIO PDF.
+
+Single-user local instance — no auth; every request is unauthenticated.
+"""
 from __future__ import annotations
 
 import json
 import time
 import urllib.error
 import urllib.request
-import uuid
 
 API = "http://127.0.0.1:8000"
 
@@ -16,10 +18,8 @@ FAST_PROBE_CONFIG = {
 }
 
 
-def req(method: str, path: str, data=None, token=None, expect_error: int | None = None):
+def req(method: str, path: str, data=None, expect_error: int | None = None):
     headers = {"Content-Type": "application/json"}
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
     body = None if data is None else json.dumps(data).encode()
     request = urllib.request.Request(f"{API}{path}", data=body, headers=headers, method=method)
     try:
@@ -32,22 +32,17 @@ def req(method: str, path: str, data=None, token=None, expect_error: int | None 
         raise RuntimeError(f"{method} {path} -> {exc.code}: {detail}") from exc
 
 
-def login(email: str, password: str) -> str:
-    return req("POST", "/v1/auth/login", {"email": email, "password": password})["access_token"]
-
-
-def run_eval(token: str, model_id: int, mode: str, wait_for: set[str]) -> dict:
+def run_eval(model_id: int, mode: str, wait_for: set[str]) -> dict:
     ev = req(
         "POST",
         "/v1/evaluations",
         {"model_id": model_id, "evaluation_mode": mode, "probe_config": FAST_PROBE_CONFIG},
-        token=token,
     )
     eval_id = ev["id"]
     print(f"  created {mode} eval {eval_id}")
     for i in range(120):
         time.sleep(5)
-        row = req("GET", f"/v1/evaluations/{eval_id}", token=token)
+        row = req("GET", f"/v1/evaluations/{eval_id}")
         status = row["status"]
         if i % 6 == 0 or status in wait_for or status == "FAILED":
             print(f"  poll {i}: status={status} progress={row.get('probe_progress')}")
@@ -109,45 +104,34 @@ def check_minio_artifacts(eval_id: str, versions: list[int]) -> None:
 
 
 def main() -> None:
-    researcher = login("researcher@trustlens.local", "trustlens-researcher-dev")
-    reviewer = login("reviewer@trustlens.local", "trustlens-reviewer-dev")
-    print("login ok")
-
-    # Unauthenticated -> 401
-    err = req("GET", f"/v1/reports/{uuid.uuid4()}", expect_error=401)
-    assert err["code"] in {"UNAUTHORIZED", "INVALID_TOKEN"}, err
-    print("unauthenticated GET -> 401 ok")
-
-    model = req("POST", "/v1/models/import-hf", {"repo_id": "distilbert-base-uncased"},
-                token=researcher)
+    model = req("POST", "/v1/models/import-hf", {"repo_id": "distilbert-base-uncased"})
     print("model_id", model["id"])
 
     # --- Autonomous: FINALIZED -> auto-generate v1 -> POST generate v2 ---
     print("AUTONOMOUS:")
-    auto = run_eval(researcher, model["id"], "AI_AUTONOMOUS", {"FINALIZED"})
+    auto = run_eval(model["id"], "AI_AUTONOMOUS", {"FINALIZED"})
     auto_id = auto["id"]
-    body = req("GET", f"/v1/reports/{auto_id}", token=researcher)
+    body = req("GET", f"/v1/reports/{auto_id}")
     check_report_body(body, eval_id=auto_id, version=1, mode="AI_AUTONOMOUS", reviewed=False)
-    again = req("GET", f"/v1/reports/{auto_id}", token=researcher)
+    again = req("GET", f"/v1/reports/{auto_id}")
     assert again["version"] == 1, "repeat GET must not regenerate"
     print("  repeat GET stays v1 ok")
-    regen = req("POST", f"/v1/reports/{auto_id}/generate", token=researcher)
+    regen = req("POST", f"/v1/reports/{auto_id}/generate")
     check_report_body(regen, eval_id=auto_id, version=2, mode="AI_AUTONOMOUS", reviewed=False)
     check_minio_artifacts(auto_id, versions=[1, 2])
 
     # --- Assisted: 409 before finalize -> review -> finalize -> report ---
     print("ASSISTED:")
-    assisted = run_eval(researcher, model["id"], "AI_ASSISTED", {"AWAITING_REVIEW"})
+    assisted = run_eval(model["id"], "AI_ASSISTED", {"AWAITING_REVIEW"})
     assisted_id = assisted["id"]
-    conflict = req("GET", f"/v1/reports/{assisted_id}", token=researcher, expect_error=409)
+    conflict = req("GET", f"/v1/reports/{assisted_id}", expect_error=409)
     assert conflict["code"] == "NOT_FINALIZED", conflict
     assert conflict["details"]["status"] == "AWAITING_REVIEW"
     print("  non-finalized GET -> 409 NOT_FINALIZED ok")
-    req("POST", f"/v1/evaluations/{assisted_id}/human-review", {"accept_all": True},
-        token=reviewer)
-    req("POST", f"/v1/evaluations/{assisted_id}/finalize", token=reviewer)
+    req("POST", f"/v1/evaluations/{assisted_id}/human-review", {"accept_all": True})
+    req("POST", f"/v1/evaluations/{assisted_id}/finalize")
     print("  reviewed + finalized")
-    body = req("GET", f"/v1/reports/{assisted_id}", token=researcher)
+    body = req("GET", f"/v1/reports/{assisted_id}")
     check_report_body(body, eval_id=assisted_id, version=1, mode="AI_ASSISTED", reviewed=True)
     check_minio_artifacts(assisted_id, versions=[1])
 

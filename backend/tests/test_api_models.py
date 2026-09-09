@@ -47,7 +47,7 @@ def test_get_missing_model_404(api_client: TestClient, auth_headers: dict[str, s
     assert response.json()["code"] == "NOT_FOUND"
 
 
-def test_list_models_without_token_401(api_client: TestClient) -> None:
+def test_list_models_works_without_auth(api_client: TestClient) -> None:
+    """Single-user local instance — no auth is required for this route."""
     response = api_client.get("/v1/models")
-    assert response.status_code == 401
-    assert response.json()["code"] == "UNAUTHORIZED"
+    assert response.status_code == 200

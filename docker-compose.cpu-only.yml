@@ -1,0 +1,17 @@
+# CPU-only override — use this on a host with no NVIDIA GPU/driver/Container
+# Toolkit, since the base docker-compose.yml now requests GPU passthrough for
+# the `worker` service by default and Compose fails outright if that
+# reservation can't be satisfied at all.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.cpu-only.yml up --build worker
+#
+# `!reset` (Compose Spec merge tag) removes the base file's `deploy` block
+# entirely rather than merging into it, so the worker container gets no GPU
+# device reservation and starts normally. Inside the container, device
+# selection is still runtime-detected (backend/app/inference/device.py) and
+# will correctly select "cpu" — this override only controls Docker-level
+# device visibility, it does not itself decide the inference device.
+services:
+  worker:
+    deploy: !reset null

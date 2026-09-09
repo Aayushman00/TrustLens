@@ -11,6 +11,7 @@ class ProbeConfigV1(BaseModel):
     """Validated evaluation ``probe_config`` payload."""
 
     schema_version: Literal["v1"] = "v1"
+    assessment_engine: Literal["deterministic", "legacy_heuristic"] | None = None
     datasets: dict[str, str] = Field(default_factory=dict)
     attack_budget: float | None = None
     slice_definitions: dict[str, Any] = Field(default_factory=dict)

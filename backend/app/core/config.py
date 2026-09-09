@@ -1,18 +1,29 @@
 """Application settings loaded from environment variables."""
 
 from functools import lru_cache
+from pathlib import Path
 
-from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-JWT_SECRET_PLACEHOLDER = "change-me-phase5-placeholder"
+_BACKEND_ROOT = Path(__file__).resolve().parents[2]
+_REPO_ROOT = _BACKEND_ROOT.parent
+
+
+def _settings_env_files() -> tuple[str, ...]:
+    """Load repo-root ``.env`` first so native runs work from ``backend/``."""
+    candidates = (
+        _REPO_ROOT / ".env",
+        _BACKEND_ROOT / ".env",
+        Path.cwd() / ".env",
+    )
+    return tuple(str(path) for path in candidates if path.is_file())
 
 
 class Settings(BaseSettings):
-    """Phase 5 settings — DB / Redis / S3 / JWT auth config."""
+    """Application settings — DB / Redis / S3 config."""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=_settings_env_files(),
         env_file_encoding="utf-8",
         extra="ignore",
     )
@@ -33,11 +44,6 @@ class Settings(BaseSettings):
     s3_bucket: str = "trustlens"
     s3_region: str = "us-east-1"
 
-    jwt_secret: str = JWT_SECRET_PLACEHOLDER
-    jwt_algorithm: str = "HS256"
-    jwt_access_expire_minutes: int = 15
-    jwt_refresh_expire_days: int = 7
-
     hf_token: str | None = None
 
     # Celery producer (Phase 7). When true, tasks run inline (tests).
@@ -51,19 +57,6 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
-
-    @model_validator(mode="after")
-    def _check_jwt_secret_not_placeholder(self) -> "Settings":
-        """Fail fast outside development/test if JWT_SECRET was never set."""
-        if (
-            self.app_env not in ("development", "test")
-            and self.jwt_secret == JWT_SECRET_PLACEHOLDER
-        ):
-            raise ValueError(
-                "JWT_SECRET must be set to a real secret when APP_ENV is not "
-                "'development' or 'test'. Refusing to start with the placeholder value."
-            )
-        return self
 
 
 @lru_cache

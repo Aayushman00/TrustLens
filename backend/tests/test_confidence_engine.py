@@ -11,7 +11,7 @@ from app.confidence.engine import (
     refine,
     summarize,
 )
-from app.db.enums import FriesDimension
+from app.db.enums import FriesDimension, ProbeEvaluationStatus
 
 _REF = [{"evidence_id": "e1"}]
 
@@ -58,6 +58,100 @@ def test_fairness_skipped_scores_low_reliability() -> None:
     assert result.confidence < 0.6
 
 
+def test_fairness_insufficient_evidence_keeps_low_reliability() -> None:
+    result = refine(
+        FriesDimension.FAIRNESS,
+        metric_values={
+            "demographic_parity_difference": "NOT_APPLICABLE",
+            "subgroup_worst_group_acc_gap": 0.12,
+            "probe_status": ProbeEvaluationStatus.INSUFFICIENT_EVIDENCE.value,
+            "aspect_scoring": "not_scored",
+        },
+        flags=["model_faithful_pairing", "missing_bootstrap_ci"],
+        evidence_refs=_REF,
+    )
+    assert result.factors.probe_reliability == 0.45
+
+
+def test_fairness_mapping_blocked_wide_ci_reduces_reliability() -> None:
+    blocked = refine(
+        FriesDimension.FAIRNESS,
+        metric_values={
+            "demographic_parity_difference": "NOT_APPLICABLE",
+            "subgroup_worst_group_acc_gap": 0.30,
+            "probe_status": ProbeEvaluationStatus.EVALUATED.value,
+            "aspect_scoring": "mapping_blocked",
+            "reliability": {
+                "gates_passed": False,
+                "failed_gates": ["G-FAIR-CI-WIDE"],
+            },
+        },
+        flags=["model_faithful_pairing", "wide_ci"],
+        evidence_refs=_REF,
+    )
+    assert blocked.factors.probe_reliability == 0.45
+    assert blocked.factors.probe_reliability < 1.0
+
+    scored = refine(
+        FriesDimension.FAIRNESS,
+        metric_values={
+            "demographic_parity_difference": "NOT_APPLICABLE",
+            "subgroup_worst_group_acc_gap": 0.30,
+            "probe_status": ProbeEvaluationStatus.EVALUATED.value,
+            "aspect_scoring": "scored_risk",
+            "reliability": {"gates_passed": True, "failed_gates": []},
+        },
+        flags=["model_faithful_pairing"],
+        evidence_refs=_REF,
+    )
+    assert scored.factors.probe_reliability == 1.0
+
+
+def test_fairness_unrelated_binary_gate_does_not_get_mapping_blocked_penalty() -> None:
+    result = refine(
+        FriesDimension.FAIRNESS,
+        metric_values={
+            "demographic_parity_difference": 0.12,
+            "equalized_odds_difference": 0.08,
+            "min_group_n": 30,
+            "min_group_n_observed": 45,
+            "probe_status": ProbeEvaluationStatus.EVALUATED.value,
+            "aspect_scoring": "scored_risk",
+            "reliability": {
+                "gates_passed": False,
+                "failed_gates": ["G-FAIR-EO-UNSTABLE"],
+            },
+        },
+        flags=["eo_unstable"],
+        evidence_refs=_REF,
+    )
+    assert result.factors.probe_reliability == 1.0
+
+
+def test_robustness_wide_ci_and_mapping_blocked() -> None:
+    blocked = refine(
+        FriesDimension.ROBUSTNESS,
+        metric_values={
+            "clean_accuracy": 0.9,
+            "robust_accuracy": 0.7,
+            "n_evaluated": 150,
+            "aspect_scoring": "mapping_blocked",
+            "uncertainty": {
+                "accuracy_drop": {
+                    "point": 0.2,
+                    "ci_lower": 0.05,
+                    "ci_upper": 0.35,
+                }
+            },
+            "reliability": {"failed_gates": ["G-ROB-CI-WIDE"]},
+        },
+        flags=["wide_ci"],
+        evidence_refs=_REF,
+    )
+    assert blocked.factors.probe_reliability == 0.45
+    assert blocked.factors.evidence_completeness == 0.6
+
+
 def test_robustness_skip_and_tiny_samples_score_low() -> None:
     skipped = refine(
         FriesDimension.ROBUSTNESS,
@@ -70,13 +164,28 @@ def test_robustness_skip_and_tiny_samples_score_low() -> None:
 
     tiny = refine(
         FriesDimension.ROBUSTNESS,
-        metric_values={"clean_accuracy": 0.9, "robust_accuracy": 0.8, "n_samples": 8},
+        metric_values={
+            "clean_accuracy": 0.9,
+            "robust_accuracy": 0.8,
+            "n_evaluated": 80,
+            "uncertainty": {
+                "accuracy_drop": {"point": 0.1, "ci_lower": 0.05, "ci_upper": 0.15}
+            },
+        },
         flags=[],
         evidence_refs=_REF,
     )
     full = refine(
         FriesDimension.ROBUSTNESS,
-        metric_values={"clean_accuracy": 0.9, "robust_accuracy": 0.8, "n_samples": 128},
+        metric_values={
+            "clean_accuracy": 0.9,
+            "robust_accuracy": 0.8,
+            "n_evaluated": 200,
+            "aspect_scoring": "no_material_risk",
+            "uncertainty": {
+                "accuracy_drop": {"point": 0.1, "ci_lower": 0.05, "ci_upper": 0.15}
+            },
+        },
         flags=[],
         evidence_refs=_REF,
     )
@@ -84,83 +193,182 @@ def test_robustness_skip_and_tiny_samples_score_low() -> None:
     assert full.confidence == 1.0
 
 
-def test_integrity_complete_checks_score_high() -> None:
-    checks = {name: {"pass": True} for name in ("a", "b", "c", "d", "e", "f")}
+def test_integrity_rich_identity_scores_high_even_with_license_risk() -> None:
     result = refine(
         FriesDimension.INTEGRITY,
-        metric_values={"checks": checks, "pass_count": 6, "fail_count": 0},
-        flags=[],
+        metric_values={
+            "probe_status": ProbeEvaluationStatus.EVALUATED.value,
+            "checks": {
+                "revision_pinned": {"pass": True},
+                "license_declared": {"pass": False},
+            },
+            "identity": {
+                "revision": "a" * 40,
+                "sha_like": True,
+                "hub_files": ["config.json"],
+                "hash_comparison": "not_performed",
+            },
+            "disclosure": {"card_present": True},
+            "reliability": {
+                "failed_gates": [
+                    "G-INT-HASH-REF-MISSING",
+                    "G-INT-HASH-LOCAL-MISSING",
+                    "I-INT-HASH-UNVERIFIED",
+                ]
+            },
+        },
+        flags=["missing_license"],
         evidence_refs=_REF,
     )
     assert result.factors.data_quality == 1.0
     assert result.factors.probe_reliability == 1.0
-    assert result.factors.evidence_completeness == 1.0
-    assert result.confidence == 1.0
+    assert result.factors.evidence_completeness == 0.85
+    assert result.confidence >= 0.9
 
 
-def test_integrity_failed_checks_lower_data_quality() -> None:
+def test_integrity_insufficient_identity_scores_low() -> None:
     result = refine(
         FriesDimension.INTEGRITY,
-        metric_values={"checks": {"a": {"pass": True}, "b": {"pass": False}},
-                       "pass_count": 3, "fail_count": 3},
+        metric_values={
+            "probe_status": ProbeEvaluationStatus.INSUFFICIENT_EVIDENCE.value,
+            "checks": {},
+            "identity": {"hash_comparison": "not_performed"},
+        },
+        flags=["identity_empty"],
+        evidence_refs=_REF,
+    )
+    assert result.factors.probe_reliability == 0.45
+    assert result.factors.data_quality == 0.35
+    assert result.confidence < 0.6
+
+
+def test_integrity_license_gap_does_not_use_pass_rate() -> None:
+    rich = refine(
+        FriesDimension.INTEGRITY,
+        metric_values={
+            "probe_status": ProbeEvaluationStatus.EVALUATED.value,
+            "checks": {
+                "license_declared": {"pass": True},
+                "revision_pinned": {"pass": True},
+            },
+            "identity": {
+                "sha_like": True,
+                "hub_files": ["a.bin"],
+                "hash_comparison": "not_performed",
+            },
+            "reliability": {"failed_gates": ["I-INT-HASH-UNVERIFIED"]},
+        },
+        evidence_refs=_REF,
+    )
+    missing_license = refine(
+        FriesDimension.INTEGRITY,
+        metric_values={
+            "probe_status": ProbeEvaluationStatus.EVALUATED.value,
+            "checks": {
+                "license_declared": {"pass": False},
+                "revision_pinned": {"pass": True},
+            },
+            "identity": {
+                "sha_like": True,
+                "hub_files": ["a.bin"],
+                "hash_comparison": "not_performed",
+            },
+            "reliability": {"failed_gates": ["I-INT-HASH-UNVERIFIED"]},
+        },
         flags=["missing_license"],
         evidence_refs=_REF,
     )
-    assert result.factors.data_quality == 0.5
-    assert result.confidence < 1.0
+    assert rich.factors.data_quality == missing_license.factors.data_quality == 1.0
 
 
-def test_safety_empty_card_scores_low() -> None:
-    result = refine(
-        FriesDimension.SAFETY,
-        metric_values={"coverage_ratio": 0.0, "card_chars": 0, "high_impact_claims": []},
-        flags=["empty_card"],
-        evidence_refs=_REF,
-    )
-    assert result.factors.data_quality == 0.1  # floored
-    assert result.factors.probe_reliability == 0.4
-    assert result.confidence < 0.35
-
-
-def test_safety_high_impact_with_gaps_lowers_reliability() -> None:
+def test_safety_insufficient_evidence_lowers_confidence() -> None:
     result = refine(
         FriesDimension.SAFETY,
         metric_values={
-            "coverage_ratio": 0.75,
-            "card_chars": 900,
-            "high_impact_claims": ["medical"],
+            "probe_status": ProbeEvaluationStatus.INSUFFICIENT_EVIDENCE.value,
+            "coverage_ratio": 0.0,
+            "card_chars": 0,
+            "high_impact_claims": [],
+            "checks": {},
+        },
+        flags=["empty_card"],
+        evidence_refs=_REF,
+    )
+    assert result.factors.probe_reliability == 0.45
+    assert result.factors.data_quality == 0.35
+    assert result.confidence < 0.5
+
+
+def test_safety_evaluated_confidence_not_coverage_or_phrase_driven() -> None:
+    partial = refine(
+        FriesDimension.SAFETY,
+        metric_values={
+            "probe_status": ProbeEvaluationStatus.EVALUATED.value,
+            "coverage_ratio": 0.25,
+            "card_chars": 300,
+            "high_impact_claims": ["healthcare"],
+            "checks": {"privacy": {"pass": False}},
         },
         flags=["high_impact_deployment_claim"],
         evidence_refs=_REF,
     )
-    assert result.factors.probe_reliability == 0.5
-
-
-def test_explainability_coverage_drives_confidence() -> None:
-    low = refine(
-        FriesDimension.EXPLAINABILITY,
-        metric_values={"coverage_ratio": 0.25, "card_chars": 300},
+    full = refine(
+        FriesDimension.SAFETY,
+        metric_values={
+            "probe_status": ProbeEvaluationStatus.EVALUATED.value,
+            "coverage_ratio": 1.0,
+            "card_chars": 3000,
+            "high_impact_claims": [],
+            "checks": {"privacy": {"pass": True}},
+        },
         flags=[],
         evidence_refs=_REF,
     )
-    high = refine(
+    assert partial.factors.data_quality == full.factors.data_quality == 1.0
+    assert partial.factors.probe_reliability == full.factors.probe_reliability == 1.0
+    assert partial.confidence == full.confidence == 1.0
+
+
+def test_explainability_evaluated_confidence_not_coverage_driven() -> None:
+    partial = refine(
         FriesDimension.EXPLAINABILITY,
-        metric_values={"coverage_ratio": 1.0, "card_chars": 3000},
+        metric_values={
+            "probe_status": ProbeEvaluationStatus.EVALUATED.value,
+            "coverage_ratio": 0.25,
+            "card_chars": 300,
+            "checks": {"documentation_completeness": {"pass": False}},
+        },
         flags=[],
         evidence_refs=_REF,
     )
-    assert low.factors.probe_reliability == 0.6  # coverage < 0.4 → weak parse
-    assert low.confidence < high.confidence
-    assert high.confidence == 1.0
+    full = refine(
+        FriesDimension.EXPLAINABILITY,
+        metric_values={
+            "probe_status": ProbeEvaluationStatus.EVALUATED.value,
+            "coverage_ratio": 1.0,
+            "card_chars": 3000,
+            "checks": {"documentation_completeness": {"pass": True}},
+        },
+        flags=[],
+        evidence_refs=_REF,
+    )
+    assert partial.factors.data_quality == full.factors.data_quality == 1.0
+    assert partial.factors.evidence_completeness == full.factors.evidence_completeness == 1.0
+    assert partial.confidence == full.confidence == 1.0
 
 
 def test_skipped_probes_score_lower_than_complete_integrity() -> None:
     integrity = refine(
         FriesDimension.INTEGRITY,
         metric_values={
-            "checks": {n: {"pass": True} for n in ("a", "b", "c", "d", "e", "f")},
-            "pass_count": 6,
-            "fail_count": 0,
+            "probe_status": ProbeEvaluationStatus.EVALUATED.value,
+            "checks": {"revision_pinned": {"pass": True}},
+            "identity": {
+                "sha_like": True,
+                "hub_files": ["config.json"],
+                "hash_comparison": "not_performed",
+            },
+            "reliability": {"failed_gates": ["I-INT-HASH-UNVERIFIED"]},
         },
         flags=[],
         evidence_refs=_REF,
@@ -216,9 +424,14 @@ def test_summarize_rederives_when_confidence_missing() -> None:
                 FriesDimension.INTEGRITY,
                 None,
                 {
-                    "checks": {n: {"pass": True} for n in ("a", "b", "c")},
-                    "pass_count": 3,
-                    "fail_count": 0,
+                    "probe_status": ProbeEvaluationStatus.EVALUATED.value,
+                    "checks": {"revision_pinned": {"pass": True}},
+                    "identity": {
+                        "sha_like": True,
+                        "hub_files": ["config.json"],
+                        "hash_comparison": "match",
+                    },
+                    "reliability": {"failed_gates": []},
                 },
             )
         ]

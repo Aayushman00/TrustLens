@@ -25,16 +25,26 @@ COPY backend/app/schemas/internal.py ./app/schemas/internal.py
 COPY backend/app/schemas/evidence.py ./app/schemas/evidence.py
 COPY backend/app/schemas/probe_config.py ./app/schemas/probe_config.py
 COPY backend/app/schemas/modes.py ./app/schemas/modes.py
+COPY backend/app/schemas/evaluation_contract.py ./app/schemas/evaluation_contract.py
 COPY backend/app/storage ./app/storage
 COPY backend/app/datasets ./app/datasets
+# app/inference is required by probes/fairness.py, robustness.py,
+# robustness_nlp.py (LocalHFBackend, device auto-detection, pairing
+# resolution) — previously missing, which broke every real Fairness/
+# Robustness run inside this container regardless of GPU.
+COPY backend/app/inference ./app/inference
 COPY backend/app/probes ./app/probes
 COPY backend/app/confidence ./app/confidence
 COPY backend/app/osd ./app/osd
 COPY backend/app/scoring ./app/scoring
 COPY backend/app/tasks/evaluate_pipeline.py ./app/tasks/evaluate_pipeline.py
 COPY configs/datasets_v1.yaml ./configs/datasets_v1.yaml
+COPY configs/supported_pairings_v1.yaml ./configs/supported_pairings_v1.yaml
+COPY configs/supported_robustness_compat_v1.yaml ./configs/supported_robustness_compat_v1.yaml
 
-ENV DATASETS_CONFIG_PATH=/app/configs/datasets_v1.yaml
+ENV DATASETS_CONFIG_PATH=/app/configs/datasets_v1.yaml \
+    PAIRINGS_CONFIG_PATH=/app/configs/supported_pairings_v1.yaml \
+    ROBUSTNESS_COMPAT_CONFIG_PATH=/app/configs/supported_robustness_compat_v1.yaml
 
 RUN pip install --upgrade pip \
     && pip install .

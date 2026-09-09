@@ -1,0 +1,957 @@
+{
+  "id": "624c9503-dcc1-43f6-99c0-ba0ad82c6e94",
+  "model_id": 134,
+  "status": "FINALIZED",
+  "evaluation_mode": "AI_AUTONOMOUS",
+  "probe_config": {
+    "extra": {},
+    "datasets": {},
+    "attack_budget": null,
+    "schema_version": "v1",
+    "assessment_engine": "deterministic",
+    "slice_definitions": {},
+    "evaluation_contract": {
+      "kind": "registry",
+      "modality": "nlp",
+      "model_ref": "textattack/bert-base-uncased-SST-2",
+      "task_type": "binary_classification",
+      "pairing_id": null,
+      "dataset_key": "sst2_robustness",
+      "label_space": null,
+      "input_adapter": null,
+      "model_revision": "95f0f6f859b35c8ff0863ae3cd4e2dbc702c0ae2",
+      "schema_version": "v1",
+      "dataset_revision": "8d51e7e4887a4caaa95b3fbebbf53c0490b58bbb"
+    }
+  },
+  "task": null,
+  "dataset": null,
+  "config": null,
+  "model_revision": "95f0f6f859b35c8ff0863ae3cd4e2dbc702c0ae2",
+  "trustlens_version": null,
+  "is_published": false,
+  "published_at": null,
+  "created_by": null,
+  "created_at": "2026-09-08T00:52:05.549144Z",
+  "updated_at": "2026-09-08T00:52:05.764445Z",
+  "probe_progress": {
+    "completed": 5,
+    "total": 5
+  },
+  "probes": [
+    {
+      "dimension": "FAIRNESS",
+      "status": "NOT_APPLICABLE",
+      "status_reason": "evaluation contract kind='registry' does not authorize a Fairness run",
+      "methodology_version": null,
+      "gates": null,
+      "risks_triggered": null,
+      "aspect_scoring": null,
+      "scored_risk_id": null,
+      "claim_boundary": null,
+      "limitations": null,
+      "flags": [
+        "no_fairness_contract",
+        "metrics_skipped"
+      ],
+      "coverage_ratio": null,
+      "n_evaluated": null,
+      "fairness_mode": "not_applicable",
+      "pairing_id": null,
+      "confidence": 0.54,
+      "evidence_refs": [
+        {
+          "uri": "s3://trustlens/evidence/624c9503-dcc1-43f6-99c0-ba0ad82c6e94/5bbc7400-a003-4d09-be41-677fb510fb04.json",
+          "hash": "sha256:3a29a8b81d019644d750ac8d8ddc86332a6654fed8a307009f968a2faa5158f7",
+          "created_at": "2026-09-08T00:52:07.152949Z",
+          "probe_name": "fairness",
+          "evidence_id": "5bbc7400-a003-4d09-be41-677fb510fb04",
+          "content_type": "application/json"
+        }
+      ],
+      "model_ref": "textattack/bert-base-uncased-SST-2",
+      "model_revision": "95f0f6f859b35c8ff0863ae3cd4e2dbc702c0ae2",
+      "dataset_key": "sst2_robustness",
+      "dataset_revision": "8d51e7e4887a4caaa95b3fbebbf53c0490b58bbb",
+      "evaluation_class": "registry",
+      "inference_executed": false,
+      "metric_values": {
+        "note": "Metrics are objective evidence only \u2014 not a normative fair/unfair judgment, not O/S/D, and not product FRIES",
+        "flags": [
+          "no_fairness_contract",
+          "metrics_skipped"
+        ],
+        "groups": null,
+        "model_ref": "textattack/bert-base-uncased-SST-2",
+        "predictor": null,
+        "pairing_id": null,
+        "dataset_key": "sst2_robustness",
+        "skip_reason": "evaluation contract kind='registry' does not authorize a Fairness run",
+        "probe_status": "NOT_APPLICABLE",
+        "fairness_mode": "not_applicable",
+        "model_revision": "95f0f6f859b35c8ff0863ae3cd4e2dbc702c0ae2",
+        "dataset_revision": "8d51e7e4887a4caaa95b3fbebbf53c0490b58bbb",
+        "evaluation_class": "registry",
+        "proposed_mapping": false,
+        "confidence_factors": {
+          "combined": 0.54,
+          "data_quality": 0.35,
+          "probe_reliability": 0.45,
+          "evidence_completeness": 1.0
+        },
+        "inference_executed": false,
+        "needs_human_review": false,
+        "subgroup_f1_spread": null,
+        "probe_status_reason": "evaluation contract kind='registry' does not authorize a Fairness run",
+        "equalized_odds_difference": null,
+        "demographic_parity_difference": null
+      }
+    },
+    {
+      "dimension": "ROBUSTNESS",
+      "status": "EVALUATED",
+      "status_reason": "R-ROB-PERT triggered: drop=0.28 > 0.05, ci_lower=0.22 > 0.05",
+      "methodology_version": "tl-methodology-v1.0",
+      "gates": [],
+      "risks_triggered": [
+        "R-ROB-PERT"
+      ],
+      "aspect_scoring": "scored_risk",
+      "scored_risk_id": "R-ROB-PERT",
+      "claim_boundary": null,
+      "limitations": [],
+      "flags": [],
+      "coverage_ratio": null,
+      "n_evaluated": 200,
+      "fairness_mode": null,
+      "pairing_id": null,
+      "confidence": 1.0,
+      "evidence_refs": [
+        {
+          "uri": "s3://trustlens/evidence/624c9503-dcc1-43f6-99c0-ba0ad82c6e94/a82310e9-a554-463b-8002-ebb31d5f3588.json",
+          "hash": "sha256:27ee3b2eeea52fd44a7c6af9ea7f1adb74984945ed1f3b8346dde2ab8abb2c1d",
+          "created_at": "2026-09-08T00:52:34.637845Z",
+          "probe_name": "robustness",
+          "evidence_id": "a82310e9-a554-463b-8002-ebb31d5f3588",
+          "content_type": "application/json"
+        }
+      ],
+      "model_ref": "textattack/bert-base-uncased-SST-2",
+      "model_revision": "95f0f6f859b35c8ff0863ae3cd4e2dbc702c0ae2",
+      "dataset_key": "sst2_robustness",
+      "dataset_revision": "8d51e7e4887a4caaa95b3fbebbf53c0490b58bbb",
+      "evaluation_class": "registry",
+      "inference_executed": true,
+      "metric_values": {
+        "norm": "discrete",
+        "note": "Layer A evidence only \u2014 R-ROB-PERT detection does not assign O/S/D",
+        "seed": 42,
+        "flags": [],
+        "attack": "char_swap",
+        "status": "EVALUATED",
+        "dataset": {
+          "hf_path": "stanfordnlp/sst2",
+          "modality": "nlp",
+          "revision": "8d51e7e4887a4caaa95b3fbebbf53c0490b58bbb",
+          "task_type": "binary_classification",
+          "config_name": null,
+          "logical_key": "sst2_robustness",
+          "evaluation_domain": "sentiment",
+          "resolution_source": "contract_validated"
+        },
+        "epsilon": 0.03,
+        "model_ref": "textattack/bert-base-uncased-SST-2",
+        "n_samples": 200,
+        "task_type": "binary_classification",
+        "dataset_key": "sst2_robustness",
+        "label_space": null,
+        "limitations": [],
+        "max_changes": 3,
+        "n_evaluated": 200,
+        "n_requested": 200,
+        "reliability": {
+          "failed_gates": [],
+          "gates_passed": true
+        },
+        "uncertainty": {
+          "accuracy_drop": {
+            "B": 1000,
+            "point": 0.28,
+            "method": "bootstrap_percentile",
+            "ci_lower": 0.22,
+            "ci_upper": 0.34
+          },
+          "clean_accuracy": {
+            "point": 0.975,
+            "method": "wilson_score",
+            "ci_lower": 0.942821,
+            "ci_upper": 0.989275
+          },
+          "robust_accuracy": {
+            "point": 0.695,
+            "method": "wilson_score",
+            "ci_lower": 0.628013,
+            "ci_upper": 0.754637
+          }
+        },
+        "probe_status": "EVALUATED",
+        "accuracy_drop": 0.28,
+        "drop_ci_lower": 0.22,
+        "drop_ci_upper": 0.34,
+        "aspect_scoring": "scored_risk",
+        "clean_accuracy": 0.975,
+        "model_revision": "95f0f6f859b35c8ff0863ae3cd4e2dbc702c0ae2",
+        "scored_risk_id": "R-ROB-PERT",
+        "risks_triggered": [
+          "R-ROB-PERT"
+        ],
+        "robust_accuracy": 0.695,
+        "dataset_revision": "8d51e7e4887a4caaa95b3fbebbf53c0490b58bbb",
+        "evaluation_class": "registry",
+        "n_perturb_failed": 0,
+        "proposed_mapping": false,
+        "degradation_ratio": 0.7128,
+        "confidence_factors": {
+          "combined": 1.0,
+          "data_quality": 1.0,
+          "probe_reliability": 1.0,
+          "evidence_completeness": 1.0
+        },
+        "inference_executed": true,
+        "n_label_compatible": 200,
+        "attack_success_rate": 0.28,
+        "methodology_version": "tl-methodology-v1.0",
+        "probe_status_reason": "R-ROB-PERT triggered: drop=0.28 > 0.05, ci_lower=0.22 > 0.05",
+        "relative_degradation": 0.7128,
+        "label_compat_fraction": 1.0,
+        "perturbation_coverage": 1.0,
+        "n_successfully_perturbed": 200
+      }
+    },
+    {
+      "dimension": "INTEGRITY",
+      "status": "EVALUATED",
+      "status_reason": null,
+      "methodology_version": "tl-integrity-v1.0",
+      "gates": [
+        "G-INT-HASH-REF-MISSING",
+        "G-INT-HASH-LOCAL-MISSING",
+        "I-INT-HASH-UNVERIFIED"
+      ],
+      "risks_triggered": [
+        "I-INT-LICENSE-UNDISCLOSED"
+      ],
+      "aspect_scoring": "risk_detected",
+      "scored_risk_id": null,
+      "claim_boundary": {
+        "cryptographic_identity": "Cryptographic identity was not verified: no trusted reference and/or no local artifact hash. Other Integrity metadata checks are independent of this claim."
+      },
+      "limitations": [
+        "Integrity risks measure disclosure and identity recording, not tampering or legal compliance.",
+        "Named Integrity risks are not additive FRIES occurrences and must not be summed into O.",
+        "Operator-supplied trusted hashes are not a PKI; hash match does not prove publisher authenticity; mismatch does not prove tampering.",
+        "Hub file listing fingerprint identifies sorted filenames, not model weight bytes.",
+        "SHA-like revision format is an uncalibrated heuristic, not cryptographic proof of immutability.",
+        "Model card text may reflect the Hub default branch, not the pinned revision."
+      ],
+      "flags": [
+        "missing_license",
+        "empty_card",
+        "thin_reproducibility"
+      ],
+      "coverage_ratio": null,
+      "n_evaluated": null,
+      "fairness_mode": null,
+      "pairing_id": null,
+      "confidence": 0.9473,
+      "evidence_refs": [
+        {
+          "uri": "s3://trustlens/evidence/624c9503-dcc1-43f6-99c0-ba0ad82c6e94/e51eb009-6f53-4c10-b5ca-e14ba67da3f1.json",
+          "hash": "sha256:8a809ebef18a561a4a458dfb6b0b19ab5895cb579372adb3d49d2ecd68cd2668",
+          "created_at": "2026-09-08T00:52:34.653917Z",
+          "probe_name": "integrity",
+          "evidence_id": "e51eb009-6f53-4c10-b5ca-e14ba67da3f1",
+          "content_type": "application/json"
+        }
+      ],
+      "model_ref": null,
+      "model_revision": null,
+      "dataset_key": null,
+      "dataset_revision": null,
+      "evaluation_class": null,
+      "inference_executed": null,
+      "metric_values": {
+        "note": "Layer A evidence only \u2014 Integrity risks do not assign O/S/D",
+        "flags": [
+          "missing_license",
+          "empty_card",
+          "thin_reproducibility"
+        ],
+        "checks": {
+          "card_present": {
+            "pass": false,
+            "detail": "empty card_text"
+          },
+          "files_listed": {
+            "pass": true,
+            "detail": "9 files; config.json present; weight-like filename present"
+          },
+          "revision_pinned": {
+            "pass": true,
+            "detail": "sha-like revision"
+          },
+          "license_declared": {
+            "pass": false,
+            "detail": "no structured license"
+          },
+          "files_listing_recorded": {
+            "pass": true,
+            "detail": "recorded Hub file listing fingerprint (not weight bytes)",
+            "model_revision": "95f0f6f859b35c8ff0863ae3cd4e2dbc702c0ae2",
+            "files_listing_fingerprint": "sha256:c289070db2510bd99197568cbc7413a82a89fd97a019de23004f04d1f7a15b48"
+          },
+          "reproducibility_claims": {
+            "pass": false,
+            "detail": "thin reproducibility (groups=none); keyword hits are disclosure evidence only"
+          }
+        },
+        "claims": {
+          "identity_recording": {
+            "reason": "identity metadata recorded from import snapshot",
+            "status": "EVALUATED"
+          },
+          "license_disclosure": {
+            "reason": "structured license check ran; absence recorded as named risk",
+            "status": "EVALUATED"
+          },
+          "cryptographic_identity": {
+            "reason": "Cryptographic identity was not verified: no trusted reference and/or no local artifact hash. Other Integrity metadata checks are independent of this claim.",
+            "status": "INSUFFICIENT_EVIDENCE"
+          }
+        },
+        "status": "EVALUATED",
+        "identity": {
+          "revision": "95f0f6f859b35c8ff0863ae3cd4e2dbc702c0ae2",
+          "sha_like": true,
+          "hub_files": [
+            ".gitattributes",
+            "config.json",
+            "eval_results_sst-2.txt",
+            "flax_model.msgpack",
+            "pytorch_model.bin",
+            "special_tokens_map.json",
+            "tokenizer_config.json",
+            "training_args.bin",
+            "vocab.txt"
+          ],
+          "weight_hash": null,
+          "hash_comparison": "not_performed",
+          "trusted_reference": null,
+          "files_listing_fingerprint": "sha256:c289070db2510bd99197568cbc7413a82a89fd97a019de23004f04d1f7a15b48"
+        },
+        "disclosure": {
+          "card_chars": 0,
+          "card_present": false,
+          "license_structured": null,
+          "repro_groups_found": []
+        },
+        "limitations": [
+          "Integrity risks measure disclosure and identity recording, not tampering or legal compliance.",
+          "Named Integrity risks are not additive FRIES occurrences and must not be summed into O.",
+          "Operator-supplied trusted hashes are not a PKI; hash match does not prove publisher authenticity; mismatch does not prove tampering.",
+          "Hub file listing fingerprint identifies sorted filenames, not model weight bytes.",
+          "SHA-like revision format is an uncalibrated heuristic, not cryptographic proof of immutability.",
+          "Model card text may reflect the Hub default branch, not the pinned revision."
+        ],
+        "reliability": {
+          "failed_gates": [
+            "G-INT-HASH-REF-MISSING",
+            "G-INT-HASH-LOCAL-MISSING",
+            "I-INT-HASH-UNVERIFIED"
+          ],
+          "gates_passed": false
+        },
+        "uncertainty": {},
+        "probe_status": "EVALUATED",
+        "osd_proposals": [],
+        "aspect_scoring": "risk_detected",
+        "claim_boundary": {
+          "cryptographic_identity": "Cryptographic identity was not verified: no trusted reference and/or no local artifact hash. Other Integrity metadata checks are independent of this claim."
+        },
+        "scored_risk_id": null,
+        "risks_triggered": [
+          "I-INT-LICENSE-UNDISCLOSED"
+        ],
+        "proposed_mapping": false,
+        "methodology_basis": "TRUSTLENS_FIVE_PROBE_METHODOLOGY_AUDIT.md",
+        "confidence_factors": {
+          "combined": 0.9473,
+          "data_quality": 1.0,
+          "probe_reliability": 1.0,
+          "evidence_completeness": 0.85
+        },
+        "methodology_version": "tl-integrity-v1.0"
+      }
+    },
+    {
+      "dimension": "EXPLAINABILITY",
+      "status": "INSUFFICIENT_EVIDENCE",
+      "status_reason": "no model card text \u2014 cannot evaluate documentation",
+      "methodology_version": "tl-explainability-v1.0",
+      "gates": [
+        "G-EXP-CARD-EMPTY"
+      ],
+      "risks_triggered": [],
+      "aspect_scoring": "not_scored",
+      "scored_risk_id": null,
+      "claim_boundary": {
+        "supported": "Required model-card documentation sections were checked for presence with non-trivial body text; coverage counts and keyword-level contradiction flags were recorded.",
+        "not_established": "This does not establish explanation faithfulness, causal correctness, human usefulness, SHAP/attention availability, or general explainability quality. Documentation coverage is not proof that the model is explainable."
+      },
+      "limitations": [
+        "Explainability v1 measures model-card documentation completeness and simple consistency flags, not runtime explanations or attribution quality.",
+        "Named E-DOC-* values are evidence-layer detections only; scored_risk_id remains null and no FRIES occurrence is assigned.",
+        "aspect_scoring=risk_detected means a documentation risk was detected \u2014 not a FRIES-scored risk.",
+        "Alias heading matching and keyword contradiction checks are heuristic and uncalibrated.",
+        "coverage_ratio counts present required sections; it is not an explainability quality score."
+      ],
+      "flags": [
+        "empty_card"
+      ],
+      "coverage_ratio": 0.0,
+      "n_evaluated": null,
+      "fairness_mode": null,
+      "pairing_id": null,
+      "confidence": 0.3158,
+      "evidence_refs": [
+        {
+          "uri": "s3://trustlens/evidence/624c9503-dcc1-43f6-99c0-ba0ad82c6e94/e2ef9f71-b05e-4d3b-a5f0-4393aa963f5d.json",
+          "hash": "sha256:4505822aed68dadbbcb9f38890886881cca9e5ed75b2dc6a8dbd3700982e9763",
+          "created_at": "2026-09-08T00:52:34.667365Z",
+          "probe_name": "explainability",
+          "evidence_id": "e2ef9f71-b05e-4d3b-a5f0-4393aa963f5d",
+          "content_type": "application/json"
+        }
+      ],
+      "model_ref": null,
+      "model_revision": null,
+      "dataset_key": null,
+      "dataset_revision": null,
+      "evaluation_class": null,
+      "inference_executed": null,
+      "metric_values": {
+        "note": "Layer A documentation/transparency evidence only \u2014 not O/S/D or interpretability quality",
+        "flags": [
+          "empty_card"
+        ],
+        "checks": {},
+        "claims": {
+          "documentation_completeness": {
+            "reason": "G-EXP-CARD-EMPTY",
+            "status": "INSUFFICIENT_EVIDENCE"
+          }
+        },
+        "status": "INSUFFICIENT_EVIDENCE",
+        "sections": {},
+        "card_chars": 0,
+        "limitations": [
+          "Explainability v1 measures model-card documentation completeness and simple consistency flags, not runtime explanations or attribution quality.",
+          "Named E-DOC-* values are evidence-layer detections only; scored_risk_id remains null and no FRIES occurrence is assigned.",
+          "aspect_scoring=risk_detected means a documentation risk was detected \u2014 not a FRIES-scored risk.",
+          "Alias heading matching and keyword contradiction checks are heuristic and uncalibrated.",
+          "coverage_ratio counts present required sections; it is not an explainability quality score."
+        ],
+        "reliability": {
+          "failed_gates": [
+            "G-EXP-CARD-EMPTY"
+          ],
+          "gates_passed": false
+        },
+        "probe_status": "INSUFFICIENT_EVIDENCE",
+        "osd_proposals": [],
+        "status_reason": "no model card text \u2014 cannot evaluate documentation",
+        "aspect_scoring": "not_scored",
+        "bonus_sections": {},
+        "claim_boundary": {
+          "supported": "Required model-card documentation sections were checked for presence with non-trivial body text; coverage counts and keyword-level contradiction flags were recorded.",
+          "not_established": "This does not establish explanation faithfulness, causal correctness, human usefulness, SHAP/attention availability, or general explainability quality. Documentation coverage is not proof that the model is explainable."
+        },
+        "contradictions": [
+          "empty_card"
+        ],
+        "coverage_ratio": 0.0,
+        "scored_risk_id": null,
+        "risks_triggered": [],
+        "proposed_mapping": false,
+        "sections_present": 0,
+        "methodology_basis": "TRUSTLENS_FIVE_PROBE_METHODOLOGY_AUDIT.md",
+        "sections_required": 5,
+        "confidence_factors": {
+          "combined": 0.3158,
+          "data_quality": 0.35,
+          "probe_reliability": 0.45,
+          "evidence_completeness": 0.2
+        },
+        "methodology_version": "tl-explainability-v1.0",
+        "probe_status_reason": "no model card text \u2014 cannot evaluate documentation"
+      }
+    },
+    {
+      "dimension": "SAFETY",
+      "status": "INSUFFICIENT_EVIDENCE",
+      "status_reason": "no model card text \u2014 cannot evaluate safety disclosures",
+      "methodology_version": "tl-safety-v1.0",
+      "gates": [
+        "G-SAFE-CARD-EMPTY"
+      ],
+      "risks_triggered": [],
+      "aspect_scoring": "not_scored",
+      "scored_risk_id": null,
+      "claim_boundary": {
+        "supported": "Required safety-disclosure model-card sections were checked for presence with non-trivial body text; documentation completeness counts and lexical presence of listed high-impact phrases were recorded as documentation metadata flags.",
+        "not_established": "This does not establish model safety or unsafety, actual deployment risk, mitigation effectiveness, harm severity, policy compliance, medical/financial fitness, or refusal capability. Phrase matches (high_impact_claims) are lexical documentation evidence only \u2014 not evidence that the model is high-risk, unsafe, harmful, or safety-critical."
+      },
+      "limitations": [
+        "Safety v1 measures model-card safety-disclosure completeness and lexical phrase matches, not runtime refusal or harm behavior.",
+        "Named S-GOV-DISCLOSURE-GAP is an evidence-layer detection only; scored_risk_id remains null and no FRIES occurrence is assigned.",
+        "aspect_scoring=risk_detected means a governance disclosure gap was detected \u2014 not a FRIES-scored risk.",
+        "high_impact_claims are documentation metadata flags; they are never promoted to risks_triggered and do not map to O/S/D or FRIES.",
+        "Alias heading matching and phrase substring checks are heuristic and uncalibrated.",
+        "coverage_ratio counts present required disclosure sections; it is not a safety quality score."
+      ],
+      "flags": [
+        "empty_card"
+      ],
+      "coverage_ratio": 0.0,
+      "n_evaluated": null,
+      "fairness_mode": null,
+      "pairing_id": null,
+      "confidence": 0.3158,
+      "evidence_refs": [
+        {
+          "uri": "s3://trustlens/evidence/624c9503-dcc1-43f6-99c0-ba0ad82c6e94/c3f820f9-203c-49f5-9eab-c7e1e8f08442.json",
+          "hash": "sha256:7ee4082e71ba1cc696f8af94c41a2dcfa84a4a06643432759f425cff68a99c90",
+          "created_at": "2026-09-08T00:52:34.680933Z",
+          "probe_name": "safety",
+          "evidence_id": "c3f820f9-203c-49f5-9eab-c7e1e8f08442",
+          "content_type": "application/json"
+        }
+      ],
+      "model_ref": null,
+      "model_revision": null,
+      "dataset_key": null,
+      "dataset_revision": null,
+      "evaluation_class": null,
+      "inference_executed": null,
+      "metric_values": {
+        "note": "Layer A safety-governance disclosure evidence only \u2014 not O/S/D, not behavioral safety, not FRIES2 caps",
+        "flags": [
+          "empty_card"
+        ],
+        "checks": {},
+        "claims": {
+          "disclosure_completeness": {
+            "reason": "G-SAFE-CARD-EMPTY",
+            "status": "INSUFFICIENT_EVIDENCE"
+          }
+        },
+        "status": "INSUFFICIENT_EVIDENCE",
+        "card_chars": 0,
+        "limitations": [
+          "Safety v1 measures model-card safety-disclosure completeness and lexical phrase matches, not runtime refusal or harm behavior.",
+          "Named S-GOV-DISCLOSURE-GAP is an evidence-layer detection only; scored_risk_id remains null and no FRIES occurrence is assigned.",
+          "aspect_scoring=risk_detected means a governance disclosure gap was detected \u2014 not a FRIES-scored risk.",
+          "high_impact_claims are documentation metadata flags; they are never promoted to risks_triggered and do not map to O/S/D or FRIES.",
+          "Alias heading matching and phrase substring checks are heuristic and uncalibrated.",
+          "coverage_ratio counts present required disclosure sections; it is not a safety quality score."
+        ],
+        "reliability": {
+          "failed_gates": [
+            "G-SAFE-CARD-EMPTY"
+          ],
+          "gates_passed": false
+        },
+        "uncertainty": {},
+        "bonus_checks": {},
+        "probe_status": "INSUFFICIENT_EVIDENCE",
+        "osd_proposals": [],
+        "status_reason": "no model card text \u2014 cannot evaluate safety disclosures",
+        "aspect_scoring": "not_scored",
+        "checks_present": 0,
+        "claim_boundary": {
+          "supported": "Required safety-disclosure model-card sections were checked for presence with non-trivial body text; documentation completeness counts and lexical presence of listed high-impact phrases were recorded as documentation metadata flags.",
+          "not_established": "This does not establish model safety or unsafety, actual deployment risk, mitigation effectiveness, harm severity, policy compliance, medical/financial fitness, or refusal capability. Phrase matches (high_impact_claims) are lexical documentation evidence only \u2014 not evidence that the model is high-risk, unsafe, harmful, or safety-critical."
+        },
+        "coverage_ratio": 0.0,
+        "scored_risk_id": null,
+        "checks_required": 4,
+        "required_checks": {},
+        "risks_triggered": [],
+        "proposed_mapping": false,
+        "methodology_basis": "TRUSTLENS_FIVE_PROBE_METHODOLOGY_AUDIT.md",
+        "confidence_factors": {
+          "combined": 0.3158,
+          "data_quality": 0.35,
+          "probe_reliability": 0.45,
+          "evidence_completeness": 0.2
+        },
+        "high_impact_claims": [],
+        "methodology_version": "tl-safety-v1.0",
+        "probe_status_reason": "no model card text \u2014 cannot evaluate safety disclosures"
+      }
+    }
+  ],
+  "confidence_summary": {
+    "overall": 0.5515,
+    "by_dimension": {
+      "FAIRNESS": 0.54,
+      "ROBUSTNESS": 1.0,
+      "INTEGRITY": 0.9473,
+      "EXPLAINABILITY": 0.3158,
+      "SAFETY": 0.3158
+    },
+    "method": "geometric_mean_v1",
+    "proposed_calibration": true,
+    "note": "Evidence strength only \u2014 not correctness or O/S/D"
+  },
+  "osd_agent": {
+    "ai_suggestion": {
+      "note": "Deterministic O/S/D representation from probe evidence; O unavailable (no approved mapping); S human-controlled; D unavailable.",
+      "aspects": [
+        {
+          "D": null,
+          "O": null,
+          "S": null,
+          "aspect": "FAIRNESS",
+          "status": "NOT_APPLICABLE",
+          "D_source": "unavailable",
+          "O_source": "unavailable",
+          "rationale": "FAIRNESS: O unavailable (no approved+validated mapping); S human-controlled; D unavailable. probe status=NOT_APPLICABLE.",
+          "confidence": 0.54,
+          "osd_metadata": {
+            "flags": [
+              "no_fairness_contract",
+              "metrics_skipped"
+            ],
+            "probe_status": "NOT_APPLICABLE",
+            "mapping_reason": "no_approved_mapping",
+            "equalized_odds_difference": null,
+            "demographic_parity_difference": null
+          }
+        },
+        {
+          "D": null,
+          "O": null,
+          "S": null,
+          "aspect": "ROBUSTNESS",
+          "status": "EVALUATED",
+          "D_source": "unavailable",
+          "O_source": "unavailable",
+          "rationale": "ROBUSTNESS: O unavailable (no approved+validated mapping); S human-controlled; D unavailable. Probe reported named risk R-ROB-PERT. aspect_scoring=scored_risk. probe status=EVALUATED.",
+          "confidence": 1.0,
+          "osd_metadata": {
+            "flags": [],
+            "status": "EVALUATED",
+            "limitations": [],
+            "n_evaluated": 200,
+            "n_requested": 200,
+            "reliability": {
+              "failed_gates": [],
+              "gates_passed": true
+            },
+            "uncertainty": {
+              "accuracy_drop": {
+                "B": 1000,
+                "point": 0.28,
+                "method": "bootstrap_percentile",
+                "ci_lower": 0.22,
+                "ci_upper": 0.34
+              },
+              "clean_accuracy": {
+                "point": 0.975,
+                "method": "wilson_score",
+                "ci_lower": 0.942821,
+                "ci_upper": 0.989275
+              },
+              "robust_accuracy": {
+                "point": 0.695,
+                "method": "wilson_score",
+                "ci_lower": 0.628013,
+                "ci_upper": 0.754637
+              }
+            },
+            "probe_status": "EVALUATED",
+            "accuracy_drop": 0.28,
+            "drop_ci_lower": 0.22,
+            "drop_ci_upper": 0.34,
+            "aspect_scoring": "scored_risk",
+            "clean_accuracy": 0.975,
+            "mapping_reason": "no_approved_mapping",
+            "scored_risk_id": "R-ROB-PERT",
+            "risks_triggered": [
+              "R-ROB-PERT"
+            ],
+            "robust_accuracy": 0.695,
+            "degradation_ratio": 0.7128,
+            "methodology_version": "tl-methodology-v1.0",
+            "relative_degradation": 0.7128,
+            "perturbation_coverage": 1.0
+          }
+        },
+        {
+          "D": null,
+          "O": null,
+          "S": null,
+          "aspect": "INTEGRITY",
+          "status": "EVALUATED",
+          "D_source": "unavailable",
+          "O_source": "unavailable",
+          "rationale": "INTEGRITY: O unavailable (no approved+validated mapping); S human-controlled; D unavailable. aspect_scoring=risk_detected. probe status=EVALUATED.",
+          "confidence": 0.9473,
+          "osd_metadata": {
+            "flags": [
+              "missing_license",
+              "empty_card",
+              "thin_reproducibility"
+            ],
+            "checks": {
+              "card_present": {
+                "pass": false,
+                "detail": "empty card_text"
+              },
+              "files_listed": {
+                "pass": true,
+                "detail": "9 files; config.json present; weight-like filename present"
+              },
+              "revision_pinned": {
+                "pass": true,
+                "detail": "sha-like revision"
+              },
+              "license_declared": {
+                "pass": false,
+                "detail": "no structured license"
+              },
+              "files_listing_recorded": {
+                "pass": true,
+                "detail": "recorded Hub file listing fingerprint (not weight bytes)",
+                "model_revision": "95f0f6f859b35c8ff0863ae3cd4e2dbc702c0ae2",
+                "files_listing_fingerprint": "sha256:c289070db2510bd99197568cbc7413a82a89fd97a019de23004f04d1f7a15b48"
+              },
+              "reproducibility_claims": {
+                "pass": false,
+                "detail": "thin reproducibility (groups=none); keyword hits are disclosure evidence only"
+              }
+            },
+            "claims": {
+              "identity_recording": {
+                "reason": "identity metadata recorded from import snapshot",
+                "status": "EVALUATED"
+              },
+              "license_disclosure": {
+                "reason": "structured license check ran; absence recorded as named risk",
+                "status": "EVALUATED"
+              },
+              "cryptographic_identity": {
+                "reason": "Cryptographic identity was not verified: no trusted reference and/or no local artifact hash. Other Integrity metadata checks are independent of this claim.",
+                "status": "INSUFFICIENT_EVIDENCE"
+              }
+            },
+            "status": "EVALUATED",
+            "identity": {
+              "revision": "95f0f6f859b35c8ff0863ae3cd4e2dbc702c0ae2",
+              "sha_like": true,
+              "hub_files": [
+                ".gitattributes",
+                "config.json",
+                "eval_results_sst-2.txt",
+                "flax_model.msgpack",
+                "pytorch_model.bin",
+                "special_tokens_map.json",
+                "tokenizer_config.json",
+                "training_args.bin",
+                "vocab.txt"
+              ],
+              "weight_hash": null,
+              "hash_comparison": "not_performed",
+              "trusted_reference": null,
+              "files_listing_fingerprint": "sha256:c289070db2510bd99197568cbc7413a82a89fd97a019de23004f04d1f7a15b48"
+            },
+            "disclosure": {
+              "card_chars": 0,
+              "card_present": false,
+              "license_structured": null,
+              "repro_groups_found": []
+            },
+            "limitations": [
+              "Integrity risks measure disclosure and identity recording, not tampering or legal compliance.",
+              "Named Integrity risks are not additive FRIES occurrences and must not be summed into O.",
+              "Operator-supplied trusted hashes are not a PKI; hash match does not prove publisher authenticity; mismatch does not prove tampering.",
+              "Hub file listing fingerprint identifies sorted filenames, not model weight bytes.",
+              "SHA-like revision format is an uncalibrated heuristic, not cryptographic proof of immutability.",
+              "Model card text may reflect the Hub default branch, not the pinned revision."
+            ],
+            "reliability": {
+              "failed_gates": [
+                "G-INT-HASH-REF-MISSING",
+                "G-INT-HASH-LOCAL-MISSING",
+                "I-INT-HASH-UNVERIFIED"
+              ],
+              "gates_passed": false
+            },
+            "uncertainty": {},
+            "probe_status": "EVALUATED",
+            "aspect_scoring": "risk_detected",
+            "claim_boundary": {
+              "cryptographic_identity": "Cryptographic identity was not verified: no trusted reference and/or no local artifact hash. Other Integrity metadata checks are independent of this claim."
+            },
+            "mapping_reason": "no_approved_mapping",
+            "scored_risk_id": null,
+            "risks_triggered": [
+              "I-INT-LICENSE-UNDISCLOSED"
+            ],
+            "methodology_basis": "TRUSTLENS_FIVE_PROBE_METHODOLOGY_AUDIT.md",
+            "methodology_version": "tl-integrity-v1.0"
+          }
+        },
+        {
+          "D": null,
+          "O": null,
+          "S": null,
+          "aspect": "EXPLAINABILITY",
+          "status": "INSUFFICIENT_EVIDENCE",
+          "D_source": "unavailable",
+          "O_source": "unavailable",
+          "rationale": "EXPLAINABILITY: O unavailable (no approved+validated mapping); S human-controlled; D unavailable. aspect_scoring=not_scored. probe status=INSUFFICIENT_EVIDENCE.",
+          "confidence": 0.3158,
+          "osd_metadata": {
+            "flags": [
+              "empty_card"
+            ],
+            "checks": {},
+            "claims": {
+              "documentation_completeness": {
+                "reason": "G-EXP-CARD-EMPTY",
+                "status": "INSUFFICIENT_EVIDENCE"
+              }
+            },
+            "status": "INSUFFICIENT_EVIDENCE",
+            "sections": {},
+            "card_chars": 0,
+            "limitations": [
+              "Explainability v1 measures model-card documentation completeness and simple consistency flags, not runtime explanations or attribution quality.",
+              "Named E-DOC-* values are evidence-layer detections only; scored_risk_id remains null and no FRIES occurrence is assigned.",
+              "aspect_scoring=risk_detected means a documentation risk was detected \u2014 not a FRIES-scored risk.",
+              "Alias heading matching and keyword contradiction checks are heuristic and uncalibrated.",
+              "coverage_ratio counts present required sections; it is not an explainability quality score."
+            ],
+            "reliability": {
+              "failed_gates": [
+                "G-EXP-CARD-EMPTY"
+              ],
+              "gates_passed": false
+            },
+            "probe_status": "INSUFFICIENT_EVIDENCE",
+            "status_reason": "no model card text \u2014 cannot evaluate documentation",
+            "aspect_scoring": "not_scored",
+            "bonus_sections": {},
+            "claim_boundary": {
+              "supported": "Required model-card documentation sections were checked for presence with non-trivial body text; coverage counts and keyword-level contradiction flags were recorded.",
+              "not_established": "This does not establish explanation faithfulness, causal correctness, human usefulness, SHAP/attention availability, or general explainability quality. Documentation coverage is not proof that the model is explainable."
+            },
+            "contradictions": [
+              "empty_card"
+            ],
+            "coverage_ratio": 0.0,
+            "mapping_reason": "no_approved_mapping",
+            "scored_risk_id": null,
+            "risks_triggered": [],
+            "sections_present": 0,
+            "methodology_basis": "TRUSTLENS_FIVE_PROBE_METHODOLOGY_AUDIT.md",
+            "sections_required": 5,
+            "methodology_version": "tl-explainability-v1.0"
+          }
+        },
+        {
+          "D": null,
+          "O": null,
+          "S": null,
+          "aspect": "SAFETY",
+          "status": "INSUFFICIENT_EVIDENCE",
+          "D_source": "unavailable",
+          "O_source": "unavailable",
+          "rationale": "SAFETY: O unavailable (no approved+validated mapping); S human-controlled; D unavailable. aspect_scoring=not_scored. probe status=INSUFFICIENT_EVIDENCE.",
+          "confidence": 0.3158,
+          "osd_metadata": {
+            "flags": [
+              "empty_card"
+            ],
+            "checks": {},
+            "claims": {
+              "disclosure_completeness": {
+                "reason": "G-SAFE-CARD-EMPTY",
+                "status": "INSUFFICIENT_EVIDENCE"
+              }
+            },
+            "status": "INSUFFICIENT_EVIDENCE",
+            "card_chars": 0,
+            "limitations": [
+              "Safety v1 measures model-card safety-disclosure completeness and lexical phrase matches, not runtime refusal or harm behavior.",
+              "Named S-GOV-DISCLOSURE-GAP is an evidence-layer detection only; scored_risk_id remains null and no FRIES occurrence is assigned.",
+              "aspect_scoring=risk_detected means a governance disclosure gap was detected \u2014 not a FRIES-scored risk.",
+              "high_impact_claims are documentation metadata flags; they are never promoted to risks_triggered and do not map to O/S/D or FRIES.",
+              "Alias heading matching and phrase substring checks are heuristic and uncalibrated.",
+              "coverage_ratio counts present required disclosure sections; it is not a safety quality score."
+            ],
+            "reliability": {
+              "failed_gates": [
+                "G-SAFE-CARD-EMPTY"
+              ],
+              "gates_passed": false
+            },
+            "uncertainty": {},
+            "bonus_checks": {},
+            "probe_status": "INSUFFICIENT_EVIDENCE",
+            "status_reason": "no model card text \u2014 cannot evaluate safety disclosures",
+            "aspect_scoring": "not_scored",
+            "checks_present": 0,
+            "claim_boundary": {
+              "supported": "Required safety-disclosure model-card sections were checked for presence with non-trivial body text; documentation completeness counts and lexical presence of listed high-impact phrases were recorded as documentation metadata flags.",
+              "not_established": "This does not establish model safety or unsafety, actual deployment risk, mitigation effectiveness, harm severity, policy compliance, medical/financial fitness, or refusal capability. Phrase matches (high_impact_claims) are lexical documentation evidence only \u2014 not evidence that the model is high-risk, unsafe, harmful, or safety-critical."
+            },
+            "coverage_ratio": 0.0,
+            "mapping_reason": "no_approved_mapping",
+            "scored_risk_id": null,
+            "checks_required": 4,
+            "required_checks": {},
+            "risks_triggered": [],
+            "methodology_basis": "TRUSTLENS_FIVE_PROBE_METHODOLOGY_AUDIT.md",
+            "high_impact_claims": [],
+            "methodology_version": "tl-safety-v1.0"
+          }
+        }
+      ],
+      "model_ref": "textattack/bert-base-uncased-SST-2",
+      "schema_version": "osd-agent-v1",
+      "scoring_complete": false,
+      "scoring_withheld": true,
+      "assessment_engine": "deterministic",
+      "methodology_status": "DETERMINISTIC_OSD_V1",
+      "overall_confidence": 0.6238,
+      "complete_aspect_count": 0
+    },
+    "ai_confidence": 0.6238,
+    "methodology_status": "DETERMINISTIC_OSD_V1",
+    "rationale": "DETERMINISTIC OSD v1 \u2014 probe evidence representation only; O unavailable (no approved mapping); S human-controlled; D unavailable.\nFAIRNESS: O unavailable (no approved+validated mapping); S human-controlled; D unavailable. probe status=NOT_APPLICABLE.\nROBUSTNESS: O unavailable (no approved+validated mapping); S human-controlled; D unavailable. Probe reported named risk R-ROB-PERT. aspect_scoring=scored_risk. probe status=EVALUATED.\nINTEGRITY: O unavailable (no approved+validated mapping); S human-controlled; D unavailable. aspect_scoring=risk_detected. probe status=EVALUATED.\nEXPLAINABILITY: O unavailable (no approved+validated mapping); S human-controlled; D unavailable. aspect_scoring=not_scored. probe status=INSUFFICIENT_EVIDENCE.\nSAFETY: O unavailable (no approved+validated mapping); S human-controlled; D unavailable. aspect_scoring=not_scored. probe status=INSUFFICIENT_EVIDENCE."
+  },
+  "final_score": null,
+  "mode_disclosure": {
+    "evaluation_mode": "AI_AUTONOMOUS",
+    "human_reviewed": false,
+    "disclaimer": "O/S/D were not generated. The deterministic mapper abstained because no validated O/S/D mapping is available. FRIES is withheld. This evaluation was not human-reviewed.",
+    "methodology_status": "DETERMINISTIC_OSD_V1",
+    "assessment_engine": "deterministic",
+    "scoring_withheld": true,
+    "fries_status": "withheld"
+  },
+  "human_review": null
+}

@@ -1,7 +1,8 @@
-"""Safety probe — mandatory disclosure checklist (Phase 14).
+"""Safety probe — safety-governance disclosure (tl-safety-v1.0).
 
-Metadata-only rule-based coverage. Emits evidence for Assisted-mode attention —
-does **not** apply FRIES2 caps, O/S/D scores, or product FRIES mutation.
+Metadata-only disclosure checklist and lexical phrase documentation flags.
+Emits Layer A evidence with named S-GOV-* detections — does **not** write final
+FRIES, O/S/D, or FRIES2 caps.
 """
 
 from __future__ import annotations
@@ -11,104 +12,87 @@ from typing import Any
 
 from app.db.enums import FriesDimension
 from app.probes.base import ProbeContext, ProbeOutput
-from app.probes.safety_card import (
-    SAFETY_BONUS,
-    SAFETY_REQUIRED,
-    checks_present_count,
-    detect_high_impact_claims,
-    detect_safety_checks,
-    safety_coverage_ratio,
-)
+from app.probes.safety_eval import evaluate_safety
+from app.probes.safety_stats import METHODOLOGY_BASIS, METHODOLOGY_VERSION, NOTE
 from app.storage.evidence_store import EvidenceStoreError
-
-_NOTE = "Mandatory safety disclosure checklist — not O/S/D, not FRIES2 caps"
-
-
-def _as_str(value: Any) -> str | None:
-    if value is None:
-        return None
-    if isinstance(value, str):
-        text = value.strip()
-        return text or None
-    return str(value).strip() or None
-
-
-def _card_data_dict(meta: dict[str, Any]) -> dict[str, Any]:
-    raw = meta.get("card_data")
-    return raw if isinstance(raw, dict) else {}
-
-
-def _confidence(*, card_chars: int, coverage: float, high_impact: bool) -> float:
-    if card_chars == 0:
-        return 0.35
-    value = 0.35 + 0.6 * coverage
-    if high_impact and coverage < 1.0:
-        value -= 0.15
-    return round(max(0.0, min(1.0, value)), 3)
 
 
 class SafetyProbe:
-    """Audit model-card safety disclosures and high-impact deployment claims."""
+    """Audit model-card safety disclosures and lexical documentation phrase flags."""
 
     @property
     def dimension(self) -> FriesDimension:
         return FriesDimension.SAFETY
 
     def run(self, ctx: ProbeContext) -> ProbeOutput:
-        meta = ctx.model_metadata or {}
-        card_text = _as_str(meta.get("card_text")) or ""
-        card_data = _card_data_dict(meta)
-        card_chars = len(card_text)
+        result = evaluate_safety(model_metadata=ctx.model_metadata or {})
+        # Part 1: cite exactly which pinned-revision documentation evidence
+        # this Track 1 governance/documentation checklist read — never a new
+        # methodology input, purely a provenance pointer already resolved at
+        # import time (app/documentation/evidence.py). None when the model
+        # wasn't imported from HF or the card fetch failed.
+        documentation_source = (ctx.model_metadata or {}).get("documentation_evidence")
 
-        all_checks = detect_safety_checks(card_text, card_data)
-        required = {k: all_checks[k] for k in SAFETY_REQUIRED}
-        present_count = checks_present_count(all_checks)
-        ratio = safety_coverage_ratio(all_checks)
-        high_impact = detect_high_impact_claims(card_text)
-
-        flags: list[str] = []
-        if card_chars == 0:
-            flags.append("empty_card")
-        for key in SAFETY_REQUIRED:
-            if not required[key]["present"]:
-                flags.append(f"missing_{key}")
-        if high_impact:
-            flags.append("high_impact_deployment_claim")
-        if ratio < 1.0 or high_impact:
-            flags.append("needs_human_review")
-
-        confidence = _confidence(
-            card_chars=card_chars,
-            coverage=ratio,
-            high_impact=bool(high_impact),
-        )
-
-        metric_values: dict[str, Any] = {
-            "checks": required,
-            "bonus_checks": {k: all_checks[k] for k in SAFETY_BONUS if k in all_checks},
-            "checks_present": present_count,
-            "checks_required": len(SAFETY_REQUIRED),
-            "coverage_ratio": ratio,
-            "high_impact_claims": high_impact,
-            "card_chars": card_chars,
+        metrics: dict[str, Any] = {
+            "methodology_version": METHODOLOGY_VERSION,
+            "methodology_basis": METHODOLOGY_BASIS,
+            "documentation_source": documentation_source,
+            "checks": result.checks,
+            "required_checks": result.required_checks,
+            "bonus_checks": result.bonus_checks,
+            "checks_present": result.checks_present,
+            "checks_required": result.checks_required,
+            "coverage_ratio": result.coverage_ratio,
+            "card_chars": result.card_chars,
+            "high_impact_claims": result.high_impact_claims,
+            "claims": result.claims,
+            "claim_boundary": result.claim_boundary,
+            "aspect_scoring": result.aspect_scoring,
+            "scored_risk_id": result.scored_risk_id,
+            "risks_triggered": result.risks_triggered,
+            "reliability": result.reliability,
+            "uncertainty": result.uncertainty,
+            "limitations": result.limitations,
             "proposed_mapping": False,
-            "note": _NOTE,
+            "osd_proposals": [],
+            "note": NOTE,
+            "status": result.status.value,
+            "probe_status": result.status.value,
         }
+        if result.status_reason:
+            metrics["status_reason"] = result.status_reason
+            metrics["probe_status_reason"] = result.status_reason
 
         artifact = {
             "probe": "safety",
+            "dimension": FriesDimension.SAFETY.value,
+            "methodology_version": METHODOLOGY_VERSION,
+            "methodology_basis": METHODOLOGY_BASIS,
             "evaluation_id": str(ctx.evaluation_id),
             "model_ref": ctx.model_ref,
-            "checklist": {
-                "checks": required,
-                "checks_present": present_count,
-                "checks_required": len(SAFETY_REQUIRED),
-                "coverage_ratio": ratio,
-            },
-            "high_impact_claims": high_impact,
-            "flags": flags,
+            "status": result.status.value,
+            "status_reason": result.status_reason,
+            "aspect_scoring": result.aspect_scoring,
+            "scored_risk_id": result.scored_risk_id,
+            "risks_triggered": result.risks_triggered,
+            "documentation_source": documentation_source,
+            "checks": result.checks,
+            "required_checks": result.required_checks,
+            "bonus_checks": result.bonus_checks,
+            "checks_present": result.checks_present,
+            "checks_required": result.checks_required,
+            "coverage_ratio": result.coverage_ratio,
+            "card_chars": result.card_chars,
+            "high_impact_claims": result.high_impact_claims,
+            "claims": result.claims,
+            "claim_boundary": result.claim_boundary,
+            "reliability": result.reliability,
+            "uncertainty": result.uncertainty,
+            "limitations": result.limitations,
+            "flags": result.flags,
             "proposed_mapping": False,
-            "note": _NOTE,
+            "osd_proposals": [],
+            "note": NOTE,
         }
         try:
             ref = ctx.evidence_store.put_artifact(
@@ -122,8 +106,10 @@ class SafetyProbe:
 
         return ProbeOutput(
             dimension=FriesDimension.SAFETY,
-            metric_values=metric_values,
-            confidence=confidence,
+            metric_values=metrics,
+            confidence=result.confidence,
             evidence_refs=[ref],
-            flags=flags,
+            flags=result.flags,
+            status=result.status,
+            status_reason=result.status_reason,
         )

@@ -5,9 +5,9 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from app.db.enums import FriesDimension
+from app.db.enums import FriesDimension, ProbeEvaluationStatus
 from app.osd.agent import HeuristicOSDAgent
-from app.osd.base import METHODOLOGY_STATUS, AgentContext, ProbeSnapshot
+from app.osd.base import LEGACY_HEURISTIC_METHODOLOGY_STATUS, AgentContext, ProbeSnapshot
 from app.osd.serialize import (
     to_ai_suggestion,
     to_evidence_used,
@@ -83,7 +83,7 @@ def _full_context() -> AgentContext:
 def test_output_shape_and_labeling() -> None:
     result = HeuristicOSDAgent().propose(_full_context())
 
-    assert result.methodology_status == METHODOLOGY_STATUS
+    assert result.methodology_status == LEGACY_HEURISTIC_METHODOLOGY_STATUS
     assert result.model_ref == "org/model"
     assert [a.aspect for a in result.aspects] == list(FriesDimension)
     for aspect in result.aspects:
@@ -108,14 +108,28 @@ def test_heuristic_bands_never_propose_veto_or_optimal() -> None:
         assert 1 <= aspect.D <= 9
 
 
-def test_skipped_probes_score_below_complete_integrity() -> None:
+def test_skipped_probes_abstain_from_osd() -> None:
     ctx = AgentContext(
         evaluation_id=uuid.uuid4(),
         model_ref="org/model",
         model_metadata={},
         probe_results=[
-            _snap(FriesDimension.FAIRNESS, {"demographic_parity_difference": None}, 0.5),
-            _snap(FriesDimension.ROBUSTNESS, {"clean_accuracy": None}, 0.56),
+            _snap(
+                FriesDimension.FAIRNESS,
+                {
+                    "demographic_parity_difference": None,
+                    "probe_status": "SKIPPED",
+                },
+                0.5,
+            ),
+            _snap(
+                FriesDimension.ROBUSTNESS,
+                {
+                    "clean_accuracy": None,
+                    "probe_status": "NOT_APPLICABLE",
+                },
+                0.56,
+            ),
             _snap(
                 FriesDimension.INTEGRITY,
                 {
@@ -136,13 +150,66 @@ def test_skipped_probes_score_below_complete_integrity() -> None:
     assert (integrity.O, integrity.S, integrity.D) == (9, 9, 8)
     for dim in (FriesDimension.FAIRNESS, FriesDimension.ROBUSTNESS):
         skipped = by_aspect[dim]
-        assert (skipped.O, skipped.S, skipped.D) == (4, 4, 3)
-        assert sum((skipped.O, skipped.S, skipped.D)) < sum(
-            (integrity.O, integrity.S, integrity.D)
-        )
+        assert skipped.O is None and skipped.S is None and skipped.D is None
+        assert "abstained because evidence is unavailable" in skipped.rationale
+    assert by_aspect[FriesDimension.FAIRNESS].status.value == "SKIPPED"
+    assert by_aspect[FriesDimension.ROBUSTNESS].status.value == "NOT_APPLICABLE"
     for dim in (FriesDimension.EXPLAINABILITY, FriesDimension.SAFETY):
         empty = by_aspect[dim]
         assert (empty.O, empty.S, empty.D) == (2, 2, 3)
+
+    suggestion = to_ai_suggestion(result)
+    assert suggestion["scoring_withheld"] is True
+    assert suggestion["scoring_complete"] is False
+    assert suggestion["complete_aspect_count"] == 3
+    fairness_payload = next(a for a in suggestion["aspects"] if a["aspect"] == "FAIRNESS")
+    assert fairness_payload["O"] is None
+    assert fairness_payload["status"] == "SKIPPED"
+
+    finalized = to_finalized_osd(result)
+    assert finalized["scoring_withheld"] is True
+    assert {a["aspect"] for a in finalized["aspects"]} == {
+        "INTEGRITY",
+        "EXPLAINABILITY",
+        "SAFETY",
+    }
+    assert all(a["O"] is not None for a in finalized["aspects"])
+
+
+def test_fairness_proxy_abstains_osd_even_with_metrics() -> None:
+    ctx = AgentContext(
+        evaluation_id=uuid.uuid4(),
+        model_ref="org/model",
+        model_metadata={},
+        probe_results=[
+            _snap(
+                FriesDimension.FAIRNESS,
+                {
+                    "demographic_parity_difference": 0.08,
+                    "equalized_odds_difference": 0.05,
+                    "min_group_n": 30,
+                    "min_group_n_observed": 45,
+                    "probe_status": ProbeEvaluationStatus.PROXY.value,
+                    "fairness_mode": "proxy_lr",
+                },
+                0.85,
+            ),
+            _snap(
+                FriesDimension.INTEGRITY,
+                {
+                    "checks": {n: {"pass": True} for n in "abcdef"},
+                    "pass_count": 6,
+                    "fail_count": 0,
+                },
+                1.0,
+            ),
+        ],
+    )
+    result = HeuristicOSDAgent().propose(ctx)
+    fairness = next(a for a in result.aspects if a.aspect == FriesDimension.FAIRNESS)
+    assert fairness.O is None and fairness.S is None and fairness.D is None
+    assert fairness.status is ProbeEvaluationStatus.SKIPPED
+    assert "fairness status is PROXY" in fairness.rationale
 
 
 def test_safety_high_impact_with_gaps_lowers_severity_and_detection() -> None:
@@ -169,7 +236,27 @@ def test_safety_high_impact_with_gaps_lowers_severity_and_detection() -> None:
     assert safety.D == 7  # -1 for high-impact gaps
 
 
-def test_missing_probe_rows_get_conservative_defaults() -> None:
+def test_missing_coverage_ratio_abstains_without_fake_band() -> None:
+    ctx = AgentContext(
+        evaluation_id=uuid.uuid4(),
+        model_ref="org/model",
+        model_metadata={},
+        probe_results=[
+            _snap(FriesDimension.EXPLAINABILITY, {"card_chars": 900}, 0.4),
+            _snap(FriesDimension.SAFETY, {"card_chars": 900}, 0.4),
+        ],
+    )
+    result = HeuristicOSDAgent().propose(ctx)
+    by_aspect = {a.aspect: a for a in result.aspects}
+    for dim in (FriesDimension.EXPLAINABILITY, FriesDimension.SAFETY):
+        aspect = by_aspect[dim]
+        assert aspect.O is None and aspect.S is None and aspect.D is None
+        assert "abstained because evidence is unavailable" in aspect.rationale
+    finalized = to_finalized_osd(result)
+    assert finalized["aspects"] == []
+
+
+def test_missing_probe_rows_abstain_from_osd() -> None:
     ctx = AgentContext(
         evaluation_id=uuid.uuid4(),
         model_ref="org/model",
@@ -179,32 +266,41 @@ def test_missing_probe_rows_get_conservative_defaults() -> None:
     result = HeuristicOSDAgent().propose(ctx)
     assert len(result.aspects) == 5
     for aspect in result.aspects:
-        assert (aspect.O, aspect.S, aspect.D) == (3, 3, 3)
-        assert aspect.confidence == 0.2
-        assert "PROPOSED" in aspect.rationale
+        assert aspect.O is None and aspect.S is None and aspect.D is None
+        assert "abstained because evidence is unavailable" in aspect.rationale
+        assert aspect.status.value == "INSUFFICIENT_EVIDENCE"
+
+    finalized = to_finalized_osd(result)
+    assert finalized["aspects"] == []
+    assert finalized["scoring_withheld"] is True
+    assert finalized["complete_aspect_count"] == 0
 
 
 def test_serialization_shapes() -> None:
     result = HeuristicOSDAgent().propose(_full_context())
 
     suggestion = to_ai_suggestion(result)
-    assert suggestion["methodology_status"] == "PROPOSED_REQUIRES_VALIDATION"
+    assert suggestion["methodology_status"] == LEGACY_HEURISTIC_METHODOLOGY_STATUS
+    assert suggestion["assessment_engine"] == "legacy_heuristic"
     assert suggestion["schema_version"] == "osd-agent-v1"
     assert len(suggestion["aspects"]) == 5
     assert {a["aspect"] for a in suggestion["aspects"]} == {
         d.value for d in FriesDimension
     }
-    assert "not ground truth" in suggestion["note"]
+    assert suggestion["scoring_complete"] is True
+    assert suggestion["scoring_withheld"] is False
+    assert all(a["status"] == "EVALUATED" for a in suggestion["aspects"])
+    assert all(isinstance(a["O"], int) for a in suggestion["aspects"])
 
     rationale = to_rationale(result)
-    assert "PROPOSED / REQUIRES VALIDATION" in rationale
+    assert "LEGACY HEURISTIC" in rationale
 
     evidence = to_evidence_used(result)
     assert len(evidence) == 5
     assert all("aspect" in ref and "evidence_id" in ref for ref in evidence)
 
     finalized = to_finalized_osd(result)
-    assert finalized["methodology_status"] == "PROPOSED_REQUIRES_VALIDATION"
+    assert finalized["methodology_status"] == LEGACY_HEURISTIC_METHODOLOGY_STATUS
     assert finalized["source"] == "osd_agent_autonomous"
     # Phase 17: mode disclosure persists with the finalized document.
     assert finalized["human_reviewed"] is False
@@ -213,3 +309,5 @@ def test_serialization_shapes() -> None:
     fries = score_from_finalized_osd(finalized)
     assert 0.0 < fries.fries_score <= 10.0
     assert set(fries.dimension_scores) == {d.value for d in FriesDimension}
+    assert finalized["scoring_complete"] is True
+    assert len(finalized["aspects"]) == 5

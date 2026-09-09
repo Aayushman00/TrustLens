@@ -14,14 +14,15 @@ import json
 import uuid
 from typing import Any
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.api.errors import AppError, NotFoundError
+from app.api.errors import AppError, ConflictError, NotFoundError
 from app.core.config import get_settings
 from app.db.enums import EvaluationStatus
 from app.db.models import Evaluation, Report
 from app.db.repositories.evaluation import EvaluationRepository
-from app.db.repositories.final_score import FinalScoreRepository
+from app.db.repositories.evaluation_event import EVENT_REPORT_GENERATED, EvaluationEventRepository
 from app.db.repositories.report import ReportRepository
 from app.reports.builder import build_report_json
 from app.reports.render import render_html, render_pdf
@@ -39,7 +40,6 @@ class ReportService:
         self._session = session
         self._store = store if store is not None else get_report_store(get_settings())
         self._evals = EvaluationRepository(session)
-        self._final_scores = FinalScoreRepository(session)
         self._reports = ReportRepository(session)
 
     # -- guards --------------------------------------------------------------
@@ -51,14 +51,10 @@ class ReportService:
                 "Evaluation not found",
                 details={"evaluation_id": str(evaluation_id)},
             )
-        if (
-            evaluation.status != EvaluationStatus.FINALIZED
-            or self._final_scores.get_for_evaluation(evaluation.id) is None
-        ):
+        if evaluation.status != EvaluationStatus.FINALIZED:
             raise AppError(
                 "NOT_FINALIZED",
-                "Reports are available only for FINALIZED evaluations with a final "
-                "score — finalize the evaluation first",
+                "Reports are available only after the evaluation reaches FINALIZED.",
                 status_code=409,
                 details={
                     "evaluation_id": str(evaluation.id),
@@ -66,6 +62,11 @@ class ReportService:
                     "evaluation_mode": evaluation.evaluation_mode.value,
                 },
             )
+        # Phase 5: a FINALIZED evaluation with no final_scores row (FRIES
+        # withheld — required O/S/D incomplete) still gets a full
+        # evidentiary report; build_report_json produces an explicit
+        # withheld score section rather than fabricating one. No 409 here
+        # anymore for that case — only "not finalized yet" blocks.
         return evaluation
 
     def _require_store(self) -> ReportStore:
@@ -82,6 +83,11 @@ class ReportService:
     def get_report(self, evaluation_id: uuid.UUID) -> ReportRead:
         """Latest report for a finalized evaluation; auto-generates v1 if none."""
         evaluation = self._get_finalized_evaluation(evaluation_id)
+        # Serializes with any concurrent get_report/generate for the SAME
+        # evaluation so "read latest -> compute next version -> insert" is
+        # never interleaved with another transaction doing the same thing
+        # (audit P1-6). Held for the rest of this request's transaction.
+        self._evals.lock_for_report_generation(evaluation.id)
         latest = self._reports.latest_for_evaluation(evaluation.id)
         if latest is None:
             return self._generate(evaluation, version=1)
@@ -90,6 +96,7 @@ class ReportService:
     def generate(self, evaluation_id: uuid.UUID) -> ReportRead:
         """Force a new report version (append-only: latest+1, new MinIO keys)."""
         evaluation = self._get_finalized_evaluation(evaluation_id)
+        self._evals.lock_for_report_generation(evaluation.id)
         latest = self._reports.latest_for_evaluation(evaluation.id)
         next_version = 1 if latest is None else latest.version + 1
         return self._generate(evaluation, version=next_version)
@@ -132,11 +139,35 @@ class ReportService:
                 details={"evaluation_id": str(evaluation.id), "error": str(exc)},
             ) from exc
 
-        row = self._reports.create(
+        try:
+            # SAVEPOINT-scoped: on a unique-constraint violation only this
+            # nested transaction rolls back, leaving the outer request
+            # transaction (and this session) usable for the ConflictError
+            # response — never a raw 500, and never a fabricated
+            # report_generated event for this failed attempt.
+            with self._session.begin_nested():
+                row = self._reports.create(
+                    evaluation_id=evaluation.id,
+                    json_uri=json_uri,
+                    pdf_uri=pdf_uri,
+                    version=version,
+                )
+        except IntegrityError as exc:
+            # Final invariant (uq_reports_evaluation_id_version) — should
+            # never actually trigger given the lock in get_report/generate,
+            # but the constraint must win over application logic no matter
+            # what.
+            raise ConflictError(
+                "A report with this version already exists for this evaluation "
+                "— retry the request.",
+                details={"evaluation_id": str(evaluation.id), "version": version},
+            ) from exc
+        # A real, legitimate fact each time — explicit regenerate endpoint
+        # supports unlimited versions by design (report_service.py docstring).
+        EvaluationEventRepository(self._session).create(
             evaluation_id=evaluation.id,
-            json_uri=json_uri,
-            pdf_uri=pdf_uri,
-            version=version,
+            event_type=EVENT_REPORT_GENERATED,
+            detail={"version": version},
         )
         return self._to_read(row, report_json, json_hash=json_hash, pdf_hash=pdf_hash)
 

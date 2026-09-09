@@ -24,7 +24,9 @@ app/
     explainability.py      ExplainabilityProbe (Phase 13) — card sections
     explainability_card.py ATX heading matcher + contradictions
     card_markdown.py       Shared ATX split / nontrivial body helpers
-    safety.py              SafetyProbe (Phase 14) — disclosure checklist
+    safety.py              SafetyProbe (Phase 5) — governance disclosure evidence
+    safety_stats.py        tl-safety-v1.0 constants, risks, gates
+    safety_eval.py         Pure evaluate_safety()
     safety_card.py         Mandatory misuse/privacy/security/data checks
     robustness.py          RobustnessProbe (Phase 11) — NLP char_swap
     robustness_nlp.py      transformers runner (lazy import)
@@ -98,30 +100,40 @@ computed, `needs_human_review` is always `true`.
 NLP-only pins (e.g. `sentiment_fairness`) → `unsupported_modality` + evidence; evaluation
 still completes. Optional: `pip install -e ".[fairness]"`.
 
-## Explainability probe (Phase 13)
+## Explainability probe (Phase 4 — tl-explainability-v1.0)
 
-Metadata-only model-card **section coverage** (not keyword stuffing, not NLP semantic
-quality, not SHAP/LIME). Integrity still owns provenance/license/repro identity checks.
+Layer-A **documentation / transparency** evidence from the Hub model card. This is
+**not** interpretability quality, SHAP/LIME, runtime explanations, or O/S/D.
+
+**Methodology:** `tl-explainability-v1.0` (`methodology_basis:
+TRUSTLENS_FIVE_PROBE_METHODOLOGY_AUDIT.md`).
 
 **Required sections (5):** `intended_use`, `limitations`, `training_data`, `evaluation`,
 `ethical_considerations`. Bonus (tracked only): `architecture`, `citation`, `examples`.
 
 Matcher: ATX `#`/`##`/`###` headings mapped via alias tables; optional `card_data`
-fallbacks; empty heading bodies do not count (`≥20` chars).
+fallbacks (architecture no longer satisfied by `pipeline_tag` alone); empty heading
+bodies do not count (`≥20` chars).
 
-| Metric | Formula |
-|--------|---------|
-| `coverage_ratio` | `sections_present / 5` ∈ [0, 1] |
+| Field | Role |
+|-------|------|
+| `coverage_ratio` | `sections_present / 5` — **measurement only**, not quality |
+| `aspect_scoring` | `not_scored` \| `risk_detected` \| `no_material_risk` — `risk_detected` is evidence-layer only, **not** FRIES |
+| `scored_risk_id` | always `null` |
+| `risks_triggered` | `E-DOC-INCOMPLETE`, `E-DOC-CONTRADICTION` (detections only) |
 | `proposed_mapping` | always `false` |
 
-**Contradiction flags:** `empty_card`, `open_claim_vs_restrictive_license`,
-`no_limitations_but_production_claim`. Also `missing_<section>` and
-`needs_human_review` when `coverage_ratio < 0.6`.
+**Status:** empty/missing card → `INSUFFICIENT_EVIDENCE` (`G-EXP-CARD-EMPTY`); non-empty
+card → `EVALUATED` (even prose without headings).
 
-## Safety probe (Phase 14)
+**Contradiction flags:** `open_claim_vs_restrictive_license`,
+`no_limitations_but_production_claim`. Also `missing_<section>` and uncalibrated
+`needs_human_review` when `coverage_ratio < 0.6` on evaluated cards.
 
-Mandatory **safety disclosure** checklist on model-card metadata (not NLP claim
-extraction, **not** FRIES2 caps, **not** O/S/D). Distinct from Explainability’s
+## Safety probe (Phase 5 — tl-safety-v1.0)
+
+**Safety-governance disclosure** checklist on model-card metadata (not behavioral
+safety, **not** FRIES2 caps, **not** O/S/D). Distinct from Explainability’s
 doc-completeness sections — `ethical_considerations` does **not** satisfy `misuse_risks`.
 
 **Required (4):** `misuse_risks`, `privacy`, `security_warnings`, `data_disclosure`.
@@ -129,13 +141,20 @@ Bonus (tracked only): `bias_and_fairness_risks`, `human_oversight`.
 
 | Metric | Formula |
 |--------|---------|
-| `coverage_ratio` | `checks_present / 4` ∈ [0, 1] |
+| `coverage_ratio` | `checks_present / 4` ∈ [0, 1] — disclosure completeness count, not safety quality |
+| `high_impact_claims` | lexical documentation metadata flags (phrase ids); not `risks_triggered` |
 | `proposed_mapping` | always `false` |
 
-**Flags:** `missing_<check>`, `empty_card`, `high_impact_deployment_claim` (production /
-healthcare / finance / legal / autonomous / biometric heuristics), `needs_human_review`
-when coverage &lt; 1.0 or high-impact present. Autonomous mode still finalizes; flags are
-evidence for Assisted attention / later reports.
+**Named risk (evidence layer only):** `S-GOV-DISCLOSURE-GAP` when ≥1 required section
+absent/trivial on a non-empty card. `scored_risk_id` is always `null`.
+
+**Status:** empty card → `INSUFFICIENT_EVIDENCE` (`G-SAFE-CARD-EMPTY`); non-empty card →
+`EVALUATED` (even prose without headings).
+
+**Flags:** `missing_<check>`, `empty_card`, `high_impact_deployment_claim` (listed phrase
+matched on card — documentation metadata only), `high_impact_without_full_disclosure`,
+uncalibrated `needs_human_review` when coverage &lt; 1.0 or listed phrases matched.
+Phrase matches are **not** evidence of model risk, unsafety, or harm.
 
 ## Confidence Engine (Phase 15)
 
@@ -153,12 +172,12 @@ Factors persist in `probe_results.metric_values.confidence_factors`.
 |-----------|----------------------|---------------------------|
 | Fairness | `insufficient_slice_size` / `min_group_n_observed < min_group_n` (0.55); null metrics (0.35) | `metrics_skipped` / `unsupported_modality` / `dataset_load_failed` (0.45) |
 | Robustness | `n_samples` scale (≥64→1.0, ≥16→0.7, else 0.4); null accuracies (0.4) | `attack_skipped` / `unsupported_modality` / `model_load_failed` (0.45) |
-| Integrity | fraction of `checks.*.pass` | — (metadata path always runs → 1.0) |
-| Explainability | `coverage_ratio` (0 if `empty_card`) | `empty_card` (0.4); coverage &lt; 0.4 → weak parse (0.6) |
-| Safety | `coverage_ratio` (0 if `empty_card`) | `empty_card` (0.4); `high_impact_claims` with coverage gaps (0.5) |
+| Integrity | identity snapshot richness (revision/files/card); not checklist pass-rate | `INSUFFICIENT_EVIDENCE` (0.45); hash-not-performed does not lower metadata reliability |
+| Explainability | non-empty card evaluated (`data_quality=1.0`) | `INSUFFICIENT_EVIDENCE` / `FAILED` (0.45); not coverage-driven |
+| Safety | non-empty card evaluated (`data_quality=1.0`) | `INSUFFICIENT_EVIDENCE` / `FAILED` (0.45); not coverage- or phrase-match-driven |
 
-`evidence_completeness`: evidence_refs present (else 0.2); coverage-scaled for E/S
-(`0.6 + 0.4·coverage`); Integrity bumps for the `checks` dict.
+`evidence_completeness`: evidence_refs present (else 0.2); Explainability and Safety use
+captured `checks` dict (not coverage); Integrity bumps for the `checks` dict.
 
 `GET /v1/evaluations/{id}` (detail only — list omits it):
 
@@ -284,23 +303,25 @@ an injectable fake runner and do **not** require torch.
 Recommended live model: `distilbert-base-uncased-finetuned-sst-2-english` (plain DistilBERT
 MLM will skip as unsupported modality).
 
-## Integrity probe (Phase 10)
+## Integrity probe (Phase 3 — tl-integrity-v1.0)
 
-Metadata-only audit (no weight downloads). Emits metrics + evidence for a future O/S/D
-Agent — **not** product FRIES and **not** finalized O/S/D.
+Metadata-only Layer A evidence (no weight downloads). Records Hub identity, disclosure,
+and optional injected hash comparison — **not** product FRIES and **not** finalized O/S/D
+(`proposed_mapping: false`, `osd_proposals: []`).
 
-| Check | Pass when |
-|-------|-----------|
-| `revision_pinned` | Non-empty Model.revision / checksum (prefer SHA-like) |
-| `files_listed` | Non-empty `metadata.files` |
-| `license_declared` | Structured `license` / `card_data.license` (card text alone → fail + flag) |
-| `card_present` | Non-empty `card_text` |
-| `reproducibility_claims` | ≥2 keyword signal groups in card (heuristic; not ground truth) |
-| `checksum_recorded` | Non-empty files → `files_fingerprint=sha256:` of sorted names (+ revision) |
+| Check | Role |
+|-------|------|
+| `revision_pinned` | SHA-like revision format (heuristic; non-SHA → `I-INT-REV-UNPINNED`) |
+| `files_listed` | Hub file manifest present (`I-INT-MANIFEST-MISSING` if empty) |
+| `license_declared` | Structured license only (`I-INT-LICENSE-UNDISCLOSED`; anti-gaming on card-only text) |
+| `card_present` | Evidence only |
+| `reproducibility_claims` | Keyword disclosure groups (evidence only; not a scored risk) |
+| `files_listing_recorded` | `files_listing_fingerprint` = SHA-256 of sorted filenames (**not** weight bytes) |
 
-**Proposed score (REQUIRES VALIDATION):** base `10.0`, six equal weights, each fail deducts
-`10/6`; clamp to `[0, 10]` as `integrity_score_0_10`. Metrics include
-`"proposed_mapping": true` and `"scoring": "equal_weight_base_10"`.
+Named risks: `I-INT-REV-UNPINNED`, `I-INT-MANIFEST-MISSING`, `I-INT-LICENSE-UNDISCLOSED`,
+conditional `I-INT-BYTES-DIVERGE` (when `probe_config.extra.integrity` supplies both
+trusted reference and local hash). Cryptographic identity unverified is a claim-scope gate
+(`I-INT-HASH-UNVERIFIED`), not whole-probe insufficient. No `integrity_score_0_10`.
 
 ## Probe plugins (Phase 9+)
 
@@ -645,9 +666,10 @@ docker compose exec api curl -s http://127.0.0.1:8000/v1/models `
 ```powershell
 cd backend
 python -m pip install -e ".[dev]"
-$env:DATABASE_URL = "postgresql+psycopg2://trustlens:trustlens@127.0.0.1:5432/trustlens"
-python -m pytest -q
+python -m pytest -q -m "not integration"
 ```
+
+Full local setup (venv, `.env`, Docker Postgres, migrations): [docs/LOCAL_DEVELOPMENT.md](../docs/LOCAL_DEVELOPMENT.md).
 
 ## Out of scope
 

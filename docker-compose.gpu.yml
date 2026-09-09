@@ -1,0 +1,31 @@
+# NVIDIA GPU passthrough for the `worker` service.
+#
+# As of this revision, docker-compose.yml already requests this same GPU
+# device reservation by default — this file now only exists for explicit/
+# backward-compatible invocation (`-f docker-compose.yml -f
+# docker-compose.gpu.yml` is a no-op merge over the base file's identical
+# block). If you DON'T have an NVIDIA GPU/toolkit, use
+# docker-compose.cpu-only.yml instead, which removes the reservation.
+#
+# Prerequisites on the host:
+#   - An NVIDIA GPU + driver (verify with `nvidia-smi` on the host).
+#   - Linux: the NVIDIA Container Toolkit installed and configured for Docker
+#       (`sudo apt install nvidia-container-toolkit && sudo nvidia-ctk runtime
+#       configure --runtime=docker && sudo systemctl restart docker`).
+#   - Windows: Docker Desktop with the WSL2 backend and a WSL2-capable NVIDIA
+#       driver installed on Windows (this is the standard "Game Ready"/
+#       "Studio" driver — no separate container toolkit install needed;
+#       Docker Desktop exposes the GPU to WSL2 containers automatically).
+#
+# Either way, actual CPU vs CUDA selection inside the container is always
+# runtime-detected in-process (backend/app/inference/device.py), never
+# assumed from Compose config alone.
+services:
+  worker:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

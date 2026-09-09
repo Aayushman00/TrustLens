@@ -14,3 +14,23 @@ export function fmtDateTime(iso: string | null | undefined): string {
 export function fmtNumber(value: number | null | undefined, digits = 2): string {
   return value == null ? "—" : value.toFixed(digits);
 }
+
+/** Render O/S/D for display. Null is unavailable, never blank or implied zero. */
+export function fmtOsd(value: number | null | undefined): string {
+  if (value == null) return "Unavailable";
+  return String(value);
+}
+
+/**
+ * Parse a review O/S/D field. Empty → null. Invalid / non-integer → null.
+ * Does not coerce parse failures to 0 (FRIES veto).
+ */
+export function parseOsdInput(raw: string): number | null {
+  const trimmed = raw.trim();
+  if (trimmed === "") return null;
+  if (!/^-?\d+$/.test(trimmed)) return null;
+  const value = Number(trimmed);
+  if (!Number.isFinite(value) || !Number.isInteger(value)) return null;
+  if (value < 0 || value > 10) return null;
+  return value;
+}

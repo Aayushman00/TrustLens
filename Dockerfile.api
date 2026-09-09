@@ -20,8 +20,12 @@ COPY backend/pyproject.toml backend/README.md backend/alembic.ini ./
 COPY backend/app ./app
 COPY backend/alembic ./alembic
 COPY configs/datasets_v1.yaml ./configs/datasets_v1.yaml
+COPY configs/supported_pairings_v1.yaml ./configs/supported_pairings_v1.yaml
+COPY configs/supported_robustness_compat_v1.yaml ./configs/supported_robustness_compat_v1.yaml
 
-ENV DATASETS_CONFIG_PATH=/app/configs/datasets_v1.yaml
+ENV DATASETS_CONFIG_PATH=/app/configs/datasets_v1.yaml \
+    PAIRINGS_CONFIG_PATH=/app/configs/supported_pairings_v1.yaml \
+    ROBUSTNESS_COMPAT_CONFIG_PATH=/app/configs/supported_robustness_compat_v1.yaml
 
 RUN pip install --upgrade pip \
     && pip install .

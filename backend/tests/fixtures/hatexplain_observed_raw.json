@@ -1,0 +1,72 @@
+{
+  "description": "Observed HateXplain train post 9995600_gab from canonical GitHub dataset.json",
+  "post_id": "9995600_gab",
+  "raw": {
+    "post_id": "9995600_gab",
+    "post_tokens": [
+      "the",
+      "uk",
+      "has",
+      "threatened",
+      "to",
+      "return",
+      "radioactive",
+      "waste",
+      "to",
+      "the",
+      "eu",
+      "if",
+      "an",
+      "agreement",
+      "cannot",
+      "be",
+      "reached",
+      "can",
+      "not",
+      "we",
+      "keep",
+      "the",
+      "radioactive",
+      "waste",
+      "and",
+      "send",
+      "back",
+      "all",
+      "the",
+      "paki",
+      "migrants",
+      "instead"
+    ],
+    "annotators": [
+      {
+        "label": "offensive",
+        "annotator_id": 27,
+        "target": [
+          "Minority",
+          "Refugee",
+          "Indian"
+        ]
+      },
+      {
+        "label": "offensive",
+        "annotator_id": 6,
+        "target": [
+          "Indian"
+        ]
+      },
+      {
+        "label": "hatespeech",
+        "annotator_id": 4,
+        "target": [
+          "Refugee",
+          "Islam"
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "text": "the uk has threatened to return radioactive waste to the eu if an agreement cannot be reached can not we keep the radioactive waste and send back all the paki migrants instead",
+    "label": 2,
+    "sensitive": "Refugee"
+  }
+}
