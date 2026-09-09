@@ -1,4 +1,4 @@
-"""UserDataset repository — create / read by id (owner-scoped) / list for owner."""
+"""UserDataset repository — create / read by id / list all."""
 
 from __future__ import annotations
 
@@ -18,7 +18,6 @@ class UserDatasetRepository:
     def create(
         self,
         *,
-        owner_id: int,
         filename: str,
         format: str,
         content_hash: str,
@@ -32,7 +31,6 @@ class UserDatasetRepository:
     ) -> UserDataset:
         row = UserDataset(
             id=id or uuid.uuid4(),
-            owner_id=owner_id,
             filename=filename,
             format=format,
             content_hash=content_hash,
@@ -50,16 +48,9 @@ class UserDatasetRepository:
     def get_by_id(self, dataset_id: uuid.UUID) -> UserDataset | None:
         return self._session.get(UserDataset, dataset_id)
 
-    def get_owned(self, dataset_id: uuid.UUID, *, owner_id: int) -> UserDataset | None:
-        row = self.get_by_id(dataset_id)
-        if row is None or row.owner_id != owner_id:
-            return None
-        return row
-
-    def list_for_owner(self, owner_id: int, *, limit: int = 100) -> list[UserDataset]:
+    def list_all(self, *, limit: int = 100) -> list[UserDataset]:
         stmt = (
             select(UserDataset)
-            .where(UserDataset.owner_id == owner_id)
             .order_by(UserDataset.created_at.desc())
             .limit(max(1, min(limit, 200)))
         )

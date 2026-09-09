@@ -12,7 +12,6 @@ from app.db.enums import (
     EvaluationMode,
     EvaluationStatus,
     FriesDimension,
-    UserRole,
 )
 from app.db.models import (
     AttackFlag,
@@ -23,7 +22,6 @@ from app.db.models import (
     OsdAgentOutput,
     ProbeResult,
     Report,
-    User,
 )
 
 
@@ -53,14 +51,6 @@ def _seed_model_and_eval(session: Session) -> Evaluation:
 
 
 def test_insert_dummy_rows_across_tables(db_session: Session) -> None:
-    user = User(
-        email=f"reviewer-{uuid.uuid4().hex[:8]}@example.com",
-        password_hash="not-a-real-hash",
-        role=UserRole.REVIEWER,
-    )
-    db_session.add(user)
-    db_session.flush()
-
     evaluation = _seed_model_and_eval(db_session)
 
     db_session.add(
@@ -92,7 +82,6 @@ def test_insert_dummy_rows_across_tables(db_session: Session) -> None:
     db_session.add(
         HumanReview(
             evaluation_id=evaluation.id,
-            reviewer_id=user.id,
             overrides={"O": 8},
             human_changed=True,
             notes="adjusted O",

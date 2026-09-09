@@ -6,7 +6,7 @@ import them by installing the backend package editable, or by adding
 """
 
 from app.db.base import Base
-from app.db.enums import EvaluationMode, EvaluationStatus, FriesDimension, UserRole
+from app.db.enums import EvaluationMode, EvaluationStatus, FriesDimension
 from app.db.models import (
     AttackFlag,
     Evaluation,
@@ -16,7 +16,6 @@ from app.db.models import (
     OsdAgentOutput,
     ProbeResult,
     Report,
-    User,
 )
 
 __all__ = [
@@ -32,6 +31,4 @@ __all__ = [
     "OsdAgentOutput",
     "ProbeResult",
     "Report",
-    "User",
-    "UserRole",
 ]

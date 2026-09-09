@@ -5,7 +5,6 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from app.routers.v1 import (
-    auth,
     datasets,
     documentation,
     evaluation_actions,
@@ -17,7 +16,6 @@ from app.routers.v1 import (
 )
 
 api_router = APIRouter(prefix="/v1")
-api_router.include_router(auth.router)
 api_router.include_router(models.router)
 api_router.include_router(import_hf.router)
 api_router.include_router(documentation.router)

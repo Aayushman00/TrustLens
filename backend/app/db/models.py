@@ -6,8 +6,10 @@ FK ondelete policy
   final_scores, reports, attack_flags): CASCADE — deleting an evaluation removes
   its derived artifacts.
 - evaluations.model_id → RESTRICT — models with evaluations cannot be deleted.
-- human_reviews.reviewer_id → RESTRICT — users referenced as reviewers stay.
-- evaluations.published_by → SET NULL — user deletion clears publish actor only.
+
+TrustLens is a single-user local application — there is no identity/user
+concept anywhere in this schema. Human review is proven by a ``HumanReview``
+row (with its timestamp) existing, not by whose id is on it.
 
 evidence_refs (JSONB) is a list of immutable refs per ADR 0004, e.g.::
 
@@ -40,7 +42,7 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, CreatedUpdatedMixin, TimestampMixin
-from app.db.enums import EvaluationMode, EvaluationStatus, FriesDimension, UserRole
+from app.db.enums import EvaluationMode, EvaluationStatus, FriesDimension
 
 
 def _pg_enum(enum_cls: type, name: str) -> Enum:
@@ -52,29 +54,9 @@ def _pg_enum(enum_cls: type, name: str) -> Enum:
     )
 
 
-user_role_enum = _pg_enum(UserRole, "user_role")
 evaluation_status_enum = _pg_enum(EvaluationStatus, "evaluation_status")
 evaluation_mode_enum = _pg_enum(EvaluationMode, "evaluation_mode")
 fries_dimension_enum = _pg_enum(FriesDimension, "fries_dimension")
-
-
-class User(Base, TimestampMixin):
-    __tablename__ = "users"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    email: Mapped[str] = mapped_column(String(320), unique=True, nullable=False, index=True)
-    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
-    role: Mapped[UserRole] = mapped_column(
-        user_role_enum,
-        nullable=False,
-        default=UserRole.RESEARCHER,
-    )
-
-    reviews: Mapped[list[HumanReview]] = relationship(back_populates="reviewer")
-    published_evaluations: Mapped[list[Evaluation]] = relationship(
-        back_populates="publisher",
-        foreign_keys="Evaluation.published_by",
-    )
 
 
 class Model(Base, TimestampMixin):
@@ -98,26 +80,21 @@ class Model(Base, TimestampMixin):
 
 
 class UserDataset(Base, TimestampMixin):
-    """User-owned local CSV dataset for the ad-hoc ``user_dataset`` Fairness path.
+    """Local CSV dataset for the ad-hoc ``user_dataset`` Fairness path.
 
-    Owner-scoped, standalone resource — no FK from ``Evaluation``/``ProbeResult``
-    to this table. An evaluation contract freezes ``storage_uri``/``content_hash``
-    as immutable strings at create time, so deleting this row later never breaks
+    Standalone resource — no FK from ``Evaluation``/``ProbeResult`` to this
+    table. An evaluation contract freezes ``storage_uri``/``content_hash`` as
+    immutable strings at create time, so deleting this row later never breaks
     a past evaluation's evidence trail (the Evidence Dossier reads only the
     frozen ``probe_results.metric_values`` snapshot, never a live dataset lookup).
     """
 
     __tablename__ = "user_datasets"
-    __table_args__ = (Index("ix_user_datasets_owner_id", "owner_id"),)
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         primary_key=True,
         default=uuid.uuid4,
-    )
-    owner_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
     )
     filename: Mapped[str] = mapped_column(String(512), nullable=False)
     format: Mapped[str] = mapped_column(String(16), nullable=False)
@@ -138,8 +115,6 @@ class UserDataset(Base, TimestampMixin):
     )
     status_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    owner: Mapped[User] = relationship(foreign_keys=[owner_id])
-
 
 class DocumentationSource(Base, TimestampMixin):
     """First-class documentation evidence for a model (Explainability/Safety Track 1).
@@ -148,9 +123,8 @@ class DocumentationSource(Base, TimestampMixin):
     - ``source_kind="huggingface_hub"`` — auto-recorded at import time, pinned to
       the model's frozen ``revision`` (never the moving default branch). One
       such row is (re)written each time the model is (re)imported.
-    - ``source_kind="user_supplied"`` — a URL a user attaches manually (paper,
-      safety card, eval report, etc.); ``created_by`` is the uploader for
-      ownership (edit/delete), not a claim that the model itself is "owned".
+    - ``source_kind="user_supplied"`` — a URL the operator attaches manually
+      (paper, safety card, eval report, etc.).
     """
 
     __tablename__ = "documentation_sources"
@@ -173,10 +147,6 @@ class DocumentationSource(Base, TimestampMixin):
     content_length: Mapped[int | None] = mapped_column(Integer, nullable=True)
     source_model_ref: Mapped[str] = mapped_column(String(256), nullable=False)
     source_model_revision: Mapped[str | None] = mapped_column(String(128), nullable=True)
-    created_by: Mapped[int | None] = mapped_column(
-        ForeignKey("users.id", ondelete="SET NULL"),
-        nullable=True,
-    )
 
     model: Mapped[Model] = relationship()
 
@@ -237,22 +207,8 @@ class Evaluation(Base, CreatedUpdatedMixin):
         DateTime(timezone=True),
         nullable=True,
     )
-    published_by: Mapped[int | None] = mapped_column(
-        ForeignKey("users.id", ondelete="SET NULL"),
-        nullable=True,
-    )
-    # Phase 5 (ADR 0006) — owner for publish/unpublish RBAC (owner-or-admin policy).
-    created_by: Mapped[int | None] = mapped_column(
-        ForeignKey("users.id", ondelete="SET NULL"),
-        nullable=True,
-    )
 
     model: Mapped[Model] = relationship(back_populates="evaluations")
-    publisher: Mapped[Optional[User]] = relationship(
-        back_populates="published_evaluations",
-        foreign_keys=[published_by],
-    )
-    creator: Mapped[Optional[User]] = relationship(foreign_keys=[created_by])
     probe_results: Mapped[list[ProbeResult]] = relationship(
         back_populates="evaluation",
         cascade="all, delete-orphan",
@@ -380,19 +336,12 @@ class OsdAgentOutput(Base, TimestampMixin):
 
 class HumanReview(Base, TimestampMixin):
     __tablename__ = "human_reviews"
-    __table_args__ = (
-        Index("ix_human_reviews_evaluation_id", "evaluation_id"),
-        Index("ix_human_reviews_reviewer_id", "reviewer_id"),
-    )
+    __table_args__ = (Index("ix_human_reviews_evaluation_id", "evaluation_id"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     evaluation_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("evaluations.id", ondelete="CASCADE"),
-        nullable=False,
-    )
-    reviewer_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
         nullable=False,
     )
     overrides: Mapped[dict[str, Any]] = mapped_column(
@@ -409,7 +358,6 @@ class HumanReview(Base, TimestampMixin):
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     evaluation: Mapped[Evaluation] = relationship(back_populates="human_reviews")
-    reviewer: Mapped[User] = relationship(back_populates="reviews")
 
 
 class FinalScore(Base, TimestampMixin):

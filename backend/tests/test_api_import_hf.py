@@ -120,13 +120,16 @@ def test_import_hf_duplicate_repo_updates_existing_row(
     assert len(matches) == 1
 
 
-def test_import_hf_without_token_401(api_client: TestClient) -> None:
+def test_import_hf_works_without_auth(
+    api_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Single-user local instance — no auth is required for this route."""
+    _patch_adapter(monkeypatch, record=_sample_record())
     response = api_client.post(
         "/v1/models/import-hf",
         json={"repo_id": "distilbert-base-uncased"},
     )
-    assert response.status_code == 401
-    assert response.json()["code"] == "UNAUTHORIZED"
+    assert response.status_code == 201, response.text
 
 
 def test_import_hf_non_hf_url_422_invalid_model_ref(

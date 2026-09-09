@@ -54,7 +54,6 @@ class HumanReviewRequest(BaseModel):
 class HumanReviewRead(BaseModel):
     id: int
     evaluation_id: uuid.UUID
-    reviewer_id: int
     human_changed: bool
     accept_all: bool
     approved_osd: dict[str, Any]

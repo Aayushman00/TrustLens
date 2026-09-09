@@ -10,7 +10,6 @@ for host-side runs.
 from __future__ import annotations
 
 import os
-import uuid
 from collections.abc import Iterator
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -67,10 +66,6 @@ if TYPE_CHECKING:
 
 from app.core.config import get_settings
 from app.core.db import get_engine, reset_engine
-from app.core.security import hash_password
-from app.db.enums import UserRole
-from app.db.models import User
-from app.db.repositories.user import UserRepository
 from tests.fakes import patch_evaluated_fairness, patch_evaluated_robustness
 
 LEGACY_HEURISTIC_PROBE_CONFIG = {
@@ -244,38 +239,6 @@ def api_client(db_session: Session) -> Iterator["TestClient"]:
     application.dependency_overrides.clear()
 
 
-# Fixed dev-only passwords for tests — never used outside this test session.
-SEEDED_PASSWORDS: dict[str, str] = {
-    "admin": "admin-test-pass-123",
-    "researcher": "researcher-test-pass-123",
-    "reviewer": "reviewer-test-pass-123",
-}
-
-
-@pytest.fixture
-def seeded_users(db_session: Session) -> dict[str, tuple[User, str]]:
-    """Create one user per role with a known password, scoped to this test's transaction."""
-    repo = UserRepository(db_session)
-    users: dict[str, tuple[User, str]] = {}
-    for key, role in (
-        ("admin", UserRole.ADMIN),
-        ("researcher", UserRole.RESEARCHER),
-        ("reviewer", UserRole.REVIEWER),
-    ):
-        password = SEEDED_PASSWORDS[key]
-        email = f"{key}-{uuid.uuid4().hex[:8]}@example.com"
-        user = repo.create(email=email, password_hash=hash_password(password), role=role)
-        users[key] = (user, password)
-    db_session.flush()
-    return users
-
-
-def auth_headers_for(api_client: "TestClient", email: str, password: str) -> dict[str, str]:
-    response = api_client.post("/v1/auth/login", json={"email": email, "password": password})
-    assert response.status_code == 200, response.text
-    return {"Authorization": f"Bearer {response.json()['access_token']}"}
-
-
 @pytest.fixture
 def evaluated_robustness(monkeypatch: pytest.MonkeyPatch) -> None:
     """Opt-in: robustness probe emits EVALUATED accuracies (complete FRIES path)."""
@@ -289,14 +252,12 @@ def evaluated_fairness(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture
-def auth_headers(api_client: "TestClient", seeded_users: dict[str, tuple[User, str]]) -> dict[str, str]:
-    """Bearer header for the seeded researcher — the default authenticated caller."""
-    user, password = seeded_users["researcher"]
-    return auth_headers_for(api_client, user.email, password)
+def auth_headers() -> dict[str, str]:
+    """No-op — TrustLens is a single-user local app with no auth headers."""
+    return {}
 
 
 @pytest.fixture
-def admin_headers(api_client: "TestClient", seeded_users: dict[str, tuple[User, str]]) -> dict[str, str]:
-    """Bearer header for the seeded admin (legacy_heuristic create path)."""
-    user, password = seeded_users["admin"]
-    return auth_headers_for(api_client, user.email, password)
+def admin_headers() -> dict[str, str]:
+    """No-op — TrustLens is a single-user local app with no auth headers."""
+    return {}

@@ -10,11 +10,11 @@ from typing import Any
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
-from app.api.errors import AppError, ConflictError, ForbiddenError, NotFoundError, ValidationAppError
+from app.api.errors import AppError, ConflictError, NotFoundError, ValidationAppError
 from app.confidence.engine import ConfidenceSummary, summarize
 from app.datasets.registry import validate_probe_config_datasets
-from app.db.enums import EvaluationMode, EvaluationStatus, UserRole
-from app.db.models import Evaluation, HumanReview, ProbeResult, User
+from app.db.enums import EvaluationMode, EvaluationStatus
+from app.db.models import Evaluation, HumanReview, ProbeResult
 from app.inference.evaluation_contract import build_evaluation_contract
 from app.db.repositories.evaluation import EvaluationRepository
 from app.db.repositories.evaluation_event import (
@@ -148,9 +148,6 @@ class EvaluationService:
     def create_evaluation(
         self,
         data: EvaluationCreate,
-        *,
-        created_by: int | None = None,
-        creator: User | None = None,
     ) -> Evaluation:
         model = self._models.get_by_id(data.model_id)
         if model is None:
@@ -174,31 +171,12 @@ class EvaluationService:
         probe_config = probe_cfg.model_dump(mode="json")
         if probe_config.get("assessment_engine") is None:
             probe_config["assessment_engine"] = "deterministic"
-        if probe_config.get("assessment_engine") == "legacy_heuristic":
-            role = creator.role if creator is not None else None
-            if role != UserRole.ADMIN:
-                raise ForbiddenError(
-                    "legacy_heuristic assessment_engine is restricted to admin users",
-                    details={"assessment_engine": "legacy_heuristic"},
-                )
-        if data.contract_kind == "proxy_lr":
-            role = creator.role if creator is not None else None
-            if role != UserRole.ADMIN:
-                raise ForbiddenError(
-                    "proxy_lr evaluation contract (Adult LR proxy) is restricted to "
-                    "admin users",
-                    details={"contract_kind": "proxy_lr"},
-                )
         # Phase 7: resolve + freeze the evaluation contract from the Model row
         # (never the client-supplied revision, which may have drifted).
-        # user_dataset_id is ownership-gated (not admin-gated like proxy_lr —
-        # this path never substitutes model or dataset, so the same risk
-        # doesn't apply); ownership is enforced inside build_evaluation_contract.
         contract = build_evaluation_contract(
             model,
             data,
             user_dataset_repo=self._user_datasets,
-            requester_id=created_by,
         )
         probe_config["evaluation_contract"] = contract.model_dump(mode="json")
         if data.included_group_values is not None:
@@ -214,7 +192,6 @@ class EvaluationService:
             config=data.config,
             model_revision=model.revision,
             trustlens_version=data.trustlens_version,
-            created_by=created_by,
         )
         payload = EvaluateModelPayload(
             evaluation_id=row.id,
@@ -362,7 +339,6 @@ class EvaluationService:
         return HumanReviewRead(
             id=row.id,
             evaluation_id=row.evaluation_id,
-            reviewer_id=row.reviewer_id,
             human_changed=row.human_changed,
             accept_all=bool(overrides.get("accept_all", False)),
             approved_osd=overrides.get("approved_osd") or {},
@@ -382,8 +358,6 @@ class EvaluationService:
         self,
         evaluation_id: uuid.UUID,
         body: HumanReviewRequest,
-        *,
-        reviewer: User,
     ) -> HumanReviewRead:
         """Phase 18: structured accept/edit of the agent O/S/D suggestion.
 
@@ -452,17 +426,15 @@ class EvaluationService:
         )
         row = self._human_reviews.create(
             evaluation_id=evaluation.id,
-            reviewer_id=reviewer.id,
             overrides=overrides,
             human_changed=human_changed,
             notes=body.notes,
         )
         logger.info(
-            "human_review_created evaluation_id=%s review_id=%s reviewer_id=%s "
+            "human_review_created evaluation_id=%s review_id=%s "
             "accept_all=%s human_changed=%s",
             evaluation.id,
             row.id,
-            reviewer.id,
             body.accept_all,
             human_changed,
         )
@@ -641,7 +613,6 @@ class EvaluationService:
         finalized_osd = to_finalized_osd_assisted(
             approved,
             human_review_id=review.id,
-            reviewer_id=review.reviewer_id,
             human_changed=review.human_changed,
             agent_suggestion=agent_suggestion,
         )
@@ -700,11 +671,11 @@ class EvaluationService:
         )
         return row
 
-    def publish(self, evaluation: Evaluation, *, user: User) -> Evaluation:
-        """Opt-in leaderboard publish (Phase 22, ADR 0013) — owner/admin via router dep.
+    def publish(self, evaluation: Evaluation) -> Evaluation:
+        """Opt-in leaderboard publish (Phase 22, ADR 0013).
 
         Requires ``FINALIZED`` + a ``final_scores`` row; idempotent — an already
-        published evaluation keeps its original ``published_at``/``published_by``.
+        published evaluation keeps its original ``published_at``.
         Pure DB flip: no report generation is triggered (report URIs attach on
         the leaderboard when reports exist). Finalize never auto-publishes.
         """
@@ -727,26 +698,20 @@ class EvaluationService:
             return evaluation
         evaluation.is_published = True
         evaluation.published_at = datetime.now(UTC)
-        evaluation.published_by = user.id
         self._session.flush()
-        logger.info(
-            "evaluation_published evaluation_id=%s published_by=%s",
-            evaluation.id,
-            user.id,
-        )
+        logger.info("evaluation_published evaluation_id=%s", evaluation.id)
         return evaluation
 
     def unpublish(self, evaluation: Evaluation) -> Evaluation:
         """Revoke leaderboard publish — idempotent; clears the publish stamp.
 
-        ``published_at``/``published_by`` are cleared rather than kept as
-        history (documented choice); republishing restamps both.
+        ``published_at`` is cleared rather than kept as history (documented
+        choice); republishing restamps it.
         """
         if not evaluation.is_published:
             return evaluation
         evaluation.is_published = False
         evaluation.published_at = None
-        evaluation.published_by = None
         self._session.flush()
         logger.info("evaluation_unpublished evaluation_id=%s", evaluation.id)
         return evaluation

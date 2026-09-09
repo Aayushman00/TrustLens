@@ -1,18 +1,11 @@
-"""Documentation source service — list model documentation evidence + user-supplied add/delete.
-
-Models have no "owner" concept in this schema (unlike UserDataset). Ownership
-here mirrors the UserDataset pattern at the *row* level instead: any
-authenticated user may attach a documentation source to any model, but only
-the row's creator or an admin may delete it.
-"""
+"""Documentation source service — list model documentation evidence + user-supplied add/delete."""
 
 from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
 from app.api.errors import ForbiddenError, NotFoundError
-from app.db.enums import UserRole
-from app.db.models import DocumentationSource, User
+from app.db.models import DocumentationSource
 from app.db.repositories.documentation import DocumentationSourceRepository
 from app.db.repositories.model import ModelRepository
 from app.schemas.documentation import UserDocumentationCreate
@@ -37,7 +30,6 @@ class DocumentationService:
         *,
         model_id: int,
         data: UserDocumentationCreate,
-        created_by: int,
     ) -> DocumentationSource:
         model = self._models.get_by_id(model_id)
         if model is None:
@@ -54,7 +46,6 @@ class DocumentationService:
             title=data.title,
             description=data.description,
             source_model_revision=model.revision,
-            created_by=created_by,
         )
 
     def delete_user_documentation(
@@ -62,7 +53,6 @@ class DocumentationService:
         *,
         model_id: int,
         source_id: int,
-        current_user: User,
     ) -> None:
         row = self._repo.get_by_id(source_id)
         if row is None or row.model_id != model_id:
@@ -75,7 +65,5 @@ class DocumentationService:
                 "auto-recorded Hugging Face documentation evidence cannot be deleted directly"
                 " — it is refreshed on re-import"
             )
-        if current_user.role != UserRole.ADMIN and row.created_by != current_user.id:
-            raise ForbiddenError("only the uploader or an admin may delete this documentation source")
         self._session.delete(row)
         self._session.flush()

@@ -284,11 +284,11 @@ def test_researcher_evaluation_with_no_contract_selection_defaults_documentation
     assert contract["kind"] == "documentation_only"
 
 
-def test_researcher_cannot_request_proxy_lr(
+def test_proxy_lr_has_no_role_gate(
     api_client: TestClient,
     auth_headers: dict[str, str],
 ) -> None:
-    """C (gate half): proxy_lr is admin-only — a researcher request is forbidden."""
+    """Single-user local instance — proxy_lr has no admin-only gate."""
     model = api_client.post(
         "/v1/models",
         json={"hf_repo_id": f"org/proxy-forbidden-{uuid.uuid4().hex[:8]}"},
@@ -304,7 +304,8 @@ def test_researcher_cannot_request_proxy_lr(
         },
         headers=auth_headers,
     )
-    assert created.status_code == 403, created.text
+    assert created.status_code == 201, created.text
+    assert created.json()["probe_config"]["evaluation_contract"]["kind"] == "proxy_lr"
 
 
 def test_admin_proxy_lr_contract_persisted(

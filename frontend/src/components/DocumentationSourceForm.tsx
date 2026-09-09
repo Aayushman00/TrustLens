@@ -11,7 +11,6 @@ import { useEffect, useState, type FormEvent } from "react";
 
 import { apiFetch } from "../api/client";
 import type { DocumentationSourceList, DocumentationSourceRead, DocumentationType } from "../api/types";
-import { useAuth } from "../auth/AuthContext";
 import ErrorNotice from "./ErrorNotice";
 
 const DOC_TYPES: { value: DocumentationType; label: string }[] = [
@@ -71,7 +70,6 @@ function SourceRow({
 }
 
 export default function DocumentationSourceForm({ modelId }: { modelId: number }) {
-  const { user } = useAuth();
   const [sources, setSources] = useState<DocumentationSourceRead[] | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [url, setUrl] = useState("");
@@ -142,7 +140,7 @@ export default function DocumentationSourceForm({ modelId }: { modelId: number }
             <SourceRow
               key={s.id}
               source={s}
-              canDelete={s.source_kind === "user_supplied" && (user?.role === "admin" || user?.id === s.created_by)}
+              canDelete={s.source_kind === "user_supplied"}
               onDelete={() => void remove(s.id)}
             />
           ))}

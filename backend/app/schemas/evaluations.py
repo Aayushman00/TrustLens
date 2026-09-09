@@ -135,7 +135,6 @@ class EvaluationRead(BaseModel):
     execution_metadata: dict[str, Any] | None = None
     is_published: bool
     published_at: datetime | None = None
-    created_by: int | None = None
     created_at: datetime
     updated_at: datetime
     probe_progress: ProbeProgress | None = None

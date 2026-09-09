@@ -1,6 +1,5 @@
 """Dataset service — upload/list/read/group-discovery for user-defined local
-Fairness datasets (ownership-gated, any authenticated user, not admin-only —
-unlike ``proxy_lr`` this path never substitutes model or dataset)."""
+Fairness datasets. Single-user local instance: no ownership concept."""
 
 from __future__ import annotations
 
@@ -8,7 +7,7 @@ import uuid
 
 from sqlalchemy.orm import Session
 
-from app.api.errors import ForbiddenError, NotFoundError, ValidationAppError
+from app.api.errors import NotFoundError, ValidationAppError
 from app.datasets.user_dataset import (
     UserDatasetError,
     count_rows,
@@ -30,7 +29,7 @@ class DatasetService:
         self._repo = UserDatasetRepository(session)
         self._store = dataset_store
 
-    def upload(self, *, owner_id: int, filename: str, data: bytes) -> UserDataset:
+    def upload(self, *, filename: str, data: bytes) -> UserDataset:
         if self._store is None:
             raise ValidationAppError(
                 "local dataset storage is not configured on this TrustLens instance"
@@ -59,13 +58,11 @@ class DatasetService:
         dataset_id = uuid.uuid4()
         storage_uri, content_hash = self._store.put_dataset(
             data=data,
-            owner_id=owner_id,
             dataset_id=dataset_id,
             filename=filename,
         )
         row = self._repo.create(
             id=dataset_id,
-            owner_id=owner_id,
             filename=filename,
             format="csv",
             content_hash=content_hash,
@@ -76,19 +73,14 @@ class DatasetService:
         )
         return row
 
-    def list_for_owner(self, owner_id: int) -> list[UserDataset]:
-        return self._repo.list_for_owner(owner_id)
+    def list_all(self) -> list[UserDataset]:
+        return self._repo.list_all()
 
-    def get_owned(self, dataset_id: uuid.UUID, *, owner_id: int, is_admin: bool = False) -> UserDataset:
+    def get_by_id(self, dataset_id: uuid.UUID) -> UserDataset:
         row = self._repo.get_by_id(dataset_id)
         if row is None:
             raise NotFoundError(
                 f"Dataset {dataset_id} not found",
-                details={"dataset_id": str(dataset_id)},
-            )
-        if row.owner_id != owner_id and not is_admin:
-            raise ForbiddenError(
-                "you do not own this dataset",
                 details={"dataset_id": str(dataset_id)},
             )
         return row
@@ -97,11 +89,9 @@ class DatasetService:
         self,
         dataset_id: uuid.UUID,
         *,
-        owner_id: int,
         group_column: str,
-        is_admin: bool = False,
     ) -> GroupDiscoveryRead:
-        row = self.get_owned(dataset_id, owner_id=owner_id, is_admin=is_admin)
+        row = self.get_by_id(dataset_id)
         if self._store is None:
             raise ValidationAppError(
                 "local dataset storage is not configured on this TrustLens instance"
@@ -119,8 +109,8 @@ class DatasetService:
             missing_reasons=missing_summary["missing_reasons"],
         )
 
-    def delete(self, dataset_id: uuid.UUID, *, owner_id: int, is_admin: bool = False) -> None:
-        row = self.get_owned(dataset_id, owner_id=owner_id, is_admin=is_admin)
+    def delete(self, dataset_id: uuid.UUID) -> None:
+        row = self.get_by_id(dataset_id)
         if self._store is not None:
             try:
                 self._store.delete_dataset(storage_uri=row.storage_uri)

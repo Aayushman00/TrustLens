@@ -13,7 +13,6 @@ from app.core.db import get_engine, reset_engine
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_TABLES = {
-    "users",
     "models",
     "evaluations",
     "probe_results",
@@ -45,6 +44,8 @@ def test_alembic_upgrade_creates_tables(database_url: str, monkeypatch: pytest.M
     engine = get_engine(database_url)
     tables = set(inspect(engine).get_table_names())
     assert EXPECTED_TABLES.issubset(tables)
+    # Single-user local instance — no users/identity table.
+    assert "users" not in tables
 
     indexes = {idx["name"] for idx in inspect(engine).get_indexes("evaluations")}
     assert "ix_evaluations_status" in indexes
@@ -75,7 +76,7 @@ def test_alembic_downgrade_and_reupgrade(
 
     with engine.connect() as conn:
         row = conn.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-    assert row == "007_add_reports_unique_version"
+    assert row == "008_remove_auth_and_ownership"
 
 
 @pytest.mark.slow

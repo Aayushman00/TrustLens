@@ -16,7 +16,6 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.db.enums import EvaluationMode, EvaluationStatus, FriesDimension
-from app.db.models import User
 from app.db.repositories.evaluation import EvaluationRepository
 from app.db.repositories.final_score import FinalScoreRepository
 from app.reports.builder import build_executive_summary, build_report_json
@@ -35,7 +34,7 @@ from app.schemas.reports import (
     ReportV1,
 )
 from app.tasks.evaluate_pipeline import run_evaluation_pipeline
-from tests.conftest import LEGACY_HEURISTIC_PROBE_CONFIG, auth_headers_for, fries_complete_model_payload
+from tests.conftest import LEGACY_HEURISTIC_PROBE_CONFIG, fries_complete_model_payload
 from tests.fakes import FakeEvidenceStore
 
 
@@ -270,11 +269,9 @@ def _create_and_run(
 
 def _review_and_finalize(
     api_client: TestClient,
-    seeded_users: dict[str, tuple[User, str]],
+    headers: dict[str, str],
     eval_id: str,
 ) -> None:
-    reviewer, password = seeded_users["reviewer"]
-    headers = auth_headers_for(api_client, reviewer.email, password)
     review = api_client.post(
         f"/v1/evaluations/{eval_id}/human-review",
         json={"accept_all": True},
@@ -386,10 +383,9 @@ def test_assisted_report_after_review_differs_from_autonomous(
     api_client: TestClient,
     admin_headers: dict[str, str],
     db_session: Session,
-    seeded_users: dict[str, tuple[User, str]],
 ) -> None:
     eval_id = _create_and_run(api_client, admin_headers, db_session, mode="AI_ASSISTED")
-    _review_and_finalize(api_client, seeded_users, eval_id)
+    _review_and_finalize(api_client, admin_headers, eval_id)
     evaluation = EvaluationRepository(db_session).get_by_id(uuid.UUID(eval_id))
     assert evaluation is not None
 
@@ -497,7 +493,6 @@ def test_finalized_withheld_report_is_complete_not_an_error(
     auth_headers: dict[str, str],
     admin_headers: dict[str, str],
     db_session: Session,
-    seeded_users: dict[str, tuple[User, str]],
 ) -> None:
     """Phase 5: a FINALIZED evaluation with FRIES withheld (deterministic
     engine, no human review completing all 5 aspects) must still produce a

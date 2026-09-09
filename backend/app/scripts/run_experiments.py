@@ -1,8 +1,8 @@
 """Phase 25 experiment runner — creates and polls benchmark evaluations via the API.
 
 Reads ``configs/experiments_v1.yaml`` (see ``docs/experiments_runbook.md``),
-drives the real product path (login → import-hf → create evaluation → poll to
-the terminal status), measures client-side wall time, and appends one JSON line
+drives the real product path (import-hf → create evaluation → poll to the
+terminal status), measures client-side wall time, and appends one JSON line
 per run to ``results/manifest_v1.jsonl``. Resumable: (model, mode, repeat)
 tuples already in the manifest are skipped — delete a line to redo a run.
 
@@ -12,13 +12,11 @@ Usage (host, against the Compose stack)::
     python -m app.scripts.run_experiments --mode c            # Mode C batch + det-check
     python -m app.scripts.run_experiments --mode b            # Mode B assisted creates
     python -m app.scripts.run_experiments --mode b-review \
-        --plan ../results/mode_b_review_plan.json             # reviewer pass + finalize
+        --plan ../results/mode_b_review_plan.json             # review pass + finalize
 
     # Pilot helpers: --only <repo substring>  --seeds 42  --dry-run
 
-Credentials come from env (seeded dev defaults): TRUSTLENS_RESEARCHER_EMAIL /
-TRUSTLENS_RESEARCHER_PASSWORD and TRUSTLENS_REVIEWER_EMAIL /
-TRUSTLENS_REVIEWER_PASSWORD.
+Single-user local instance — no login/credentials required.
 """
 
 from __future__ import annotations
@@ -26,7 +24,6 @@ from __future__ import annotations
 import argparse
 import copy
 import json
-import os
 import sys
 import time
 from dataclasses import dataclass
@@ -80,19 +77,9 @@ def _append_manifest(row: dict[str, Any]) -> None:
 
 
 def _login(client: httpx.Client, role: str) -> dict[str, str]:
-    email = os.environ.get(
-        f"TRUSTLENS_{role.upper()}_EMAIL", f"{role}@trustlens.local"
-    )
-    password = os.environ.get(
-        f"TRUSTLENS_{role.upper()}_PASSWORD", f"trustlens-{role}-dev"
-    )
-    response = client.post("/v1/auth/login", json={"email": email, "password": password})
-    if response.status_code != 200:
-        raise SystemExit(
-            f"login failed for {email}: {response.status_code} {response.text} "
-            "(is the stack up and seeded? make seed-users)"
-        )
-    return {"Authorization": f"Bearer {response.json()['access_token']}"}
+    """No-op — TrustLens is single-user local; the API takes no auth headers."""
+    del client, role
+    return {}
 
 
 def _import_model(client: httpx.Client, headers: dict[str, str], repo_id: str) -> dict[str, Any]:

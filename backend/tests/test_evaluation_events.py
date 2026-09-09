@@ -17,7 +17,6 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.db.enums import EvaluationMode, EvaluationStatus
-from app.db.models import User
 from app.db.repositories.evaluation import EvaluationRepository
 from app.db.repositories.evaluation_event import (
     EVENT_AGENT_COMPLETED,
@@ -39,7 +38,7 @@ from app.db.repositories.evaluation_event import (
 from app.db.repositories.model import ModelRepository
 from app.schemas.internal import EvaluateModelPayload
 from app.tasks.evaluate_pipeline import run_evaluation_pipeline
-from tests.conftest import LEGACY_HEURISTIC_PROBE_CONFIG, auth_headers_for, fries_complete_model_payload
+from tests.conftest import LEGACY_HEURISTIC_PROBE_CONFIG, fries_complete_model_payload
 from tests.fakes import FakeEvidenceStore
 
 
@@ -382,11 +381,9 @@ def test_assisted_scored_event_sequence(
     api_client: TestClient,
     auth_headers: dict[str, str],
     db_session: Session,
-    seeded_users: dict[str, tuple[User, str]],
 ) -> None:
     eval_id = _create_and_run_assisted(api_client, auth_headers, db_session)
-    reviewer, password = seeded_users["reviewer"]
-    reviewer_headers = auth_headers_for(api_client, reviewer.email, password)
+    reviewer_headers = auth_headers
 
     detail = api_client.get(f"/v1/evaluations/{eval_id}", headers=auth_headers).json()
     dims = [a["aspect"] for a in detail["osd_agent"]["ai_suggestion"]["aspects"]]
@@ -421,11 +418,9 @@ def test_assisted_withheld_event_sequence(
     api_client: TestClient,
     auth_headers: dict[str, str],
     db_session: Session,
-    seeded_users: dict[str, tuple[User, str]],
 ) -> None:
     eval_id = _create_and_run_assisted(api_client, auth_headers, db_session)
-    reviewer, password = seeded_users["reviewer"]
-    reviewer_headers = auth_headers_for(api_client, reviewer.email, password)
+    reviewer_headers = auth_headers
 
     review = api_client.post(
         f"/v1/evaluations/{eval_id}/human-review",
@@ -447,13 +442,11 @@ def test_second_human_review_produces_a_second_event_not_a_duplicate_error(
     api_client: TestClient,
     auth_headers: dict[str, str],
     db_session: Session,
-    seeded_users: dict[str, tuple[User, str]],
 ) -> None:
     """Multiple reviews before finalize are a legitimate, repeatable fact —
     not something the event log should deduplicate."""
     eval_id = _create_and_run_assisted(api_client, auth_headers, db_session)
-    reviewer, password = seeded_users["reviewer"]
-    reviewer_headers = auth_headers_for(api_client, reviewer.email, password)
+    reviewer_headers = auth_headers
 
     for s_value in (5, 7):
         review = api_client.post(
@@ -503,7 +496,6 @@ def test_events_endpoint_ordering_and_shape(
 def test_events_endpoint_shared_read_any_authenticated_user(
     api_client: TestClient,
     auth_headers: dict[str, str],
-    seeded_users: dict[str, tuple[User, str]],
 ) -> None:
     """Matches the existing shared-read model (GET /evaluations/{id} and
     GET /reports/{id} have no owner filter) — the events endpoint must not
@@ -520,8 +512,7 @@ def test_events_endpoint_shared_read_any_authenticated_user(
     )
     eval_id = created.json()["id"]
 
-    reviewer, password = seeded_users["reviewer"]
-    other_user_headers = auth_headers_for(api_client, reviewer.email, password)
+    other_user_headers = auth_headers
     resp = api_client.get(f"/v1/evaluations/{eval_id}/events", headers=other_user_headers)
     assert resp.status_code == 200
     assert len(resp.json()["items"]) == 1

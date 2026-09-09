@@ -12,7 +12,6 @@ import type {
   UserDatasetList,
   UserDatasetRead,
 } from "../api/types";
-import { useAuth } from "../auth/AuthContext";
 import ContractCatalog, { type ContractSelection } from "../components/ContractCatalog";
 import ErrorNotice from "../components/ErrorNotice";
 import Spinner from "../components/Spinner";
@@ -48,7 +47,6 @@ function expectedDimensionOutcomes(choice: ContractSelection | null) {
 export default function CreateEvaluationPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
 
   const [modelId, setModelId] = useState<number | null>(
     params.get("modelId") ? Number(params.get("modelId")) : null,
@@ -725,12 +723,10 @@ export default function CreateEvaluationPage() {
             ))}
           </div>
 
-          {!user || user.role !== "admin" ? (
-            <p className="field-hint" style={{ marginTop: "0.8rem" }}>
-              Result is finalized automatically (no human review step) unless you choose
-              otherwise later. FRIES is withheld by default until O/S/D synthesis is available.
-            </p>
-          ) : null}
+          <p className="field-hint" style={{ marginTop: "0.8rem" }}>
+            Result is finalized automatically (no human review step) unless you choose
+            otherwise later. FRIES is withheld by default until O/S/D synthesis is available.
+          </p>
 
           <ErrorNotice error={error} />
           <div className="btn-row" style={{ marginTop: "1.1rem" }}>

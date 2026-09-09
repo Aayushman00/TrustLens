@@ -5,12 +5,6 @@ from __future__ import annotations
 import enum
 
 
-class UserRole(str, enum.Enum):
-    RESEARCHER = "researcher"
-    REVIEWER = "reviewer"
-    ADMIN = "admin"
-
-
 class EvaluationStatus(str, enum.Enum):
     PENDING = "PENDING"
     RUNNING = "RUNNING"

@@ -183,18 +183,18 @@ def test_extra_heuristic_ignored_stays_deterministic(
     assert body["final_score"] is None
 
 
-def test_researcher_legacy_403_admin_legacy_ok(
+def test_legacy_heuristic_has_no_role_gate(
     api_client: TestClient,
     auth_headers: dict[str, str],
-    admin_headers: dict[str, str],
 ) -> None:
+    """Single-user local instance — legacy_heuristic has no admin-only gate."""
     model = api_client.post(
         "/v1/models",
         json={"hf_repo_id": f"org/p6-legacy-{uuid.uuid4().hex[:8]}"},
         headers=auth_headers,
     )
     assert model.status_code == 201, model.text
-    denied = api_client.post(
+    allowed = api_client.post(
         "/v1/evaluations",
         json={
             "model_id": model.json()["id"],
@@ -202,23 +202,6 @@ def test_researcher_legacy_403_admin_legacy_ok(
             "probe_config": LEGACY_HEURISTIC_PROBE_CONFIG,
         },
         headers=auth_headers,
-    )
-    assert denied.status_code == 403, denied.text
-    assert denied.json()["code"] == "FORBIDDEN"
-
-    admin_model = api_client.post(
-        "/v1/models",
-        json={"hf_repo_id": f"org/p6-legacy-a-{uuid.uuid4().hex[:8]}"},
-        headers=admin_headers,
-    )
-    allowed = api_client.post(
-        "/v1/evaluations",
-        json={
-            "model_id": admin_model.json()["id"],
-            "evaluation_mode": "AI_AUTONOMOUS",
-            "probe_config": LEGACY_HEURISTIC_PROBE_CONFIG,
-        },
-        headers=admin_headers,
     )
     assert allowed.status_code == 201, allowed.text
     assert allowed.json()["probe_config"]["assessment_engine"] == "legacy_heuristic"

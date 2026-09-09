@@ -9,7 +9,6 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.db.enums import EvaluationMode
-from app.db.models import User
 from app.db.repositories.final_score import FinalScoreRepository
 from app.schemas.internal import EvaluateModelPayload
 from app.schemas.modes import (
@@ -18,7 +17,7 @@ from app.schemas.modes import (
     LEGACY_AUTONOMOUS_DISCLAIMER,
 )
 from app.tasks.evaluate_pipeline import run_evaluation_pipeline
-from tests.conftest import LEGACY_HEURISTIC_PROBE_CONFIG, auth_headers_for, fries_complete_model_payload
+from tests.conftest import LEGACY_HEURISTIC_PROBE_CONFIG, fries_complete_model_payload
 from tests.fakes import FakeEvidenceStore
 
 
@@ -143,7 +142,6 @@ def test_assisted_finalize_review_required_then_writes(
     api_client: TestClient,
     admin_headers: dict[str, str],
     db_session: Session,
-    seeded_users: dict[str, tuple[User, str]],
 ) -> None:
     eval_id = _create_and_run(api_client, admin_headers, db_session, mode="AI_ASSISTED")
 
@@ -155,8 +153,7 @@ def test_assisted_finalize_review_required_then_writes(
     assert disclosure["human_reviewed"] is False
     assert disclosure["disclaimer"] == ASSISTED_AWAITING_DISCLAIMER
 
-    reviewer, reviewer_pw = seeded_users["reviewer"]
-    reviewer_headers = auth_headers_for(api_client, reviewer.email, reviewer_pw)
+    reviewer_headers = admin_headers
 
     response = api_client.post(
         f"/v1/evaluations/{eval_id}/finalize", headers=reviewer_headers

@@ -13,11 +13,10 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.db.enums import EvaluationMode
-from app.db.models import User
 from app.schemas.internal import EvaluateModelPayload
 from app.schemas.modes import ASSISTED_REVIEWED_LEGACY_DISCLAIMER, LEGACY_AUTONOMOUS_DISCLAIMER
 from app.tasks.evaluate_pipeline import run_evaluation_pipeline
-from tests.conftest import LEGACY_HEURISTIC_PROBE_CONFIG, auth_headers_for, fries_complete_model_payload
+from tests.conftest import LEGACY_HEURISTIC_PROBE_CONFIG, fries_complete_model_payload
 from tests.fakes import FakeEvidenceStore, FakeReportStore
 
 
@@ -85,11 +84,9 @@ def _create_and_run(
 
 def _review_and_finalize(
     api_client: TestClient,
-    seeded_users: dict[str, tuple[User, str]],
+    headers: dict[str, str],
     eval_id: str,
 ) -> None:
-    reviewer, password = seeded_users["reviewer"]
-    headers = auth_headers_for(api_client, reviewer.email, password)
     review = api_client.post(
         f"/v1/evaluations/{eval_id}/human-review",
         json={"accept_all": True},
@@ -100,10 +97,12 @@ def _review_and_finalize(
     assert finalized.status_code == 200, finalized.text
 
 
-def test_reports_require_auth(api_client: TestClient) -> None:
+def test_reports_work_without_auth(api_client: TestClient) -> None:
+    """Single-user local instance — no auth is required for these routes;
+    an unknown evaluation id still 404s, never 401."""
     some_id = uuid.uuid4()
-    assert api_client.get(f"/v1/reports/{some_id}").status_code == 401
-    assert api_client.post(f"/v1/reports/{some_id}/generate").status_code == 401
+    assert api_client.get(f"/v1/reports/{some_id}").status_code == 404
+    assert api_client.post(f"/v1/reports/{some_id}/generate").status_code == 404
 
 
 def test_report_unknown_evaluation_404(
@@ -224,11 +223,10 @@ def test_assisted_report_has_reviewed_disclosure(
     auth_headers: dict[str, str],
     admin_headers: dict[str, str],
     db_session: Session,
-    seeded_users: dict[str, tuple[User, str]],
     report_store: FakeReportStore,
 ) -> None:
     eval_id = _create_and_run(api_client, admin_headers, db_session, mode="AI_ASSISTED")
-    _review_and_finalize(api_client, seeded_users, eval_id)
+    _review_and_finalize(api_client, admin_headers, eval_id)
 
     response = api_client.get(f"/v1/reports/{eval_id}", headers=auth_headers)
     assert response.status_code == 200, response.text

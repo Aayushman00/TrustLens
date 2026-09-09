@@ -1,4 +1,7 @@
-"""Compose verify: run evaluation and print FAIRNESS probe_results row."""
+"""Compose verify: run evaluation and print FAIRNESS probe_results row.
+
+Single-user local instance — no auth; every request is unauthenticated.
+"""
 from __future__ import annotations
 
 import json
@@ -14,10 +17,8 @@ from app.core.db import session_scope
 from app.db.models import ProbeResult
 
 
-def req(method: str, path: str, data=None, token=None):
+def req(method: str, path: str, data=None):
     headers = {"Content-Type": "application/json"}
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
     body = None if data is None else json.dumps(data).encode()
     request = urllib.request.Request(
         f"http://127.0.0.1:8000{path}", data=body, headers=headers, method=method
@@ -31,21 +32,10 @@ def req(method: str, path: str, data=None, token=None):
 
 
 def main() -> None:
-    login = req(
-        "POST",
-        "/v1/auth/login",
-        {
-            "email": "researcher@trustlens.local",
-            "password": "trustlens-researcher-dev",
-        },
-    )
-    token = login["access_token"]
-    print("login_ok", bool(token))
     imp = req(
         "POST",
         "/v1/models/import-hf",
         {"repo_id": "distilbert-base-uncased"},
-        token=token,
     )
     print("model_id", imp["id"])
     ev = req(
@@ -60,14 +50,13 @@ def main() -> None:
                 "extra": {"max_samples": 64, "seed": 42, "min_group_n": 30},
             },
         },
-        token=token,
     )
     eval_id = ev["id"]
     print("eval_id", eval_id, "status", ev.get("status"))
     final = None
     for i in range(90):
         time.sleep(5)
-        row = req("GET", f"/v1/evaluations/{eval_id}", token=token)
+        row = req("GET", f"/v1/evaluations/{eval_id}")
         status = row.get("status")
         prog = row.get("probe_progress")
         print(f"poll {i}: status={status} progress={prog}")

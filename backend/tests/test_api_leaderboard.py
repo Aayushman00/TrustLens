@@ -12,14 +12,11 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.core.security import hash_password
-from app.db.enums import EvaluationMode, UserRole
-from app.db.models import User
+from app.db.enums import EvaluationMode
 from app.db.repositories.report import ReportRepository
-from app.db.repositories.user import UserRepository
 from app.schemas.internal import EvaluateModelPayload
 from app.tasks.evaluate_pipeline import run_evaluation_pipeline
-from tests.conftest import LEGACY_HEURISTIC_PROBE_CONFIG, auth_headers_for, fries_complete_model_payload
+from tests.conftest import LEGACY_HEURISTIC_PROBE_CONFIG, fries_complete_model_payload
 from tests.fakes import FakeEvidenceStore
 
 
@@ -80,11 +77,9 @@ def _create_and_run(
 
 def _review_and_finalize(
     api_client: TestClient,
-    seeded_users: dict[str, tuple[User, str]],
+    headers: dict[str, str],
     eval_id: str,
 ) -> None:
-    reviewer, password = seeded_users["reviewer"]
-    headers = auth_headers_for(api_client, reviewer.email, password)
     review = api_client.post(
         f"/v1/evaluations/{eval_id}/human-review",
         json={"accept_all": True},
@@ -107,8 +102,9 @@ def _listed_ids(api_client: TestClient, headers: dict[str, str], query: str = ""
     return [entry["evaluation_id"] for entry in response.json()["items"]]
 
 
-def test_leaderboard_requires_auth(api_client: TestClient) -> None:
-    assert api_client.get("/v1/leaderboard").status_code == 401
+def test_leaderboard_works_without_auth(api_client: TestClient) -> None:
+    """Single-user local instance — no auth is required for this route."""
+    assert api_client.get("/v1/leaderboard").status_code == 200
 
 
 def test_finalized_unpublished_never_listed(
@@ -189,27 +185,17 @@ def test_publish_not_finalized_409(
     assert body["details"]["status"] == "AWAITING_REVIEW"
 
 
-def test_other_researcher_cannot_publish_owner_can(
+def test_publish_has_no_ownership_gate(
     api_client: TestClient,
     auth_headers: dict[str, str],
     admin_headers: dict[str, str],
     db_session: Session,
 ) -> None:
+    """Single-user local instance — publish has no owner/admin gate; any
+    caller may publish any evaluation."""
     eval_id = _create_and_run(api_client, admin_headers, db_session, mode="AI_AUTONOMOUS")
 
-    email = f"researcher2-{uuid.uuid4().hex[:8]}@example.com"
-    password = "researcher2-test-pass-123"
-    UserRepository(db_session).create(
-        email=email, password_hash=hash_password(password), role=UserRole.RESEARCHER
-    )
-    db_session.flush()
-    other_headers = auth_headers_for(api_client, email, password)
-
-    denied = api_client.post(f"/v1/evaluations/{eval_id}/publish", headers=other_headers)
-    assert denied.status_code == 403
-    assert denied.json()["code"] == "FORBIDDEN"
-
-    published = _publish(api_client, admin_headers, eval_id)  # owner succeeds
+    published = _publish(api_client, auth_headers, eval_id)
     assert published["is_published"] is True
 
 
@@ -238,11 +224,10 @@ def test_mode_filter_and_assisted_human_reviewed(
     auth_headers: dict[str, str],
     admin_headers: dict[str, str],
     db_session: Session,
-    seeded_users: dict[str, tuple[User, str]],
 ) -> None:
     auto_id = _create_and_run(api_client, admin_headers, db_session, mode="AI_AUTONOMOUS")
     assisted_id = _create_and_run(api_client, admin_headers, db_session, mode="AI_ASSISTED")
-    _review_and_finalize(api_client, seeded_users, assisted_id)
+    _review_and_finalize(api_client, admin_headers, assisted_id)
     _publish(api_client, admin_headers, auto_id)
     _publish(api_client, admin_headers, assisted_id)
 

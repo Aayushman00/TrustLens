@@ -30,7 +30,6 @@ class DocumentationSourceRepository:
         retrieval_error: str | None = None,
         content_length: int | None = None,
         source_model_revision: str | None = None,
-        created_by: int | None = None,
     ) -> DocumentationSource:
         row = DocumentationSource(
             model_id=model_id,
@@ -46,7 +45,6 @@ class DocumentationSourceRepository:
             content_length=content_length,
             source_model_ref=source_model_ref,
             source_model_revision=source_model_revision,
-            created_by=created_by,
         )
         self._session.add(row)
         self._session.flush()

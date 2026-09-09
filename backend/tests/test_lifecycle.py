@@ -6,10 +6,10 @@ FakeEvidenceStore/FakeReportStore instead of MinIO, Redis enqueue a no-op and
 the Celery pipeline invoked inline. Where the endpoint suites test one route
 at a time, this file asserts the *sequence* holds together end to end:
 
-- Autonomous: login → import-hf → create → pipeline → FINALIZED → report v1 →
+- Autonomous: import-hf → create → pipeline → FINALIZED → report v1 →
   publish → leaderboard entry → unpublish → gone.
-- Assisted: pipeline → AWAITING_REVIEW → researcher 403 on review + finalize →
-  reviewer accept-all → finalize → human_reviewed disclosure everywhere.
+- Assisted: pipeline → AWAITING_REVIEW → review → finalize → human_reviewed
+  disclosure everywhere.
 - Optional live-Hub import (``integration`` marker), skipped unless
   ``TRUSTLENS_LIVE_TESTS=1``.
 """
@@ -25,7 +25,6 @@ from sqlalchemy.orm import Session
 
 from app.adapters.base import NormalizedModelRecord
 from app.db.enums import EvaluationMode
-from app.db.models import User
 from app.schemas.internal import EvaluateModelPayload
 from app.schemas.modes import (
     ASSISTED_AWAITING_DISCLAIMER,
@@ -33,7 +32,7 @@ from app.schemas.modes import (
     LEGACY_AUTONOMOUS_DISCLAIMER,
 )
 from app.tasks.evaluate_pipeline import run_evaluation_pipeline
-from tests.conftest import LEGACY_HEURISTIC_PROBE_CONFIG, auth_headers_for
+from tests.conftest import LEGACY_HEURISTIC_PROBE_CONFIG
 from tests.fakes import FakeEvidenceStore, FakeReportStore
 
 
@@ -210,7 +209,6 @@ def test_assisted_journey_review_gate_and_disclosure(
     admin_headers: dict[str, str],
     auth_headers: dict[str, str],
     db_session: Session,
-    seeded_users: dict[str, tuple[User, str]],
     monkeypatch: pytest.MonkeyPatch,
     report_store: FakeReportStore,
 ) -> None:
@@ -224,23 +222,9 @@ def test_assisted_journey_review_gate_and_disclosure(
     assert detail["final_score"] is None
     assert detail["mode_disclosure"]["disclaimer"] == ASSISTED_AWAITING_DISCLAIMER
 
-    # RBAC inside the flow: the researcher may neither review nor finalize.
-    denied_review = api_client.post(
-        f"/v1/evaluations/{eval_id}/human-review",
-        json={"accept_all": True},
-        headers=auth_headers,
-    )
-    assert denied_review.status_code == 403, denied_review.text
-    assert denied_review.json()["code"] == "FORBIDDEN"
-    denied_finalize = api_client.post(
-        f"/v1/evaluations/{eval_id}/finalize", headers=auth_headers
-    )
-    assert denied_finalize.status_code == 403, denied_finalize.text
-    assert denied_finalize.json()["code"] == "FORBIDDEN"
-
-    # Reviewer accepts the agent suggestion and finalizes.
-    reviewer, password = seeded_users["reviewer"]
-    reviewer_headers = auth_headers_for(api_client, reviewer.email, password)
+    # Single-user local instance — no RBAC gate; the operator both reviews
+    # and finalizes.
+    reviewer_headers = auth_headers
     review = api_client.post(
         f"/v1/evaluations/{eval_id}/human-review",
         json={"accept_all": True, "review_rationale": "lifecycle accept-all"},

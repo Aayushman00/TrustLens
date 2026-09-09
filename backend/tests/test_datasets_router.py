@@ -1,4 +1,4 @@
-"""API-layer tests for /v1/datasets — upload/list/get/group-discovery, ownership."""
+"""API-layer tests for /v1/datasets — upload/list/get/group-discovery."""
 
 from __future__ import annotations
 
@@ -79,29 +79,18 @@ def test_group_discovery_reflects_actual_file_values(
     assert body["missing_count"] == 0
 
 
-def test_non_owner_cannot_read_another_users_dataset(
+def test_dataset_read_has_no_ownership_gate(
     api_client: TestClient,
-    seeded_users: dict,
+    auth_headers: dict[str, str],
     dataset_store_override: FakeDatasetStore,
 ) -> None:
-    from tests.conftest import auth_headers_for
-
-    from tests.conftest import SEEDED_PASSWORDS
-
-    researcher_user, _ = seeded_users["researcher"]
-    reviewer_user, _ = seeded_users["reviewer"]
-    researcher_headers = auth_headers_for(
-        api_client, researcher_user.email, SEEDED_PASSWORDS["researcher"]
-    )
-    reviewer_headers = auth_headers_for(
-        api_client, reviewer_user.email, SEEDED_PASSWORDS["reviewer"]
-    )
-
-    resp = _upload(api_client, researcher_headers)
+    """Single-user local instance — no ownership concept; any uploaded
+    dataset is readable, never a 403."""
+    resp = _upload(api_client, auth_headers)
     dataset_id = resp.json()["id"]
 
-    forbidden = api_client.get(f"/v1/datasets/{dataset_id}", headers=reviewer_headers)
-    assert forbidden.status_code == 403
+    fetched = api_client.get(f"/v1/datasets/{dataset_id}", headers=auth_headers)
+    assert fetched.status_code == 200
 
 
 def test_non_csv_upload_rejected(

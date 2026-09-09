@@ -38,7 +38,7 @@ def test_hatexplain_pin_exposes_fairness_only_never_robustness(
     # Critical: HateXplain must never appear as a Robustness contract.
     assert body["robustness"] == []
     assert body["documentation_only_available"] is True
-    assert body["proxy_lr_available"] is False
+    assert body["proxy_lr_available"] is True
 
 
 def test_ag_news_pin_exposes_robustness(api_client: TestClient, auth_headers: dict[str, str]) -> None:
@@ -73,20 +73,15 @@ def test_unmatched_model_has_empty_contract_lists_no_fabrication(
     assert body["documentation_only_available"] is True
 
 
-def test_proxy_lr_option_only_visible_to_admin(
-    api_client: TestClient, auth_headers: dict[str, str], admin_headers: dict[str, str]
+def test_proxy_lr_option_always_visible(
+    api_client: TestClient, auth_headers: dict[str, str]
 ) -> None:
+    """Single-user local instance — no admin-only visibility gate."""
     model_id = _create_model(
         api_client,
         auth_headers,
         hf_repo_id=f"org/proxy-visibility-{uuid.uuid4().hex[:8]}",
         revision=None,
     )
-    as_researcher = api_client.get(
-        f"/v1/models/{model_id}/evaluation-options", headers=auth_headers
-    )
-    as_admin = api_client.get(
-        f"/v1/models/{model_id}/evaluation-options", headers=admin_headers
-    )
-    assert as_researcher.json()["proxy_lr_available"] is False
-    assert as_admin.json()["proxy_lr_available"] is True
+    resp = api_client.get(f"/v1/models/{model_id}/evaluation-options", headers=auth_headers)
+    assert resp.json()["proxy_lr_available"] is True

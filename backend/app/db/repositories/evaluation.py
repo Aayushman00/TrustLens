@@ -29,7 +29,6 @@ class EvaluationRepository:
         model_revision: str | None = None,
         trustlens_version: str | None = None,
         evaluation_id: uuid.UUID | None = None,
-        created_by: int | None = None,
     ) -> Evaluation:
         row = Evaluation(
             id=evaluation_id or uuid.uuid4(),
@@ -42,7 +41,6 @@ class EvaluationRepository:
             config=config,
             model_revision=model_revision,
             trustlens_version=trustlens_version,
-            created_by=created_by,
         )
         self._session.add(row)
         self._session.flush()

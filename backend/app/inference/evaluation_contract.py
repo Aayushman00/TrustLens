@@ -6,9 +6,7 @@ value — so the worker cannot drift from what was actually imported.
 Enforces mutual exclusion between ``pairing_id``, ``dataset_key``, and
 ``contract_kind=proxy_lr`` and rejects a ``pairing_id`` whose pinned
 ``model_revision`` does not match the evaluated model's frozen revision
-(HTTP 422 — never a silent Adult fallback). Admin-only authorization for
-``proxy_lr`` is enforced by the caller (``EvaluationService``), which has the
-requesting user's role; this module only builds the contract shape.
+(HTTP 422 — never a silent Adult fallback).
 """
 
 from __future__ import annotations
@@ -31,7 +29,6 @@ def build_evaluation_contract(
     create: EvaluationCreate,
     *,
     user_dataset_repo: UserDatasetRepository | None = None,
-    requester_id: int | None = None,
 ) -> EvaluationContractV1:
     """Resolve the contract implied by ``create`` against the frozen ``model`` row.
 
@@ -138,11 +135,6 @@ def build_evaluation_contract(
         if dataset is None:
             raise NotFoundError(
                 f"Unknown user_dataset_id {create.user_dataset_id!r}",
-                details={"user_dataset_id": create.user_dataset_id},
-            )
-        if requester_id is not None and dataset.owner_id != requester_id:
-            raise ValidationAppError(
-                "you do not own this dataset",
                 details={"user_dataset_id": create.user_dataset_id},
             )
         if dataset.status != "ready":

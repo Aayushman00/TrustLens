@@ -240,15 +240,14 @@ class DatasetStore:
     def bucket(self) -> str:
         return self._bucket
 
-    def _object_key(self, *, owner_id: int, dataset_id: uuid.UUID, filename: str) -> str:
+    def _object_key(self, *, dataset_id: uuid.UUID, filename: str) -> str:
         safe_filename = sanitize_filename(filename, default_stem="dataset")
-        return f"datasets/{owner_id}/{dataset_id}/{safe_filename}"
+        return f"datasets/{dataset_id}/{safe_filename}"
 
     def put_dataset(
         self,
         *,
         data: bytes,
-        owner_id: int,
         dataset_id: uuid.UUID,
         filename: str,
         content_type: str = "text/csv",
@@ -259,7 +258,7 @@ class DatasetStore:
         uploaded — computed before any parsing, so it never depends on
         encoding/parsing behavior.
         """
-        key = self._object_key(owner_id=owner_id, dataset_id=dataset_id, filename=filename)
+        key = self._object_key(dataset_id=dataset_id, filename=filename)
         digest = format_sha256(data)
         try:
             self._client.put_object(
@@ -268,7 +267,6 @@ class DatasetStore:
                 Body=data,
                 ContentType=content_type,
                 Metadata={
-                    "owner_id": str(owner_id),
                     "dataset_id": str(dataset_id),
                     "sha256": digest.removeprefix("sha256:"),
                 },
@@ -278,9 +276,8 @@ class DatasetStore:
                 f"Failed to put dataset artifact key={key}: {exc}"
             ) from exc
         logger.info(
-            "dataset_put dataset_id=%s owner_id=%s key=%s bytes=%s",
+            "dataset_put dataset_id=%s key=%s bytes=%s",
             dataset_id,
-            owner_id,
             key,
             len(data),
         )

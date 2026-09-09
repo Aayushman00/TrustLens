@@ -192,12 +192,11 @@ class _FakeDatasetBoto:
         self.put_calls.append(kwargs)
 
 
-def test_dataset_store_object_key_stays_within_owner_dataset_prefix() -> None:
+def test_dataset_store_object_key_stays_within_dataset_prefix() -> None:
     client = _FakeDatasetBoto()
     store = DatasetStore(client, "trustlens")
-    owner_id = 42
     dataset_id = uuid.uuid4()
-    expected_prefix = f"datasets/{owner_id}/{dataset_id}/"
+    expected_prefix = f"datasets/{dataset_id}/"
 
     for malicious_name in [
         "../../../etc/passwd.csv",
@@ -209,7 +208,6 @@ def test_dataset_store_object_key_stays_within_owner_dataset_prefix() -> None:
     ]:
         store.put_dataset(
             data=b"a,b\n1,2\n",
-            owner_id=owner_id,
             dataset_id=dataset_id,
             filename=malicious_name,
         )

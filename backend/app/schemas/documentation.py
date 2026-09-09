@@ -50,7 +50,6 @@ class DocumentationSourceRead(BaseModel):
     content_length: int | None = None
     source_model_ref: str
     source_model_revision: str | None = None
-    created_by: int | None = None
     created_at: datetime
 
 

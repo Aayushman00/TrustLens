@@ -11,8 +11,7 @@ import logging
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_db
-from app.db.models import User
+from app.api.deps import get_db
 from app.schemas.common import ErrorResponse
 from app.schemas.models import ImportHfRequest, ModelRead
 from app.services.model_service import ModelService
@@ -34,7 +33,6 @@ logger = logging.getLogger("trustlens.api")
         "(manual create)."
     ),
     responses={
-        401: {"model": ErrorResponse},
         403: {"model": ErrorResponse, "description": "Gated model without HF_TOKEN access"},
         404: {"model": ErrorResponse, "description": "Repo/revision not found on the Hub"},
         422: {"model": ErrorResponse, "description": "Invalid/non-HF reference"},
@@ -44,13 +42,11 @@ logger = logging.getLogger("trustlens.api")
 def import_hf(
     body: ImportHfRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
 ) -> ModelRead:
     row = ModelService(db).import_from_hf(body)
     logger.info(
-        "hf_import_completed hf_repo_id=%s model_id=%s requested_by=%s",
+        "hf_import_completed hf_repo_id=%s model_id=%s",
         row.hf_repo_id,
         row.id,
-        current_user.email,
     )
     return ModelRead.model_validate(row)

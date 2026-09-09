@@ -1,7 +1,5 @@
 /** Hand-written TS mirror of the backend Pydantic schemas (TrustLens 0.20.1). */
 
-export type UserRole = "researcher" | "reviewer" | "admin";
-
 export type EvaluationMode = "AI_ASSISTED" | "AI_AUTONOMOUS";
 
 export type EvaluationStatus =
@@ -35,21 +33,6 @@ export const ACTIVE_STATUSES: EvaluationStatus[] = [
   "PROBES_COMPLETED",
   "AGENT_COMPLETED",
 ];
-
-// ---- auth ----
-
-export interface TokenResponse {
-  access_token: string;
-  refresh_token: string;
-  token_type: string;
-  expires_in: number;
-}
-
-export interface UserRead {
-  id: number;
-  email: string;
-  role: UserRole;
-}
 
 // ---- models ----
 
@@ -186,7 +169,6 @@ export interface DocumentationSourceRead {
   content_length: number | null;
   source_model_ref: string;
   source_model_revision: string | null;
-  created_by: number | null;
   created_at: string;
 }
 
@@ -337,7 +319,6 @@ export interface ModeDisclosure {
 export interface HumanReviewRead {
   id: number;
   evaluation_id: string;
-  reviewer_id: number;
   human_changed: boolean;
   accept_all: boolean;
   approved_osd: Record<string, unknown>;
@@ -410,7 +391,6 @@ export interface EvaluationRead {
   execution_metadata?: ExecutionMetadata | null;
   is_published: boolean;
   published_at: string | null;
-  created_by: number | null;
   created_at: string;
   updated_at: string;
   probe_progress?: ProbeProgress | null;

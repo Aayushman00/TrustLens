@@ -1,9 +1,4 @@
-"""Report routes — canonical JSON + PDF projection (Phase 19, ADR 0009).
-
-RBAC (documented MVP choice): any authenticated user may fetch or force-generate
-reports — the same access level as evaluation detail reads; reports expose no
-data beyond what those reads already return.
-"""
+"""Report routes — canonical JSON + PDF projection (Phase 19, ADR 0009)."""
 
 from __future__ import annotations
 
@@ -12,8 +7,7 @@ import uuid
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_db
-from app.db.models import User
+from app.api.deps import get_db
 from app.schemas.common import ErrorResponse
 from app.schemas.reports import ReportRead
 from app.services.report_service import ReportService
@@ -21,7 +15,6 @@ from app.services.report_service import ReportService
 router = APIRouter(prefix="/reports", tags=["reports"])
 
 _ERROR_RESPONSES = {
-    401: {"model": ErrorResponse},
     404: {"model": ErrorResponse},
     409: {"model": ErrorResponse},
     503: {"model": ErrorResponse},
@@ -45,7 +38,6 @@ _ERROR_RESPONSES = {
 def get_report(
     evaluation_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
 ) -> ReportRead:
     return ReportService(db).get_report(evaluation_id)
 
@@ -65,6 +57,5 @@ def get_report(
 def generate_report(
     evaluation_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
 ) -> ReportRead:
     return ReportService(db).generate(evaluation_id)

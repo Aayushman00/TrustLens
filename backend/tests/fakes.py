@@ -280,20 +280,19 @@ class FakeDatasetStore:
         self.bucket = bucket
         self.objects: dict[str, bytes] = {}
 
-    def _key(self, *, owner_id: int, dataset_id: uuid.UUID, filename: str) -> str:
+    def _key(self, *, dataset_id: uuid.UUID, filename: str) -> str:
         safe_filename = sanitize_filename(filename, default_stem="dataset")
-        return f"datasets/{owner_id}/{dataset_id}/{safe_filename}"
+        return f"datasets/{dataset_id}/{safe_filename}"
 
     def put_dataset(
         self,
         *,
         data: bytes,
-        owner_id: int,
         dataset_id: uuid.UUID,
         filename: str,
         content_type: str = "text/csv",
     ) -> tuple[str, str]:
-        key = self._key(owner_id=owner_id, dataset_id=dataset_id, filename=filename)
+        key = self._key(dataset_id=dataset_id, filename=filename)
         self.objects[key] = data
         return f"s3://{self.bucket}/{key}", format_sha256(data)
 

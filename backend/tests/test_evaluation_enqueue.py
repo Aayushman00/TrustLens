@@ -134,18 +134,21 @@ def test_reconcile_requeues_confirmed_failure_and_records_real_outcome(
     assert events[1]["detail"]["task_id"] == "recovered-task-id"
 
 
-def test_reconcile_requires_admin_role(
+def test_reconcile_has_no_role_gate(
     api_client: TestClient,
     auth_headers: dict[str, str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Single-user local instance — reconcile-enqueue has no admin-only gate."""
     eval_id, _ = _create_model_and_pending_eval(
         api_client, auth_headers, enqueue_succeeds=False, monkeypatch=monkeypatch
     )
+    monkeypatch.setattr(
+        "app.services.evaluation_service.enqueue_evaluate_model",
+        lambda payload: "recovered-task-id",
+    )
     resp = api_client.post(f"/v1/evaluations/{eval_id}/reconcile-enqueue", headers=auth_headers)
-    assert resp.status_code == 403, resp.text
-    # Refused before any action — no second event was recorded.
-    assert len(_events(api_client, auth_headers, eval_id)) == 1
+    assert resp.status_code == 200, resp.text
 
 
 def test_reconcile_refuses_when_already_confirmed_enqueued(

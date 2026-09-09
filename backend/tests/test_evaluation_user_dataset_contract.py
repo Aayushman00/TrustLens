@@ -1,8 +1,7 @@
 """Evaluation-create API tests for the user_dataset Fairness contract.
 
-Covers: non-admin researcher can use it (unlike proxy_lr), mutual exclusivity
-with pairing_id/dataset_key/contract_kind=proxy_lr, missing-column validation,
-and cross-owner rejection.
+Covers: mutual exclusivity with pairing_id/dataset_key/contract_kind=proxy_lr
+and missing-column validation.
 """
 
 from __future__ import annotations
@@ -68,7 +67,7 @@ def _upload_dataset(api_client: TestClient, headers: dict[str, str]) -> str:
     return resp.json()["id"]
 
 
-def test_non_admin_researcher_can_use_user_dataset_contract(
+def test_user_dataset_contract_usable(
     api_client: TestClient,
     auth_headers: dict[str, str],
     dataset_store_override: FakeDatasetStore,
@@ -152,26 +151,17 @@ def test_user_dataset_mutually_exclusive_with_pairing_id(
     assert created.status_code == 422, created.text
 
 
-def test_cannot_reference_another_users_dataset(
+def test_user_dataset_reference_has_no_ownership_gate(
     api_client: TestClient,
-    seeded_users: dict,
+    auth_headers: dict[str, str],
     dataset_store_override: FakeDatasetStore,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from tests.conftest import SEEDED_PASSWORDS, auth_headers_for
-
+    """Single-user local instance — no ownership concept; any uploaded
+    dataset can be referenced by any evaluation."""
     _stub_enqueue(monkeypatch)
-    researcher_user, _ = seeded_users["researcher"]
-    reviewer_user, _ = seeded_users["reviewer"]
-    researcher_headers = auth_headers_for(
-        api_client, researcher_user.email, SEEDED_PASSWORDS["researcher"]
-    )
-    reviewer_headers = auth_headers_for(
-        api_client, reviewer_user.email, SEEDED_PASSWORDS["reviewer"]
-    )
-
-    dataset_id = _upload_dataset(api_client, researcher_headers)
-    model_id = _create_model(api_client, reviewer_headers)
+    dataset_id = _upload_dataset(api_client, auth_headers)
+    model_id = _create_model(api_client, auth_headers)
 
     created = api_client.post(
         "/v1/evaluations",
@@ -183,6 +173,6 @@ def test_cannot_reference_another_users_dataset(
             "group_column": "gender",
             "text_column": "text",
         },
-        headers=reviewer_headers,
+        headers=auth_headers,
     )
-    assert created.status_code == 422, created.text
+    assert created.status_code == 201, created.text

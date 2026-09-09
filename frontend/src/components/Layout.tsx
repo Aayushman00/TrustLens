@@ -1,14 +1,11 @@
 import { useEffect, useState } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet } from "react-router-dom";
 
 import { API_BASE } from "../api/client";
-import { useAuth } from "../auth/AuthContext";
 
 type Health = "checking" | "ok" | "down";
 
 export default function Layout() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
   const [health, setHealth] = useState<Health>("checking");
 
   useEffect(() => {
@@ -28,13 +25,6 @@ export default function Layout() {
       clearInterval(timer);
     };
   }, []);
-
-  function handleLogout() {
-    logout();
-    navigate("/login");
-  }
-
-  const initial = user?.email ? user.email[0]!.toUpperCase() : "?";
 
   return (
     <div className="app-shell">
@@ -102,22 +92,6 @@ export default function Layout() {
             <span className={`health-dot health-${health}`} title={`API: ${health}`} />
             Local API: {health === "ok" ? "connected" : health === "down" ? "unreachable" : "checking…"}
           </div>
-          {user ? (
-            <>
-              <div className="sidebar-user">
-                <span className="sidebar-user-avatar" aria-hidden="true">
-                  {initial}
-                </span>
-                <div className="sidebar-user-meta">
-                  <div className="sidebar-user-email">{user.email}</div>
-                  <span className={`badge role-${user.role}`}>{user.role}</span>
-                </div>
-              </div>
-              <button type="button" className="btn btn-ghost" onClick={handleLogout}>
-                Log out
-              </button>
-            </>
-          ) : null}
         </div>
       </aside>
       <main className="app-main">

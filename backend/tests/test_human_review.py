@@ -14,7 +14,6 @@ from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.db.enums import EvaluationMode, FriesDimension
-from app.db.models import User
 from app.db.repositories.final_score import FinalScoreRepository
 from app.osd.review import (
     build_overrides,
@@ -31,7 +30,7 @@ from app.schemas.modes import (
 from app.schemas.reviews import HumanReviewRequest
 from app.scoring.fries import score_from_finalized_osd
 from app.tasks.evaluate_pipeline import run_evaluation_pipeline
-from tests.conftest import LEGACY_HEURISTIC_PROBE_CONFIG, auth_headers_for, fries_complete_model_payload
+from tests.conftest import LEGACY_HEURISTIC_PROBE_CONFIG, fries_complete_model_payload
 from tests.fakes import FakeEvidenceStore
 
 
@@ -140,14 +139,12 @@ def test_to_finalized_osd_assisted_disclosure() -> None:
     finalized = to_finalized_osd_assisted(
         approved,
         human_review_id=7,
-        reviewer_id=3,
         human_changed=human_changed,
         agent_suggestion=AGENT_SUGGESTION,
     )
     assert finalized["human_reviewed"] is True
     assert finalized["human_changed"] is True
     assert finalized["human_review_id"] == 7
-    assert finalized["reviewer_id"] == 3
     assert finalized["source"] == "human_review_assisted"
     assert finalized["evaluation_mode"] == "AI_ASSISTED"
     assert finalized["disclaimer"] == ASSISTED_REVIEWED_LEGACY_DISCLAIMER
@@ -178,7 +175,6 @@ def test_deterministic_human_s_is_tagged_source_human_never_fabricated() -> None
     finalized = to_finalized_osd_assisted(
         approved,
         human_review_id=1,
-        reviewer_id=2,
         human_changed=human_changed,
         agent_suggestion=deterministic_suggestion,
     )
@@ -230,7 +226,7 @@ def test_human_o_s_d_each_independently_editable(edit: dict, expected: dict) -> 
     assert entry["D"] == expected["D"]
 
     finalized = to_finalized_osd_assisted(
-        approved, human_review_id=1, reviewer_id=2, human_changed=human_changed,
+        approved, human_review_id=1, human_changed=human_changed,
         agent_suggestion=suggestion,
     )
     aspect = finalized["aspects"][0]
@@ -294,7 +290,7 @@ def test_incomplete_single_aspect_blocks_fries_but_complete_all_five_permits_it(
         suggestion, [{"aspect": "FAIRNESS", "O": 4, "S": 6, "D": 8}], accept_all=False
     )
     partial_finalized = to_finalized_osd_assisted(
-        partial, human_review_id=1, reviewer_id=2, human_changed=True, agent_suggestion=suggestion
+        partial, human_review_id=1, human_changed=True, agent_suggestion=suggestion
     )
     assert partial_finalized["scoring_complete"] is False
     assert partial_finalized["scoring_withheld"] is True
@@ -306,7 +302,7 @@ def test_incomplete_single_aspect_blocks_fries_but_complete_all_five_permits_it(
     ]
     full_approved, _ = merge_review_aspects(suggestion, full_edits, accept_all=False)
     full_finalized = to_finalized_osd_assisted(
-        full_approved, human_review_id=1, reviewer_id=2, human_changed=True, agent_suggestion=suggestion
+        full_approved, human_review_id=1, human_changed=True, agent_suggestion=suggestion
     )
     assert full_finalized["scoring_complete"] is True
     assert full_finalized["scoring_withheld"] is False
@@ -337,7 +333,6 @@ def test_deterministic_accept_all_never_tags_a_fabricated_human_source() -> None
     finalized = to_finalized_osd_assisted(
         approved,
         human_review_id=1,
-        reviewer_id=2,
         human_changed=human_changed,
         agent_suggestion=deterministic_suggestion,
     )
@@ -435,13 +430,6 @@ def _create_and_run(
     return eval_id
 
 
-def _reviewer_headers(
-    api_client: TestClient, seeded_users: dict[str, tuple[User, str]]
-) -> tuple[User, dict[str, str]]:
-    reviewer, password = seeded_users["reviewer"]
-    return reviewer, auth_headers_for(api_client, reviewer.email, password)
-
-
 def _osd_triples(aspects: list[dict]) -> list[dict]:
     return [
         {"aspect": a["aspect"], "O": a["O"], "S": a["S"], "D": a["D"]} for a in aspects
@@ -453,10 +441,9 @@ def test_accept_all_review_then_finalize(
     auth_headers: dict[str, str],
     admin_headers: dict[str, str],
     db_session: Session,
-    seeded_users: dict[str, tuple[User, str]],
 ) -> None:
     eval_id = _create_and_run(api_client, admin_headers, db_session, mode="AI_ASSISTED")
-    reviewer, reviewer_headers = _reviewer_headers(api_client, seeded_users)
+    reviewer_headers = auth_headers
 
     detail = api_client.get(f"/v1/evaluations/{eval_id}", headers=auth_headers).json()
     assert detail["status"] == "AWAITING_REVIEW"
@@ -471,7 +458,6 @@ def test_accept_all_review_then_finalize(
     assert review.status_code == 201, review.text
     body = review.json()
     assert body["evaluation_id"] == eval_id
-    assert body["reviewer_id"] == reviewer.id
     assert body["accept_all"] is True
     assert body["human_changed"] is False
     assert body["approved_osd"]["aspects"] == agent_aspects
@@ -509,7 +495,6 @@ def test_accept_all_review_then_finalize(
     assert row.finalized_osd["human_reviewed"] is True
     assert row.finalized_osd["human_changed"] is False
     assert row.finalized_osd["human_review_id"] == body["id"]
-    assert row.finalized_osd["reviewer_id"] == reviewer.id
     assert row.finalized_osd["disclaimer"] == ASSISTED_REVIEWED_LEGACY_DISCLAIMER
     assert _osd_triples(row.finalized_osd["aspects"]) == agent_aspects
 
@@ -519,10 +504,9 @@ def test_edit_veto_changes_score_and_marks_human_changed(
     auth_headers: dict[str, str],
     admin_headers: dict[str, str],
     db_session: Session,
-    seeded_users: dict[str, tuple[User, str]],
 ) -> None:
     eval_id = _create_and_run(api_client, admin_headers, db_session, mode="AI_ASSISTED")
-    _, reviewer_headers = _reviewer_headers(api_client, seeded_users)
+    reviewer_headers = auth_headers
 
     detail = api_client.get(f"/v1/evaluations/{eval_id}", headers=auth_headers).json()
     agent_aspects = _osd_triples(detail["osd_agent"]["ai_suggestion"]["aspects"])
@@ -566,10 +550,9 @@ def test_second_review_supersedes_first(
     auth_headers: dict[str, str],
     admin_headers: dict[str, str],
     db_session: Session,
-    seeded_users: dict[str, tuple[User, str]],
 ) -> None:
     eval_id = _create_and_run(api_client, admin_headers, db_session, mode="AI_ASSISTED")
-    _, reviewer_headers = _reviewer_headers(api_client, seeded_users)
+    reviewer_headers = auth_headers
 
     detail = api_client.get(f"/v1/evaluations/{eval_id}", headers=auth_headers).json()
     agent_aspects = _osd_triples(detail["osd_agent"]["ai_suggestion"]["aspects"])
@@ -609,9 +592,8 @@ def test_review_conflicts(
     auth_headers: dict[str, str],
     admin_headers: dict[str, str],
     db_session: Session,
-    seeded_users: dict[str, tuple[User, str]],
 ) -> None:
-    _, reviewer_headers = _reviewer_headers(api_client, seeded_users)
+    reviewer_headers = auth_headers
     accept_all = {"accept_all": True}
 
     # Autonomous evaluations never take a human review.
@@ -690,7 +672,6 @@ def test_deterministic_accept_all_finalizes_without_fries(
     auth_headers: dict[str, str],
     admin_headers: dict[str, str],
     db_session: Session,
-    seeded_users: dict[str, tuple[User, str]],
 ) -> None:
     eval_id = _create_and_run(
         api_client,
@@ -699,7 +680,7 @@ def test_deterministic_accept_all_finalizes_without_fries(
         mode="AI_ASSISTED",
         probe_config={"schema_version": "v1", "assessment_engine": "deterministic"},
     )
-    _, reviewer_headers = _reviewer_headers(api_client, seeded_users)
+    reviewer_headers = auth_headers
 
     detail = api_client.get(f"/v1/evaluations/{eval_id}", headers=auth_headers).json()
     assert detail["osd_agent"]["ai_suggestion"]["assessment_engine"] == "deterministic"
@@ -727,7 +708,6 @@ def test_deterministic_full_human_osd_all_aspects_permits_fries(
     auth_headers: dict[str, str],
     admin_headers: dict[str, str],
     db_session: Session,
-    seeded_users: dict[str, tuple[User, str]],
 ) -> None:
     """A human filling in complete O/S/D for every required aspect makes the
     evaluation FRIES-eligible via the existing, untouched scorer — proving
@@ -739,7 +719,7 @@ def test_deterministic_full_human_osd_all_aspects_permits_fries(
         mode="AI_ASSISTED",
         probe_config={"schema_version": "v1", "assessment_engine": "deterministic"},
     )
-    _, reviewer_headers = _reviewer_headers(api_client, seeded_users)
+    reviewer_headers = auth_headers
 
     detail = api_client.get(f"/v1/evaluations/{eval_id}", headers=auth_headers).json()
     dims = [a["aspect"] for a in detail["osd_agent"]["ai_suggestion"]["aspects"]]
@@ -801,7 +781,6 @@ def test_deterministic_human_s_still_withholds_fries(
     auth_headers: dict[str, str],
     admin_headers: dict[str, str],
     db_session: Session,
-    seeded_users: dict[str, tuple[User, str]],
 ) -> None:
     eval_id = _create_and_run(
         api_client,
@@ -810,7 +789,7 @@ def test_deterministic_human_s_still_withholds_fries(
         mode="AI_ASSISTED",
         probe_config={"schema_version": "v1", "assessment_engine": "deterministic"},
     )
-    _, reviewer_headers = _reviewer_headers(api_client, seeded_users)
+    reviewer_headers = auth_headers
 
     review = api_client.post(
         f"/v1/evaluations/{eval_id}/human-review",
@@ -868,7 +847,6 @@ def test_review_submitted_incomplete_osd_shows_reviewed_disclaimer(
     api_client: TestClient,
     admin_headers: dict[str, str],
     db_session: Session,
-    seeded_users: dict[str, tuple[User, str]],
 ) -> None:
     eval_id = _create_and_run(
         api_client,
@@ -877,7 +855,7 @@ def test_review_submitted_incomplete_osd_shows_reviewed_disclaimer(
         mode="AI_ASSISTED",
         probe_config={"schema_version": "v1", "assessment_engine": "deterministic"},
     )
-    _, reviewer_headers = _reviewer_headers(api_client, seeded_users)
+    reviewer_headers = admin_headers
 
     review = api_client.post(
         f"/v1/evaluations/{eval_id}/human-review",
@@ -905,7 +883,6 @@ def test_review_submitted_complete_osd_shows_scored_disclaimer(
     api_client: TestClient,
     admin_headers: dict[str, str],
     db_session: Session,
-    seeded_users: dict[str, tuple[User, str]],
 ) -> None:
     eval_id = _create_and_run(
         api_client,
@@ -914,7 +891,7 @@ def test_review_submitted_complete_osd_shows_scored_disclaimer(
         mode="AI_ASSISTED",
         probe_config={"schema_version": "v1", "assessment_engine": "deterministic"},
     )
-    _, reviewer_headers = _reviewer_headers(api_client, seeded_users)
+    reviewer_headers = admin_headers
 
     aspects = [
         {"aspect": d.value, "O": 5, "S": 5, "D": 5}

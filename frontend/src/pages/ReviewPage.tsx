@@ -10,7 +10,6 @@ import type {
   HumanReviewRequest,
   OsdAspectSuggestion,
 } from "../api/types";
-import { useAuth } from "../auth/AuthContext";
 import ErrorNotice from "../components/ErrorNotice";
 import ModeDisclosureBanner from "../components/ModeDisclosure";
 import Spinner from "../components/Spinner";
@@ -58,7 +57,6 @@ function evidenceSummary(metadata: Record<string, unknown> | undefined): string 
 
 export default function ReviewPage() {
   const { id } = useParams();
-  const { user } = useAuth();
   const [evaluation, setEvaluation] = useState<EvaluationRead | null>(null);
   const [error, setError] = useState<unknown>(null);
 
@@ -69,8 +67,6 @@ export default function ReviewPage() {
   const [phase, setPhase] = useState<"idle" | "review" | "finalize">("idle");
   const [submitError, setSubmitError] = useState<unknown>(null);
   const [finalized, setFinalized] = useState<EvaluationRead | null>(null);
-
-  const isReviewerRole = user?.role === "reviewer" || user?.role === "admin";
 
   useEffect(() => {
     let cancelled = false;
@@ -183,14 +179,6 @@ export default function ReviewPage() {
     }
   }
 
-  if (!isReviewerRole) {
-    return (
-      <div className="notice notice-warning">
-        Reviewing O/S/D requires the reviewer or admin role.{" "}
-        <Link to={`/evaluations/${id}`}>Back to the evaluation</Link>.
-      </div>
-    );
-  }
   if (error != null) return <ErrorNotice error={error} />;
   if (evaluation == null || draft == null) return <Spinner label="Loading review…" />;
 

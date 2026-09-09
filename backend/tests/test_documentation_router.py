@@ -1,12 +1,10 @@
-"""API-layer tests for /v1/models/{id}/documentation — list, add, ownership on delete."""
+"""API-layer tests for /v1/models/{id}/documentation — list, add, delete."""
 
 from __future__ import annotations
 
 import uuid
 
 from fastapi.testclient import TestClient
-
-from tests.conftest import auth_headers_for
 
 
 def _create_model(api_client: TestClient, headers: dict[str, str]) -> int:
@@ -53,7 +51,7 @@ def test_add_user_documentation_roundtrip(
     assert any(item["id"] == body["id"] for item in listed.json()["items"])
 
 
-def test_delete_user_documentation_by_owner_succeeds(
+def test_delete_user_documentation_succeeds(
     api_client: TestClient, auth_headers: dict[str, str]
 ) -> None:
     model_id = _create_model(api_client, auth_headers)
@@ -71,47 +69,6 @@ def test_delete_user_documentation_by_owner_succeeds(
 
     listed = api_client.get(f"/v1/models/{model_id}/documentation", headers=auth_headers)
     assert all(item["id"] != source_id for item in listed.json()["items"])
-
-
-def test_delete_user_documentation_by_non_owner_forbidden(
-    api_client: TestClient,
-    auth_headers: dict[str, str],
-    seeded_users,
-) -> None:
-    model_id = _create_model(api_client, auth_headers)
-    added = api_client.post(
-        f"/v1/models/{model_id}/documentation",
-        json={"url": "https://example.com/report.pdf", "documentation_type": "evaluation_report"},
-        headers=auth_headers,
-    )
-    source_id = added.json()["id"]
-
-    reviewer_user, reviewer_password = seeded_users["reviewer"]
-    reviewer_headers = auth_headers_for(api_client, reviewer_user.email, reviewer_password)
-
-    resp = api_client.delete(
-        f"/v1/models/{model_id}/documentation/{source_id}", headers=reviewer_headers
-    )
-    assert resp.status_code == 403, resp.text
-
-
-def test_delete_user_documentation_by_admin_succeeds(
-    api_client: TestClient,
-    auth_headers: dict[str, str],
-    admin_headers: dict[str, str],
-) -> None:
-    model_id = _create_model(api_client, auth_headers)
-    added = api_client.post(
-        f"/v1/models/{model_id}/documentation",
-        json={"url": "https://example.com/report.pdf", "documentation_type": "evaluation_report"},
-        headers=auth_headers,
-    )
-    source_id = added.json()["id"]
-
-    resp = api_client.delete(
-        f"/v1/models/{model_id}/documentation/{source_id}", headers=admin_headers
-    )
-    assert resp.status_code == 204, resp.text
 
 
 def test_documentation_for_unknown_model_404s(

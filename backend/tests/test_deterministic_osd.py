@@ -207,7 +207,6 @@ def test_human_s_merge_withheld_fries() -> None:
     finalized = to_finalized_osd_assisted(
         approved,
         human_review_id=1,
-        reviewer_id=2,
         human_changed=human_changed,
         agent_suggestion=suggestion,
     )

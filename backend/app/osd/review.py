@@ -241,7 +241,6 @@ def to_finalized_osd_assisted(
     approved_aspects: list[dict[str, Any]],
     *,
     human_review_id: int,
-    reviewer_id: int,
     human_changed: bool,
     agent_suggestion: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
@@ -291,7 +290,6 @@ def to_finalized_osd_assisted(
         "human_reviewed": True,
         "human_changed": human_changed,
         "human_review_id": human_review_id,
-        "reviewer_id": reviewer_id,
         "disclaimer": disclaimer_for(
             EvaluationMode.AI_ASSISTED,
             human_reviewed=True,

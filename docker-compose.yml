@@ -83,7 +83,6 @@ services:
       S3_SECRET_KEY: ${S3_SECRET_KEY:-minioadmin}
       S3_BUCKET: ${S3_BUCKET:-trustlens}
       S3_REGION: ${S3_REGION:-us-east-1}
-      JWT_SECRET: ${JWT_SECRET:-change-me-phase5-placeholder}
       HF_TOKEN: ${HF_TOKEN:-}
     ports:
       - "${BACKEND_PORT:-8000}:8000"

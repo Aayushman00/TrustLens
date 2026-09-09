@@ -8,9 +8,6 @@ from app.main import create_app
 
 IMPLEMENTED_PATHS = {
     "/health",
-    "/v1/auth/login",
-    "/v1/auth/refresh",
-    "/v1/auth/me",
     "/v1/models",
     "/v1/models/{model_id}",
     "/v1/models/import-hf",
@@ -36,14 +33,14 @@ def test_docs_and_openapi_ok() -> None:
     assert IMPLEMENTED_PATHS.issubset(paths)
 
 
-def test_openapi_declares_bearer_scheme_on_protected_routes() -> None:
+def test_openapi_declares_no_auth_security_scheme() -> None:
+    """Single-user local instance — no auth security scheme, no route requires it."""
     client = TestClient(create_app())
     schema = client.get("/openapi.json").json()
     security_schemes = schema.get("components", {}).get("securitySchemes", {})
-    assert any(s.get("type") == "http" and s.get("scheme") == "bearer" for s in security_schemes.values())
+    assert not any(
+        s.get("type") == "http" and s.get("scheme") == "bearer" for s in security_schemes.values()
+    )
 
     models_get = schema["paths"]["/v1/models"]["get"]
-    assert models_get.get("security"), "GET /v1/models should require a security scheme"
-
-    login_post = schema["paths"]["/v1/auth/login"]["post"]
-    assert not login_post.get("security"), "POST /v1/auth/login must stay public"
+    assert not models_get.get("security"), "GET /v1/models must not require a security scheme"

@@ -17,15 +17,6 @@ vi.mock("../api/client", async () => {
   return { ...actual, apiFetch: apiFetchMock };
 });
 
-vi.mock("../auth/AuthContext", () => ({
-  useAuth: () => ({
-    user: { id: 1, email: "reviewer@example.com", role: "reviewer" },
-    initializing: false,
-    login: vi.fn(),
-    logout: vi.fn(),
-  }),
-}));
-
 import ReviewPage from "./ReviewPage";
 
 const EVAL_ID = "22222222-2222-2222-2222-222222222222";
@@ -44,7 +35,6 @@ function evaluationFixture(): EvaluationRead {
     trustlens_version: "0.23.0",
     is_published: false,
     published_at: null,
-    created_by: 1,
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",
     mode_disclosure: {

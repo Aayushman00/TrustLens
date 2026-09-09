@@ -10,7 +10,6 @@ import {
   type EvaluationRead,
   type FriesDimension,
 } from "../api/types";
-import { useAuth } from "../auth/AuthContext";
 import DimensionCard from "../components/DimensionCard";
 import ErrorNotice from "../components/ErrorNotice";
 import EvaluationTimeline from "../components/EvaluationTimeline";
@@ -28,7 +27,6 @@ const POLL_MS = 2500;
 
 export default function EvaluationDetailPage() {
   const { id } = useParams();
-  const { user } = useAuth();
   const [evaluation, setEvaluation] = useState<EvaluationRead | null>(null);
   const [events, setEvents] = useState<EvaluationEventRead[] | null>(null);
   const [error, setError] = useState<unknown>(null);
@@ -95,9 +93,9 @@ export default function EvaluationDetailPage() {
   if (evaluation == null) return <Spinner label="Loading evaluation…" />;
 
   const isActive = ACTIVE_STATUSES.includes(evaluation.status);
-  const isReviewerRole = user?.role === "reviewer" || user?.role === "admin";
-  const canPublish =
-    user != null && (user.role === "admin" || evaluation.created_by === user.id);
+  // Single-user local instance — no RBAC/ownership gate on review or publish.
+  const isReviewerRole = true;
+  const canPublish = true;
   const awaitingAssistedReview =
     evaluation.evaluation_mode === "AI_ASSISTED" &&
     evaluation.status === "AWAITING_REVIEW";
@@ -365,8 +363,6 @@ export default function EvaluationDetailPage() {
         <div className="card">
           <h2>Human review</h2>
           <dl className="kv">
-            <dt>Reviewer</dt>
-            <dd>#{evaluation.human_review.reviewer_id}</dd>
             <dt>Decision</dt>
             <dd>
               {evaluation.human_review.accept_all ? "Accepted recorded O/S/D as-is" : "Edited recorded O/S/D"}

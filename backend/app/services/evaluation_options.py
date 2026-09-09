@@ -8,8 +8,7 @@ invented or approximate contract.
 
 from __future__ import annotations
 
-from app.db.models import Model, User
-from app.db.enums import UserRole
+from app.db.models import Model
 from app.inference.pairing import resolve_pairing
 from app.probes.robustness_compat import resolve_robustness_compat
 from app.schemas.models import (
@@ -19,7 +18,7 @@ from app.schemas.models import (
 )
 
 
-def build_evaluation_options(model: Model, *, requester: User | None) -> EvaluationOptionsRead:
+def build_evaluation_options(model: Model) -> EvaluationOptionsRead:
     fairness: list[FairnessContractOption] = []
     pairing = resolve_pairing(model.hf_repo_id, revision=model.revision)
     if pairing is not None:
@@ -53,7 +52,7 @@ def build_evaluation_options(model: Model, *, requester: User | None) -> Evaluat
         fairness=fairness,
         robustness=robustness,
         documentation_only_available=True,
-        proxy_lr_available=requester is not None and requester.role == UserRole.ADMIN,
+        proxy_lr_available=True,
     )
 
 
