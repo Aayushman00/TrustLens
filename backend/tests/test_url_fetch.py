@@ -138,65 +138,68 @@ def test_dns_rebinding_defense(httpserver, _localhost_allowed_for_fetch):
     assert result.data == b"a,b\n1,2\n"
     assert result.http_status == 200
 
-    # CRITICAL: attacker.example was resolved at least once during validation
-    assert call_count["attacker.example"] >= 1, \
-        "Hostname should be resolved during validation phase"
+    # CRITICAL: "attacker.example" must be resolved EXACTLY ONCE — during
+    # _resolve_and_validate_host's validation pass. If connection pinning were
+    # broken (e.g. the pinned-IP URL were replaced with a hostname URL), httpx/
+    # httpcore would independently resolve "attacker.example" again at connect
+    # time in order to open the TCP socket, pushing this count to 2+. A ">= 1"
+    # assertion here would be satisfied in both the pinned and unpinned case and
+    # proves nothing; "== 1" is what actually discriminates pinned behavior from
+    # unpinned behavior (verified by deliberately breaking pinning — see
+    # task-1.3-report.md round 4 for the red/green evidence).
+    assert call_count["attacker.example"] == 1, (
+        f"Expected exactly one resolution of 'attacker.example' (during "
+        f"validation only), got {call_count['attacker.example']}. A count > 1 "
+        f"means the hostname was re-resolved at connect time, i.e. connection "
+        f"pinning is NOT in effect and DNS rebinding is possible."
+    )
 
-    # The key proof of pinning: even though the fake DNS could return different IPs
-    # on subsequent calls, the fetch succeeded by reaching the real server at the
-    # validated IP. This proves we used the pinned IP, not re-resolved the hostname.
 
-
-def test_redirect_to_private_ip_rejected(httpserver, _localhost_allowed_for_fetch, monkeypatch):
+def test_redirect_to_private_ip_rejected(httpserver, _localhost_allowed_for_fetch):
     """Verify redirects to private IPs are rejected via re-validation (real redirect).
 
-    CRITICAL TEST: Proves the redirect re-validation path. Uses real httpserver to
-    issue a genuine HTTP 302 redirect to a private-IP URL, and asserts it's rejected
-    before any connection is attempted to the private target.
+    CRITICAL TEST: Proves the redirect re-validation path — not the initial-URL
+    check — is what rejects the request.
 
-    The test:
-    1. Sets up httpserver to respond with 302 Location: http://127.0.0.1:1/...
-    2. Uses monkeypatch to temporarily disable the localhost-allow fixture for this test
-    3. Calls fetch_dataset_url on the httpserver's own URL
-    4. Asserts UrlFetchError is raised with "private|loopback" in the message
-    5. This proves _validate_url() is called on the redirect Location and rejects it
+    Why this needs care: pytest-httpserver binds to 127.0.0.1, which is itself a
+    loopback address. If the *initial* request used strict (unrelaxed) SSRF
+    validation, it would be rejected before the server ever sent its 302
+    response, and the redirect-handling code would never run — the exact bug
+    found in round 3 (httpserver.log was empty afterwards, proving no request
+    was ever sent).
 
-    NOTE: We need to temporarily REMOVE the fixture's monkeypatch for the redirect
-    target validation, so that 127.0.0.1 is correctly rejected.
+    The fix: use the same `_localhost_allowed_for_fetch` fixture the other
+    httpserver-based tests use, so the *initial* request to
+    `httpserver.url_for(...)` (127.0.0.1) is allowed through. The redirect's
+    `Location` then points at 10.0.0.5 — a private RFC1918 address that is
+    NOT in the fixture's localhost/loopback allowlist — so it is the
+    *redirect re-validation* branch (running after `response.is_redirect`)
+    that must reject it, genuinely exercising that code path.
+
+    The test also asserts on `httpserver.log` to prove the initial request
+    really was sent to and served by the real server (i.e. the 302 was
+    actually issued), not merely that some exception happened to be raised.
     """
     from werkzeug.wrappers import Response
-    from app.datasets import url_fetch
-
-    # Restore the original validation function for this test (remove the fixture's bypass)
-    import socket
-    import ipaddress
-
-    def original_resolve_and_validate_host(host: str) -> str:
-        try:
-            infos = socket.getaddrinfo(host, None)
-        except socket.gaierror as exc:
-            raise url_fetch.UrlFetchError(f"could not resolve host: {exc}") from exc
-        for family, _, _, _, sockaddr in infos:
-            ip = ipaddress.ip_address(sockaddr[0])
-            if (
-                ip.is_private
-                or ip.is_loopback
-                or ip.is_link_local
-                or ip.is_multicast
-                or ip.is_reserved
-                or ip.is_unspecified
-            ):
-                raise url_fetch.UrlFetchError(f"resolved address is private/loopback/link-local/reserved: {ip}")
-        return str(ipaddress.ip_address(infos[0][4][0]))
-
-    # For this specific test, use the strict original validation (not the fixture's relaxed one)
-    monkeypatch.setattr(url_fetch, "_resolve_and_validate_host", original_resolve_and_validate_host)
 
     httpserver.expect_request("/start.csv").respond_with_response(
-        Response(status=302, headers={"Location": "http://127.0.0.1:1/data.csv"})
+        Response(status=302, headers={"Location": "http://10.0.0.5:1/data.csv"})
     )
     url = httpserver.url_for("/start.csv")
 
-    # The fetch should fail when trying to follow the redirect to 127.0.0.1
+    # The fetch should fail when trying to follow the redirect to 10.0.0.5 (a
+    # private RFC1918 address the fixture does NOT exempt).
     with pytest.raises(UrlFetchError, match="private|loopback"):
         fetch_dataset_url(url)
+
+    # Prove the initial request was genuinely sent to and answered by the real
+    # server (the 302 with its malicious Location header actually round-tripped)
+    # rather than the request having been rejected before ever reaching it.
+    assert len(httpserver.log) == 1, (
+        "Expected exactly one real request to the httpserver (the initial "
+        "/start.csv request that received the 302). An empty log means the "
+        "initial URL was rejected before the redirect was ever sent, and the "
+        "redirect re-validation code path was never exercised."
+    )
+    received_request, _ = httpserver.log[0]
+    assert received_request.path == "/start.csv"
