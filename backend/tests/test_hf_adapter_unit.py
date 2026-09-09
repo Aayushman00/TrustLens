@@ -9,6 +9,7 @@ from huggingface_hub.utils import GatedRepoError, RepositoryNotFoundError, Revis
 from app.adapters.base import HfAuthRequiredError, ModelNotFoundError, NormalizedModelRecord
 from app.adapters.hf_hub import HfHubModelAdapter, parse_hf_ref
 from app.api.errors import AppError
+from app.documentation.evidence import DocumentationEvidence
 
 
 def _hub_error(cls: type[Exception], message: str, *, status_code: int = 404) -> Exception:
@@ -108,19 +109,33 @@ class _FakeHfApi:
         return self._files
 
 
-class _FakeModelCard:
-    def __init__(self, text: str | None) -> None:
-        self.text = text
-
-    @staticmethod
-    def load(repo_id: str, *, token: object = None) -> _FakeModelCard:
-        return _FakeModelCard("# Model Card\nSome text.")
-
-
 def _install_fake_api(monkeypatch: pytest.MonkeyPatch, **kwargs: object) -> _FakeHfApi:
     fake_api = _FakeHfApi(**kwargs)
     monkeypatch.setattr("app.adapters.hf_hub.HfApi", lambda token=None: fake_api)
     return fake_api
+
+
+def _install_fake_documentation_evidence(
+    monkeypatch: pytest.MonkeyPatch,
+    evidence: DocumentationEvidence | None = None,
+) -> DocumentationEvidence:
+    """Stub the pinned-revision README fetch — no real Hub network call in unit tests."""
+    result = evidence or DocumentationEvidence(
+        documentation_source_type="model_card",
+        documentation_url="https://huggingface.co/distilbert-base-uncased/blob/abc123/README.md",
+        documentation_revision="abc123",
+        documentation_content_hash="sha256:deadbeef",
+        retrieval_status="ok",
+        content_length=24,
+        source_model_ref="distilbert-base-uncased",
+        source_model_revision="abc123",
+        content="# Model Card\nSome text.",
+    )
+    monkeypatch.setattr(
+        "app.adapters.hf_hub.resolve_hf_documentation_evidence",
+        lambda repo_id, revision, *, token=None: result,
+    )
+    return result
 
 
 def test_resolve_returns_normalized_record_with_card_and_files(
@@ -136,7 +151,7 @@ def test_resolve_returns_normalized_record_with_card_and_files(
         transformers_info={"auto_model": "AutoModel"},
     )
     _install_fake_api(monkeypatch, model_info_result=info, files=["config.json", "pytorch_model.bin"])
-    monkeypatch.setattr("app.adapters.hf_hub.ModelCard", _FakeModelCard)
+    _install_fake_documentation_evidence(monkeypatch)
 
     adapter = HfHubModelAdapter()
     record = adapter.resolve("distilbert-base-uncased")
@@ -159,6 +174,16 @@ def test_resolve_returns_normalized_record_with_card_and_files(
     assert metadata["card_data"] == {"license": "apache-2.0"}
     assert metadata["transformers_info"] == {"auto_model": "AutoModel"}
     assert metadata["hub_url"] == "https://huggingface.co/distilbert-base-uncased"
+
+    doc_evidence = metadata["documentation_evidence"]
+    assert doc_evidence["documentation_source_type"] == "model_card"
+    assert doc_evidence["documentation_revision"] == "abc123"
+    assert doc_evidence["retrieval_status"] == "ok"
+    assert doc_evidence["documentation_content_hash"] == "sha256:deadbeef"
+    assert doc_evidence["source_model_ref"] == "distilbert-base-uncased"
+    assert doc_evidence["source_model_revision"] == "abc123"
+    # Raw content is not duplicated into the metadata pointer — only card_text carries it.
+    assert "content" not in doc_evidence
 
 
 def test_resolve_repo_not_found_raises_model_not_found_404(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -193,11 +218,14 @@ def test_resolve_gated_repo_raises_hf_auth_required_403(monkeypatch: pytest.Monk
 
 
 def test_resolve_never_calls_download_apis(monkeypatch: pytest.MonkeyPatch) -> None:
-    """ADR 0012 — metadata only. Asserts no weight-download method exists on the fake API,
-    guaranteeing the adapter can't accidentally rely on one."""
+    """ADR 0012 — metadata only (weights). Asserts no weight-download method
+    exists on the fake API, guaranteeing the adapter can't accidentally rely
+    on one. The documentation README fetch is stubbed here — that one real
+    network call (a text file, never model weights) is covered/asserted
+    separately in test_documentation_evidence.py."""
     info = _FakeModelInfo(sha="deadbeef", pipeline_tag=None, tags=[], library_name=None)
     fake_api = _install_fake_api(monkeypatch, model_info_result=info, files=[])
-    monkeypatch.setattr("app.adapters.hf_hub.ModelCard", _FakeModelCard)
+    _install_fake_documentation_evidence(monkeypatch)
     assert not hasattr(fake_api, "snapshot_download")
     assert not hasattr(fake_api, "hf_hub_download")
 

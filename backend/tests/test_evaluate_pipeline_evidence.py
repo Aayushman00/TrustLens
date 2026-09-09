@@ -108,6 +108,10 @@ def test_pipeline_writes_evidence_ref(db_session: Session) -> None:
     evaluation = evals.get_by_id(evaluation.id)
     assert evaluation is not None
     assert evaluation.status == EvaluationStatus.FINALIZED
+    # No contract was selected (documentation_only) so neither Fairness nor
+    # Robustness invoked LocalHFBackend — execution_metadata must stay None,
+    # never a fabricated/guessed device.
+    assert evaluation.execution_metadata is None
     osd_row = OsdAgentOutputRepository(db_session).latest_for_evaluation(evaluation.id)
     assert osd_row is not None
     suggestion = osd_row.ai_suggestion

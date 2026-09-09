@@ -5,6 +5,7 @@ import { apiFetch } from "../api/client";
 import type { ModelList, ModelRead } from "../api/types";
 import ErrorNotice from "../components/ErrorNotice";
 import Spinner from "../components/Spinner";
+import { shortRevision } from "../lib/contract";
 import { fmtDateTime } from "../lib/format";
 
 export default function ModelsPage() {
@@ -37,57 +38,61 @@ export default function ModelsPage() {
       <div className="page-header">
         <div>
           <h1>Models</h1>
-          <p className="muted">Registered Hugging Face models.</p>
+          <p className="muted">Registered Hugging Face models — stored and evaluated locally.</p>
         </div>
         <Link to="/models/import" className="btn">
           Import HF model
         </Link>
       </div>
       <ErrorNotice error={error} />
-      <div className="card">
-        {items.length === 0 && !loading ? (
+      {items.length === 0 && !loading ? (
+        <div className="card">
           <p className="empty">
             Nothing registered yet — <Link to="/models/import">import a model</Link>.
           </p>
-        ) : (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Repo</th>
-                  <th>Revision</th>
-                  <th>Created</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((model) => (
-                  <tr key={model.id}>
-                    <td className="muted">{model.id}</td>
-                    <td>
-                      <Link to={`/models/${model.id}`}>{model.hf_repo_id}</Link>
-                    </td>
-                    <td className="mono">{model.revision ?? "—"}</td>
-                    <td className="muted">{fmtDateTime(model.created_at)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-        {loading ? <Spinner label="Loading…" /> : null}
-        {nextCursor && !loading ? (
-          <p>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => void loadPage(nextCursor)}
-            >
-              Load more
-            </button>
-          </p>
-        ) : null}
-      </div>
+        </div>
+      ) : (
+        <div className="contract-card-grid">
+          {items.map((model) => {
+            const displayName = model.hf_repo_id.split("/").pop() ?? model.hf_repo_id;
+            return (
+              <div key={model.id} className="contract-card static">
+                <span className="contract-card-title">{displayName}</span>
+                <span className="contract-card-sub mono">{model.hf_repo_id}</span>
+                <span className="contract-card-chips">
+                  <span className={`chip ${model.revision ? "chip-accent" : ""}`}>
+                    Revision: {shortRevision(model.revision)}
+                  </span>
+                  <span className="chip">{model.revision ? "Available locally" : "No pinned revision"}</span>
+                </span>
+                <span className="contract-card-sub">
+                  Imported {fmtDateTime(model.created_at)}
+                </span>
+                <div className="btn-row" style={{ marginTop: "0.4rem" }}>
+                  <Link to={`/models/${model.id}`} className="btn btn-secondary">
+                    View model
+                  </Link>
+                  <Link to={`/evaluations/new?modelId=${model.id}`} className="btn">
+                    Evaluate
+                  </Link>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {loading ? <Spinner label="Loading…" /> : null}
+      {nextCursor && !loading ? (
+        <p style={{ marginTop: "1rem" }}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => void loadPage(nextCursor)}
+          >
+            Load more
+          </button>
+        </p>
+      ) : null}
     </>
   );
 }

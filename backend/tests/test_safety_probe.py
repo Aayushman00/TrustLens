@@ -85,6 +85,38 @@ def test_complete_card_evaluated_no_material_risk() -> None:
     assert "high-risk" in artifact["claim_boundary"]["not_established"]
 
 
+def test_documentation_source_pointer_absent_when_not_hf_imported() -> None:
+    text = _read("model_card_safety_complete.md")
+    ctx, _ = _ctx(metadata={"card_text": text})
+    out = SafetyProbe().run(ctx)
+    assert out.metric_values["documentation_source"] is None
+
+
+def test_documentation_source_pointer_cited_without_affecting_methodology() -> None:
+    text = _read("model_card_safety_complete.md")
+    doc_evidence = {
+        "documentation_source_type": "model_card",
+        "documentation_url": "https://huggingface.co/org/safety-model/blob/abc/README.md",
+        "documentation_revision": "abc",
+        "documentation_content_hash": "sha256:xyz",
+        "retrieval_status": "ok",
+        "retrieval_error": None,
+        "content_length": len(text),
+        "source_model_ref": "org/safety-model",
+        "source_model_revision": "abc",
+    }
+    baseline = SafetyProbe().run(_ctx(metadata={"card_text": text})[0])
+    out = SafetyProbe().run(
+        _ctx(metadata={"card_text": text, "documentation_evidence": doc_evidence})[0]
+    )
+
+    assert out.metric_values["documentation_source"] == doc_evidence
+    assert out.metric_values["coverage_ratio"] == baseline.metric_values["coverage_ratio"]
+    assert out.metric_values["aspect_scoring"] == baseline.metric_values["aspect_scoring"]
+    assert out.metric_values["risks_triggered"] == baseline.metric_values["risks_triggered"]
+    assert out.status == baseline.status
+
+
 def test_complete_vs_missing_privacy_coverage() -> None:
     complete = _read("model_card_safety_complete.md")
     missing = _read("model_card_safety_missing_privacy.md")

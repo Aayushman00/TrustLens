@@ -1,9 +1,11 @@
 """DeterministicOSDMapper — consumer/representation layer over Layer A probes.
 
 Reads persisted probe snapshots only. Does **not** recompute metrics, CIs,
-gates, confidence, or risk triggers. Under v1.0 rules every aspect has
-``O=None`` (no approved mapping), ``S=None`` (human-controlled only),
-``D=None`` (unavailable).
+gates, confidence, or risk triggers. Under v1.0 rules the agent itself always
+abstains — every aspect starts with ``O=None``, ``S=None``, ``D=None`` (no
+approved automatic mapping exists). A human reviewer may independently supply
+any subset of O, S, D per aspect afterward (see ``app.osd.review``) — none of
+the three is ever agent-sourced.
 """
 
 from __future__ import annotations
@@ -116,8 +118,9 @@ def _extract_probe_metadata(metric_values: dict[str, Any]) -> dict[str, Any]:
 
 def _build_rationale(dimension: FriesDimension, metadata: dict[str, Any]) -> str:
     parts = [
-        f"{dimension.value}: O unavailable (no approved+validated mapping); "
-        "S human-controlled; D unavailable."
+        f"{dimension.value}: no approved automatic mapping from evidence to "
+        "O, S, or D exists yet — all three are human-entered assessment, not "
+        "measured model properties."
     ]
     scored = metadata.get("scored_risk_id")
     if scored:

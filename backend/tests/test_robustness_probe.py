@@ -7,13 +7,32 @@ from typing import Any
 
 import pytest
 
+from app.datasets.registry import get_dataset_spec
 from app.db.enums import FriesDimension, ProbeEvaluationStatus
 from app.probes.base import ProbeContext
 from app.probes.robustness import RobustnessProbe
 from app.probes.robustness_nlp import RobustnessRunResult
+from app.schemas.evaluation_contract import EvaluationContractV1
 from app.schemas.probe_config import ProbeConfigV1
 from app.storage.evidence_store import EvidenceStoreError
 from tests.fakes import FakeEvidenceStore
+
+_AG_NEWS_MODEL = "textattack/bert-base-uncased-ag-news"
+_AG_NEWS_REV = "fe417ad660b1657142f66353a184dc0c7e6d2e48"
+
+
+def _ag_news_contract() -> EvaluationContractV1:
+    """Registry contract matching the exact approved compat pin."""
+    spec = get_dataset_spec("ag_news_robustness")
+    return EvaluationContractV1(
+        kind="registry",
+        dataset_key="ag_news_robustness",
+        dataset_revision=spec.revision,
+        model_ref=_AG_NEWS_MODEL,
+        model_revision=_AG_NEWS_REV,
+        task_type=spec.task_type,
+        modality=spec.modality,
+    )
 
 
 def _aligned_rows(n: int, *, clean_acc: float = 0.9, robust_acc: float = 0.6) -> list[dict]:
@@ -88,11 +107,14 @@ def _ctx(
     metadata: dict | None = None,
     probe_config: ProbeConfigV1 | None = None,
     store: FakeEvidenceStore | None = None,
+    evaluation_contract: EvaluationContractV1 | None = None,
+    model_ref: str = "org/text-clf",
+    model_revision: str | None = "a" * 40,
 ) -> tuple[ProbeContext, FakeEvidenceStore]:
     evidence = store or FakeEvidenceStore()
     ctx = ProbeContext(
         evaluation_id=uuid.uuid4(),
-        model_ref="org/text-clf",
+        model_ref=model_ref,
         model_metadata=metadata
         or {
             "pipeline_tag": "text-classification",
@@ -101,12 +123,14 @@ def _ctx(
         },
         probe_config=probe_config or ProbeConfigV1(),
         evidence_store=evidence,  # type: ignore[arg-type]
-        model_revision="a" * 40,
+        model_revision=model_revision,
+        evaluation_contract=evaluation_contract,
     )
     return ctx, evidence
 
 
 def test_no_implicit_dataset_not_applicable() -> None:
+    """A/B collapse here too: no contract at all -> N/A, no auto-selection."""
     ctx, _ = _ctx()
     out = RobustnessProbe(runner=_FakeRunner()).run(ctx)
     assert out.status is ProbeEvaluationStatus.NOT_APPLICABLE
@@ -125,9 +149,11 @@ def test_fake_runner_accuracies_and_degradation(monkeypatch: pytest.MonkeyPatch)
     ctx, store = _ctx(
         probe_config=ProbeConfigV1(
             attack_budget=0.03,
-            datasets={"robustness": "ag_news_robustness"},
             extra={"seed": 42, "max_samples": 200},
-        )
+        ),
+        evaluation_contract=_ag_news_contract(),
+        model_ref=_AG_NEWS_MODEL,
+        model_revision=_AG_NEWS_REV,
     )
     out = RobustnessProbe(runner=runner).run(ctx)
     assert out.dimension == FriesDimension.ROBUSTNESS
@@ -153,7 +179,9 @@ def test_fake_runner_accuracies_and_degradation(monkeypatch: pytest.MonkeyPatch)
 
 def test_unsupported_modality_skips() -> None:
     ctx, store = _ctx(
-        probe_config=ProbeConfigV1(datasets={"robustness": "ag_news_robustness"}),
+        evaluation_contract=_ag_news_contract(),
+        model_ref=_AG_NEWS_MODEL,
+        model_revision=_AG_NEWS_REV,
         metadata={"pipeline_tag": "fill-mask", "tags": []},
     )
     out = RobustnessProbe(runner=_FakeRunner()).run(ctx)
@@ -169,14 +197,27 @@ def test_unsupported_modality_skips() -> None:
     assert len(store.puts) == 1
 
 
-def test_vision_dataset_unsupported() -> None:
-    ctx, _ = _ctx(
-        probe_config=ProbeConfigV1(datasets={"robustness": "cifar10_subset"}),
+def test_unapproved_dataset_key_is_not_applicable_no_substitution() -> None:
+    """C/F: an explicit dataset_key with no compat entry at all -> N/A.
+
+    Previously ``probe_config.datasets.robustness`` could select an arbitrary
+    (even non-NLP) dataset directly; that entrypoint is removed. Since
+    ``supported_robustness_compat_v1.yaml`` never lists a vision dataset, this
+    also proves there is no fallback substitution — never a different dataset,
+    just NOT_APPLICABLE.
+    """
+    contract = EvaluationContractV1(
+        kind="registry",
+        dataset_key="cifar10_subset",
+        model_ref="org/text-clf",
+        model_revision="a" * 40,
     )
+    ctx, _ = _ctx(evaluation_contract=contract)
     out = RobustnessProbe(runner=_FakeRunner()).run(ctx)
-    assert "unsupported_modality" in out.flags
+    assert "no_compatible_dataset" in out.flags
     assert out.status is ProbeEvaluationStatus.NOT_APPLICABLE
-    assert out.metric_values["dataset"]["logical_key"] == "cifar10_subset"
+    assert out.metric_values["dataset"]["logical_key"] is None
+    assert out.metric_values["dataset_key"] is None
 
 
 def test_attack_budget_flows_into_metrics(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -187,9 +228,11 @@ def test_attack_budget_flows_into_metrics(monkeypatch: pytest.MonkeyPatch) -> No
     ctx, _ = _ctx(
         probe_config=ProbeConfigV1(
             attack_budget=0.05,
-            datasets={"robustness": "ag_news_robustness"},
             extra={"seed": 7},
-        )
+        ),
+        evaluation_contract=_ag_news_contract(),
+        model_ref=_AG_NEWS_MODEL,
+        model_revision=_AG_NEWS_REV,
     )
     out = RobustnessProbe(runner=_FakeRunner()).run(ctx)
     assert out.metric_values["epsilon"] == 0.05
@@ -203,7 +246,9 @@ def test_model_load_failure_is_failed(monkeypatch: pytest.MonkeyPatch) -> None:
         lambda *_a, **_k: [{"text": "hello world", "label": 0}] * 200,
     )
     ctx, _ = _ctx(
-        probe_config=ProbeConfigV1(datasets={"robustness": "ag_news_robustness"}),
+        evaluation_contract=_ag_news_contract(),
+        model_ref=_AG_NEWS_MODEL,
+        model_revision=_AG_NEWS_REV,
     )
     out = RobustnessProbe(runner=_FakeRunner(error=RuntimeError("no weights"))).run(ctx)
     assert "model_load_failed" in out.flags
@@ -211,6 +256,7 @@ def test_model_load_failure_is_failed(monkeypatch: pytest.MonkeyPatch) -> None:
     assert out.status is ProbeEvaluationStatus.FAILED
     assert out.metric_values["probe_status"] == "FAILED"
     assert out.metric_values["clean_accuracy"] is None
+    assert out.metric_values["inference_executed"] is False
 
 
 def test_zero_eligible_insufficient_not_failed(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -226,11 +272,14 @@ def test_zero_eligible_insufficient_not_failed(monkeypatch: pytest.MonkeyPatch) 
         insufficient_reason="no label-compatible samples",
     )
     ctx, _ = _ctx(
-        probe_config=ProbeConfigV1(datasets={"robustness": "ag_news_robustness"}),
+        evaluation_contract=_ag_news_contract(),
+        model_ref=_AG_NEWS_MODEL,
+        model_revision=_AG_NEWS_REV,
     )
     out = RobustnessProbe(runner=_FakeRunner(result=insufficient)).run(ctx)
     assert out.status is ProbeEvaluationStatus.INSUFFICIENT_EVIDENCE
     assert "G-ROB-LABEL-COMPAT" in out.metric_values["reliability"]["failed_gates"]
+    assert out.metric_values["inference_executed"] is False
 
 
 def test_robustness_dataset_load_failed(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -241,7 +290,9 @@ def test_robustness_dataset_load_failed(monkeypatch: pytest.MonkeyPatch) -> None
 
     monkeypatch.setattr("app.probes.robustness.load_pinned_subset", _boom)
     ctx, _ = _ctx(
-        probe_config=ProbeConfigV1(datasets={"robustness": "ag_news_robustness"}),
+        evaluation_contract=_ag_news_contract(),
+        model_ref=_AG_NEWS_MODEL,
+        model_revision=_AG_NEWS_REV,
     )
     out = RobustnessProbe(runner=_FakeRunner()).run(ctx)
     assert out.status is ProbeEvaluationStatus.FAILED
@@ -250,25 +301,30 @@ def test_robustness_dataset_load_failed(monkeypatch: pytest.MonkeyPatch) -> None
     assert out.metric_values["clean_accuracy"] is None
 
 
-def test_domain_gate_with_compat_mismatch(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(
-        "app.probes.robustness.load_pinned_subset",
-        lambda *_a, **_k: [{"text": "hello world", "label": 0}] * 200,
+def test_mismatched_dataset_for_pinned_model_is_not_applicable_no_substitution() -> None:
+    """H: an explicit dataset_key that disagrees with this model's approved pin
+    is rejected outright (N/A) rather than silently falling back to the
+    model's *actual* approved dataset, or running the wrong-domain dataset
+    anyway. (The wide/hard domain-mismatch statistical gate itself,
+    G-ROB-DOMAIN, is unchanged and still covered directly in
+    test_robustness_eval.py — this test proves it is no longer reachable via
+    a mismatched contract, because compat validation rejects it earlier.)
+    """
+    contract = EvaluationContractV1(
+        kind="registry",
+        dataset_key="sst2_robustness",  # wrong dataset for this exact model pin
+        model_ref=_AG_NEWS_MODEL,
+        model_revision=_AG_NEWS_REV,
     )
     ctx, _ = _ctx(
-        probe_config=ProbeConfigV1(
-            datasets={"robustness": "sst2_robustness"},
-        ),
-        metadata={
-            "pipeline_tag": "text-classification",
-            "tags": ["text-classification"],
-        },
+        evaluation_contract=contract,
+        model_ref=_AG_NEWS_MODEL,
+        model_revision=_AG_NEWS_REV,
     )
-    ctx.model_ref = "textattack/bert-base-uncased-ag-news"
-    ctx.model_revision = "fe417ad660b1657142f66353a184dc0c7e6d2e48"
     out = RobustnessProbe(runner=_FakeRunner()).run(ctx)
-    assert out.status is ProbeEvaluationStatus.INSUFFICIENT_EVIDENCE
-    assert "G-ROB-DOMAIN" in out.metric_values["reliability"]["failed_gates"]
+    assert out.status is ProbeEvaluationStatus.NOT_APPLICABLE
+    assert "no_compatible_dataset" in out.flags
+    assert out.metric_values["dataset_key"] is None
 
 
 def test_evidence_store_error_propagates(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -277,7 +333,9 @@ def test_evidence_store_error_propagates(monkeypatch: pytest.MonkeyPatch) -> Non
         lambda *_a, **_k: [{"text": "hello world", "label": 0}] * 200,
     )
     ctx, _ = _ctx(
-        probe_config=ProbeConfigV1(datasets={"robustness": "ag_news_robustness"}),
+        evaluation_contract=_ag_news_contract(),
+        model_ref=_AG_NEWS_MODEL,
+        model_revision=_AG_NEWS_REV,
         store=_BoomStore(),
     )
     with pytest.raises(EvidenceStoreError):

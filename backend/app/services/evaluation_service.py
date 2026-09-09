@@ -10,18 +10,26 @@ from typing import Any
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
-from app.api.errors import AppError, ForbiddenError, NotFoundError, ValidationAppError
+from app.api.errors import AppError, ConflictError, ForbiddenError, NotFoundError, ValidationAppError
 from app.confidence.engine import ConfidenceSummary, summarize
 from app.datasets.registry import validate_probe_config_datasets
 from app.db.enums import EvaluationMode, EvaluationStatus, UserRole
 from app.db.models import Evaluation, HumanReview, ProbeResult, User
 from app.inference.evaluation_contract import build_evaluation_contract
 from app.db.repositories.evaluation import EvaluationRepository
+from app.db.repositories.evaluation_event import (
+    EVENT_EVALUATION_CREATED,
+    EVENT_EVALUATION_FINALIZED,
+    EVENT_EVALUATION_REQUEUED,
+    EVENT_HUMAN_REVIEW_SUBMITTED,
+    EvaluationEventRepository,
+)
 from app.db.repositories.final_score import FinalScoreRepository
 from app.db.repositories.human_review import HumanReviewRepository
 from app.db.repositories.model import ModelRepository
 from app.db.repositories.osd_agent_output import OsdAgentOutputRepository
 from app.db.repositories.probe_result import ProbeResultRepository
+from app.db.repositories.user_dataset import UserDatasetRepository
 from app.osd.review import (
     build_overrides,
     merge_review_aspects,
@@ -111,6 +119,17 @@ def _probe_evidence_from_row(row: ProbeResult) -> ProbeEvidenceRead:
         pairing_id=pairing_id,
         confidence=row.confidence,
         evidence_refs=list(row.evidence_refs or []),
+        model_ref=_optional_str(metrics.get("model_ref")),
+        model_revision=_optional_str(metrics.get("model_revision")),
+        dataset_key=_optional_str(metrics.get("dataset_key")),
+        dataset_revision=_optional_str(metrics.get("dataset_revision")),
+        evaluation_class=_optional_str(metrics.get("evaluation_class")),
+        inference_executed=(
+            bool(metrics["inference_executed"])
+            if isinstance(metrics.get("inference_executed"), bool)
+            else None
+        ),
+        metric_values=metrics or None,
     )
 
 
@@ -118,11 +137,13 @@ class EvaluationService:
     def __init__(self, session: Session) -> None:
         self._session = session
         self._evals = EvaluationRepository(session)
+        self._events = EvaluationEventRepository(session)
         self._models = ModelRepository(session)
         self._probes = ProbeResultRepository(session)
         self._osd_outputs = OsdAgentOutputRepository(session)
         self._final_scores = FinalScoreRepository(session)
         self._human_reviews = HumanReviewRepository(session)
+        self._user_datasets = UserDatasetRepository(session)
 
     def create_evaluation(
         self,
@@ -170,8 +191,19 @@ class EvaluationService:
                 )
         # Phase 7: resolve + freeze the evaluation contract from the Model row
         # (never the client-supplied revision, which may have drifted).
-        contract = build_evaluation_contract(model, data)
+        # user_dataset_id is ownership-gated (not admin-gated like proxy_lr —
+        # this path never substitutes model or dataset, so the same risk
+        # doesn't apply); ownership is enforced inside build_evaluation_contract.
+        contract = build_evaluation_contract(
+            model,
+            data,
+            user_dataset_repo=self._user_datasets,
+            requester_id=created_by,
+        )
         probe_config["evaluation_contract"] = contract.model_dump(mode="json")
+        if data.included_group_values is not None:
+            probe_config.setdefault("extra", {})
+            probe_config["extra"]["included_group_values"] = data.included_group_values
         row = self._evals.create(
             model_id=data.model_id,
             evaluation_mode=data.evaluation_mode,
@@ -198,6 +230,86 @@ class EvaluationService:
             row.id,
             model.hf_repo_id,
             task_id,
+        )
+        # enqueue_evaluate_model silently returns None on a broker failure,
+        # leaving the row at PENDING with no other visible signal — recording
+        # enqueued/task_id here is what makes that state observable at all.
+        self._events.create(
+            evaluation_id=row.id,
+            event_type=EVENT_EVALUATION_CREATED,
+            detail={"enqueued": task_id is not None, "task_id": task_id},
+        )
+        return row
+
+    def reconcile_enqueue_failure(self, evaluation_id: uuid.UUID) -> Evaluation:
+        """Operator-triggered recovery for a confirmed Celery enqueue failure
+        (audit P1-4) — NOT an automatic/self-healing background process.
+
+        Eligibility is decided only from the confirmed ``enqueued`` signal
+        already recorded on this evaluation's own event trail (never an age
+        heuristic, which could misclassify a legitimate slow-running
+        evaluation): the evaluation must still be PENDING, and its most
+        recent enqueue-related event (``evaluation_created`` or a prior
+        ``evaluation_requeued``) must have ``enqueued: false``. Anything else
+        — already enqueued, already running, already terminal — is refused.
+
+        Re-enqueuing is safe to retry here without bypassing the lifecycle:
+        the payload is reconstructed byte-identical to the original from the
+        persisted row, and the worker's own PENDING->RUNNING CAS
+        (evaluate_pipeline.py) admits only one execution even if this ever
+        races with a delivery that actually succeeded — this call only ever
+        records what happened, it never changes ``status`` itself.
+        """
+        row = self._evals.get_by_id(evaluation_id)
+        if row is None:
+            raise NotFoundError(
+                f"Evaluation {evaluation_id} not found",
+                details={"evaluation_id": str(evaluation_id)},
+            )
+        if row.status != EvaluationStatus.PENDING:
+            raise ConflictError(
+                "Only a PENDING evaluation can be reconciled",
+                details={"evaluation_id": str(evaluation_id), "status": row.status.value},
+            )
+        events = self._events.list_for_evaluation(evaluation_id)
+        enqueue_events = [
+            e for e in events if e.event_type in (EVENT_EVALUATION_CREATED, EVENT_EVALUATION_REQUEUED)
+        ]
+        last_enqueue_event = enqueue_events[-1] if enqueue_events else None
+        confirmed_failed = bool(
+            last_enqueue_event is not None
+            and (last_enqueue_event.detail or {}).get("enqueued") is False
+        )
+        if not confirmed_failed:
+            raise ConflictError(
+                "No confirmed enqueue failure to reconcile for this evaluation",
+                details={"evaluation_id": str(evaluation_id)},
+            )
+        model = self._models.get_by_id(row.model_id)
+        if model is None:
+            raise ConflictError(
+                "Cannot reconcile — the evaluation's model no longer exists",
+                details={"evaluation_id": str(evaluation_id), "model_id": row.model_id},
+            )
+        probe_config = row.probe_config or {}
+        payload = EvaluateModelPayload(
+            evaluation_id=row.id,
+            model_ref=model.hf_repo_id,
+            evaluation_mode=row.evaluation_mode,
+            probe_config=probe_config,
+            model_revision=row.model_revision,
+            evaluation_contract=probe_config.get("evaluation_contract", {}),
+        )
+        task_id = enqueue_evaluate_model(payload)
+        logger.info(
+            "evaluation_requeued evaluation_id=%s enqueue_task_id=%s",
+            row.id,
+            task_id,
+        )
+        self._events.create(
+            evaluation_id=row.id,
+            event_type=EVENT_EVALUATION_REQUEUED,
+            detail={"enqueued": task_id is not None, "task_id": task_id},
         )
         return row
 
@@ -354,6 +466,14 @@ class EvaluationService:
             body.accept_all,
             human_changed,
         )
+        # A real, legitimate fact each time — Phase 3 explicitly supports
+        # multiple reviews before finalize ("latest wins"), so this event may
+        # recur; O/S/D values themselves stay solely in human_reviews.overrides.
+        self._events.create(
+            evaluation_id=evaluation.id,
+            event_type=EVENT_HUMAN_REVIEW_SUBMITTED,
+            detail={"accept_all": body.accept_all, "human_changed": human_changed},
+        )
         return self._review_to_read(row)
 
     def get_final_score(self, evaluation_id: uuid.UUID) -> FinalScoreRead | None:
@@ -379,11 +499,12 @@ class EvaluationService:
     def get_mode_disclosure(self, evaluation: Evaluation) -> ModeDisclosure:
         """Phase 17: always present on detail reads; derived from mode + score + agent."""
         final_row = self._final_scores.get_for_evaluation(evaluation.id)
-        human_reviewed = (
-            bool((final_row.finalized_osd or {}).get("human_reviewed", False))
-            if final_row is not None
-            else False
-        )
+        # The human_reviews table is the authoritative record of whether a
+        # review was actually submitted — never derived from final_scores,
+        # which has no row at all when FRIES is withheld (incomplete O/S/D)
+        # even though a genuine review happened (audit: mode_disclosure
+        # defect found in item 8 live validation).
+        human_reviewed = self._human_reviews.latest_for_evaluation(evaluation.id) is not None
         osd_row = self._osd_outputs.latest_for_evaluation(evaluation.id)
         suggestion = (osd_row.ai_suggestion or {}) if osd_row else {}
         methodology_status = str(
@@ -394,18 +515,29 @@ class EvaluationService:
             cfg = evaluation.probe_config or {}
             raw_engine = cfg.get("assessment_engine")
             assessment_engine = raw_engine if isinstance(raw_engine, str) else None
-        scoring_withheld = suggestion.get("scoring_withheld")
-        if scoring_withheld is None and evaluation.status == EvaluationStatus.FINALIZED:
-            scoring_withheld = final_row is None
+        # Prefer the authoritative, human-reviewed completion state from
+        # final_scores.finalized_osd (real state, set by
+        # to_finalized_osd_assisted/to_finalized_osd from the actual
+        # completed aspect count) over the agent's own pre-review suggestion
+        # — the latter is always incomplete for the deterministic engine and
+        # goes stale the moment a human finishes supplying O/S/D, since the
+        # agent itself never revisits its abstention.
+        if final_row is not None:
+            scoring_withheld = bool((final_row.finalized_osd or {}).get("scoring_withheld", False))
+        else:
+            scoring_withheld = suggestion.get("scoring_withheld")
+            if scoring_withheld is None and evaluation.status == EvaluationStatus.FINALIZED:
+                scoring_withheld = True
+            scoring_withheld = bool(scoring_withheld) if scoring_withheld is not None else None
         has_score = final_row is not None
         return build_mode_disclosure(
             evaluation_mode=evaluation.evaluation_mode,
             human_reviewed=human_reviewed,
             methodology_status=methodology_status,
             assessment_engine=assessment_engine,
-            scoring_withheld=bool(scoring_withheld) if scoring_withheld is not None else None,
+            scoring_withheld=scoring_withheld,
             fries_status=fries_status_for(
-                scoring_withheld=bool(scoring_withheld) if scoring_withheld is not None else None,
+                scoring_withheld=scoring_withheld,
                 has_final_score=has_score,
                 osd_present=bool(suggestion),
             ),
@@ -514,11 +646,20 @@ class EvaluationService:
             agent_suggestion=agent_suggestion,
         )
         if finalized_osd.get("scoring_withheld"):
-            self._evals.transition_status(
+            withheld_transition = self._evals.transition_status(
                 evaluation.id,
                 expected=EvaluationStatus.AWAITING_REVIEW,
                 new=EvaluationStatus.FINALIZED,
             )
+            if withheld_transition is not None:
+                # scoring_withheld read straight from finalized_osd — already
+                # computed by the untouched to_finalized_osd_assisted, never
+                # recomputed here.
+                self._events.create(
+                    evaluation_id=evaluation.id,
+                    event_type=EVENT_EVALUATION_FINALIZED,
+                    detail={"evaluation_mode": EvaluationMode.AI_ASSISTED.value, "scoring_withheld": True},
+                )
             logger.info(
                 "evaluation_finalized_assisted_scoring_withheld evaluation_id=%s "
                 "human_review_id=%s complete_aspects=%s",
@@ -541,6 +682,12 @@ class EvaluationService:
             expected=EvaluationStatus.AWAITING_REVIEW,
             new=EvaluationStatus.FINALIZED,
         )
+        if row is not None:
+            self._events.create(
+                evaluation_id=evaluation.id,
+                event_type=EVENT_EVALUATION_FINALIZED,
+                detail={"evaluation_mode": EvaluationMode.AI_ASSISTED.value, "scoring_withheld": False},
+            )
         if row is None:
             row = self.get_evaluation(evaluation.id)
         logger.info(
@@ -614,13 +761,3 @@ class EvaluationService:
         rows = self._evals.list_all(status=status, limit=limit, cursor=cursor)
         next_cursor = str(rows[-1].id) if len(rows) == limit and rows else None
         return rows, next_cursor
-
-    def update_status(self, evaluation_id: uuid.UUID, status: EvaluationStatus) -> Evaluation:
-        """Repo wrapper — raw status write (prefer transition_status in the worker)."""
-        row = self._evals.update_status(evaluation_id, status)
-        if row is None:
-            raise NotFoundError(
-                f"Evaluation {evaluation_id} not found",
-                details={"evaluation_id": str(evaluation_id)},
-            )
-        return row

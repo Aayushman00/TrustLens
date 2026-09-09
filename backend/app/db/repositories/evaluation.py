@@ -51,6 +51,20 @@ class EvaluationRepository:
     def get_by_id(self, evaluation_id: uuid.UUID) -> Evaluation | None:
         return self._session.get(Evaluation, evaluation_id)
 
+    def lock_for_report_generation(self, evaluation_id: uuid.UUID) -> None:
+        """Acquire a row-level ``SELECT ... FOR UPDATE`` on this evaluation
+        for the rest of the current transaction (audit P1-6).
+
+        Used only to serialize concurrent report-version assignment
+        (ReportService) — never to gate the CAS lifecycle transitions, which
+        remain solely governed by ``transition_status``. A no-op (locks
+        nothing) if the row does not exist; the caller is expected to have
+        already confirmed it exists.
+        """
+        self._session.execute(
+            select(Evaluation.id).where(Evaluation.id == evaluation_id).with_for_update()
+        )
+
     def list_by_status(self, status: EvaluationStatus) -> list[Evaluation]:
         stmt = (
             select(Evaluation)
@@ -160,15 +174,20 @@ class EvaluationRepository:
         ).first()
         return None if row is None else (row[0], row[1], row[2])
 
-    def update_status(
+    def set_execution_metadata(
         self,
         evaluation_id: uuid.UUID,
-        status: EvaluationStatus,
+        execution_metadata: dict[str, Any],
     ) -> Evaluation | None:
+        """Persist real device/GPU evidence captured from a probe's inference run.
+
+        Never called with fabricated data — the caller only invokes this when
+        a probe actually reports ``device_info``/``inference`` metadata.
+        """
         row = self.get_by_id(evaluation_id)
         if row is None:
             return None
-        row.status = status
+        row.execution_metadata = execution_metadata
         self._session.flush()
         return row
 

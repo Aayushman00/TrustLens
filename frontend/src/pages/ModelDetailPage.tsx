@@ -1,44 +1,40 @@
-import { useEffect, useState, type FormEvent } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
 
 import { apiFetch } from "../api/client";
-import type {
-  EvaluationCreate,
-  EvaluationList,
-  EvaluationMode,
-  EvaluationRead,
-  ModelRead,
-} from "../api/types";
+import type { EvaluationList, EvaluationOptionsRead, EvaluationRead, ModelRead } from "../api/types";
 import ErrorNotice from "../components/ErrorNotice";
+import ContractCatalog from "../components/ContractCatalog";
+import DocumentationSourceForm from "../components/DocumentationSourceForm";
 import Spinner from "../components/Spinner";
 import StatusBadge from "../components/StatusBadge";
 import { modeLabel } from "../components/ModeDisclosure";
+import { shortRevision } from "../lib/contract";
 import { fmtDateTime } from "../lib/format";
+
+type Tab = "overview" | "evaluations" | "card";
 
 export default function ModelDetailPage() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const [model, setModel] = useState<ModelRead | null>(null);
   const [history, setHistory] = useState<EvaluationRead[] | null>(null);
+  const [options, setOptions] = useState<EvaluationOptionsRead | null>(null);
   const [error, setError] = useState<unknown>(null);
-
-  const [mode, setMode] = useState<EvaluationMode>("AI_AUTONOMOUS");
-  const [task, setTask] = useState("");
-  const [dataset, setDataset] = useState("");
-  const [createError, setCreateError] = useState<unknown>(null);
-  const [creating, setCreating] = useState(false);
+  const [tab, setTab] = useState<Tab>("overview");
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
       try {
-        const [row, evals] = await Promise.all([
+        const [row, evals, opts] = await Promise.all([
           apiFetch<ModelRead>(`/v1/models/${id}`),
           apiFetch<EvaluationList>("/v1/evaluations?limit=200"),
+          apiFetch<EvaluationOptionsRead>(`/v1/models/${id}/evaluation-options`),
         ]);
         if (!cancelled) {
           setModel(row);
           setHistory(evals.items.filter((e) => e.model_id === row.id));
+          setOptions(opts);
         }
       } catch (err) {
         if (!cancelled) setError(err);
@@ -50,161 +46,175 @@ export default function ModelDetailPage() {
     };
   }, [id]);
 
-  async function handleCreate(event: FormEvent) {
-    event.preventDefault();
-    if (!model) return;
-    setCreateError(null);
-    setCreating(true);
-    const body: EvaluationCreate = { model_id: model.id, evaluation_mode: mode };
-    if (task.trim()) body.task = task.trim();
-    if (dataset.trim()) body.dataset = dataset.trim();
-    try {
-      const created = await apiFetch<EvaluationRead>("/v1/evaluations", {
-        method: "POST",
-        body,
-      });
-      navigate(`/evaluations/${created.id}`);
-    } catch (err) {
-      setCreateError(err);
-      setCreating(false);
-    }
-  }
-
   if (error != null) return <ErrorNotice error={error} />;
   if (model == null) return <Spinner label="Loading model…" />;
 
+  const meta = model.model_metadata ?? {};
+  const license = typeof meta.license === "string" ? meta.license : null;
+  const cardText = typeof meta.card_text === "string" ? meta.card_text : null;
+  const pipelineTag = typeof meta.pipeline_tag === "string" ? meta.pipeline_tag : null;
+  const displayName = model.hf_repo_id.split("/").pop() ?? model.hf_repo_id;
+
   return (
     <>
-      <div className="page-header">
-        <div>
-          <h1>{model.hf_repo_id}</h1>
-          <p className="muted">Model #{model.id}</p>
+      <div className="identity-header">
+        <div className="identity-title">
+          <h1>{displayName}</h1>
+          <span className={`badge ${model.revision ? "badge-yes" : "badge-no"}`}>
+            {model.revision ? "Available locally" : "No pinned revision"}
+          </span>
         </div>
+        <Link to={`/evaluations/new?modelId=${model.id}`} className="btn">
+          Evaluate model
+        </Link>
       </div>
-      <div className="grid-2">
-        <div>
+      <div className="identity-meta">
+        <span className="identity-meta-item">
+          Repository:{" "}
+          <a href={`https://huggingface.co/${model.hf_repo_id}`} target="_blank" rel="noreferrer">
+            {model.hf_repo_id}
+          </a>
+        </span>
+        <span className="identity-meta-item">
+          Revision: <strong className="mono">{shortRevision(model.revision)}</strong>
+        </span>
+        {pipelineTag ? (
+          <span className="identity-meta-item">
+            Task: <strong>{pipelineTag.replaceAll("-", " ")}</strong>
+          </span>
+        ) : null}
+        <span className="identity-meta-item">Imported {fmtDateTime(model.created_at)}</span>
+      </div>
+
+      <div className="tabs" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "overview"}
+          className={`tab ${tab === "overview" ? "active" : ""}`}
+          onClick={() => setTab("overview")}
+        >
+          Overview
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "evaluations"}
+          className={`tab ${tab === "evaluations" ? "active" : ""}`}
+          onClick={() => setTab("evaluations")}
+        >
+          Evaluations ({history?.length ?? 0})
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "card"}
+          className={`tab ${tab === "card" ? "active" : ""}`}
+          onClick={() => setTab("card")}
+        >
+          Model Card
+        </button>
+      </div>
+
+      {tab === "overview" ? (
+        <>
+          <div className="card">
+            <h2>Available evaluation contracts</h2>
+            <p className="muted">
+              These are the only evaluations TrustLens can run model-faithfully for this exact
+              model + revision. Nothing here is inferred or substituted.
+            </p>
+            {options ? <ContractCatalog options={options} /> : <Spinner label="Loading contracts…" />}
+          </div>
           <div className="card">
             <h2>Details</h2>
             <dl className="kv">
-              <dt>Repo</dt>
-              <dd>
-                <a
-                  href={`https://huggingface.co/${model.hf_repo_id}`}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {model.hf_repo_id}
-                </a>
-              </dd>
+              <dt>Model ID</dt>
+              <dd>{model.id}</dd>
               <dt>Revision</dt>
-              <dd className="mono">{model.revision ?? "—"}</dd>
+              <dd className="mono">{model.revision ?? "Unavailable"}</dd>
               <dt>Checksum</dt>
-              <dd className="mono">{model.checksum ?? "—"}</dd>
-              <dt>Imported</dt>
-              <dd>{fmtDateTime(model.created_at)}</dd>
+              <dd className="mono">{model.checksum ?? "Not collected"}</dd>
+              <dt>License</dt>
+              <dd>{license ?? "Not disclosed"}</dd>
             </dl>
           </div>
-          <div className="card">
-            <h2>Evaluations of this model</h2>
-            {history == null ? <Spinner label="Loading…" /> : null}
-            {history != null && history.length === 0 ? (
-              <p className="empty">None yet — start one on the right.</p>
-            ) : null}
-            {history != null && history.length > 0 ? (
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Evaluation</th>
-                      <th>Mode</th>
-                      <th>Status</th>
-                      <th>Created</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {history.map((evaluation) => (
-                      <tr key={evaluation.id}>
-                        <td>
-                          <Link to={`/evaluations/${evaluation.id}`} className="mono">
-                            {evaluation.id.slice(0, 8)}…
-                          </Link>
-                        </td>
-                        <td>{modeLabel(evaluation.evaluation_mode)}</td>
-                        <td>
-                          <StatusBadge status={evaluation.status} />
-                        </td>
-                        <td className="muted">{fmtDateTime(evaluation.created_at)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : null}
-          </div>
-        </div>
+        </>
+      ) : null}
+
+      {tab === "evaluations" ? (
         <div className="card">
-          <h2>New evaluation</h2>
-          <form className="form" onSubmit={handleCreate}>
-            <div className="field">
-              Mode
-              <label className="radio-row">
-                <input
-                  type="radio"
-                  name="mode"
-                  checked={mode === "AI_AUTONOMOUS"}
-                  onChange={() => setMode("AI_AUTONOMOUS")}
-                />
-                <span>
-                  Auto-finalize (no human review) — pipeline completes without a
-                  reviewer. Default engine is deterministic: O/S/D are not generated
-                  and FRIES is withheld. Results are marked <em>not human-reviewed</em>.
-                </span>
-              </label>
-              <label className="radio-row">
-                <input
-                  type="radio"
-                  name="mode"
-                  checked={mode === "AI_ASSISTED"}
-                  onChange={() => setMode("AI_ASSISTED")}
-                />
-                <span>
-                  Human review before finalize — pauses at <em>awaiting review</em>.
-                  A reviewer records human-controlled S (deterministic) or edits
-                  heuristic O/S/D (legacy admin path) before finalize. This is not
-                  LLM interpretation.
-                </span>
-              </label>
+          {history == null ? <Spinner label="Loading…" /> : null}
+          {history != null && history.length === 0 ? (
+            <p className="empty">
+              None yet — <Link to={`/evaluations/new?modelId=${model.id}`}>start one</Link>.
+            </p>
+          ) : null}
+          {history != null && history.length > 0 ? (
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Evaluation</th>
+                    <th>Mode</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {history.map((evaluation) => (
+                    <tr key={evaluation.id}>
+                      <td>
+                        <Link to={`/evaluations/${evaluation.id}`} className="mono">
+                          {evaluation.id.slice(0, 8)}…
+                        </Link>
+                      </td>
+                      <td>{modeLabel(evaluation.evaluation_mode)}</td>
+                      <td>
+                        <StatusBadge status={evaluation.status} />
+                      </td>
+                      <td className="muted">{fmtDateTime(evaluation.created_at)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            <label>
-              Task (optional)
-              <input
-                value={task}
-                onChange={(e) => setTask(e.target.value)}
-                placeholder="e.g. sentiment-classification"
-              />
-              <span className="field-hint">
-                Used by the leaderboard comparability filter.
-              </span>
-            </label>
-            <label>
-              Dataset (optional)
-              <input
-                value={dataset}
-                onChange={(e) => setDataset(e.target.value)}
-                placeholder="e.g. sst2"
-              />
-            </label>
-            <ErrorNotice error={createError} />
-            <button type="submit" className="btn" disabled={creating}>
-              {creating ? "Creating…" : "Create evaluation"}
-            </button>
-            <span className="field-hint">
-              Probe config uses server defaults (deterministic). All five probes run
-              as evidence, not as a FRIES score.
-            </span>
-          </form>
+          ) : null}
         </div>
-      </div>
+      ) : null}
+
+      {tab === "card" ? (
+        <div className="card">
+          <h2>Model card disclosures</h2>
+          <dl className="kv">
+            <dt>License</dt>
+            <dd>{license ?? "Not disclosed"}</dd>
+            <dt>Pipeline tag</dt>
+            <dd>{pipelineTag ?? "Not disclosed"}</dd>
+          </dl>
+          <h2 style={{ marginTop: "1.2rem" }}>Card text</h2>
+          {cardText ? (
+            <pre className="json-view">{cardText}</pre>
+          ) : (
+            <p className="empty">Not collected for this model.</p>
+          )}
+          <p className="field-hint">
+            This is the raw Hugging Face model-card text used by the Integrity, Explainability
+            and Safety probes — TrustLens does not rewrite or summarize it.
+          </p>
+        </div>
+      ) : null}
+
+      {tab === "card" ? (
+        <div className="card">
+          <h2>Documentation sources</h2>
+          <p className="muted">
+            The pinned-revision Hugging Face card evidence (auto-recorded at import) plus any
+            documentation you attach — papers, safety cards, eval reports.
+          </p>
+          <DocumentationSourceForm modelId={model.id} />
+        </div>
+      ) : null}
     </>
   );
 }

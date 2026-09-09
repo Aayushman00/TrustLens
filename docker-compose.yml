@@ -124,6 +124,30 @@ services:
       HF_HOME: /cache/huggingface
     volumes:
       - hf_cache:/cache/huggingface
+    # GPU passthrough is requested by default (Compose Spec device
+    # reservation below). This REQUIRES the NVIDIA Container Toolkit (Linux)
+    # or Docker Desktop with the WSL2 backend + a WSL2-capable NVIDIA driver
+    # (Windows) — see docker-compose.gpu.yml's header comment for exact
+    # prerequisites/verification steps (`nvidia-smi` on host, then
+    # `docker run --gpus all ... nvidia-smi`).
+    #
+    # On a host with NO NVIDIA runtime configured at all, this reservation
+    # makes `docker compose up` fail outright rather than silently falling
+    # back — Compose cannot satisfy a `driver: nvidia` reservation without
+    # the runtime present. If you don't have an NVIDIA GPU/toolkit, run:
+    #   docker compose -f docker-compose.yml -f docker-compose.cpu-only.yml up --build worker
+    # which resets this reservation so the worker builds/runs CPU-only.
+    # Either way, actual CPU vs CUDA selection inside the container is always
+    # runtime-detected in-process (app/inference/device.py) — the Compose
+    # config only controls whether the GPU device is visible to Docker at
+    # all, never which device torch picks.
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     depends_on:
       postgres:
         condition: service_healthy

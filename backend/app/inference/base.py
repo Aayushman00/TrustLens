@@ -24,7 +24,10 @@ class DecisionMode(str, enum.Enum):
 class InferenceConfig:
     task_type: TaskType = TaskType.MULTICLASS_CLASSIFICATION
     batch_size: int = 8
-    device: str = "cpu"
+    # "auto" resolves to CUDA when genuinely available, else CPU (see
+    # app.inference.device.resolve_device) — never a hardcoded "cpu" default
+    # that silently ignores a present GPU.
+    device: str = "auto"
     max_length: int = 256
     decision: DecisionMode = DecisionMode.ARGMAX
     binary_threshold: float = 0.5
@@ -48,6 +51,14 @@ class InferenceMetadata:
     batch_size: int
     backend: str
     num_labels: int | None = None
+    # GPU/device-decision evidence (app.inference.device.DeviceDecision) —
+    # never fabricated; None/False when detection genuinely found nothing.
+    execution_device: str | None = None
+    gpu_available: bool | None = None
+    gpu_name: str | None = None
+    cuda_available: bool | None = None
+    device_reason: str | None = None
+    fallback_reason: str | None = None
 
 
 @dataclass(frozen=True)
@@ -58,6 +69,12 @@ class DeviceInfo:
     dtype: str | None
     batch_size: int
     backend: str
+    execution_device: str | None = None
+    gpu_available: bool | None = None
+    gpu_name: str | None = None
+    cuda_available: bool | None = None
+    device_reason: str | None = None
+    fallback_reason: str | None = None
 
 
 @dataclass(frozen=True)

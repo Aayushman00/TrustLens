@@ -8,7 +8,8 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, get_db
 from app.db.models import User
 from app.schemas.common import ErrorResponse
-from app.schemas.models import ModelCreate, ModelList, ModelRead
+from app.schemas.models import EvaluationOptionsRead, ModelCreate, ModelList, ModelRead
+from app.services.evaluation_options import build_evaluation_options
 from app.services.model_service import ModelService
 
 router = APIRouter(prefix="/models", tags=["models"])
@@ -56,3 +57,24 @@ def get_model(
 ) -> ModelRead:
     row = ModelService(db).get_model(model_id)
     return ModelRead.model_validate(row)
+
+
+@router.get(
+    "/{model_id}/evaluation-options",
+    response_model=EvaluationOptionsRead,
+    summary="Approved evaluation contracts for this model",
+    description=(
+        "Read-only reflection of the existing pairing / robustness-compat "
+        "registries for this model's exact hf_repo_id + frozen revision. "
+        "Never a fallback or an invented contract — an unmatched model gets "
+        "empty fairness/robustness lists."
+    ),
+    responses={401: {"model": ErrorResponse}, 404: {"model": ErrorResponse}},
+)
+def get_evaluation_options(
+    model_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> EvaluationOptionsRead:
+    row = ModelService(db).get_model(model_id)
+    return build_evaluation_options(row, requester=current_user)

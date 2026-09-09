@@ -49,7 +49,7 @@ export function setAuthFailureHandler(handler: (() => void) | null): void {
 }
 
 interface RequestOptions {
-  method?: "GET" | "POST";
+  method?: "GET" | "POST" | "DELETE";
   body?: unknown;
   /** Skip the Authorization header (login/refresh). */
   anonymous?: boolean;
@@ -134,6 +134,26 @@ export async function apiFetch<T>(
     }
   }
 
+  if (!response.ok) throw await parseError(response);
+  if (response.status === 204) return undefined as T;
+  return (await response.json()) as T;
+}
+
+/** Multipart upload (local dataset files) — apiFetch is JSON-only, this is the
+ * one exception. No manual Content-Type: the browser sets the multipart
+ * boundary. Files stay on this TrustLens instance's local stack — this is
+ * not a call to a hosted/cloud service. */
+export async function apiUpload<T>(path: string, file: File): Promise<T> {
+  const headers: Record<string, string> = {};
+  const token = getAccessToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const form = new FormData();
+  form.append("file", file);
+  const response = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    headers,
+    body: form,
+  });
   if (!response.ok) throw await parseError(response);
   return (await response.json()) as T;
 }

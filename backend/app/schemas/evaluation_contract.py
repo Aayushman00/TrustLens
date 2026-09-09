@@ -23,6 +23,7 @@ class EvaluationContractV1(BaseModel):
         "registry",
         "proxy_lr",
         "documentation_only",
+        "user_dataset",
     ]
 
     pairing_id: str | None = None
@@ -36,6 +37,15 @@ class EvaluationContractV1(BaseModel):
     label_space: list[str] | list[int] | None = None
     modality: str | None = None
     input_adapter: str | None = None
+
+    # kind="user_dataset" only — frozen identity of the user's own local
+    # Fairness dataset. Never presented as an approved/certified benchmark.
+    user_dataset_id: str | None = None
+    dataset_uri: str | None = None
+    dataset_content_hash: str | None = None
+    target_column: str | None = None
+    group_column: str | None = None
+    text_column: str | None = None
 
 
 __all__ = ["EvaluationContractV1"]

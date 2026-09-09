@@ -103,7 +103,7 @@ data/minio/
 artifacts/
 evidence/
 reports/generated/
-storage/
+/storage/
 tmp/
 temp/
 .cache/
@@ -148,6 +148,8 @@ log/
 # Cursor — ignore local machine state; keep project plans/docs tracked
 .cursor/*
 !.cursor/plans/
+.claude/
+.codegraph/
 
 # -----------------------------------------------------------------------------
 # OS files
@@ -182,6 +184,5 @@ FRIES_Trust_Score_Notes.md
 document.md
 papers/
 implementation/
-scripts/
 docs/TRUSTLENS_*.md
-configs/supported_*.yaml
+stitch*/

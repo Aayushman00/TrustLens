@@ -134,25 +134,32 @@ def test_flags_persisted_on_all_five_probes(
         assert isinstance(row.metric_values["flags"], list)
 
 
-def test_report_409_withheld_not_unfinalized_wording(
+def test_report_withheld_returns_honest_complete_report_not_409(
     api_client: TestClient,
     auth_headers: dict[str, str],
     db_session: Session,
     report_store: FakeReportStore,
 ) -> None:
+    """Phase 5 superseded the old honest-409 wording with something more
+    honest still: a FINALIZED-but-withheld evaluation now gets a real,
+    complete report (all probe evidence, gates, limitations) with an
+    explicit withheld score section — rather than an error withholding the
+    evidence entirely."""
     eval_id, hf_repo_id = _create_eval(api_client, auth_headers)
     _run(db_session, eval_id, hf_repo_id)
     response = api_client.get(f"/v1/reports/{eval_id}", headers=auth_headers)
-    assert response.status_code == 409, response.text
+    assert response.status_code == 200, response.text
     body = response.json()
-    assert body["code"] == "NOT_FINALIZED"
-    assert body["details"]["status"] == "FINALIZED"
-    assert body["details"]["scoring_withheld"] is True
-    message = body["message"].lower()
-    assert "not finalized yet" not in message
-    assert "finalize first" not in message
-    assert "withheld" in message
-    assert report_store.objects == {}
+    assert body["fries_score"] is None
+    report_json = body["report_json"]
+    assert report_json["score"]["scoring_withheld"] is True
+    assert report_json["score"]["fries_score"] is None
+    headline = report_json["executive_summary"]["headline"].lower()
+    assert "withheld" in headline
+    # Never a fabricated 0 or placeholder score standing in for "withheld".
+    assert report_json["score"]["dimension_scores"] == {}
+    assert len(report_json["probes"]) == 5
+    assert report_store.objects != {}
 
 
 def test_extra_heuristic_ignored_stays_deterministic(

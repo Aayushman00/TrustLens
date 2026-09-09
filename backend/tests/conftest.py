@@ -1,7 +1,10 @@
 """Shared fixtures for DB integration tests.
 
-Tests that need Postgres skip when ``DATABASE_URL`` is unset or unreachable.
-Compose service hostname ``postgres`` is rewritten to ``127.0.0.1`` for host-side runs.
+DB-backed tests connect only through ``TEST_DATABASE_URL`` — never
+``DATABASE_URL`` (the development database) — and skip cleanly when no
+database is configured at all. See ``resolve_test_database_url`` (audit
+P1-2). Compose service hostname ``postgres`` is rewritten to ``127.0.0.1``
+for host-side runs.
 """
 
 from __future__ import annotations
@@ -11,12 +14,23 @@ import uuid
 from collections.abc import Iterator
 from pathlib import Path
 from typing import TYPE_CHECKING
+from urllib.parse import urlsplit
 
 from dotenv import load_dotenv
 
 import pytest
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
+
+# The exact database name TrustLens development/Compose uses (.env.example,
+# docker-compose.yml POSTGRES_DB). TEST_DATABASE_URL must never resolve to
+# this name — that is precisely the dev database the destructive migration
+# test (test_migrations.py) would otherwise be able to wipe (audit P1-2).
+_KNOWN_DEV_DB_NAMES = {"trustlens"}
+
+
+class UnsafeTestDatabaseError(RuntimeError):
+    """TEST_DATABASE_URL is missing or unsafe — never silently use DATABASE_URL."""
 
 
 def _bootstrap_test_env() -> None:
@@ -28,6 +42,10 @@ def _bootstrap_test_env() -> None:
     db_url = os.environ.get("DATABASE_URL")
     if db_url and "@postgres:" in db_url:
         os.environ["DATABASE_URL"] = db_url.replace("@postgres:", "@127.0.0.1:")
+
+    test_db_url = os.environ.get("TEST_DATABASE_URL")
+    if test_db_url and "@postgres:" in test_db_url:
+        os.environ["TEST_DATABASE_URL"] = test_db_url.replace("@postgres:", "@127.0.0.1:")
 
     redis_url = os.environ.get("REDIS_URL")
     if redis_url and "redis://redis:" in redis_url:
@@ -89,13 +107,58 @@ BACKEND_ROOT = Path(__file__).resolve().parents[1]
 get_settings.cache_clear()
 
 
-def resolve_database_url() -> str | None:
-    get_settings.cache_clear()
-    url = os.environ.get("DATABASE_URL") or get_settings().database_url
-    if not url:
+def _db_name(url: str) -> str:
+    return urlsplit(url).path.lstrip("/").split("?", 1)[0].lower()
+
+
+def resolve_test_database_url() -> str | None:
+    """Resolve the dedicated test database URL — the ONLY database DB-backed
+    tests may connect to. Never reads/falls back to DATABASE_URL.
+
+    Returns ``None`` only when no database is configured at all (a pure
+    unit-only local run with no ``.env``/Postgres present) — DB-backed tests
+    skip in that case, exactly as before this fix. The moment any database
+    connection is configured (``DATABASE_URL`` set, e.g. from ``.env``),
+    ``TEST_DATABASE_URL`` becomes mandatory: this is precisely the ambiguous
+    state the audit flagged, where tests could silently reach the real
+    development database (P1-2).
+    """
+    test_url = os.environ.get("TEST_DATABASE_URL")
+    dev_url = os.environ.get("DATABASE_URL")
+
+    if not test_url and not dev_url:
         return None
-    # Host pytest cannot resolve Compose DNS name `postgres`
-    return url.replace("@postgres:", "@127.0.0.1:")
+
+    if not test_url:
+        raise UnsafeTestDatabaseError(
+            "TEST_DATABASE_URL is not set, but a database connection is "
+            "configured (DATABASE_URL). DB-backed tests — including the "
+            "destructive Alembic migration test — require a dedicated "
+            "TEST_DATABASE_URL and will never fall back to DATABASE_URL. Set "
+            "TEST_DATABASE_URL to a distinctly-named database, e.g.\n"
+            "  postgresql+psycopg2://trustlens:trustlens@127.0.0.1:5432/trustlens_test\n"
+            "See backend/tests/README.md."
+        )
+
+    url = test_url.replace("@postgres:", "@127.0.0.1:")
+    db_name = _db_name(url)
+    if db_name in _KNOWN_DEV_DB_NAMES:
+        raise UnsafeTestDatabaseError(
+            f"TEST_DATABASE_URL points at database {db_name!r}, which matches "
+            "the known TrustLens development/Compose database name. Refusing "
+            "to run DB-backed tests — including the destructive migration "
+            "test — against it. Use a distinctly-named test database (e.g. "
+            f"{db_name}_test)."
+        )
+
+    normalized_dev = (dev_url or "").replace("@postgres:", "@127.0.0.1:")
+    if normalized_dev and url == normalized_dev:
+        raise UnsafeTestDatabaseError(
+            "TEST_DATABASE_URL is identical to DATABASE_URL. Tests must use a "
+            "database dedicated to testing, never the development database."
+        )
+
+    return url
 
 
 def _alembic_config(database_url: str) -> Config:
@@ -107,16 +170,20 @@ def _alembic_config(database_url: str) -> Config:
 
 @pytest.fixture(scope="session")
 def database_url() -> str:
-    url = resolve_database_url()
+    """The isolated test database URL — every DB-backed test (ORM, API,
+    lifecycle, and the destructive migration round-trip) connects only
+    through this fixture, which resolves exclusively from
+    ``TEST_DATABASE_URL`` (see ``resolve_test_database_url``)."""
+    url = resolve_test_database_url()
     if not url:
-        pytest.skip("DATABASE_URL not set — skipping DB integration tests")
+        pytest.skip("No database configured — skipping DB integration tests")
     reset_engine()
     engine = get_engine(url)
     try:
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
     except Exception as exc:
-        pytest.skip(f"Postgres unreachable at DATABASE_URL ({exc})")
+        pytest.skip(f"Postgres unreachable at TEST_DATABASE_URL ({exc})")
     return url
 
 

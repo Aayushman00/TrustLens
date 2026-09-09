@@ -11,7 +11,7 @@ import string
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
-from app.inference.base import DecisionMode, InferenceConfig, InferenceBackend, TaskType
+from app.inference.base import DecisionMode, DeviceInfo, InferenceConfig, InferenceBackend, TaskType
 from app.inference.errors import MODEL_LOAD_ERROR, InferenceError
 from app.inference.local_hf import LocalHFBackend
 
@@ -35,6 +35,7 @@ class RobustnessRunResult:
     aligned_rows: list[dict[str, Any]] = field(default_factory=list)
     insufficient_evidence: bool = False
     insufficient_reason: str | None = None
+    device_info: DeviceInfo | None = None
 
 
 class RobustnessRunner(Protocol):
@@ -110,7 +111,7 @@ class TransformersCharSwapRunner:
         config = inference_config or InferenceConfig(
             task_type=TaskType.MULTICLASS_CLASSIFICATION,
             decision=DecisionMode.ARGMAX,
-            device="cpu",
+            device="auto",
         )
         try:
             loaded = backend.load(
@@ -128,6 +129,7 @@ class TransformersCharSwapRunner:
                 details={"cause": str(exc)},
             ) from exc
 
+        device_info = backend.device_info()
         num_labels = loaded.num_labels
         rng = random.Random(seed)
         n_requested = len(samples)
@@ -172,6 +174,7 @@ class TransformersCharSwapRunner:
                 label_compat_fraction=label_compat_fraction,
                 insufficient_evidence=True,
                 insufficient_reason="no label-compatible samples after filter",
+                device_info=device_info,
             )
 
         try:
@@ -235,4 +238,5 @@ class TransformersCharSwapRunner:
             perturbation_coverage=perturbation_coverage,
             label_compat_fraction=label_compat_fraction,
             aligned_rows=aligned_rows,
+            device_info=device_info,
         )

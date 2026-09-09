@@ -15,6 +15,7 @@ from app.inference.base import (
     PredictionRecord,
     TaskType,
 )
+from app.inference.device import DeviceDecision, resolve_device
 from app.inference.errors import (
     INFERENCE_ERROR,
     INVALID_INPUT,
@@ -65,6 +66,7 @@ class LocalHFBackend:
         self._tokenizer: Any = None
         self._model: Any = None
         self._device: Any = None
+        self._device_decision: DeviceDecision | None = None
         self._loaded_info = LoadedModelInfo()
         self.is_loaded = False
 
@@ -119,9 +121,18 @@ class LocalHFBackend:
                 details={"model_ref": ref, "revision": revision, "cause": str(exc)},
             ) from exc
 
-        device = torch.device(self._config.device)
+        decision = resolve_device(self._config.device)
+        device = torch.device(decision.device)
         model.to(device)
         model.eval()
+        self._device_decision = decision
+        if decision.fallback_reason:
+            logger.info(
+                "inference_device_fallback requested=%s selected=%s reason=%s",
+                decision.requested_device,
+                decision.device,
+                decision.fallback_reason,
+            )
 
         num_labels = getattr(model.config, "num_labels", None)
         problem_type = getattr(model.config, "problem_type", None)
@@ -264,25 +275,25 @@ class LocalHFBackend:
                 dtype = str(next(self._model.parameters()).dtype)
             except StopIteration:
                 dtype = None
-        device_name: str | None = None
-        if self._device is not None and str(self._device).startswith("cuda"):
-            try:
-                import torch
-
-                idx = self._device.index if self._device.index is not None else 0
-                device_name = torch.cuda.get_device_name(idx)
-            except Exception:  # noqa: BLE001
-                device_name = str(self._device)
+        decision = self._device_decision
+        device_str = decision.device if decision is not None else self._config.device
+        device_name = decision.gpu_name if decision is not None else None
         return InferenceMetadata(
             model_ref=self._model_ref or "",
             revision=self._revision,
             task_type=self._config.task_type.value,
-            device=self._config.device,
+            device=device_str,
             device_name=device_name,
             dtype=dtype,
             batch_size=self._config.batch_size,
             backend=_BACKEND_ID,
             num_labels=self._loaded_info.num_labels,
+            execution_device=decision.execution_device if decision is not None else None,
+            gpu_available=decision.gpu_available if decision is not None else None,
+            gpu_name=decision.gpu_name if decision is not None else None,
+            cuda_available=decision.cuda_available if decision is not None else None,
+            device_reason=decision.device_reason if decision is not None else None,
+            fallback_reason=decision.fallback_reason if decision is not None else None,
         )
 
     def device_info(self) -> DeviceInfo:
@@ -304,12 +315,19 @@ class LocalHFBackend:
             dtype=meta.dtype,
             batch_size=meta.batch_size,
             backend=meta.backend,
+            execution_device=meta.execution_device,
+            gpu_available=meta.gpu_available,
+            gpu_name=meta.gpu_name,
+            cuda_available=meta.cuda_available,
+            device_reason=meta.device_reason,
+            fallback_reason=meta.fallback_reason,
         )
 
     def close(self) -> None:
         self._tokenizer = None
         self._model = None
         self._device = None
+        self._device_decision = None
         self._model_ref = None
         self._revision = None
         self._loaded_info = LoadedModelInfo()

@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 
 import ErrorNotice from "../components/ErrorNotice";
 import { useAuth } from "../auth/AuthContext";
@@ -34,8 +34,15 @@ export default function LoginPage() {
   return (
     <div className="page-center">
       <div className="card login-card">
+        <span className="local-engine-tag" style={{ marginBottom: "0.9rem" }}>
+          <span className="local-engine-dot" aria-hidden="true" />
+          Local Engine
+        </span>
         <h1 className="brand-title">TrustLens</h1>
-        <p className="muted">Local-first ML evaluation — sign in to continue.</p>
+        <p className="muted">
+          Local-first, evidence-based ML evaluation. Sign in to continue — evaluations run and
+          store evidence on this machine.
+        </p>
         <form onSubmit={handleSubmit} className="form">
           <label>
             Email
@@ -63,6 +70,10 @@ export default function LoginPage() {
             {submitting ? "Signing in…" : "Sign in"}
           </button>
         </form>
+        <p className="link-row">
+          <Link to="/forgot-password">Forgot password?</Link>
+          <Link to="/create-account">Create account</Link>
+        </p>
         <details className="seed-hint">
           <summary>Dev seed users</summary>
           <ul>

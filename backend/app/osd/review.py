@@ -19,13 +19,22 @@ from app.schemas.modes import disclaimer_for, METHODOLOGY_STATUS_PROPOSED
 
 ASSISTED_SOURCE = "human_review_assisted"
 
+# Per-field O/S/D provenance tag for values a human explicitly entered/
+# confirmed via the review endpoint — never inferred or fabricated. Kept as
+# a stable string so a future LLM-assisted workflow can populate the same
+# O_source/S_source/D_source keys with "llm_assisted" (paired with an
+# explicit human-confirmation flag) without changing this schema.
+HUMAN_SOURCE = "human"
+
 _METHODOLOGY_NOTE_HEURISTIC = (
     "Legacy heuristic O/S/D was PROPOSED (requires validation); the values here "
     "were human approved/edited. Not an LLM assessment."
 )
 _METHODOLOGY_NOTE_DETERMINISTIC = (
-    "Deterministic OSD v1 — O unavailable (no approved mapping); S may be "
-    "human-supplied; D unavailable. FRIES withheld until all O/S/D are complete."
+    "Deterministic OSD v1 — the agent never proposes O, S, or D (no approved "
+    "automatic mapping exists yet); all three are human-entered assessment, "
+    "not measured model properties. FRIES withheld until all O/S/D are "
+    "complete for every required aspect."
 )
 
 
@@ -75,9 +84,11 @@ def merge_review_aspects(
 ) -> tuple[list[dict[str, Any]], bool]:
     """Merge reviewer edits over the agent suggestion.
 
-    Returns ``(approved_aspects, human_changed)``. On the deterministic path
-    O/D are unavailable and only explicit human S is accepted; ``accept_all``
-    records evidence acceptance without fabricating O/S/D.
+    Returns ``(approved_aspects, human_changed)``. On the deterministic path,
+    O, S, and D are all independently human-enterable per aspect (the agent
+    itself never proposes any of them — it always abstains); each field the
+    reviewer omits stays ``None`` on that aspect, never defaulted.
+    ``accept_all`` records evidence acceptance without fabricating O/S/D.
     """
     if _is_deterministic(agent_suggestion):
         return _merge_deterministic(agent_suggestion, edits, accept_all=accept_all)
@@ -177,23 +188,14 @@ def _merge_deterministic(
         edit = edits_by_aspect.get(name)
         if edit is None:
             continue
-        if edit.get("O") is not None:
-            raise ValueError(
-                f"aspect {name}: O is unavailable — human cannot supply O"
-            )
-        if edit.get("D") is not None:
-            raise ValueError(
-                f"aspect {name}: D is unavailable — human cannot supply D"
-            )
-        if edit.get("S") is None:
-            raise ValueError(
-                f"aspect {name}: explicit human S required when editing on the "
-                "deterministic path"
-            )
+        # Each of O, S, D is independently optional (AspectOSDEdit only
+        # requires at least one field to be present on the edit itself).
+        # Whatever the reviewer omits stays None here — never defaulted.
         entry = _partial_entry(edit, name)
-        agent_s = agent_aspects[name].get("S")
-        if agent_s != entry["S"]:
-            human_changed = True
+        agent_entry = agent_aspects[name]
+        for field in ("O", "S", "D"):
+            if agent_entry.get(field) != entry[field]:
+                human_changed = True
         approved.append(entry)
     return approved, human_changed
 
@@ -261,14 +263,24 @@ def to_finalized_osd_assisted(
     aspects_out: list[dict[str, Any]] = []
     for entry in approved_aspects:
         aspect = str(entry.get("aspect", ""))
-        aspects_out.append(
-            {
-                "aspect": aspect,
-                "O": entry.get("O"),
-                "S": entry.get("S"),
-                "D": entry.get("D"),
-            }
-        )
+        out_entry: dict[str, Any] = {
+            "aspect": aspect,
+            "O": entry.get("O"),
+            "S": entry.get("S"),
+            "D": entry.get("D"),
+        }
+        if deterministic:
+            # On the deterministic path the agent itself never proposes O,
+            # S, or D (it always abstains) — _merge_deterministic guarantees
+            # every non-null value reaching here came from an explicit
+            # reviewer edit (accept_all short-circuits to an empty approved
+            # list), so tagging each present field "human" here is never a
+            # fabricated provenance claim. A field the reviewer left blank
+            # stays None with no source tag — never defaulted.
+            out_entry["O_source"] = HUMAN_SOURCE if out_entry["O"] is not None else None
+            out_entry["S_source"] = HUMAN_SOURCE if out_entry["S"] is not None else None
+            out_entry["D_source"] = HUMAN_SOURCE if out_entry["D"] is not None else None
+        aspects_out.append(out_entry)
     complete_count = count_scoring_complete_aspects(aspects_out)
     scoring_complete = complete_count == FRIES_ASPECT_COUNT
     payload: dict[str, Any] = {

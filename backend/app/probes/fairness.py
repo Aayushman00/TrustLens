@@ -9,6 +9,11 @@ from typing import Any, Protocol
 
 from app.datasets.loader import DatasetLoadError, load_fairness_subset, load_pairing_subset
 from app.datasets.registry import DatasetSpec, get_dataset_spec
+from app.datasets.user_dataset import (
+    UserDatasetError,
+    discover_group_values,
+    load_rows_for_evaluation,
+)
 from app.db.enums import FriesDimension, ProbeEvaluationStatus
 from app.inference.adapters import get_adapter
 from app.inference.base import InferenceConfig, InferenceBackend, TaskType
@@ -18,8 +23,12 @@ from app.inference.pairing import SupportedPairing, get_pairing_by_id
 from app.probes.base import ProbeContext, ProbeOutput
 from app.probes.fairness_metrics import compute_fairness_bundle
 from app.probes.fairness_multiclass import MulticlassFairnessResult, evaluate_multiclass_fairness
-from app.probes.fairness_stats import METHODOLOGY_VERSION
-from app.storage.evidence_store import EvidenceStoreError
+from app.probes.fairness_stats import (
+    METHODOLOGY_VERSION,
+    filter_compared_groups,
+    group_accuracies_from_aligned,
+)
+from app.storage.evidence_store import EvidenceStoreError, format_sha256, hashes_equal
 
 logger = logging.getLogger("trustlens.probes.fairness")
 
@@ -268,6 +277,20 @@ class FairnessProbe:
                 min_group_n=min_group_n,
             )
 
+        if kind == "user_dataset":
+            included_raw = extra.get("included_group_values")
+            included_group_values = (
+                set(included_raw) if isinstance(included_raw, list) else None
+            )
+            return self._run_user_dataset(
+                ctx,
+                contract=contract,
+                seed=seed,
+                min_group_n=min_group_n,
+                included_group_values=included_group_values,
+                extra=extra,
+            )
+
         # kind in {None, "documentation_only", "registry"}, or any other
         # value that does not authorize Fairness: no Adult fallback, ever.
         reason = (
@@ -397,7 +420,7 @@ class FairnessProbe:
             config = InferenceConfig(
                 task_type=pairing.task_type_enum(),
                 decision=pairing.decision_mode(),
-                device=str(pairing.preprocessing.get("device", "cpu")),
+                device=str(pairing.preprocessing.get("device", "auto")),
                 max_length=int(pairing.preprocessing.get("max_length", 256)),
                 binary_threshold=float(
                     pairing.output_decoding.binary_threshold
@@ -426,7 +449,14 @@ class FairnessProbe:
                 "dtype": batch.metadata.dtype,
                 "batch_size": batch.metadata.batch_size,
                 "backend": batch.metadata.backend,
+                "inference_backend": batch.metadata.backend,
                 "num_labels": batch.metadata.num_labels,
+                "execution_device": batch.metadata.execution_device,
+                "gpu_available": batch.metadata.gpu_available,
+                "gpu_name": batch.metadata.gpu_name,
+                "cuda_available": batch.metadata.cuda_available,
+                "device_reason": batch.metadata.device_reason,
+                "fallback_reason": batch.metadata.fallback_reason,
             }
         except InferenceError as exc:
             logger.warning("pairing_inference_failed err=%s", exc)
@@ -881,6 +911,320 @@ class FairnessProbe:
             flags=flags,
             confidence=confidence,
             status=ProbeEvaluationStatus.PROXY,
+        )
+
+    def _run_user_dataset(
+        self,
+        ctx: ProbeContext,
+        *,
+        contract: Any,
+        seed: int,
+        min_group_n: int,
+        included_group_values: set[str] | None,
+        extra: dict[str, Any],
+    ) -> ProbeOutput:
+        """User-defined local CSV dataset — exact selected model, no substitution.
+
+        Reuses ``compute_fairness_bundle``/``evaluate_multiclass_fairness``
+        unchanged; only row loading/group discovery differ from the pairing
+        path (a user CSV instead of a pinned HF dataset).
+        """
+        flags: list[str] = ["user_defined_local_dataset"]
+        base_metrics: dict[str, Any] = {
+            "fairness_mode": "not_evaluated",
+            "predictor": "inference_backend",
+            "evaluation_class": "user_dataset",
+            "inference_executed": False,
+            "model_ref": ctx.model_ref,
+            "model_revision": ctx.model_revision,
+            "dataset_key": None,
+            "dataset_revision": None,
+            "user_dataset_id": contract.user_dataset_id,
+            "dataset_format": "csv",
+            "dataset_content_hash": contract.dataset_content_hash,
+            "target_column": contract.target_column,
+            "group_column": contract.group_column,
+            "text_column": contract.text_column,
+            "sensitive_attribute": contract.group_column,
+            "min_group_n": min_group_n,
+            "seed": seed,
+            "note": _NOTE,
+        }
+
+        if ctx.dataset_store is None:
+            skip_reason = "dataset storage is not configured on this TrustLens instance"
+            flags.append("dataset_store_unavailable")
+            return self._finish(
+                ctx,
+                metrics={**base_metrics, "skip_reason": skip_reason},
+                flags=flags,
+                confidence=0.35,
+                status=ProbeEvaluationStatus.FAILED,
+                status_reason=skip_reason,
+            )
+
+        try:
+            data = ctx.dataset_store.get_dataset(storage_uri=contract.dataset_uri)
+        except EvidenceStoreError as exc:
+            flags.append("dataset_fetch_failed")
+            return self._finish(
+                ctx,
+                metrics={**base_metrics, "skip_reason": str(exc)},
+                flags=flags,
+                confidence=0.35,
+                status=ProbeEvaluationStatus.FAILED,
+                status_reason=str(exc),
+            )
+
+        if not hashes_equal(format_sha256(data), contract.dataset_content_hash or ""):
+            skip_reason = "dataset content hash mismatch — refusing to evaluate drifted data"
+            flags.append("dataset_hash_mismatch")
+            return self._finish(
+                ctx,
+                metrics={**base_metrics, "skip_reason": skip_reason},
+                flags=flags,
+                confidence=0.35,
+                status=ProbeEvaluationStatus.FAILED,
+                status_reason=skip_reason,
+            )
+
+        try:
+            observed_groups, missing_summary = discover_group_values(
+                data, group_column=contract.group_column
+            )
+        except UserDatasetError as exc:
+            flags.extend(["dataset_load_failed", "metrics_skipped"])
+            return self._finish(
+                ctx,
+                metrics={**base_metrics, "skip_reason": str(exc)},
+                flags=flags,
+                confidence=0.35,
+                status=ProbeEvaluationStatus.FAILED,
+                status_reason=str(exc),
+            )
+
+        dataset_row_count = sum(int(g["count"]) for g in observed_groups)
+        all_values = {g["value"] for g in observed_groups if g["value"] != "(missing)"}
+        user_excluded = (
+            set() if included_group_values is None else all_values - set(included_group_values)
+        )
+
+        try:
+            rows, exclusions = load_rows_for_evaluation(
+                data,
+                target_column=contract.target_column,
+                group_column=contract.group_column,
+                text_column=contract.text_column,
+                excluded_group_values=user_excluded,
+            )
+        except UserDatasetError as exc:
+            flags.extend(["dataset_load_failed", "metrics_skipped"])
+            return self._finish(
+                ctx,
+                metrics={**base_metrics, "skip_reason": str(exc)},
+                flags=flags,
+                confidence=0.35,
+                status=ProbeEvaluationStatus.FAILED,
+                status_reason=str(exc),
+            )
+
+        base_metrics.update(
+            {
+                "dataset_row_count": dataset_row_count,
+                "observed_groups": observed_groups,
+                "missing_rows": missing_summary,
+                "excluded_rows": {
+                    "missing_target": exclusions["rows_dropped_missing_target"],
+                    "missing_text": exclusions["rows_dropped_missing_text"],
+                    "missing_group": exclusions["rows_dropped_missing_group"],
+                    "user_excluded_group": exclusions["rows_dropped_excluded_group"],
+                },
+                "user_excluded_groups": sorted(user_excluded),
+                "label_encoding": exclusions["label_encoding"],
+                "n_evaluated": len(rows),
+            }
+        )
+
+        label_values_seen = exclusions["label_values_seen"]
+        if len(rows) == 0 or len(label_values_seen) < 2:
+            skip_reason = (
+                "fewer than 2 distinct target classes remain after exclusions"
+                if rows
+                else "no rows remain after missing-value/group exclusions"
+            )
+            flags.extend(["dataset_load_failed", "metrics_skipped"])
+            return self._finish(
+                ctx,
+                metrics={**base_metrics, "skip_reason": skip_reason},
+                flags=flags,
+                confidence=0.35,
+                status=ProbeEvaluationStatus.FAILED,
+                status_reason=skip_reason,
+            )
+
+        is_binary = len(label_values_seen) == 2
+        backend = self._resolve_backend()
+        inference_meta: dict[str, Any] | None = None
+        y_pred: list[int] = []
+        try:
+            config = InferenceConfig(
+                task_type=(
+                    TaskType.BINARY_CLASSIFICATION
+                    if is_binary
+                    else TaskType.MULTICLASS_CLASSIFICATION
+                ),
+            )
+            backend.load(contract.model_ref, revision=contract.model_revision, config=config)
+            texts = [r["text"] for r in rows]
+            batch = backend.predict_batch(texts)
+            y_pred = [int(p.y_hat) for p in batch.predictions]
+            inference_meta = {
+                "model_ref": batch.metadata.model_ref,
+                "revision": batch.metadata.revision,
+                "task_type": batch.metadata.task_type,
+                "device": batch.metadata.device,
+                "device_name": batch.metadata.device_name,
+                "dtype": batch.metadata.dtype,
+                "batch_size": batch.metadata.batch_size,
+                "backend": batch.metadata.backend,
+                "inference_backend": batch.metadata.backend,
+                "num_labels": batch.metadata.num_labels,
+                "execution_device": batch.metadata.execution_device,
+                "gpu_available": batch.metadata.gpu_available,
+                "gpu_name": batch.metadata.gpu_name,
+                "cuda_available": batch.metadata.cuda_available,
+                "device_reason": batch.metadata.device_reason,
+                "fallback_reason": batch.metadata.fallback_reason,
+            }
+        except InferenceError as exc:
+            logger.warning("user_dataset_inference_failed err=%s", exc)
+            flags.extend(["predictor_failed", "metrics_skipped"])
+            return self._finish(
+                ctx,
+                metrics={**base_metrics, "skip_reason": exc.message},
+                flags=flags,
+                confidence=0.35,
+                status=ProbeEvaluationStatus.FAILED,
+                status_reason=exc.message,
+            )
+        finally:
+            backend.close()
+
+        if len(y_pred) != len(rows):
+            skip_reason = "prediction count does not match input count"
+            flags.extend(["predictor_failed", "metrics_skipped"])
+            return self._finish(
+                ctx,
+                metrics={**base_metrics, "skip_reason": skip_reason},
+                flags=flags,
+                confidence=0.35,
+                status=ProbeEvaluationStatus.FAILED,
+                status_reason=skip_reason,
+            )
+
+        base_metrics.update({"inference": inference_meta, "inference_executed": True})
+
+        if is_binary:
+            y_true = [r["label"] for r in rows]
+            sensitive = [r["sensitive"] for r in rows]
+            try:
+                bundle = compute_fairness_bundle(y_true, y_pred, sensitive)
+            except ValueError as exc:
+                flags.append("metrics_skipped")
+                return self._finish(
+                    ctx,
+                    metrics={**base_metrics, "skip_reason": str(exc)},
+                    flags=flags,
+                    confidence=0.4,
+                    status=ProbeEvaluationStatus.FAILED,
+                    status_reason=str(exc),
+                )
+            # Reporting-only group-size exclusion metadata — compute_fairness_bundle
+            # itself is called with the unfiltered rows above, unchanged.
+            aligned_for_report = [
+                {"label": y_true[i], "y_hat": y_pred[i], "sensitive": sensitive[i]}
+                for i in range(len(rows))
+            ]
+            per_group_all = group_accuracies_from_aligned(aligned_for_report)
+            _compared, excluded = filter_compared_groups(per_group_all, min_group_n)
+            if excluded:
+                flags.append("thin_groups_excluded")
+            if int(bundle["min_group_n_observed"]) < min_group_n:
+                flags.append("insufficient_slice_size")
+            base_metrics.update(
+                {
+                    "fairness_mode": "user_defined_local",
+                    "demographic_parity_difference": bundle["demographic_parity_difference"],
+                    "equalized_odds_difference": bundle["equalized_odds_difference"],
+                    "subgroup_f1_spread": bundle["subgroup_f1_spread"],
+                    "groups": bundle["groups"],
+                    "min_group_n_observed": bundle["min_group_n_observed"],
+                    "excluded_groups": excluded,
+                    "proposed_mapping": False,
+                    "needs_human_review": True,
+                }
+            )
+            confidence = 0.75 if "insufficient_slice_size" in flags else 0.85
+            return self._finish(
+                ctx,
+                metrics=base_metrics,
+                flags=flags,
+                confidence=confidence,
+                status=ProbeEvaluationStatus.EVALUATED,
+            )
+
+        aligned = [
+            {
+                "text": rows[i]["text"],
+                "label": rows[i]["label"],
+                "sensitive": rows[i]["sensitive"],
+                "y_hat": y_pred[i],
+            }
+            for i in range(len(rows))
+        ]
+        min_total_n = _extra_int(extra, "min_total_n", 200)
+        mc_result = evaluate_multiclass_fairness(
+            aligned,
+            seed=seed,
+            min_total_n=min_total_n,
+            min_group_n=min_group_n,
+            sensitive_attribute=contract.group_column,
+        )
+        base_metrics.update(mc_result.metrics)
+        base_metrics["min_total_n"] = min_total_n
+        base_metrics["fairness_mode"] = (
+            "user_defined_local"
+            if mc_result.status != ProbeEvaluationStatus.FAILED
+            else "not_evaluated"
+        )
+        persisted = {
+            **base_metrics,
+            "uncertainty": mc_result.uncertainty,
+            "reliability": mc_result.reliability,
+            "limitations": mc_result.limitations,
+            "scored_risk_id": mc_result.scored_risk_id,
+            "risks_triggered": mc_result.risks_triggered,
+            "aspect_scoring": mc_result.aspect_scoring,
+            "methodology_version": METHODOLOGY_VERSION,
+        }
+        all_flags = flags + mc_result.flags
+        try:
+            ref = ctx.evidence_store.put_artifact(
+                data=json.dumps(persisted, separators=(",", ":"), default=str).encode("utf-8"),
+                content_type="application/json",
+                probe_name="fairness",
+                evaluation_id=ctx.evaluation_id,
+            )
+        except EvidenceStoreError:
+            raise
+        return ProbeOutput(
+            dimension=FriesDimension.FAIRNESS,
+            metric_values=persisted,
+            confidence=mc_result.confidence,
+            evidence_refs=[ref],
+            flags=all_flags,
+            status=mc_result.status,
+            status_reason=mc_result.status_reason,
         )
 
     def _finish(

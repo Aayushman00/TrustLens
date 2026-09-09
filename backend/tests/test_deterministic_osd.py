@@ -5,8 +5,6 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-import pytest
-
 from app.db.enums import FriesDimension, ProbeEvaluationStatus
 from app.osd.base import METHODOLOGY_STATUS_DETERMINISTIC, AgentContext, ProbeSnapshot
 from app.osd.deterministic import DeterministicOSDMapper
@@ -217,7 +215,9 @@ def test_human_s_merge_withheld_fries() -> None:
     assert finalized["complete_aspect_count"] == 0
 
 
-def test_deterministic_rejects_human_o_and_d() -> None:
+def test_deterministic_accepts_human_o_and_d() -> None:
+    """O and D are independently human-enterable, same as S — the agent itself
+    still never proposes any of the three (it always abstains)."""
     from app.osd.review import merge_review_aspects
 
     suggestion = {
@@ -228,14 +228,17 @@ def test_deterministic_rejects_human_o_and_d() -> None:
             for name in FriesDimension
         ],
     }
-    with pytest.raises(ValueError, match="O is unavailable"):
-        merge_review_aspects(
-            suggestion, [{"aspect": "FAIRNESS", "O": 5, "S": 7}], accept_all=False
-        )
-    with pytest.raises(ValueError, match="D is unavailable"):
-        merge_review_aspects(
-            suggestion, [{"aspect": "FAIRNESS", "S": 7, "D": 5}], accept_all=False
-        )
+    approved_o, changed_o = merge_review_aspects(
+        suggestion, [{"aspect": "FAIRNESS", "O": 5, "S": 7}], accept_all=False
+    )
+    assert changed_o is True
+    assert approved_o == [{"aspect": "FAIRNESS", "O": 5, "S": 7, "D": None}]
+
+    approved_d, changed_d = merge_review_aspects(
+        suggestion, [{"aspect": "FAIRNESS", "S": 7, "D": 5}], accept_all=False
+    )
+    assert changed_d is True
+    assert approved_d == [{"aspect": "FAIRNESS", "O": None, "S": 7, "D": 5}]
 
 
 def test_deterministic_accept_all_no_fabricated_triples() -> None:

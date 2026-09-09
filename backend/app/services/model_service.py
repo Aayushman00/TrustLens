@@ -10,6 +10,7 @@ from app.adapters.base import ModelAdapter
 from app.adapters.hf_hub import HfHubModelAdapter, parse_hf_ref
 from app.api.errors import ConflictError, NotFoundError
 from app.db.models import Model
+from app.db.repositories.documentation import DocumentationSourceRepository
 from app.db.repositories.model import ModelRepository
 from app.schemas.models import ImportHfRequest, ModelCreate
 
@@ -19,6 +20,7 @@ logger = logging.getLogger("trustlens.api")
 class ModelService:
     def __init__(self, session: Session, *, hf_adapter: ModelAdapter | None = None) -> None:
         self._repo = ModelRepository(session)
+        self._documentation_repo = DocumentationSourceRepository(session)
         self._hf_adapter = hf_adapter
 
     def create_model(self, data: ModelCreate) -> Model:
@@ -57,24 +59,32 @@ class ModelService:
         existing = self._repo.get_by_hf_repo_id(record.hf_repo_id)
         if existing is None:
             logger.info("hf_import_create hf_repo_id=%s", record.hf_repo_id)
-            return self._repo.create(
+            row = self._repo.create(
                 hf_repo_id=record.hf_repo_id,
                 model_metadata=record.model_metadata,
                 checksum=record.checksum,
                 revision=record.revision,
             )
+        else:
+            logger.info("hf_import_update hf_repo_id=%s model_id=%s", record.hf_repo_id, existing.id)
+            row = self._repo.update_by_hf_repo_id(
+                record.hf_repo_id,
+                model_metadata=record.model_metadata,
+                checksum=record.checksum,
+                revision=record.revision,
+            )
+            if row is None:
+                # Row could have been deleted concurrently between the lookup above and here.
+                raise NotFoundError(
+                    f"Model '{record.hf_repo_id}' was removed during import",
+                    details={"hf_repo_id": record.hf_repo_id},
+                )
 
-        logger.info("hf_import_update hf_repo_id=%s model_id=%s", record.hf_repo_id, existing.id)
-        row = self._repo.update_by_hf_repo_id(
-            record.hf_repo_id,
-            model_metadata=record.model_metadata,
-            checksum=record.checksum,
-            revision=record.revision,
-        )
-        if row is None:
-            # Row could have been deleted concurrently between the lookup above and here.
-            raise NotFoundError(
-                f"Model '{record.hf_repo_id}' was removed during import",
-                details={"hf_repo_id": record.hf_repo_id},
+        doc_evidence = record.model_metadata.get("documentation_evidence")
+        if isinstance(doc_evidence, dict):
+            self._documentation_repo.replace_hf_source(
+                model_id=row.id,
+                evidence=doc_evidence,
+                source_model_ref=record.hf_repo_id,
             )
         return row

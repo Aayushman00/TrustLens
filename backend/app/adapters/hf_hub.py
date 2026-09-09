@@ -1,9 +1,10 @@
 """Hugging Face Hub model adapter (Phase 6, ADR 0012).
 
 Resolves user-selected HF repo ids/URLs to normalized metadata via the Hub
-metadata APIs only (``HfApi.model_info``, ``HfApi.list_repo_files``,
-``ModelCard.load``). Never downloads model weight files, never crawls/searches
-the Hub, and never scrapes the website.
+metadata APIs only (``HfApi.model_info``, ``HfApi.list_repo_files``, and a
+pinned-revision ``README.md`` fetch — see ``app.documentation.evidence``).
+Never downloads model weight files, never crawls/searches the Hub, and never
+scrapes the website.
 """
 
 from __future__ import annotations
@@ -14,7 +15,7 @@ import re
 from typing import Any
 from urllib.parse import urlparse
 
-from huggingface_hub import HfApi, ModelCard
+from huggingface_hub import HfApi
 from huggingface_hub.utils import (
     GatedRepoError,
     HfHubHTTPError,
@@ -30,6 +31,7 @@ from app.adapters.base import (
     NormalizedModelRecord,
 )
 from app.core.config import get_settings
+from app.documentation.evidence import resolve_hf_documentation_evidence
 
 logger = logging.getLogger("trustlens.adapters.hf_hub")
 
@@ -129,6 +131,14 @@ class HfHubModelAdapter:
         card_data = _to_plain_dict(getattr(info, "card_data", None))
         pipeline_tag = getattr(info, "pipeline_tag", None)
 
+        # Documentation evidence (Part 1): the model card is fetched pinned to
+        # resolved_revision — never the moving default branch — and the fetch
+        # provenance (url/revision/hash/retrieval status) is recorded
+        # alongside the text so Explainability/Safety can cite exactly what
+        # they read and probes/routers can attach the same pointer without a
+        # second Hub round-trip.
+        doc_evidence = self._fetch_documentation_evidence(ref, resolved_revision)
+
         metadata: dict[str, Any] = {
             "source": "huggingface_hub",
             "architecture": architectures[0] if architectures else None,
@@ -136,14 +146,14 @@ class HfHubModelAdapter:
             "task": pipeline_tag,
             "license": card_data.get("license") if card_data else None,
             "tags": list(getattr(info, "tags", None) or []),
-            "card_text": None,
+            "card_text": doc_evidence.content,
             "card_data": card_data,
             "files": self._fetch_file_list(ref, resolved_revision),
             "library_name": getattr(info, "library_name", None),
             "transformers_info": _to_plain_dict(getattr(info, "transformers_info", None)),
             "hub_url": f"https://huggingface.co/{ref}",
+            "documentation_evidence": doc_evidence.as_metadata(),
         }
-        metadata["card_text"] = self._fetch_card_text(ref)
 
         return NormalizedModelRecord(
             hf_repo_id=ref,
@@ -195,11 +205,13 @@ class HfHubModelAdapter:
             logger.warning("hf_list_repo_files_failed hf_repo_id=%s", ref)
             return []
 
-    def _fetch_card_text(self, ref: str) -> str | None:
-        """``ModelCard.load`` has no revision parameter — always reads the default branch."""
-        try:
-            card = ModelCard.load(ref, token=self._token)
-            return getattr(card, "text", None)
-        except Exception:  # noqa: BLE001 - many repos have no card; not fatal
-            logger.info("hf_model_card_unavailable hf_repo_id=%s", ref)
-            return None
+    def _fetch_documentation_evidence(self, ref: str, revision: str | None):  # noqa: ANN201
+        doc_evidence = resolve_hf_documentation_evidence(ref, revision, token=self._token)
+        if doc_evidence.retrieval_status != "ok":
+            logger.info(
+                "hf_model_card_unavailable hf_repo_id=%s revision=%s status=%s",
+                ref,
+                revision,
+                doc_evidence.retrieval_status,
+            )
+        return doc_evidence

@@ -14,7 +14,7 @@ from app.db.enums import FriesDimension, ProbeEvaluationStatus
 from app.schemas.evaluation_contract import EvaluationContractV1
 from app.schemas.evidence import EvidenceRef
 from app.schemas.probe_config import ProbeConfigV1
-from app.storage.evidence_store import EvidenceStore
+from app.storage.evidence_store import DatasetStore, EvidenceStore
 
 FRIES_PROBE_ORDER: tuple[FriesDimension, ...] = (
     FriesDimension.FAIRNESS,
@@ -37,6 +37,8 @@ class ProbeContext:
     model_checksum: str | None = None
     # Phase 7: frozen evaluation contract (not yet consumed by probe logic).
     evaluation_contract: EvaluationContractV1 | None = None
+    # User-defined local Fairness dataset path only (kind="user_dataset").
+    dataset_store: DatasetStore | None = None
 
 
 @dataclass

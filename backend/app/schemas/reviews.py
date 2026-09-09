@@ -1,8 +1,10 @@
 """Human review request/response schemas (Phase 18) — structured accept/edit.
 
 Reviews are structured O/S/D overrides, never free-form-only. On the
-deterministic path only explicit human S is accepted; O and D are unavailable.
-Legacy heuristic reviews may set full O/S/D triples including 0 (veto) and 10.
+deterministic path the agent never proposes O, S, or D — all three are
+independently human-enterable per aspect, each optional; a field the reviewer
+omits stays unset (never defaulted). Legacy heuristic reviews may set full
+O/S/D triples including 0 (veto) and 10.
 """
 
 from __future__ import annotations

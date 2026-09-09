@@ -34,36 +34,96 @@ export default function Layout() {
     navigate("/login");
   }
 
+  const initial = user?.email ? user.email[0]!.toUpperCase() : "?";
+
   return (
     <div className="app-shell">
-      <header className="topbar">
-        <div className="topbar-inner">
-          <NavLink to="/" className="brand">
-            TrustLens
-          </NavLink>
-          <nav className="nav-links">
-            <NavLink to="/" end>
-              Dashboard
-            </NavLink>
-            <NavLink to="/models">Models</NavLink>
-            <NavLink to="/leaderboard">Leaderboard</NavLink>
-          </nav>
-          <div className="topbar-right">
-            <span className={`health-dot health-${health}`} title={`API: ${health}`} />
-            {user ? (
-              <>
-                <span className="user-email">{user.email}</span>
-                <span className={`badge role-${user.role}`}>{user.role}</span>
-                <button type="button" className="btn btn-ghost" onClick={handleLogout}>
-                  Log out
-                </button>
-              </>
-            ) : null}
-          </div>
+      <a href="#main-content" className="skip-link">
+        Skip to content
+      </a>
+      <aside className="sidebar" aria-label="Primary navigation">
+        <NavLink to="/" className="brand">
+          <span className="brand-mark" aria-hidden="true">
+            TL
+          </span>
+          TrustLens
+        </NavLink>
+        <div className="local-engine-tag" title="Evaluations run on this machine — no model upload">
+          <span className="local-engine-dot" aria-hidden="true" />
+          Local Engine
         </div>
-      </header>
-      <main className="container">
-        <Outlet />
+
+        <div className="nav-section-label">Workspace</div>
+        <nav className="nav-links">
+          <NavLink to="/" end>
+            <span className="nav-icon" aria-hidden="true">
+              ⌂
+            </span>
+            Overview
+          </NavLink>
+          <NavLink to="/models">
+            <span className="nav-icon" aria-hidden="true">
+              ▣
+            </span>
+            Models
+          </NavLink>
+          <NavLink to="/evaluations">
+            <span className="nav-icon" aria-hidden="true">
+              ≣
+            </span>
+            Evaluations
+          </NavLink>
+          <NavLink to="/leaderboard">
+            <span className="nav-icon" aria-hidden="true">
+              ⚑
+            </span>
+            Leaderboard
+          </NavLink>
+        </nav>
+
+        <div className="nav-section-label">System</div>
+        <nav className="nav-links">
+          <NavLink to="/documentation">
+            <span className="nav-icon" aria-hidden="true">
+              ▤
+            </span>
+            Documentation
+          </NavLink>
+          <NavLink to="/settings">
+            <span className="nav-icon" aria-hidden="true">
+              ⚙
+            </span>
+            Settings
+          </NavLink>
+        </nav>
+
+        <div className="sidebar-footer">
+          <div className="health-row">
+            <span className={`health-dot health-${health}`} title={`API: ${health}`} />
+            Local API: {health === "ok" ? "connected" : health === "down" ? "unreachable" : "checking…"}
+          </div>
+          {user ? (
+            <>
+              <div className="sidebar-user">
+                <span className="sidebar-user-avatar" aria-hidden="true">
+                  {initial}
+                </span>
+                <div className="sidebar-user-meta">
+                  <div className="sidebar-user-email">{user.email}</div>
+                  <span className={`badge role-${user.role}`}>{user.role}</span>
+                </div>
+              </div>
+              <button type="button" className="btn btn-ghost" onClick={handleLogout}>
+                Log out
+              </button>
+            </>
+          ) : null}
+        </div>
+      </aside>
+      <main className="app-main">
+        <div className="container" id="main-content">
+          <Outlet />
+        </div>
       </main>
     </div>
   );

@@ -15,7 +15,7 @@ from app.probes.registry import ProbeRegistry, default_registry
 from app.schemas.evaluation_contract import EvaluationContractV1
 from app.schemas.internal import EvaluateModelPayload
 from app.schemas.probe_config import parse_probe_config
-from app.storage.evidence_store import EvidenceStore, EvidenceStoreError
+from app.storage.evidence_store import DatasetStore, EvidenceStore, EvidenceStoreError
 
 logger = logging.getLogger("trustlens.probes")
 
@@ -51,6 +51,7 @@ def run_all_probes(
     registry: ProbeRegistry | None = None,
     model_revision: str | None = None,
     model_checksum: str | None = None,
+    dataset_store: DatasetStore | None = None,
 ) -> list[ProbeOutput]:
     """Run F→R→I→E→S; persist each via ProbeResultRepository; return outputs.
 
@@ -76,6 +77,7 @@ def run_all_probes(
         model_revision=model_revision,
         model_checksum=model_checksum,
         evaluation_contract=contract,
+        dataset_store=dataset_store,
     )
     outputs: list[ProbeOutput] = []
     for probe in reg.all_ordered():

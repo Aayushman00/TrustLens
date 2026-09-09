@@ -22,6 +22,8 @@ EXPECTED_TABLES = {
     "final_scores",
     "reports",
     "attack_flags",
+    "documentation_sources",
+    "evaluation_events",
     "alembic_version",
 }
 
@@ -73,4 +75,24 @@ def test_alembic_downgrade_and_reupgrade(
 
     with engine.connect() as conn:
         row = conn.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-    assert row == "002_add_evaluation_created_by"
+    assert row == "007_add_reports_unique_version"
+
+
+@pytest.mark.slow
+def test_reports_unique_evaluation_id_version_constraint_exists(
+    database_url: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """audit P1-6 — the DB constraint is the final invariant regardless of
+    application-level locking (ReportService.lock_for_report_generation)."""
+    monkeypatch.setenv("DATABASE_URL", database_url)
+    reset_engine()
+    command.upgrade(_alembic_config(database_url), "head")
+
+    engine = get_engine(database_url)
+    unique_constraints = inspect(engine).get_unique_constraints("reports")
+    names = {uc["name"] for uc in unique_constraints}
+    assert "uq_reports_evaluation_id_version" in names
+    matching = next(
+        uc for uc in unique_constraints if uc["name"] == "uq_reports_evaluation_id_version"
+    )
+    assert set(matching["column_names"]) == {"evaluation_id", "version"}

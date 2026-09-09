@@ -15,7 +15,7 @@ from app.datasets.registry import DatasetSpec, get_dataset_spec
 from app.db.enums import FriesDimension, ProbeEvaluationStatus
 from app.inference.base import DecisionMode, InferenceConfig
 from app.probes.base import ProbeContext, ProbeOutput
-from app.probes.robustness_compat import resolve_robustness_compat
+from app.probes.robustness_compat import RobustnessCompatEntry, resolve_robustness_compat
 from app.probes.robustness_eval import evaluate_classification_robustness
 from app.probes.robustness_nlp import (
     RobustnessRunner,
@@ -24,6 +24,7 @@ from app.probes.robustness_nlp import (
     task_type_from_spec,
 )
 from app.probes.robustness_stats import MIN_REQUESTED, SCORED_RISK_ID
+from app.schemas.evaluation_contract import EvaluationContractV1
 from app.storage.evidence_store import EvidenceStoreError
 
 logger = logging.getLogger("trustlens.probes.robustness")
@@ -89,26 +90,32 @@ def _is_text_classification(meta: dict[str, Any]) -> bool:
 
 
 def _resolve_robustness_dataset(
-    ctx: ProbeContext,
-) -> tuple[str | None, str | None, str | None]:
-    """Return (logical_key, evaluation_domain, resolution_source) or (None, None, None)."""
-    cfg = ctx.probe_config
-    explicit = cfg.datasets.get("robustness")
-    if explicit:
-        try:
-            spec = get_dataset_spec(explicit)
-        except KeyError:
-            return explicit, None, "probe_config"
-        return explicit, spec.evaluation_domain, "probe_config"
+    contract: EvaluationContractV1 | None,
+) -> tuple[str | None, str | None, str | None, RobustnessCompatEntry | None]:
+    """Explicit-contract-only dataset resolution (Phase 7).
 
-    compat = resolve_robustness_compat(ctx.model_ref, revision=ctx.model_revision)
-    if compat is not None:
-        return (
-            compat.robustness_dataset_key,
-            compat.evaluation_domain,
-            "versioned_compat",
-        )
-    return None, None, None
+    ``contract.dataset_key`` is the **only** dataset selection source — there
+    is no ``probe_config.datasets.robustness`` override and no silent
+    auto-selection from ``supported_robustness_compat_v1.yaml`` based on
+    model identity alone. The compat YAML only *validates* that the already
+    selected key is an approved pin for the frozen ``contract.model_ref`` /
+    ``contract.model_revision``; it never substitutes a different dataset.
+
+    Returns ``(logical_key, evaluation_domain, resolution_source, compat)``
+    or ``(None, None, None, None)`` when the contract does not authorize a
+    Robustness run (``documentation_only``/``proxy_lr``, no ``dataset_key``,
+    or a ``dataset_key`` that is not an approved pin for this exact model +
+    revision).
+    """
+    if contract is None or contract.kind in ("documentation_only", "proxy_lr"):
+        return None, None, None, None
+    dataset_key = contract.dataset_key
+    if not dataset_key:
+        return None, None, None, None
+    compat = resolve_robustness_compat(contract.model_ref, revision=contract.model_revision)
+    if compat is None or compat.robustness_dataset_key != dataset_key:
+        return None, None, None, None
+    return dataset_key, compat.evaluation_domain, "contract_validated", compat
 
 
 def _check_domain_compat(
@@ -133,7 +140,7 @@ def _resolve_inference_config(spec: DatasetSpec) -> InferenceConfig:
     return InferenceConfig(
         task_type=task_type_from_spec(spec.task_type),
         decision=DecisionMode.ARGMAX,
-        device="cpu",
+        device="auto",
     )
 
 
@@ -145,6 +152,7 @@ def _base_metrics(
     seed: int,
     max_samples: int,
     dataset_info: dict[str, Any],
+    contract: EvaluationContractV1 | None,
 ) -> dict[str, Any]:
     return {
         "attack": "char_swap",
@@ -166,6 +174,16 @@ def _base_metrics(
         "risks_triggered": [],
         "proposed_mapping": False,
         "note": _NOTE,
+        # Phase 7: frozen evaluation-contract identity — never a freshly
+        # substituted/auto-selected dataset or a live Model.revision read.
+        "model_ref": contract.model_ref if contract is not None else None,
+        "model_revision": contract.model_revision if contract is not None else None,
+        "dataset_key": logical_key,
+        "dataset_revision": None,
+        "task_type": None,
+        "label_space": contract.label_space if contract is not None else None,
+        "evaluation_class": contract.kind if contract is not None else "missing",
+        "inference_executed": False,
     }
 
 
@@ -199,7 +217,10 @@ class RobustnessProbe:
         max_changes = _budget_to_max_changes(budget)
         allow_domain_mismatch = _extra_bool(extra, "allow_domain_mismatch", False)
 
-        logical_key, declared_domain, resolution_source = _resolve_robustness_dataset(ctx)
+        contract = ctx.evaluation_contract
+        logical_key, declared_domain, resolution_source, dataset_compat = (
+            _resolve_robustness_dataset(contract)
+        )
         dataset_info: dict[str, Any] = {
             "logical_key": logical_key,
             "resolution_source": resolution_source,
@@ -212,14 +233,19 @@ class RobustnessProbe:
             seed=seed,
             max_samples=max_samples,
             dataset_info=dataset_info,
+            contract=contract,
         )
         flags: list[str] = []
 
         if logical_key is None:
             flags.extend(["no_compatible_dataset", "attack_skipped"])
             skip_reason = (
-                "no explicit robustness dataset: set probe_config.datasets.robustness "
-                "or add versioned entry in supported_robustness_compat_v1.yaml"
+                "no Robustness-compatible evaluation contract: dataset_key must be "
+                "an explicitly selected key already approved in "
+                "supported_robustness_compat_v1.yaml for this exact model + "
+                "revision — documentation_only/proxy_lr contracts, an unapproved "
+                "dataset_key, and a mismatched model revision all resolve here; "
+                "never a silently substituted dataset"
             )
             return self._finish(
                 ctx,
@@ -266,6 +292,8 @@ class RobustnessProbe:
                 "evaluation_domain": spec.evaluation_domain or declared_domain,
             }
         )
+        base_metrics["dataset_revision"] = spec.revision
+        base_metrics["task_type"] = spec.task_type
 
         if spec.modality != "nlp":
             flags.extend(["unsupported_modality", "attack_skipped"])
@@ -292,8 +320,11 @@ class RobustnessProbe:
                 status_reason=skip_reason,
             )
 
-        compat = resolve_robustness_compat(ctx.model_ref, revision=ctx.model_revision)
-        compat_domain = compat.evaluation_domain if compat else None
+        # dataset_compat is the same compat entry that already validated
+        # logical_key against contract.model_ref/model_revision above; the
+        # domain gate is kept as-is (unchanged methodology) for defense in
+        # depth even though it is consistent by construction on this path.
+        compat_domain = dataset_compat.evaluation_domain if dataset_compat else None
         pin_domain = spec.evaluation_domain
         domain_mismatch, mapping_blocked_pre = _check_domain_compat(
             dataset_domain=pin_domain,
@@ -321,8 +352,10 @@ class RobustnessProbe:
         hf_token = self._hf_token()
         try:
             result = self._resolve_runner().run(
-                model_ref=ctx.model_ref,
-                model_revision=ctx.model_revision,
+                model_ref=contract.model_ref if contract is not None else ctx.model_ref,
+                model_revision=(
+                    contract.model_revision if contract is not None else ctx.model_revision
+                ),
                 samples=samples,
                 max_changes=max_changes,
                 seed=seed,
@@ -344,6 +377,23 @@ class RobustnessProbe:
                 status=ProbeEvaluationStatus.FAILED,
                 status_reason=str(exc),
             )
+
+        # The model actually loaded and ran; whether predictions were usable
+        # is a separate (unchanged) statistical question decided below.
+        base_metrics["inference_executed"] = not result.insufficient_evidence
+        if result.device_info is not None:
+            base_metrics["inference"] = {
+                "device": result.device_info.device,
+                "device_name": result.device_info.device_name,
+                "backend": result.device_info.backend,
+                "inference_backend": result.device_info.backend,
+                "execution_device": result.device_info.execution_device,
+                "gpu_available": result.device_info.gpu_available,
+                "gpu_name": result.device_info.gpu_name,
+                "cuda_available": result.device_info.cuda_available,
+                "device_reason": result.device_info.device_reason,
+                "fallback_reason": result.device_info.fallback_reason,
+            }
 
         if result.insufficient_evidence:
             eval_out = evaluate_classification_robustness(
@@ -446,6 +496,13 @@ class RobustnessProbe:
             "probe": "robustness",
             "evaluation_id": str(ctx.evaluation_id),
             "model_ref": ctx.model_ref,
+            "model_revision": metrics.get("model_revision"),
+            "dataset_key": metrics.get("dataset_key"),
+            "dataset_revision": metrics.get("dataset_revision"),
+            "task_type": metrics.get("task_type"),
+            "label_space": metrics.get("label_space"),
+            "evaluation_class": metrics.get("evaluation_class"),
+            "inference_executed": metrics.get("inference_executed"),
             "methodology": "tl-methodology-v1.0",
             "config": {
                 "attack": metrics.get("attack"),

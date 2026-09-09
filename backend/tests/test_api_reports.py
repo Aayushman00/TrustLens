@@ -138,6 +138,45 @@ def test_report_not_finalized_409(
     assert report_store.objects == {}
 
 
+def test_report_available_for_finalized_withheld_evaluation(
+    api_client: TestClient,
+    auth_headers: dict[str, str],
+    admin_headers: dict[str, str],
+    db_session: Session,
+    report_store: FakeReportStore,
+) -> None:
+    """Phase 5: FINALIZED + FRIES withheld (default deterministic engine,
+    no human review) must now return 200 with a complete report — not the
+    old 409 NOT_FINALIZED."""
+    model = api_client.post(
+        "/v1/models",
+        json={"hf_repo_id": f"org/withheld-api-{uuid.uuid4().hex[:8]}"},
+        headers=admin_headers,
+    )
+    assert model.status_code == 201, model.text
+    created = api_client.post(
+        "/v1/evaluations",
+        json={"model_id": model.json()["id"], "evaluation_mode": "AI_AUTONOMOUS"},
+        headers=admin_headers,
+    )
+    assert created.status_code == 201, created.text
+    eval_id = created.json()["id"]
+    payload = EvaluateModelPayload(
+        evaluation_id=uuid.UUID(eval_id),
+        model_ref=model.json()["hf_repo_id"],
+        evaluation_mode=EvaluationMode.AI_AUTONOMOUS,
+    )
+    run_evaluation_pipeline(db_session, payload, evidence_store=FakeEvidenceStore())
+    db_session.flush()
+
+    response = api_client.get(f"/v1/reports/{eval_id}", headers=auth_headers)
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["fries_score"] is None
+    assert body["report_json"]["score"]["scoring_withheld"] is True
+    assert len(body["report_json"]["evidence_traceability"]) == 5
+
+
 def test_autonomous_get_auto_generates_v1(
     api_client: TestClient,
     auth_headers: dict[str, str],

@@ -40,9 +40,20 @@ def test_user_model_evaluation_repositories(db_session: Session) -> None:
     assert evaluation.status is EvaluationStatus.PENDING
     assert evaluations.get_by_id(evaluation.id) is not None
 
-    updated = evaluations.update_status(evaluation.id, EvaluationStatus.RUNNING)
+    updated = evaluations.transition_status(
+        evaluation.id, expected=EvaluationStatus.PENDING, new=EvaluationStatus.RUNNING
+    )
     assert updated is not None
     assert updated.status is EvaluationStatus.RUNNING
+
+    # CAS rejects a transition from a status that no longer matches (the
+    # evaluation is now RUNNING, not PENDING) — the only lifecycle status
+    # mutation path is the atomic CAS, never an unconditional write.
+    stale = evaluations.transition_status(
+        evaluation.id, expected=EvaluationStatus.PENDING, new=EvaluationStatus.FAILED
+    )
+    assert stale is None
+    assert evaluations.get_by_id(evaluation.id).status is EvaluationStatus.RUNNING
 
     pending = evaluations.list_by_status(EvaluationStatus.PENDING)
     running = evaluations.list_by_status(EvaluationStatus.RUNNING)

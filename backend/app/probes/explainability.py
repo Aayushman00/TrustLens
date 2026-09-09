@@ -25,10 +25,17 @@ class ExplainabilityProbe:
 
     def run(self, ctx: ProbeContext) -> ProbeOutput:
         result = evaluate_explainability(model_metadata=ctx.model_metadata or {})
+        # Part 1: cite exactly which pinned-revision documentation evidence
+        # this Track 1 documentation-coverage check read — never a new
+        # methodology input, purely a provenance pointer already resolved at
+        # import time (app/documentation/evidence.py). None when the model
+        # wasn't imported from HF or the card fetch failed.
+        documentation_source = (ctx.model_metadata or {}).get("documentation_evidence")
 
         metrics: dict[str, Any] = {
             "methodology_version": METHODOLOGY_VERSION,
             "methodology_basis": METHODOLOGY_BASIS,
+            "documentation_source": documentation_source,
             "sections": result.sections,
             "bonus_sections": result.bonus_sections,
             "sections_present": result.sections_present,
@@ -66,6 +73,7 @@ class ExplainabilityProbe:
             "aspect_scoring": result.aspect_scoring,
             "scored_risk_id": result.scored_risk_id,
             "risks_triggered": result.risks_triggered,
+            "documentation_source": documentation_source,
             "sections": result.sections,
             "bonus_sections": result.bonus_sections,
             "sections_present": result.sections_present,

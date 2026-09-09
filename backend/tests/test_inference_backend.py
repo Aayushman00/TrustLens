@@ -204,7 +204,7 @@ def test_softmax_sums_to_one() -> None:
 
 def test_device_info_exposed() -> None:
     backend = FakeInferenceBackend()
-    backend.load("org/m", revision="r1", config=InferenceConfig(batch_size=16))
+    backend.load("org/m", revision="r1", config=InferenceConfig(batch_size=16, device="cpu"))
     info = backend.device_info()
     assert info.backend == "fake"
     assert info.batch_size == 16

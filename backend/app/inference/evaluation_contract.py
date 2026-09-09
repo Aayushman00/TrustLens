@@ -13,8 +13,11 @@ requesting user's role; this module only builds the contract shape.
 
 from __future__ import annotations
 
+import uuid
+
 from app.api.errors import NotFoundError, ValidationAppError
 from app.db.models import Model
+from app.db.repositories.user_dataset import UserDatasetRepository
 from app.datasets.registry import get_dataset_spec
 from app.inference.pairing import get_pairing_by_id
 from app.schemas.evaluation_contract import EvaluationContractV1
@@ -23,27 +26,35 @@ from app.schemas.evaluations import EvaluationCreate
 _PROXY_LR_DATASET_KEY = "adult_fairness"
 
 
-def build_evaluation_contract(model: Model, create: EvaluationCreate) -> EvaluationContractV1:
+def build_evaluation_contract(
+    model: Model,
+    create: EvaluationCreate,
+    *,
+    user_dataset_repo: UserDatasetRepository | None = None,
+    requester_id: int | None = None,
+) -> EvaluationContractV1:
     """Resolve the contract implied by ``create`` against the frozen ``model`` row.
 
-    Selection is ``pairing_id`` xor ``dataset_key`` xor ``contract_kind=proxy_lr``;
-    supplying more than one raises ``ValidationAppError`` (422). Nothing selected
-    resolves to ``documentation_only`` — never Adult.
+    Selection is ``pairing_id`` xor ``dataset_key`` xor ``contract_kind=proxy_lr``
+    xor ``user_dataset_id``; supplying more than one raises ``ValidationAppError``
+    (422). Nothing selected resolves to ``documentation_only`` — never Adult.
     """
     model_revision = model.revision or ""
     selected = [
         bool(create.pairing_id),
         bool(create.dataset_key),
         create.contract_kind == "proxy_lr",
+        bool(create.user_dataset_id),
     ]
     if sum(selected) > 1:
         raise ValidationAppError(
-            "pairing_id, dataset_key, and contract_kind=proxy_lr are mutually "
-            "exclusive on an evaluation contract",
+            "pairing_id, dataset_key, contract_kind=proxy_lr, and "
+            "user_dataset_id are mutually exclusive on an evaluation contract",
             details={
                 "pairing_id": create.pairing_id,
                 "dataset_key": create.dataset_key,
                 "contract_kind": create.contract_kind,
+                "user_dataset_id": create.user_dataset_id,
             },
         )
 
@@ -102,6 +113,53 @@ def build_evaluation_contract(model: Model, create: EvaluationCreate) -> Evaluat
             model_revision=model_revision,
             task_type=spec.task_type,
             modality=spec.modality,
+        )
+
+    if create.user_dataset_id:
+        if not create.target_column or not create.group_column or not create.text_column:
+            raise ValidationAppError(
+                "user_dataset_id requires target_column, group_column, and "
+                "text_column to all be selected",
+                details={"user_dataset_id": create.user_dataset_id},
+            )
+        if user_dataset_repo is None:
+            raise ValidationAppError(
+                "user_dataset_id evaluation requires a dataset lookup context",
+                details={"user_dataset_id": create.user_dataset_id},
+            )
+        try:
+            dataset_uuid = uuid.UUID(create.user_dataset_id)
+        except ValueError as exc:
+            raise ValidationAppError(
+                f"user_dataset_id {create.user_dataset_id!r} is not a valid id",
+                details={"user_dataset_id": create.user_dataset_id},
+            ) from exc
+        dataset = user_dataset_repo.get_by_id(dataset_uuid)
+        if dataset is None:
+            raise NotFoundError(
+                f"Unknown user_dataset_id {create.user_dataset_id!r}",
+                details={"user_dataset_id": create.user_dataset_id},
+            )
+        if requester_id is not None and dataset.owner_id != requester_id:
+            raise ValidationAppError(
+                "you do not own this dataset",
+                details={"user_dataset_id": create.user_dataset_id},
+            )
+        if dataset.status != "ready":
+            raise ValidationAppError(
+                f"dataset is not ready (status={dataset.status})",
+                details={"user_dataset_id": create.user_dataset_id},
+            )
+        return EvaluationContractV1(
+            kind="user_dataset",
+            model_ref=model.hf_repo_id,
+            model_revision=model_revision,
+            user_dataset_id=str(dataset.id),
+            dataset_uri=dataset.storage_uri,
+            dataset_content_hash=dataset.content_hash,
+            target_column=create.target_column,
+            group_column=create.group_column,
+            text_column=create.text_column,
         )
 
     return EvaluationContractV1(
