@@ -127,6 +127,13 @@ def fetch_dataset_url(
 ) -> FetchedBytes:
     """Fetch a dataset URL with SSRF protection and connection pinning.
 
+    Connection pinning defends against DNS rebinding by connecting to the exact
+    IP that was validated, not re-resolving the hostname at connect time.
+
+    For HTTPS, SNI (Server Name Indication) is set to the original hostname to allow
+    TLS handshake and certificate verification to succeed (connects to IP but presents
+    hostname as SNI so certificate verification works correctly).
+
     Args:
         url: URL to fetch (http/https only)
         max_bytes: Max response size in bytes (default 10MB)
@@ -156,10 +163,18 @@ def fetch_dataset_url(
             ip_url = _make_pinned_request_url(current_validated)
             headers = {"Host": current_validated.original_hostname}
 
+            # For HTTPS, set SNI (Server Name Indication) to the original hostname
+            # so the TLS handshake and certificate verification work correctly.
+            # The connection is made to the pinned IP, but TLS sees the real hostname.
+            extensions: dict = {}
+            if current_validated.scheme == "https":
+                extensions["sni_hostname"] = current_validated.original_hostname
+
             with client.stream(
                 "GET",
                 ip_url,
                 headers=headers,
+                extensions=extensions,
             ) as response:
                 if response.is_redirect:
                     redirects_followed += 1
