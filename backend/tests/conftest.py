@@ -308,13 +308,32 @@ def fake_s3_client() -> FakeS3Client:
 
 @pytest.fixture
 def _localhost_allowed_for_fetch(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Patch SSRF validation to allow localhost/127.0.0.1 for httpserver tests only.
+    """Patch SSRF validation and DNS to ensure IPv4-first resolution for httpserver tests.
 
     Use this fixture in tests that need to connect to pytest-httpserver.
+
+    Fixes: pytest-httpserver on Windows resolves localhost to ::1 (IPv6) first,
+    but the server may bind to 127.0.0.1 (IPv4). We monkeypatch getaddrinfo to
+    return IPv4 first, ensuring pinned connection targets the correct address.
     """
     import socket
     import ipaddress
     from app.datasets import url_fetch
+
+    # Save original getaddrinfo
+    original_getaddrinfo = socket.getaddrinfo
+
+    def patched_getaddrinfo(host, port, *args, **kwargs):
+        """Return IPv4 addresses before IPv6 for localhost testing."""
+        infos = original_getaddrinfo(host, port, *args, **kwargs)
+        # For localhost, sort to put IPv4 (AF_INET) results before IPv6 (AF_INET6)
+        if host == "localhost":
+            # Separate IPv4 and IPv6 results
+            ipv4_results = [info for info in infos if info[0] == socket.AF_INET]
+            ipv6_results = [info for info in infos if info[0] == socket.AF_INET6]
+            # Return IPv4 first, then IPv6
+            return ipv4_results + ipv6_results
+        return infos
 
     def patched_resolve_and_validate_host(host: str) -> str:
         """Allow localhost/127.0.0.1/::1 for testing, otherwise use full SSRF validation."""
@@ -340,4 +359,5 @@ def _localhost_allowed_for_fetch(monkeypatch: pytest.MonkeyPatch) -> None:
                 raise url_fetch.UrlFetchError(f"resolved address is private/loopback/link-local/reserved: {ip}")
         return str(ipaddress.ip_address(infos[0][4][0]))
 
+    monkeypatch.setattr(socket, "getaddrinfo", patched_getaddrinfo)
     monkeypatch.setattr(url_fetch, "_resolve_and_validate_host", patched_resolve_and_validate_host)
