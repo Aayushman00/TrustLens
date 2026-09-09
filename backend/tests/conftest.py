@@ -325,6 +325,47 @@ def fake_s3_client() -> FakeS3Client:
 
 
 @pytest.fixture
+def seeded_dataset_content(
+    db_session: Session, fake_s3_client: FakeS3Client, monkeypatch: pytest.MonkeyPatch
+) -> Any:
+    """A DatasetContent row backed by an in-memory DatasetContentStore (no
+    real MinIO) so ``EvaluationDraftService.update_dimension`` can fetch
+    ``dataset_bytes`` in tests. Same CSV shape as Task 2.3's draft-validation
+    tests: columns text/label/group, 5 rows."""
+    import uuid
+
+    from app.db.models import DatasetContent
+    from app.storage.evidence_store import DatasetContentStore
+    from app.services import evaluation_draft_service as draft_service_module
+
+    csv_bytes = b"text,label,group\nhello,pos,a\nworld,neg,a\nfoo,pos,b\nbar,neg,b\nbaz,pos,b\n"
+    store = DatasetContentStore(fake_s3_client, "test-bucket")
+    storage_uri, content_hash = store.put(csv_bytes, format="csv")
+    # DatasetContentStore.put() returns "sha256:"-prefixed; the DB column is
+    # bare 64-hex (established boundary convention, see Task 1.5).
+    content_hash = content_hash.removeprefix("sha256:")
+
+    content = DatasetContent(
+        id=uuid.uuid4(),
+        content_hash=content_hash,
+        storage_uri=storage_uri,
+        byte_size=len(csv_bytes),
+        format="csv",
+        row_count=5,
+        columns=[
+            {"name": "text", "inferred_type": "string"},
+            {"name": "label", "inferred_type": "string"},
+            {"name": "group", "inferred_type": "string"},
+        ],
+    )
+    db_session.add(content)
+    db_session.flush()
+
+    monkeypatch.setattr(draft_service_module, "get_dataset_content_store", lambda settings: store)
+    return content
+
+
+@pytest.fixture
 def _localhost_allowed_for_fetch(monkeypatch: pytest.MonkeyPatch) -> None:
     """Patch SSRF validation and DNS to ensure IPv4-first resolution for httpserver tests.
 
