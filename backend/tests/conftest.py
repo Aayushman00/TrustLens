@@ -285,9 +285,9 @@ class FakeS3Client:
     def get_object(self, *, Bucket: str, Key: str) -> dict:
         """Retrieve an object from memory."""
         if (Bucket, Key) not in self.objects:
-            from botocore.exceptions import NoSuchKey
+            from botocore.exceptions import ClientError
 
-            raise NoSuchKey(
+            raise ClientError(
                 error_response={"Error": {"Code": "NoSuchKey", "Message": "Not found"}},
                 operation_name="GetObject",
             )
