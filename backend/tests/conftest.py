@@ -304,3 +304,40 @@ class FakeS3Client:
 def fake_s3_client() -> FakeS3Client:
     """In-memory S3 client for storage tests."""
     return FakeS3Client()
+
+
+@pytest.fixture
+def _localhost_allowed_for_fetch(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Patch SSRF validation to allow localhost/127.0.0.1 for httpserver tests only.
+
+    Use this fixture in tests that need to connect to pytest-httpserver.
+    """
+    import socket
+    import ipaddress
+    from app.datasets import url_fetch
+
+    def patched_resolve_and_validate_host(host: str) -> str:
+        """Allow localhost/127.0.0.1/::1 for testing, otherwise use full SSRF validation."""
+        try:
+            infos = socket.getaddrinfo(host, None)
+        except socket.gaierror as exc:
+            raise url_fetch.UrlFetchError(f"could not resolve host: {exc}") from exc
+
+        for family, _, _, _, sockaddr in infos:
+            ip = ipaddress.ip_address(sockaddr[0])
+            # Allow localhost/loopback only if it's the hostname "localhost", not direct IP
+            # This preserves the test that explicitly uses 127.0.0.1
+            if host == "localhost" or str(ip) in ("127.0.0.1", "::1"):
+                continue
+            if (
+                ip.is_private
+                or ip.is_loopback
+                or ip.is_link_local
+                or ip.is_multicast
+                or ip.is_reserved
+                or ip.is_unspecified
+            ):
+                raise url_fetch.UrlFetchError(f"resolved address is private/loopback/link-local/reserved: {ip}")
+        return str(ipaddress.ip_address(infos[0][4][0]))
+
+    monkeypatch.setattr(url_fetch, "_resolve_and_validate_host", patched_resolve_and_validate_host)
