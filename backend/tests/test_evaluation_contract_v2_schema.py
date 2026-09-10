@@ -1,3 +1,6 @@
+import pytest
+from pydantic import ValidationError
+
 from app.schemas.evaluation_contract_v2 import (
     EvaluationContractV2,
     FairnessContractV2,
@@ -29,3 +32,28 @@ def test_fairness_contract_requires_sensitive_column():
         min_group_n=30,
     )
     assert fairness.sensitive_column == "group"
+
+
+def test_fairness_contract_min_group_n_must_be_positive():
+    """min_group_n must be a positive integer (gt=0)."""
+    # Test that min_group_n=0 raises ValidationError
+    with pytest.raises(ValidationError):
+        FairnessContractV2(
+            dataset_content_id="00000000-0000-0000-0000-000000000001",
+            text_column="text",
+            target_column="label",
+            sensitive_column="group",
+            label_mapping=[LabelMappingEntry(dataset_value="pos", model_label_index=1)],
+            min_group_n=0,
+        )
+
+    # Test that min_group_n=-5 raises ValidationError
+    with pytest.raises(ValidationError):
+        FairnessContractV2(
+            dataset_content_id="00000000-0000-0000-0000-000000000001",
+            text_column="text",
+            target_column="label",
+            sensitive_column="group",
+            label_mapping=[LabelMappingEntry(dataset_value="pos", model_label_index=1)],
+            min_group_n=-5,
+        )
