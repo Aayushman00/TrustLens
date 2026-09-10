@@ -21,6 +21,7 @@ from app.inference.adapters import get_adapter
 from app.inference.base import InferenceConfig, InferenceBackend, TaskType
 from app.inference.errors import InferenceError
 from app.inference.local_hf import LocalHFBackend
+from app.inference.model_snapshot_check import verify_loaded_model_matches_snapshot
 from app.inference.pairing import SupportedPairing, get_pairing_by_id
 from app.probes.base import ProbeContext, ProbeOutput
 from app.probes.fairness_metrics import compute_fairness_bundle
@@ -544,7 +545,8 @@ class FairnessProbe:
                     else TaskType.MULTICLASS_CLASSIFICATION
                 ),
             )
-            backend.load(contract.model_ref, revision=contract.model_revision, config=config)
+            loaded = backend.load(contract.model_ref, revision=contract.model_revision, config=config)
+            verify_loaded_model_matches_snapshot(loaded, contract.model_label_snapshot)
             texts = [r["text"] for r in rows]
             batch = backend.predict_batch(texts)
             y_pred = [int(p.y_hat) for p in batch.predictions]

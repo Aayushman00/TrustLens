@@ -276,6 +276,7 @@ class EvaluationService:
             probe_config=probe_config,
             model_revision=row.model_revision,
             evaluation_contract=probe_config.get("evaluation_contract", {}),
+            methodology_version=row.methodology_version,
         )
         task_id = enqueue_evaluate_model(payload)
         logger.info(

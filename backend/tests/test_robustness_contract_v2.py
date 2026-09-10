@@ -240,3 +240,8 @@ def test_robustness_v2_full_path_insufficient_evidence(
     assert len(runner.calls) == 1
     assert len(runner.calls[0]["samples"]) == 8
     assert len(fake_evidence_store.puts) == 1
+    # Global Constraint: worker must pass the frozen model_label_snapshot
+    # through to the runner so it can hard-fail on a mismatch at load time.
+    assert runner.calls[0]["expected_label_snapshot"] == ModelLabelSnapshot(
+        num_labels=2, id2label={0: "NEG", 1: "POS"}
+    )
