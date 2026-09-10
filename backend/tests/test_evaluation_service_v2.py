@@ -60,6 +60,21 @@ def test_create_from_draft_rejects_stale_model_revision(db_session, confirmed_fa
             service.create_from_draft(confirmed_fairness_draft.id, EvaluationMode.AI_ASSISTED)
 
 
+def test_create_from_draft_converts_model_inspection_error_to_validation_error(
+    db_session, confirmed_fairness_draft
+):
+    """A model revision that no longer resolves on the Hub between draft
+    confirmation and submission (deleted branch/tag, Hub inspection failure)
+    must surface as a clean 422, never an unhandled 500."""
+    from app.inference.model_inspection import ModelInspectionError
+    from app.api.errors import ValidationAppError
+
+    service = EvaluationServiceV2(db_session)
+    with patch(_PATCH_TARGET, side_effect=ModelInspectionError("MODEL_LOAD_ERROR", "boom")):
+        with pytest.raises(ValidationAppError):
+            service.create_from_draft(confirmed_fairness_draft.id, EvaluationMode.AI_ASSISTED)
+
+
 def test_create_from_draft_rejects_half_confirmed_dimension(db_session, half_confirmed_draft):
     service = EvaluationServiceV2(db_session)
     with patch(_PATCH_TARGET, return_value=_MATCHING_SNAPSHOT):

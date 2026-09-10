@@ -46,7 +46,7 @@ from __future__ import annotations
 import logging
 import uuid
 
-from app.api.errors import ConflictError, NotFoundError
+from app.api.errors import ConflictError, NotFoundError, ValidationAppError
 from app.core.config import get_settings
 from app.db.enums import EvaluationMode, EvaluationStatus
 from app.db.models import Evaluation
@@ -54,7 +54,7 @@ from app.db.repositories.evaluation import EvaluationRepository
 from app.db.repositories.evaluation_draft import EvaluationDraftRepository
 from app.db.repositories.evaluation_event import EVENT_EVALUATION_CREATED, EvaluationEventRepository
 from app.db.repositories.model import ModelRepository
-from app.inference.model_inspection import inspect_model_config
+from app.inference.model_inspection import ModelInspectionError, inspect_model_config
 from app.schemas.evaluation_contract_v2 import (
     EvaluationContractV2,
     FairnessContractV2,
@@ -112,9 +112,15 @@ class EvaluationServiceV2:
         # EvaluationDraftService._ensure_model_snapshot's own call — a
         # gated/private repo that intake could inspect must also be
         # re-inspectable at consumption time.
-        current_snapshot = inspect_model_config(
-            model.hf_repo_id, revision=model.revision, hf_token=get_settings().hf_token
-        )
+        try:
+            current_snapshot = inspect_model_config(
+                model.hf_repo_id, revision=model.revision, hf_token=get_settings().hf_token
+            )
+        except ModelInspectionError as exc:
+            raise ValidationAppError(
+                f"could not inspect model config for {model.hf_repo_id}: {exc}",
+                details={"model_id": model.id, "code": exc.code},
+            ) from exc
         if draft.resolved_model_sha is not None and current_snapshot.resolved_sha != draft.resolved_model_sha:
             draft.status = "stale"
             # Fix 1: commit (not merely flush) so this survives the

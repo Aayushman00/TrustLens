@@ -31,6 +31,27 @@ def test_create_draft(draft_service, seeded_model):
     assert read.model_id == seeded_model.id
 
 
+def test_update_dimension_converts_model_inspection_error_to_validation_error(
+    draft_service, seeded_model, seeded_dataset_content
+):
+    """A model reference/revision that fails Hub inspection at intake
+    (typo'd revision, deleted branch, Hub error) must surface as a clean
+    422, never an unhandled 500."""
+    from app.inference.model_inspection import ModelInspectionError
+
+    draft = draft_service.create(seeded_model.id)
+    with patch(
+        "app.services.evaluation_draft_service.inspect_model_config",
+        side_effect=ModelInspectionError("MODEL_LOAD_ERROR", "boom"),
+    ):
+        with pytest.raises(ValidationAppError):
+            draft_service.update_dimension(
+                draft.id,
+                "FAIRNESS",
+                {"dataset_content_id": seeded_dataset_content.id, **FAIRNESS_BODY},
+            )
+
+
 def test_update_fairness_dimension_validates_and_returns_preview(draft_service, seeded_model, seeded_dataset_content):
     draft = draft_service.create(seeded_model.id)
     with patch("app.services.evaluation_draft_service.inspect_model_config", return_value=FAKE_SNAPSHOT):

@@ -46,7 +46,7 @@ from app.core.config import get_settings
 from app.db.repositories.dataset_content import DatasetContentRepository
 from app.db.repositories.evaluation_draft import EvaluationDraftRepository
 from app.db.repositories.model import ModelRepository
-from app.inference.model_inspection import ModelLabelSnapshot, inspect_model_config
+from app.inference.model_inspection import ModelInspectionError, ModelLabelSnapshot, inspect_model_config
 from app.schemas.evaluation_draft import DimensionConfigUpdate, DimensionValidationRead, EvaluationDraftRead
 from app.datasets.user_dataset import UserDatasetError
 from app.services.draft_validation import (
@@ -84,7 +84,15 @@ class EvaluationDraftService:
         if draft.resolved_model_sha and draft.model_label_snapshot:
             return
         model = self._models.get_by_id(draft.model_id)
-        snapshot = inspect_model_config(model.hf_repo_id, revision=model.revision, hf_token=get_settings().hf_token)
+        try:
+            snapshot = inspect_model_config(
+                model.hf_repo_id, revision=model.revision, hf_token=get_settings().hf_token
+            )
+        except ModelInspectionError as exc:
+            raise ValidationAppError(
+                f"could not inspect model config for {model.hf_repo_id}: {exc}",
+                details={"model_id": draft.model_id, "code": exc.code},
+            ) from exc
         label_snapshot = {"num_labels": snapshot.num_labels, "id2label": snapshot.id2label}
         self._drafts.set_model_snapshot(
             draft.id,
