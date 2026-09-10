@@ -412,7 +412,8 @@ def summarize(
     time); otherwise re-derives from ``metric_values`` (flags unavailable).
 
     When ``methodology_version != LEGACY_METHODOLOGY_VERSION``, rows whose
-    ``metric_values["probe_status"] == "not_applicable"`` are excluded from
+    ``metric_values["probe_status"] == ProbeEvaluationStatus.NOT_APPLICABLE.value``
+    (i.e. the persisted string ``"NOT_APPLICABLE"``) are excluded from
     the geometric mean (still present in ``by_dimension`` for display, valued
     ``None``). When ``methodology_version == LEGACY_METHODOLOGY_VERSION``,
     behavior is byte-for-byte unchanged from before this parameter existed —
@@ -423,7 +424,9 @@ def summarize(
     included_values: list[float] = []
     for dimension, confidence, metric_values in rows:
         metric_values = metric_values or {}
-        is_not_applicable = metric_values.get("probe_status") == "not_applicable"
+        is_not_applicable = (
+            metric_values.get("probe_status") == ProbeEvaluationStatus.NOT_APPLICABLE.value
+        )
         if confidence is not None:
             value = round(_clamp(float(confidence)), 4)
         else:
