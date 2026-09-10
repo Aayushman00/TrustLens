@@ -8,7 +8,7 @@ from __future__ import annotations
 import uuid
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class LabelMappingEntry(BaseModel):
@@ -27,7 +27,7 @@ class FairnessContractV2(BaseModel):
     target_column: str
     sensitive_column: str
     label_mapping: list[LabelMappingEntry]
-    min_group_n: int
+    min_group_n: int = Field(gt=0)
 
 
 class RobustnessContractV2(BaseModel):
