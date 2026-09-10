@@ -22,6 +22,16 @@ Out of scope for this task (see task-2.4 report for reasoning):
     exists to prevent; per the plan, drafts are frozen for consumption by
     Phase 4's atomic ``POST /v1/evaluations``, which is the natural point to
     detect staleness against the then-current model row before consuming.
+
+Task 4.4 addendum: once Phase 4's consumption endpoint (``EvaluationServiceV2
+.create_from_draft``) marks a draft ``"consumed"`` or ``"stale"``, it becomes
+an immutable audit record. ``update_dimension``/``confirm_dimension`` reject
+any further mutation of such a draft (``ConflictError``) — otherwise a
+"consumed" draft's ``DraftDimensionConfig`` rows (the very rows that
+documented what was frozen into the ``Evaluation``) could be silently
+rewritten after the fact, and a "stale" draft could accumulate a fresh,
+never-revalidated confirmation that looks indistinguishable from a
+legitimately confirmed one.
 """
 
 from __future__ import annotations
@@ -31,7 +41,7 @@ import uuid
 
 from pydantic import ValidationError
 
-from app.api.errors import NotFoundError, ValidationAppError
+from app.api.errors import ConflictError, NotFoundError, ValidationAppError
 from app.core.config import get_settings
 from app.db.repositories.dataset_content import DatasetContentRepository
 from app.db.repositories.evaluation_draft import EvaluationDraftRepository
@@ -48,6 +58,9 @@ from app.storage.evidence_store import get_dataset_content_store
 
 _DEFAULT_MIN_GROUP_N = 30
 _DIMENSIONS = {"FAIRNESS", "ROBUSTNESS"}
+# Once a draft reaches either of these, it is an immutable audit record
+# (Task 4.4) — no further dimension mutation or confirmation is allowed.
+_IMMUTABLE_DRAFT_STATUSES = {"consumed", "stale"}
 
 
 class EvaluationDraftService:
@@ -85,6 +98,11 @@ class EvaluationDraftService:
             raise NotFoundError(f"Draft {draft_id} not found", details={"draft_id": str(draft_id)})
         if dimension not in _DIMENSIONS:
             raise ValidationAppError(f"unknown dimension {dimension!r}")
+        if draft.status in _IMMUTABLE_DRAFT_STATUSES:
+            raise ConflictError(
+                f"Draft is {draft.status} and can no longer be modified",
+                details={"draft_id": str(draft_id), "status": draft.status},
+            )
 
         try:
             update = DimensionConfigUpdate.model_validate(body)
@@ -162,6 +180,11 @@ class EvaluationDraftService:
         draft = self._drafts.get_by_id(draft_id)
         if draft is None:
             raise NotFoundError(f"Draft {draft_id} not found", details={"draft_id": str(draft_id)})
+        if draft.status in _IMMUTABLE_DRAFT_STATUSES:
+            raise ConflictError(
+                f"Draft is {draft.status} and can no longer be modified",
+                details={"draft_id": str(draft_id), "status": draft.status},
+            )
         dim = self._drafts.get_dimension(draft_id, dimension)
         if dim is None or dim.validated_at is None:
             raise ValidationAppError(f"{dimension} has not been validated yet")
