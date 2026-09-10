@@ -65,3 +65,52 @@ test("label-mapping rows default to unmapped and never auto-select a matching la
   expect(positiveRow.value).toBe("-1");
   expect(negativeRow.value).toBe("-1");
 });
+
+test("shows an ErrorNotice when the target-values fetch fails, instead of failing silently", async () => {
+  vi.mocked(apiFetch).mockRejectedValueOnce(new Error("could not read target_column"));
+  render(
+    <ColumnRoleMappingForm draftId="draft-1" dimension="ROBUSTNESS" content={CONTENT} onValidated={vi.fn()} />
+  );
+
+  fireEvent.change(screen.getByLabelText(/target column/i), { target: { value: "label" } });
+
+  await screen.findByText(/could not read target_column/i);
+  // No mapping rows are rendered when discovery failed — nothing to map.
+  expect(screen.queryByText(/map dataset labels to model labels/i)).toBeNull();
+});
+
+test("a stale target-values response does not overwrite a newer selection's rows", async () => {
+  let resolveFirst!: (value: { values: string[] }) => void;
+  let resolveSecond!: (value: { values: string[] }) => void;
+  vi.mocked(apiFetch)
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveFirst = resolve;
+        })
+    )
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveSecond = resolve;
+        })
+    );
+
+  render(
+    <ColumnRoleMappingForm draftId="draft-1" dimension="ROBUSTNESS" content={CONTENT} onValidated={vi.fn()} />
+  );
+
+  fireEvent.change(screen.getByLabelText(/target column/i), { target: { value: "label" } });
+  fireEvent.change(screen.getByLabelText(/target column/i), { target: { value: "group" } });
+
+  // The second (current) request resolves first...
+  resolveSecond({ values: ["a", "b"] });
+  await screen.findByLabelText(/^a/i);
+
+  // ...then the stale first request resolves late. It must be ignored.
+  resolveFirst({ values: ["pos", "neg"] });
+
+  await new Promise((r) => setTimeout(r, 0));
+  expect(screen.queryByLabelText(/^pos/i)).toBeNull();
+  expect(screen.getByLabelText(/^a/i)).toBeTruthy();
+});

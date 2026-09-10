@@ -41,15 +41,29 @@ export default function ColumnRoleMappingForm({
 
   useEffect(() => {
     if (!targetColumn) return;
-    void apiFetch<{ values: string[] }>(
-      `/v1/evaluation-drafts/${draftId}/${dimension}/target-values?dataset_content_id=${content.id}&target_column=${targetColumn}`
-    ).then((res) => {
-      setTargetValues(res.values);
-      // Every row starts unmapped (-1) — never auto-applied, never a
-      // pre-selected guess, no matter how confident a normalized-string
-      // match would look.
-      setLabelMapping(res.values.map((v) => ({ dataset_value: v, model_label_index: -1 })));
-    });
+    // Ignore-flag guard: if the target column changes again before this
+    // fetch resolves, a stale (out-of-order) response must never overwrite
+    // state for the column the user has since moved on to.
+    let ignore = false;
+    async function fetchTargetValues() {
+      try {
+        const res = await apiFetch<{ values: string[] }>(
+          `/v1/evaluation-drafts/${draftId}/${dimension}/target-values?dataset_content_id=${encodeURIComponent(content.id)}&target_column=${encodeURIComponent(targetColumn)}`
+        );
+        if (ignore) return;
+        setTargetValues(res.values);
+        // Every row starts unmapped (-1) — never auto-applied, never a
+        // pre-selected guess, no matter how confident a normalized-string
+        // match would look.
+        setLabelMapping(res.values.map((v) => ({ dataset_value: v, model_label_index: -1 })));
+      } catch (err) {
+        if (!ignore) setError(err);
+      }
+    }
+    void fetchTargetValues();
+    return () => {
+      ignore = true;
+    };
   }, [targetColumn, draftId, dimension, content.id]);
 
   async function submit() {

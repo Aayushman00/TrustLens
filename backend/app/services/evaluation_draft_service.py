@@ -38,6 +38,7 @@ from app.db.repositories.evaluation_draft import EvaluationDraftRepository
 from app.db.repositories.model import ModelRepository
 from app.inference.model_inspection import ModelLabelSnapshot, inspect_model_config
 from app.schemas.evaluation_draft import DimensionConfigUpdate, DimensionValidationRead, EvaluationDraftRead
+from app.datasets.user_dataset import UserDatasetError
 from app.services.draft_validation import (
     _observed_target_values,
     validate_fairness_config,
@@ -181,7 +182,12 @@ class EvaluationDraftService:
             )
         store = get_dataset_content_store(get_settings())
         data = store.get(content.storage_uri)
-        return sorted(_observed_target_values(data, target_column))
+        try:
+            return sorted(_observed_target_values(data, target_column))
+        except UserDatasetError as exc:
+            raise ValidationAppError(
+                f"could not read target_column={target_column!r}: {exc}"
+            ) from exc
 
     def get(self, draft_id: uuid.UUID) -> EvaluationDraftRead:
         draft = self._drafts.get_by_id(draft_id)
