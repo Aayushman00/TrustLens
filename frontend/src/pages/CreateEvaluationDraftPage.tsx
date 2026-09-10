@@ -1,21 +1,11 @@
 /**
  * Draft-based evaluation creation wizard (Phase 3, Task 3.5; made the
  * default entry point at /evaluations/new in Phase 6). The old flat-contract
- * wizard (CreateEvaluationPage.tsx) is still reachable at
- * /evaluations/new-legacy, unchanged, pending Phase 7 removal.
+ * wizard was deleted in Phase 7.
  *
  * Flow: pick a model -> create an EvaluationDraft -> optionally configure
  * Fairness and/or Robustness (DatasetIntakeForm -> ColumnRoleMappingForm ->
  * confirm) -> "Continue" enables once every *enabled* dimension is confirmed.
- *
- * Model-picker reuse note: the model-selection step below is copied,
- * deliberately near-verbatim in behavior (fetch `/v1/models?limit=100`,
- * render a card grid, select-to-continue), from CreateEvaluationPage.tsx's
- * "model" step rather than extracted into a shared hook/component. Extracting
- * would require editing CreateEvaluationPage.tsx, which this task must leave
- * completely untouched; the reusable slice is also small enough (one fetch +
- * one render block) that duplicating it is cheaper and safer than threading a
- * shared abstraction through a component this task must not modify.
  */
 import { useEffect, useState } from "react";
 
@@ -61,7 +51,7 @@ const DIMENSION_LABEL: Record<Dimension, string> = {
 };
 
 export default function CreateEvaluationDraftPage() {
-  // --- Model step (duplicated from CreateEvaluationPage.tsx's "model" step) ---
+  // --- Model step ---
   const [modelId, setModelId] = useState<number | null>(null);
   const [models, setModels] = useState<ModelRead[] | null>(null);
   const [model, setModel] = useState<ModelRead | null>(null);
