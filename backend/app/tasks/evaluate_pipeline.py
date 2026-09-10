@@ -74,6 +74,7 @@ from app.scoring.methodology_version import LEGACY_METHODOLOGY_VERSION
 from app.storage.evidence_store import (
     EvidenceStore,
     EvidenceStoreError,
+    get_dataset_content_store,
     get_dataset_store,
     get_evidence_store,
 )
@@ -297,6 +298,7 @@ def run_evaluation_pipeline(
             model_revision=payload.model_revision,
             model_checksum=model.checksum,
             dataset_store=get_dataset_store(get_settings()),
+            dataset_content_store=get_dataset_content_store(get_settings()),
         )
     except (ProbeError, EvidenceStoreError):
         logger.exception(

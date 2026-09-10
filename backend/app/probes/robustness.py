@@ -12,7 +12,12 @@ from typing import Any
 
 from app.datasets.loader import DatasetLoadError, load_pinned_subset
 from app.datasets.registry import DatasetSpec, get_dataset_spec
+from app.datasets.user_dataset import (
+    UserDatasetError,
+    load_samples_for_robustness_with_label_mapping,
+)
 from app.db.enums import FriesDimension, ProbeEvaluationStatus
+from app.db.repositories.dataset_content import DatasetContentRepository
 from app.inference.base import DecisionMode, InferenceConfig
 from app.probes.base import ProbeContext, ProbeOutput
 from app.probes.robustness_compat import RobustnessCompatEntry, resolve_robustness_compat
@@ -25,7 +30,8 @@ from app.probes.robustness_nlp import (
 )
 from app.probes.robustness_stats import MIN_REQUESTED, SCORED_RISK_ID
 from app.schemas.evaluation_contract import EvaluationContractV1
-from app.storage.evidence_store import EvidenceStoreError
+from app.schemas.evaluation_contract_v2 import EvaluationContractV2
+from app.storage.evidence_store import EvidenceStoreError, format_sha256, hashes_equal
 
 logger = logging.getLogger("trustlens.probes.robustness")
 
@@ -201,6 +207,10 @@ class RobustnessProbe:
         return self._runner if self._runner is not None else TransformersCharSwapRunner()
 
     def run(self, ctx: ProbeContext) -> ProbeOutput:
+        contract_any = ctx.evaluation_contract
+        if isinstance(contract_any, EvaluationContractV2):
+            return self._run_v2(ctx, contract_any)
+
         cfg = ctx.probe_config
         extra = cfg.extra or {}
         budget = (
@@ -427,6 +437,236 @@ class RobustnessProbe:
             domain_mismatch=domain_mismatch,
             allow_domain_mismatch=allow_domain_mismatch,
             mapping_blocked_pre=mapping_blocked_pre,
+        )
+        return self._finish_from_eval(
+            ctx,
+            eval_out=eval_out,
+            base_metrics=base_metrics,
+            result=result,
+            extra_flags=flags,
+        )
+
+    def _run_v2(self, ctx: ProbeContext, contract: EvaluationContractV2) -> ProbeOutput:
+        """EvaluationContractV2 dispatch (Task 4.5).
+
+        Mirrors ``robustness_nlp.TransformersCharSwapRunner.run``'s sample
+        shape (``[{"text": str, "label": int}, ...]``) and this file's own
+        pinned-dataset ``run()`` path below it for the runner-call/
+        ``evaluate_classification_robustness``/``_finish_from_eval`` stages —
+        those are reused completely unchanged. Only the front end differs:
+        samples come from a user CSV (fetched via ``DatasetContentStore`` by
+        ``contract.robustness.dataset_content_id``, hash-verified, then
+        loaded through ``load_samples_for_robustness_with_label_mapping``
+        using the confirmed ``label_mapping``) instead of a pinned HF
+        dataset subset.
+        """
+        cfg = ctx.probe_config
+        extra = cfg.extra or {}
+        budget = (
+            float(cfg.attack_budget)
+            if cfg.attack_budget is not None
+            else _extra_float(extra, "attack_budget", _DEFAULT_BUDGET)
+        )
+        if budget <= 0:
+            budget = _DEFAULT_BUDGET
+        seed = _extra_int(extra, "seed", _DEFAULT_SEED)
+        max_changes = _budget_to_max_changes(budget)
+
+        if contract.robustness is None:
+            skip_reason = "Robustness was not configured for this evaluation"
+            base_metrics = _base_metrics(
+                logical_key=None,
+                budget=budget,
+                max_changes=max_changes,
+                seed=seed,
+                max_samples=0,
+                dataset_info={"logical_key": None, "resolution_source": None, "evaluation_domain": None},
+                contract=None,
+            )
+            base_metrics["model_ref"] = contract.model_ref
+            base_metrics["model_revision"] = contract.model_revision
+            base_metrics["evaluation_class"] = "user_dataset_v2"
+            return self._finish(
+                ctx,
+                metrics={**base_metrics, "skip_reason": skip_reason},
+                flags=["no_robustness_contract"],
+                confidence=0.4,
+                status=ProbeEvaluationStatus.NOT_APPLICABLE,
+                status_reason=skip_reason,
+            )
+
+        rc = contract.robustness
+        label_encoding = {e.dataset_value: e.model_label_index for e in rc.label_mapping}
+        flags: list[str] = ["evaluation_contract_v2", "user_defined_local_dataset"]
+        base_metrics = _base_metrics(
+            logical_key=None,
+            budget=budget,
+            max_changes=max_changes,
+            seed=seed,
+            max_samples=0,
+            dataset_info={"logical_key": None, "resolution_source": "user_dataset_v2", "evaluation_domain": None},
+            contract=None,
+        )
+        base_metrics.update(
+            {
+                "model_ref": contract.model_ref,
+                "model_revision": contract.model_revision,
+                "evaluation_class": "user_dataset_v2",
+                "dataset_content_id": str(rc.dataset_content_id),
+                "dataset_format": "csv",
+                "target_column": rc.target_column,
+                "text_column": rc.text_column,
+                "label_mapping": [e.model_dump() for e in rc.label_mapping],
+            }
+        )
+
+        if ctx.dataset_content_store is None or ctx.session is None:
+            skip_reason = "dataset content storage is not configured on this TrustLens instance"
+            flags.append("dataset_store_unavailable")
+            return self._finish(
+                ctx,
+                metrics={**base_metrics, "skip_reason": skip_reason},
+                flags=flags,
+                confidence=0.35,
+                status=ProbeEvaluationStatus.FAILED,
+                status_reason=skip_reason,
+            )
+
+        content_row = DatasetContentRepository(ctx.session).get_by_id(rc.dataset_content_id)
+        if content_row is None:
+            skip_reason = f"dataset content {rc.dataset_content_id} not found"
+            flags.append("dataset_fetch_failed")
+            return self._finish(
+                ctx,
+                metrics={**base_metrics, "skip_reason": skip_reason},
+                flags=flags,
+                confidence=0.35,
+                status=ProbeEvaluationStatus.FAILED,
+                status_reason=skip_reason,
+            )
+
+        try:
+            data = ctx.dataset_content_store.get(content_row.storage_uri)
+        except EvidenceStoreError as exc:
+            flags.append("dataset_fetch_failed")
+            return self._finish(
+                ctx,
+                metrics={**base_metrics, "skip_reason": str(exc)},
+                flags=flags,
+                confidence=0.35,
+                status=ProbeEvaluationStatus.FAILED,
+                status_reason=str(exc),
+            )
+
+        # Hash-verify-before-use: see the identical comment in
+        # fairness.py::_run_v2 — DatasetContentStore's key is derived from
+        # the content hash itself, so this is redundant-but-harmless on the
+        # happy path and is kept as a cheap defense against an out-of-band
+        # mutation of the object at that key.
+        if not hashes_equal(format_sha256(data), content_row.content_hash):
+            skip_reason = "dataset content hash mismatch — refusing to evaluate drifted data"
+            flags.append("dataset_hash_mismatch")
+            return self._finish(
+                ctx,
+                metrics={**base_metrics, "skip_reason": skip_reason},
+                flags=flags,
+                confidence=0.35,
+                status=ProbeEvaluationStatus.FAILED,
+                status_reason=skip_reason,
+            )
+
+        try:
+            samples, exclusions = load_samples_for_robustness_with_label_mapping(
+                data,
+                target_column=rc.target_column,
+                text_column=rc.text_column,
+                label_encoding=label_encoding,
+            )
+        except UserDatasetError as exc:
+            flags.extend(["dataset_load_failed", "attack_skipped"])
+            return self._finish(
+                ctx,
+                metrics={**base_metrics, "skip_reason": str(exc)},
+                flags=flags,
+                confidence=0.35,
+                status=ProbeEvaluationStatus.FAILED,
+                status_reason=str(exc),
+            )
+
+        base_metrics.update(
+            {
+                "n_requested": len(samples),
+                "n_samples": len(samples),
+                "excluded_rows": {
+                    "missing_target": exclusions["rows_dropped_missing_target"],
+                    "missing_text": exclusions["rows_dropped_missing_text"],
+                    "unmapped_label": exclusions["rows_dropped_unmapped_label"],
+                },
+                "label_encoding": exclusions["label_encoding"],
+            }
+        )
+
+        if not samples:
+            skip_reason = "no samples remain after missing-value/label-mapping exclusions"
+            flags.extend(["dataset_load_failed", "attack_skipped"])
+            return self._finish(
+                ctx,
+                metrics={**base_metrics, "skip_reason": skip_reason},
+                flags=flags,
+                confidence=0.35,
+                status=ProbeEvaluationStatus.FAILED,
+                status_reason=skip_reason,
+            )
+
+        hf_token = self._hf_token()
+        try:
+            result = self._resolve_runner().run(
+                model_ref=contract.model_ref,
+                model_revision=contract.model_revision,
+                samples=samples,
+                max_changes=max_changes,
+                seed=seed,
+                hf_token=hf_token,
+            )
+        except Exception as exc:  # noqa: BLE001 — execution failure → FAILED
+            logger.warning("robustness_v2_model_or_attack_failed err=%s", exc)
+            flags.extend(["model_load_failed", "attack_skipped"])
+            return self._finish(
+                ctx,
+                metrics={
+                    **base_metrics,
+                    "n_samples": len(samples),
+                    "skip_reason": str(exc),
+                },
+                flags=flags,
+                confidence=0.35,
+                status=ProbeEvaluationStatus.FAILED,
+                status_reason=str(exc),
+            )
+
+        base_metrics["inference_executed"] = not result.insufficient_evidence
+        if result.device_info is not None:
+            base_metrics["inference"] = {
+                "device": result.device_info.device,
+                "device_name": result.device_info.device_name,
+                "backend": result.device_info.backend,
+                "inference_backend": result.device_info.backend,
+                "execution_device": result.device_info.execution_device,
+                "gpu_available": result.device_info.gpu_available,
+                "gpu_name": result.device_info.gpu_name,
+                "cuda_available": result.device_info.cuda_available,
+                "device_reason": result.device_info.device_reason,
+                "fallback_reason": result.device_info.fallback_reason,
+            }
+
+        eval_out = evaluate_classification_robustness(
+            aligned=result.aligned_rows,
+            n_requested=result.n_samples,
+            n_label_compatible=result.n_label_compatible,
+            label_compat_fraction=result.label_compat_fraction,
+            n_successfully_perturbed=result.n_successfully_perturbed,
+            perturbation_coverage=result.perturbation_coverage,
+            seed=seed,
         )
         return self._finish_from_eval(
             ctx,
