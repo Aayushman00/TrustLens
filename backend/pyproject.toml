@@ -34,16 +34,14 @@ dependencies = [
 [project.optional-dependencies]
 # Listed for later phases — do NOT import/connect until those phases
 future = []
+# Local-dev convenience install for real (non-mocked) Fairness/Robustness
+# inference against LocalHFBackend — torch/transformers are lazily imported
+# inside app/inference/local_hf.py and app/inference/device.py, not at
+# module load, which is why the API container starts fine without this
+# extra installed.
 robustness = [
   "torch>=2.2.0",
   "transformers>=4.44.0",
-  "datasets>=2.21.0",
-]
-fairness = [
-  "fairlearn>=0.10.0",
-  "scikit-learn>=1.5.0",
-  "numpy>=1.26.0",
-  "datasets>=2.21.0",
 ]
 dev = [
   "pytest>=8.3.0",

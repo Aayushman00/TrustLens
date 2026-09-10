@@ -134,6 +134,12 @@ class TransformersCharSwapRunner:
             ) from exc
 
         if expected_label_snapshot is not None:
+            # Re-verify here, not just at draft intake: expected_label_snapshot
+            # was frozen when the draft was validated, but the pinned revision
+            # could still resolve to different weights by the time the worker
+            # actually loads them. Trusting intake alone would silently run
+            # the attack under the wrong label semantics — this hard-fails
+            # instead.
             try:
                 verify_loaded_model_matches_snapshot(loaded, expected_label_snapshot)
             except InferenceError:

@@ -55,15 +55,16 @@ export default function ModelsPage() {
         <div className="contract-card-grid">
           {items.map((model) => {
             const displayName = model.hf_repo_id.split("/").pop() ?? model.hf_repo_id;
+            const isPinned = !!model.revision;
             return (
               <div key={model.id} className="contract-card static">
                 <span className="contract-card-title">{displayName}</span>
                 <span className="contract-card-sub mono">{model.hf_repo_id}</span>
                 <span className="contract-card-chips">
-                  <span className={`chip ${model.revision ? "chip-accent" : ""}`}>
+                  <span className={`chip ${isPinned ? "chip-accent" : ""}`}>
                     Revision: {shortRevision(model.revision)}
                   </span>
-                  <span className="chip">{model.revision ? "Available locally" : "No pinned revision"}</span>
+                  {!isPinned ? <span className="chip">Not reproducible</span> : null}
                 </span>
                 <span className="contract-card-sub">
                   Imported {fmtDateTime(model.created_at)}
@@ -72,9 +73,11 @@ export default function ModelsPage() {
                   <Link to={`/models/${model.id}`} className="btn btn-secondary">
                     View model
                   </Link>
-                  <Link to={`/evaluations/new?modelId=${model.id}`} className="btn">
-                    Evaluate
-                  </Link>
+                  {isPinned ? (
+                    <Link to={`/evaluations/new?modelId=${model.id}`} className="btn">
+                      Evaluate
+                    </Link>
+                  ) : null}
                 </div>
               </div>
             );

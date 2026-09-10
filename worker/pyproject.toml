@@ -18,17 +18,13 @@ dependencies = [
   "sqlalchemy>=2.0.0",
   "psycopg2-binary>=2.9.0",
   "pyyaml>=6.0.0",
-  # Phase 11 NLP robustness. Default PyPI wheels for linux x86_64 already
-  # bundle CUDA runtime libraries — no separate GPU-specific install/index is
-  # needed; device selection (CPU vs CUDA) is detected at runtime
-  # (app/inference/device.py), not decided by which wheel got installed.
+  # NLP robustness/fairness inference. Default PyPI wheels for linux x86_64
+  # already bundle CUDA runtime libraries — no separate GPU-specific
+  # install/index is needed; device selection (CPU vs CUDA) is detected at
+  # runtime (app/inference/device.py), not decided by which wheel got
+  # installed.
   "torch>=2.2.0",
   "transformers>=4.44.0",
-  "datasets>=2.21.0",
-  # Phase 12 fairness (Adult tabular + proxy LR; metrics helpers stay stdlib)
-  "fairlearn>=0.10.0",
-  "scikit-learn>=1.5.0",
-  "numpy>=1.26.0",
 ]
 
 [project.optional-dependencies]

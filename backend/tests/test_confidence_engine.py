@@ -73,7 +73,7 @@ def test_fairness_insufficient_evidence_keeps_low_reliability() -> None:
             "probe_status": ProbeEvaluationStatus.INSUFFICIENT_EVIDENCE.value,
             "aspect_scoring": "not_scored",
         },
-        flags=["model_faithful_pairing", "missing_bootstrap_ci"],
+        flags=["model_faithful", "missing_bootstrap_ci"],
         evidence_refs=_REF,
     )
     assert result.factors.probe_reliability == 0.45
@@ -92,7 +92,7 @@ def test_fairness_mapping_blocked_wide_ci_reduces_reliability() -> None:
                 "failed_gates": ["G-FAIR-CI-WIDE"],
             },
         },
-        flags=["model_faithful_pairing", "wide_ci"],
+        flags=["model_faithful", "wide_ci"],
         evidence_refs=_REF,
     )
     assert blocked.factors.probe_reliability == 0.45
@@ -107,7 +107,7 @@ def test_fairness_mapping_blocked_wide_ci_reduces_reliability() -> None:
             "aspect_scoring": "scored_risk",
             "reliability": {"gates_passed": True, "failed_gates": []},
         },
-        flags=["model_faithful_pairing"],
+        flags=["model_faithful"],
         evidence_refs=_REF,
     )
     assert scored.factors.probe_reliability == 1.0

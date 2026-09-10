@@ -74,6 +74,19 @@ class EvaluationDraftService:
         model = self._models.get_by_id(model_id)
         if model is None:
             raise NotFoundError(f"Model {model_id} not found", details={"model_id": model_id})
+        if not model.revision:
+            # Reproducibility is a property of the Model row itself, not
+            # just of whatever revision happens to resolve when this draft
+            # later freezes its own snapshot (_ensure_model_snapshot) — an
+            # unpinned model could resolve a different commit on every
+            # future (re-)import, so no evaluation may ever start from one.
+            # Matches every other reproducibility gate in this codebase
+            # (dataset hash, label snapshot) in failing fast, not silently.
+            raise ValidationAppError(
+                f"Model {model_id} has no pinned revision — re-import with an "
+                "explicit revision before evaluating",
+                details={"model_id": model_id},
+            )
         draft = self._drafts.create(model_id=model_id)
         return self._to_read(draft)
 
