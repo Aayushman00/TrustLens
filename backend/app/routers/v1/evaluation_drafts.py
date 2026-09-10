@@ -42,3 +42,18 @@ def confirm_dimension(draft_id: uuid.UUID, dimension: str, db: Session = Depends
 @router.get("/{draft_id}", response_model=EvaluationDraftRead)
 def get_draft(draft_id: uuid.UUID, db: Session = Depends(get_db)) -> EvaluationDraftRead:
     return EvaluationDraftService(db).get(draft_id)
+
+
+@router.get("/{draft_id}/{dimension}/target-values")
+def get_target_values(
+    draft_id: uuid.UUID,
+    dimension: str,
+    dataset_content_id: uuid.UUID,
+    target_column: str,
+    db: Session = Depends(get_db),
+) -> dict:
+    """Distinct observed target-column values, for populating label-mapping
+    rows before the user has saved anything — never a source of a default
+    mapping (see EvaluationDraftService.discover_target_values)."""
+    values = EvaluationDraftService(db).discover_target_values(dataset_content_id, target_column)
+    return {"values": values}

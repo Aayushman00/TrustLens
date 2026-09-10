@@ -38,7 +38,11 @@ from app.db.repositories.evaluation_draft import EvaluationDraftRepository
 from app.db.repositories.model import ModelRepository
 from app.inference.model_inspection import ModelLabelSnapshot, inspect_model_config
 from app.schemas.evaluation_draft import DimensionConfigUpdate, DimensionValidationRead, EvaluationDraftRead
-from app.services.draft_validation import validate_fairness_config, validate_robustness_config
+from app.services.draft_validation import (
+    _observed_target_values,
+    validate_fairness_config,
+    validate_robustness_config,
+)
 from app.storage.evidence_store import get_dataset_content_store
 
 _DEFAULT_MIN_GROUP_N = 30
@@ -163,6 +167,21 @@ class EvaluationDraftService:
         dim.confirmed_at = dt.datetime.now(dt.UTC)
         self._session.flush()
         return self._to_read(draft)
+
+    def discover_target_values(self, dataset_content_id: uuid.UUID, target_column: str) -> list[str]:
+        """Distinct observed values in ``target_column`` for a dataset
+        content, used to populate label-mapping rows *before* the user has
+        saved anything — every row must start unmapped (see module docstring
+        / Global Constraint: label mappings are never auto-applied)."""
+        content = self._contents.get_by_id(dataset_content_id)
+        if content is None:
+            raise NotFoundError(
+                f"DatasetContent {dataset_content_id} not found",
+                details={"dataset_content_id": str(dataset_content_id)},
+            )
+        store = get_dataset_content_store(get_settings())
+        data = store.get(content.storage_uri)
+        return sorted(_observed_target_values(data, target_column))
 
     def get(self, draft_id: uuid.UUID) -> EvaluationDraftRead:
         draft = self._drafts.get_by_id(draft_id)

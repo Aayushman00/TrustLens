@@ -69,6 +69,16 @@ def test_confirm_dimension_without_prior_validation_returns_422(api_client: Test
     assert resp.status_code == 422
 
 
+def test_target_values_discovery(api_client: TestClient, seeded_model, seeded_dataset_content) -> None:
+    created = api_client.post("/v1/evaluation-drafts", json={"model_id": seeded_model.id}).json()
+    resp = api_client.get(
+        f"/v1/evaluation-drafts/{created['id']}/FAIRNESS/target-values",
+        params={"dataset_content_id": str(seeded_dataset_content.id), "target_column": "label"},
+    )
+    assert resp.status_code == 200, resp.text
+    assert set(resp.json()["values"]) == {"pos", "neg"}
+
+
 def test_update_dimension_unknown_dimension_returns_422_not_500(api_client: TestClient, seeded_model) -> None:
     created = api_client.post("/v1/evaluation-drafts", json={"model_id": seeded_model.id}).json()
     resp = api_client.put(
