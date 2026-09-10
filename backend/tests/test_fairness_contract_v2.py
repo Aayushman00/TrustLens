@@ -206,3 +206,64 @@ def test_fairness_v2_full_path_binary_evaluated(
     assert metrics["equalized_odds_difference"] == 0.0
     assert DatasetContentRepository(db_session).get_by_id(content.id) is not None
     assert len(fake_evidence_store.puts) == 1
+
+
+def test_fairness_v2_worker_hard_fails_on_label_snapshot_mismatch(
+    fake_evidence_store: FakeEvidenceStore,
+    fake_probe_config: ProbeConfigV1,
+    db_session: Any,
+) -> None:
+    """Global Constraint: worker re-loads the full model and hard-fails on
+    any num_labels/id2label mismatch against the frozen model_label_snapshot
+    — even though intake validated the snapshot, the worker must not trust
+    it blindly at execution time."""
+    from app.db.models import DatasetContent
+
+    csv_bytes = b"text,label,group\nhello,pos,a\nworld,neg,a\nfoo,pos,b\nbar,neg,b\n"
+    store = DatasetContentStore(_FakeS3Client(), "test-bucket")
+    storage_uri, content_hash = store.put(csv_bytes, format="csv")
+
+    content = DatasetContent(
+        id=uuid.uuid4(),
+        content_hash=content_hash.removeprefix("sha256:"),
+        storage_uri=storage_uri,
+        byte_size=len(csv_bytes),
+        format="csv",
+        row_count=4,
+        columns=[
+            {"name": "text", "inferred_type": "string"},
+            {"name": "label", "inferred_type": "string"},
+            {"name": "group", "inferred_type": "string"},
+        ],
+    )
+    db_session.add(content)
+    db_session.flush()
+
+    fc = FairnessContractV2(
+        dataset_content_id=content.id,
+        text_column="text",
+        target_column="label",
+        sensitive_column="group",
+        label_mapping=[
+            LabelMappingEntry(dataset_value="pos", model_label_index=1),
+            LabelMappingEntry(dataset_value="neg", model_label_index=0),
+        ],
+        min_group_n=2,
+    )
+    ctx = _ctx(
+        probe_config=fake_probe_config,
+        evidence_store=fake_evidence_store,
+        # _v2_contract() freezes model_label_snapshot at num_labels=2, but the
+        # worker's freshly-loaded model reports num_labels=3 below — a drift
+        # that must hard-fail, not silently score with wrong label semantics.
+        evaluation_contract=_v2_contract(fairness=fc),
+        dataset_content_store=store,
+        session=db_session,
+    )
+    backend = FakeInferenceBackend(predictions=[1, 0, 1, 0], num_labels=3)
+    probe = FairnessProbe(inference=backend)
+
+    output = probe.run(ctx)
+
+    assert output.status == ProbeEvaluationStatus.FAILED
+    assert "num_labels" in (output.status_reason or "")

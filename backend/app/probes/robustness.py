@@ -627,6 +627,7 @@ class RobustnessProbe:
                 max_changes=max_changes,
                 seed=seed,
                 hf_token=hf_token,
+                expected_label_snapshot=contract.model_label_snapshot,
             )
         except Exception as exc:  # noqa: BLE001 — execution failure → FAILED
             logger.warning("robustness_v2_model_or_attack_failed err=%s", exc)

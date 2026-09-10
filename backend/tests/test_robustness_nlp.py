@@ -11,6 +11,7 @@ from app.probes.robustness_nlp import (
     char_swap_attack,
     perturbation_succeeded,
 )
+from app.schemas.evaluation_contract_v2 import ModelLabelSnapshot
 from tests.fakes import FakeInferenceBackend
 
 
@@ -55,6 +56,23 @@ def test_zero_eligible_structured_insufficient() -> None:
     )
     assert result.insufficient_evidence is True
     assert result.n_label_compatible == 0
+
+
+def test_hard_fails_on_label_snapshot_mismatch() -> None:
+    """Global Constraint: worker re-loads the full model and hard-fails on
+    any num_labels/id2label mismatch against the frozen model_label_snapshot."""
+    backend = FakeInferenceBackend(predictions=[0, 1, 0, 1], num_labels=3)
+    runner = TransformersCharSwapRunner(backend=backend)
+    samples = [{"text": "hello world", "label": 0}] * 4
+    with pytest.raises(InferenceError, match="num_labels"):
+        runner.run(
+            model_ref="org/model",
+            model_revision="abc123",
+            samples=samples,
+            max_changes=2,
+            seed=1,
+            expected_label_snapshot=ModelLabelSnapshot(num_labels=2, id2label={0: "NEG", 1: "POS"}),
+        )
 
 
 def test_model_load_failure_raises() -> None:

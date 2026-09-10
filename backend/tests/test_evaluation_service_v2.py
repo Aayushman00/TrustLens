@@ -9,6 +9,7 @@ import pytest
 from app.api.errors import ConflictError
 from app.db.enums import EvaluationMode
 from app.inference.model_inspection import ModelLabelSnapshot
+from app.scoring.methodology_version import LEGACY_METHODOLOGY_VERSION
 from app.services.evaluation_service_v2 import EvaluationServiceV2
 
 # Matches the resolved_sha baked into the confirmed_fairness_draft /
@@ -190,9 +191,20 @@ def test_create_from_draft_records_reconcilable_event_on_enqueue_failure(db_sess
 
     assert evaluation.status == EvaluationStatus.PENDING
 
-    with patch("app.services.evaluation_service.enqueue_evaluate_model", return_value="task-123"):
+    captured_payload: dict[str, object] = {}
+
+    def _capture(payload):
+        captured_payload["methodology_version"] = payload.methodology_version
+        return "task-123"
+
+    with patch("app.services.evaluation_service.enqueue_evaluate_model", side_effect=_capture):
         reconciled = EvaluationService(db_session).reconcile_enqueue_failure(evaluation.id)
     assert reconciled.status == EvaluationStatus.PENDING
+    # Blocker fix: a reconciled V2 evaluation must be requeued under its own
+    # (non-legacy) methodology_version, not silently fall back to legacy
+    # scoring semantics because the rebuilt payload dropped the field.
+    assert captured_payload["methodology_version"] == evaluation.methodology_version
+    assert evaluation.methodology_version != LEGACY_METHODOLOGY_VERSION
 
 
 def test_stale_status_persists_across_a_real_commit_and_rollback(database_url, ensure_migrated, monkeypatch):
