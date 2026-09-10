@@ -30,6 +30,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from app.db.enums import FriesDimension, ProbeEvaluationStatus
+from app.scoring.methodology_version import LEGACY_METHODOLOGY_VERSION
 
 CONFIDENCE_METHOD = "geometric_mean_v1"
 CONFIDENCE_NOTE = "Evidence strength only — not correctness or O/S/D"
@@ -67,7 +68,7 @@ class DimensionConfidence(BaseModel):
 
 class ConfidenceSummary(BaseModel):
     overall: float = Field(ge=0.0, le=1.0)
-    by_dimension: dict[str, float]
+    by_dimension: dict[str, float | None]
     method: str = CONFIDENCE_METHOD
     proposed_calibration: bool = True
     note: str = CONFIDENCE_NOTE
@@ -402,21 +403,40 @@ def refine(
 
 def summarize(
     rows: Sequence[tuple[FriesDimension, float | None, dict[str, Any]]],
+    *,
+    methodology_version: str = LEGACY_METHODOLOGY_VERSION,
 ) -> ConfidenceSummary:
     """Aggregate persisted probe rows → overall + per-dimension confidences.
 
     Uses the stored ``confidence`` when present (engine wrote it at persist
     time); otherwise re-derives from ``metric_values`` (flags unavailable).
+
+    When ``methodology_version != LEGACY_METHODOLOGY_VERSION``, rows whose
+    ``metric_values["probe_status"] == "not_applicable"`` are excluded from
+    the geometric mean (still present in ``by_dimension`` for display, valued
+    ``None``). When ``methodology_version == LEGACY_METHODOLOGY_VERSION``,
+    behavior is byte-for-byte unchanged from before this parameter existed —
+    NOT_APPLICABLE rows are still folded into ``overall`` at their stored
+    confidence, forever.
     """
-    by_dimension: dict[str, float] = {}
+    by_dimension: dict[str, float | None] = {}
+    included_values: list[float] = []
     for dimension, confidence, metric_values in rows:
+        metric_values = metric_values or {}
+        is_not_applicable = metric_values.get("probe_status") == "not_applicable"
         if confidence is not None:
-            by_dimension[dimension.value] = round(_clamp(float(confidence)), 4)
+            value = round(_clamp(float(confidence)), 4)
         else:
-            by_dimension[dimension.value] = refine(
+            value = refine(
                 dimension,
-                metric_values=metric_values or {},
+                metric_values=metric_values,
                 evidence_refs=[True],  # rows always persisted with ≥1 ref
             ).confidence
-    overall = round(geometric_mean(list(by_dimension.values())), 4)
+
+        exclude = is_not_applicable and methodology_version != LEGACY_METHODOLOGY_VERSION
+        by_dimension[dimension.value] = None if exclude else value
+        if not exclude:
+            included_values.append(value)
+
+    overall = round(geometric_mean(included_values), 4) if included_values else 0.0
     return ConfidenceSummary(overall=overall, by_dimension=by_dimension)

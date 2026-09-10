@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import math
 
+import pytest
+
 from app.confidence.engine import (
     CONFIDENCE_METHOD,
     ConfidenceSummary,
@@ -12,6 +14,10 @@ from app.confidence.engine import (
     summarize,
 )
 from app.db.enums import FriesDimension, ProbeEvaluationStatus
+from app.scoring.methodology_version import (
+    CURRENT_METHODOLOGY_VERSION,
+    LEGACY_METHODOLOGY_VERSION,
+)
 
 _REF = [{"evidence_id": "e1"}]
 
@@ -438,3 +444,25 @@ def test_summarize_rederives_when_confidence_missing() -> None:
     )
     assert summary.by_dimension["INTEGRITY"] == 1.0
     assert summary.overall == 1.0
+
+
+def _rows_with_not_applicable_fairness():
+    return [
+        (FriesDimension.FAIRNESS, 0.4, {"probe_status": "not_applicable"}),
+        (FriesDimension.ROBUSTNESS, 0.9, {"clean_accuracy": 0.8}),
+        (FriesDimension.INTEGRITY, 0.9, {}),
+        (FriesDimension.EXPLAINABILITY, 0.9, {}),
+        (FriesDimension.SAFETY, 0.9, {}),
+    ]
+
+
+def test_legacy_version_folds_not_applicable_into_overall() -> None:
+    summary = summarize(_rows_with_not_applicable_fairness(), methodology_version=LEGACY_METHODOLOGY_VERSION)
+    assert summary.by_dimension["FAIRNESS"] == 0.4
+    assert summary.overall < 0.9  # dragged down by the included 0.4
+
+
+def test_current_version_excludes_not_applicable_from_overall() -> None:
+    summary = summarize(_rows_with_not_applicable_fairness(), methodology_version=CURRENT_METHODOLOGY_VERSION)
+    assert summary.overall == pytest.approx(0.9, abs=1e-6)  # geometric mean of four 0.9s, FAIRNESS excluded
+    assert summary.by_dimension["FAIRNESS"] is None
