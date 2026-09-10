@@ -3,11 +3,20 @@
  * default entry point at /evaluations/new in Phase 6). The old flat-contract
  * wizard was deleted in Phase 7.
  *
- * Flow: pick a model -> create an EvaluationDraft -> optionally configure
- * Fairness and/or Robustness (DatasetIntakeForm -> ColumnRoleMappingForm ->
- * confirm) -> "Continue" enables once every *enabled* dimension is confirmed.
+ * Flow: model (preselected via ?modelId=, or picked here if reached
+ * directly) -> create an EvaluationDraft -> optionally configure Fairness
+ * and/or Robustness (DatasetIntakeForm -> ColumnRoleMappingForm -> confirm)
+ * -> optionally attach documentation sources for this model -> "Continue"
+ * enables once every *enabled* dimension is confirmed.
+ *
+ * A model reached via ?modelId= (the normal path — every in-app link to
+ * this page already carries it) is fixed for the rest of the flow: its
+ * revision is what gets frozen into the evaluation, and it is never
+ * re-selectable here. Reaching this page with no ?modelId= at all (a bare
+ * /evaluations/new) falls back to picking a model from the full list.
  */
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import { apiFetch } from "../api/client";
 import type {
@@ -19,6 +28,7 @@ import type {
 } from "../api/types";
 import ColumnRoleMappingForm from "../components/ColumnRoleMappingForm";
 import DatasetIntakeForm from "../components/DatasetIntakeForm";
+import DocumentationSourceForm from "../components/DocumentationSourceForm";
 import ErrorNotice from "../components/ErrorNotice";
 import Spinner from "../components/Spinner";
 import { shortRevision } from "../lib/contract";
@@ -52,13 +62,40 @@ const DIMENSION_LABEL: Record<Dimension, string> = {
 
 export default function CreateEvaluationDraftPage() {
   // --- Model step ---
+  const [searchParams] = useSearchParams();
+  const preselectedModelId = searchParams.get("modelId");
+
   const [modelId, setModelId] = useState<number | null>(null);
   const [models, setModels] = useState<ModelRead[] | null>(null);
   const [model, setModel] = useState<ModelRead | null>(null);
   const [modelError, setModelError] = useState<unknown>(null);
+  const [loadingPreselected, setLoadingPreselected] = useState(preselectedModelId != null);
 
   useEffect(() => {
-    if (modelId != null) return;
+    if (preselectedModelId == null) return;
+    let cancelled = false;
+    apiFetch<ModelRead>(`/v1/models/${preselectedModelId}`)
+      .then((row) => {
+        if (cancelled) return;
+        setModel(row);
+        setModelId(row.id);
+      })
+      .catch((err) => {
+        if (!cancelled) setModelError(err);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingPreselected(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // Only the id from the URL should ever re-trigger this — it identifies
+    // a fixed starting point for the flow, not a value to keep re-reading.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preselectedModelId]);
+
+  useEffect(() => {
+    if (preselectedModelId != null || modelId != null) return;
     let cancelled = false;
     apiFetch<ModelList>("/v1/models?limit=100")
       .then((page) => {
@@ -70,7 +107,9 @@ export default function CreateEvaluationDraftPage() {
     return () => {
       cancelled = true;
     };
-  }, [modelId]);
+  }, [preselectedModelId, modelId]);
+
+  const isPinned = model != null && !!model.revision;
 
   // --- Draft creation ---
   const [draft, setDraft] = useState<EvaluationDraftRead | null>(null);
@@ -78,7 +117,7 @@ export default function CreateEvaluationDraftPage() {
   const [draftError, setDraftError] = useState<unknown>(null);
 
   async function startDraft() {
-    if (modelId === null || model === null) return;
+    if (modelId === null || model === null || !isPinned) return;
     setCreatingDraft(true);
     setDraftError(null);
     try {
@@ -220,16 +259,20 @@ export default function CreateEvaluationDraftPage() {
     <>
       <div className="page-header">
         <div>
-          <h1>New evaluation (draft wizard)</h1>
+          <h1>New evaluation</h1>
           <p className="muted">
-            Model selection, then a per-dimension dataset intake and column-role mapping flow.
+            {model
+              ? "Configure Fairness, Robustness, and documentation for this model."
+              : "Choose a model, then configure Fairness, Robustness, and documentation."}
           </p>
         </div>
       </div>
 
       <ErrorNotice error={modelError} />
 
-      {!model ? (
+      {loadingPreselected ? <Spinner label="Loading model…" /> : null}
+
+      {!model && !loadingPreselected && preselectedModelId == null ? (
         <div className="card">
           <h2>Choose a model</h2>
           {models == null ? <Spinner label="Loading models…" /> : null}
@@ -259,27 +302,40 @@ export default function CreateEvaluationDraftPage() {
         </div>
       ) : null}
 
-      {model && !draft ? (
+      {model && !isPinned ? (
         <div className="card">
-          <h2>Create draft</h2>
+          <h2>{model.hf_repo_id}</h2>
+          <div className="notice notice-error">
+            This model has no pinned revision, so an evaluation of it could not be reproduced
+            later. Re-import it with an explicit revision before evaluating.
+          </div>
+        </div>
+      ) : null}
+
+      {model && isPinned && !draft ? (
+        <div className="card">
+          <h2>{model.hf_repo_id}</h2>
           <p className="muted">
-            {model.hf_repo_id} · revision <span className="mono">{shortRevision(model.revision)}</span>
+            Revision <span className="mono">{shortRevision(model.revision)}</span> — fixed for
+            this evaluation.
           </p>
           <ErrorNotice error={draftError} />
           <div className="btn-row">
             <button type="button" className="btn" disabled={creatingDraft} onClick={() => void startDraft()}>
-              {creatingDraft ? "Creating…" : "Start draft"}
+              {creatingDraft ? "Starting…" : "Start evaluation"}
             </button>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => {
-                setModel(null);
-                setModelId(null);
-              }}
-            >
-              Back
-            </button>
+            {preselectedModelId == null ? (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  setModel(null);
+                  setModelId(null);
+                }}
+              >
+                Choose a different model
+              </button>
+            ) : null}
           </div>
         </div>
       ) : null}
@@ -288,6 +344,15 @@ export default function CreateEvaluationDraftPage() {
         <>
           {renderDimension("FAIRNESS")}
           {renderDimension("ROBUSTNESS")}
+
+          <div className="card">
+            <h2>Documentation</h2>
+            <p className="muted">
+              The pinned model card is included automatically. Add papers, safety cards, or
+              other documentation for the Integrity, Explainability, and Safety probes.
+            </p>
+            <DocumentationSourceForm modelId={draft.model_id} />
+          </div>
 
           <div className="btn-row" style={{ marginTop: "1rem" }}>
             <button type="button" className="btn" disabled={!readyToContinue}>
