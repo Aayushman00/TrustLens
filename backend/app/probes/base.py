@@ -8,13 +8,17 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 from app.db.enums import FriesDimension, ProbeEvaluationStatus
 from app.schemas.evaluation_contract import EvaluationContractV1
+from app.schemas.evaluation_contract_v2 import EvaluationContractV2
 from app.schemas.evidence import EvidenceRef
 from app.schemas.probe_config import ProbeConfigV1
-from app.storage.evidence_store import DatasetStore, EvidenceStore
+from app.storage.evidence_store import DatasetContentStore, DatasetStore, EvidenceStore
+
+if TYPE_CHECKING:
+    from sqlalchemy.orm import Session
 
 FRIES_PROBE_ORDER: tuple[FriesDimension, ...] = (
     FriesDimension.FAIRNESS,
@@ -35,10 +39,22 @@ class ProbeContext:
     # From Model ORM columns (Phase 6); not inside metadata JSONB.
     model_revision: str | None = None
     model_checksum: str | None = None
-    # Phase 7: frozen evaluation contract (not yet consumed by probe logic).
-    evaluation_contract: EvaluationContractV1 | None = None
+    # Phase 7: frozen evaluation contract. Task 4.5: widened to also accept
+    # the V1-dataset-redesign EvaluationContractV2 (per-dimension optional
+    # contract, content-addressed dataset). Exactly one shape is populated
+    # for a given evaluation — the schema_version on the raw payload decides
+    # which Pydantic model runner.py parses it into.
+    evaluation_contract: EvaluationContractV1 | EvaluationContractV2 | None = None
     # User-defined local Fairness dataset path only (kind="user_dataset").
     dataset_store: DatasetStore | None = None
+    # Task 4.5: content-addressed DatasetContent bytes for EvaluationContractV2's
+    # fairness.dataset_content_id / robustness.dataset_content_id.
+    dataset_content_store: DatasetContentStore | None = None
+    # Task 4.5: DB session, needed by V2 probe paths to resolve a
+    # dataset_content_id into its DatasetContent row (storage_uri/content_hash)
+    # via DatasetContentRepository. None in tests that never exercise the V2
+    # dataset-loading path.
+    session: "Session | None" = None
 
 
 @dataclass
