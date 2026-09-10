@@ -549,7 +549,7 @@ export interface DatasetContentRead {
   byte_size: number;
   format: string;
   row_count: number;
-  columns: Record<string, any>[];
+  columns: { name: string; inferred_type: string }[];
   created_at: string;
 }
 
@@ -585,10 +585,10 @@ export interface GroupPreviewEntry {
 export interface DimensionValidationRead {
   ok: boolean;
   errors: string[];
-  group_preview?: Record<string, any>[];
-  groups_remaining?: number;
-  n_label_compatible?: number;
-  n_excluded?: number;
+  group_preview?: GroupPreviewEntry[] | null;
+  groups_remaining?: number | null;
+  n_label_compatible?: number | null;
+  n_excluded?: number | null;
 }
 
 /** EvaluationDraft status lifecycle — backend Literal values. */
