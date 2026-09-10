@@ -58,37 +58,6 @@ export interface ImportHfRequest {
   revision?: string;
 }
 
-// ---- Phase 7 evaluation contract ----
-
-/** Mirrors backend EvaluationContractV1 (backend/app/schemas/evaluation_contract.py). */
-export type EvaluationContractKind =
-  | "pairing"
-  | "registry"
-  | "proxy_lr"
-  | "documentation_only"
-  | "user_dataset";
-
-export interface EvaluationContractV1 {
-  schema_version: "v1";
-  kind: EvaluationContractKind;
-  pairing_id: string | null;
-  dataset_key: string | null;
-  dataset_revision: string | null;
-  model_ref: string;
-  model_revision: string;
-  task_type: string | null;
-  label_space: string[] | number[] | null;
-  modality: string | null;
-  input_adapter: string | null;
-  /** kind="user_dataset" only — the user's own local Fairness dataset. */
-  user_dataset_id: string | null;
-  dataset_uri: string | null;
-  dataset_content_hash: string | null;
-  target_column: string | null;
-  group_column: string | null;
-  text_column: string | null;
-}
-
 // ---- user-defined local Fairness datasets ----
 
 export interface UserDatasetColumn {
@@ -124,25 +93,6 @@ export interface GroupDiscoveryRead {
   observed_groups: ObservedGroup[];
   missing_count: number;
   missing_reasons: Record<string, number>;
-}
-
-/** GET /v1/models/{id}/evaluation-options — approved contracts for this model only. */
-export interface FairnessContractOption {
-  kind: "pairing";
-  pairing_id: string;
-  dataset_key: string;
-  dataset_revision: string;
-  task_type: string;
-  label_space: string[] | number[] | null;
-  modality: string;
-  notes: string | null;
-}
-
-export interface RobustnessContractOption {
-  kind: "registry";
-  dataset_key: string;
-  evaluation_domain: string;
-  notes: string | null;
 }
 
 export type DocumentationType =
@@ -183,18 +133,12 @@ export interface UserDocumentationCreate {
   description?: string | null;
 }
 
-export interface EvaluationOptionsRead {
-  model_id: number;
-  hf_repo_id: string;
-  model_revision: string | null;
-  fairness: FairnessContractOption[];
-  robustness: RobustnessContractOption[];
-  documentation_only_available: boolean;
-  proxy_lr_available: boolean;
-}
-
 // ---- evaluations ----
 
+/** Bare, contract-free evaluation creation (Phase 7) — no dataset/contract
+ * selection of any kind. Fairness/Robustness both resolve NOT_APPLICABLE;
+ * use the draft-based flow (CreateEvaluationDraftPage) for a real
+ * Fairness/Robustness configuration. */
 export interface EvaluationCreate {
   model_id: number;
   evaluation_mode: EvaluationMode;
@@ -202,16 +146,6 @@ export interface EvaluationCreate {
   task?: string;
   dataset?: string;
   config?: string;
-  /** Phase 7 contract selection — mutually exclusive; omit all for documentation_only. */
-  pairing_id?: string;
-  dataset_key?: string;
-  contract_kind?: "proxy_lr";
-  /** User-defined local Fairness dataset selection (kind="user_dataset"). */
-  user_dataset_id?: string;
-  target_column?: string;
-  group_column?: string;
-  text_column?: string;
-  included_group_values?: string[];
 }
 
 export interface ProbeProgress {

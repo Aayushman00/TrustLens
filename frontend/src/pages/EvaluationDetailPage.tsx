@@ -19,7 +19,7 @@ import ModeDisclosureBanner, { engineLabel } from "../components/ModeDisclosure"
 import ScoreBars from "../components/ScoreBars";
 import Spinner from "../components/Spinner";
 import StatusBadge from "../components/StatusBadge";
-import { contractFamilyLabel, contractKindLabel, getEvaluationContract, shortRevision } from "../lib/contract";
+import { contractFamilyLabel, getEvaluationContract, shortRevision } from "../lib/contract";
 import { fmtDateTime, fmtNumber, fmtOsd } from "../lib/format";
 import { mockExecutionTelemetry } from "../mocks/telemetry";
 
@@ -138,7 +138,7 @@ export default function EvaluationDetailPage() {
         </span>
         {contract ? (
           <span className="identity-meta-item">
-            Contract: <strong>{contractFamilyLabel(contract.kind)} · {contractKindLabel(contract.kind)}</strong>
+            Contract: <strong>{contractFamilyLabel(contract)}</strong>
           </span>
         ) : null}
         <span className="identity-meta-item">Created {fmtDateTime(evaluation.created_at)}</span>
@@ -380,9 +380,9 @@ export default function EvaluationDetailPage() {
         <h2>Context</h2>
         <dl className="kv">
           <dt>Evaluation contract</dt>
-          <dd>{contract ? `${contractFamilyLabel(contract.kind)} (${contract.kind})` : "documentation_only"}</dd>
+          <dd>{contractFamilyLabel(contract)}</dd>
           <dt>Dataset</dt>
-          <dd>{contract?.dataset_key ?? evaluation.dataset ?? "—"}</dd>
+          <dd>{evaluation.dataset ?? "—"}</dd>
           <dt>Model revision</dt>
           <dd className="mono">{evaluation.model_revision ?? "—"}</dd>
           <dt>Local execution device</dt>
