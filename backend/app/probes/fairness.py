@@ -105,19 +105,14 @@ class FairnessProbe:
         )
 
     def _run_v2(self, ctx: ProbeContext, contract: EvaluationContractV2) -> ProbeOutput:
-        """EvaluationContractV2 dispatch (Task 4.5).
+        """Sole Fairness evaluation path: EvaluationContractV2 dispatch.
 
-        Mirrors ``_run_user_dataset`` below almost line-for-line — same
-        hash-verify-before-use gate, same ``discover_group_values``/row-loading
-        shape, same downstream ``compute_fairness_bundle``/
-        ``evaluate_multiclass_fairness`` calls — substituting:
-        - ``contract.fairness.dataset_content_id`` (+ a DB lookup via
-          ``DatasetContentRepository``) for the legacy ``UserDataset``'s
-          mutable ``dataset_uri``/``dataset_content_hash`` pair,
-        - the confirmed ``label_mapping`` (dataset value -> model output
-          index) for the legacy path's internally computed alphabetical
-          ``0..k-1`` encoding — see
-          ``load_rows_for_evaluation_with_label_mapping``.
+        Fetches ``contract.fairness.dataset_content_id`` via
+        ``DatasetContentRepository``, hash-verifies the bytes before use,
+        then loads rows using the user-confirmed ``label_mapping`` (dataset
+        value -> model output index) via
+        ``load_rows_for_evaluation_with_label_mapping``, before running
+        inference and ``compute_fairness_bundle``/``evaluate_multiclass_fairness``.
         """
         cfg = ctx.probe_config
         extra = cfg.extra or {}
@@ -139,6 +134,11 @@ class FairnessProbe:
             "inference_executed": False,
             "model_ref": contract.model_ref,
             "model_revision": contract.model_revision,
+            # V2 has no dataset_key/dataset_revision concept at all (that was
+            # the deleted pinned-dataset-registry identity) — these stay
+            # None by design, not omitted, so ProbeEvidenceRead's generic
+            # metrics.get("dataset_key") read (shared with legacy rows)
+            # never KeyErrors on a V2 row.
             "dataset_key": None,
             "dataset_revision": None,
             "dataset_content_id": str(fc.dataset_content_id),
@@ -156,40 +156,19 @@ class FairnessProbe:
         if ctx.dataset_content_store is None or ctx.session is None:
             skip_reason = "dataset content storage is not configured on this TrustLens instance"
             flags.append("dataset_store_unavailable")
-            return self._finish(
-                ctx,
-                metrics={**base_metrics, "skip_reason": skip_reason},
-                flags=flags,
-                confidence=0.35,
-                status=ProbeEvaluationStatus.FAILED,
-                status_reason=skip_reason,
-            )
+            return self._fail(ctx, base_metrics=base_metrics, flags=flags, reason=skip_reason)
 
         content_row = DatasetContentRepository(ctx.session).get_by_id(fc.dataset_content_id)
         if content_row is None:
             skip_reason = f"dataset content {fc.dataset_content_id} not found"
             flags.append("dataset_fetch_failed")
-            return self._finish(
-                ctx,
-                metrics={**base_metrics, "skip_reason": skip_reason},
-                flags=flags,
-                confidence=0.35,
-                status=ProbeEvaluationStatus.FAILED,
-                status_reason=skip_reason,
-            )
+            return self._fail(ctx, base_metrics=base_metrics, flags=flags, reason=skip_reason)
 
         try:
             data = ctx.dataset_content_store.get(content_row.storage_uri)
         except EvidenceStoreError as exc:
             flags.append("dataset_fetch_failed")
-            return self._finish(
-                ctx,
-                metrics={**base_metrics, "skip_reason": str(exc)},
-                flags=flags,
-                confidence=0.35,
-                status=ProbeEvaluationStatus.FAILED,
-                status_reason=str(exc),
-            )
+            return self._fail(ctx, base_metrics=base_metrics, flags=flags, reason=str(exc))
 
         # Hash-verify-before-use: DatasetContentStore's object key is itself
         # derived from the content hash (Task 1.2), so on the pure happy path
@@ -205,14 +184,7 @@ class FairnessProbe:
         if not hashes_equal(format_sha256(data), content_row.content_hash):
             skip_reason = "dataset content hash mismatch — refusing to evaluate drifted data"
             flags.append("dataset_hash_mismatch")
-            return self._finish(
-                ctx,
-                metrics={**base_metrics, "skip_reason": skip_reason},
-                flags=flags,
-                confidence=0.35,
-                status=ProbeEvaluationStatus.FAILED,
-                status_reason=skip_reason,
-            )
+            return self._fail(ctx, base_metrics=base_metrics, flags=flags, reason=skip_reason)
 
         try:
             observed_groups, missing_summary = discover_group_values(
@@ -220,14 +192,7 @@ class FairnessProbe:
             )
         except UserDatasetError as exc:
             flags.extend(["dataset_load_failed", "metrics_skipped"])
-            return self._finish(
-                ctx,
-                metrics={**base_metrics, "skip_reason": str(exc)},
-                flags=flags,
-                confidence=0.35,
-                status=ProbeEvaluationStatus.FAILED,
-                status_reason=str(exc),
-            )
+            return self._fail(ctx, base_metrics=base_metrics, flags=flags, reason=str(exc))
 
         dataset_row_count = sum(int(g["count"]) for g in observed_groups)
 
@@ -239,20 +204,13 @@ class FairnessProbe:
                 text_column=fc.text_column,
                 # v2's contract carries no manual group-exclusion field yet;
                 # thin-group filtering still happens downstream via
-                # filter_compared_groups/min_group_n, same as the pairing path.
+                # filter_compared_groups/min_group_n.
                 excluded_group_values=set(),
                 label_encoding=label_encoding,
             )
         except UserDatasetError as exc:
             flags.extend(["dataset_load_failed", "metrics_skipped"])
-            return self._finish(
-                ctx,
-                metrics={**base_metrics, "skip_reason": str(exc)},
-                flags=flags,
-                confidence=0.35,
-                status=ProbeEvaluationStatus.FAILED,
-                status_reason=str(exc),
-            )
+            return self._fail(ctx, base_metrics=base_metrics, flags=flags, reason=str(exc))
 
         base_metrics.update(
             {
@@ -278,14 +236,7 @@ class FairnessProbe:
                 else "no rows remain after missing-value/label-mapping exclusions"
             )
             flags.extend(["dataset_load_failed", "metrics_skipped"])
-            return self._finish(
-                ctx,
-                metrics={**base_metrics, "skip_reason": skip_reason},
-                flags=flags,
-                confidence=0.35,
-                status=ProbeEvaluationStatus.FAILED,
-                status_reason=skip_reason,
-            )
+            return self._fail(ctx, base_metrics=base_metrics, flags=flags, reason=skip_reason)
 
         min_group_n = fc.min_group_n
         is_binary = len(label_values_seen) == 2
@@ -301,6 +252,12 @@ class FairnessProbe:
                 ),
             )
             loaded = backend.load(contract.model_ref, revision=contract.model_revision, config=config)
+            # Re-verify here, not just at draft intake: contract.model_label_snapshot
+            # was frozen when the draft was validated, but the pinned revision
+            # could still resolve to different weights by the time the worker
+            # actually loads them (a repo owner force-pushing the same tag,
+            # e.g.). Trusting intake alone would silently score under the
+            # wrong label semantics — this hard-fails instead.
             verify_loaded_model_matches_snapshot(loaded, contract.model_label_snapshot)
             texts = [r["text"] for r in rows]
             batch = backend.predict_batch(texts)
@@ -326,28 +283,14 @@ class FairnessProbe:
         except InferenceError as exc:
             logger.warning("v2_dataset_inference_failed err=%s", exc)
             flags.extend(["predictor_failed", "metrics_skipped"])
-            return self._finish(
-                ctx,
-                metrics={**base_metrics, "skip_reason": exc.message},
-                flags=flags,
-                confidence=0.35,
-                status=ProbeEvaluationStatus.FAILED,
-                status_reason=exc.message,
-            )
+            return self._fail(ctx, base_metrics=base_metrics, flags=flags, reason=exc.message)
         finally:
             backend.close()
 
         if len(y_pred) != len(rows):
             skip_reason = "prediction count does not match input count"
             flags.extend(["predictor_failed", "metrics_skipped"])
-            return self._finish(
-                ctx,
-                metrics={**base_metrics, "skip_reason": skip_reason},
-                flags=flags,
-                confidence=0.35,
-                status=ProbeEvaluationStatus.FAILED,
-                status_reason=skip_reason,
-            )
+            return self._fail(ctx, base_metrics=base_metrics, flags=flags, reason=skip_reason)
 
         base_metrics.update({"inference": inference_meta, "inference_executed": True})
 
@@ -358,14 +301,7 @@ class FairnessProbe:
                 bundle = compute_fairness_bundle(y_true, y_pred, sensitive)
             except ValueError as exc:
                 flags.append("metrics_skipped")
-                return self._finish(
-                    ctx,
-                    metrics={**base_metrics, "skip_reason": str(exc)},
-                    flags=flags,
-                    confidence=0.4,
-                    status=ProbeEvaluationStatus.FAILED,
-                    status_reason=str(exc),
-                )
+                return self._fail(ctx, base_metrics=base_metrics, flags=flags, reason=str(exc), confidence=0.4)
             aligned_for_report = [
                 {"label": y_true[i], "y_hat": y_pred[i], "sensitive": sensitive[i]}
                 for i in range(len(rows))
@@ -450,6 +386,28 @@ class FairnessProbe:
             flags=all_flags,
             status=mc_result.status,
             status_reason=mc_result.status_reason,
+        )
+
+    def _fail(
+        self,
+        ctx: ProbeContext,
+        *,
+        base_metrics: dict[str, Any],
+        flags: list[str],
+        reason: str,
+        confidence: float = 0.35,
+    ) -> ProbeOutput:
+        """Shared shape for every FAILED early-return in ``_run_v2`` — same
+        ``metrics={**base_metrics, "skip_reason": reason}``/``status=FAILED``
+        pattern repeated at each failure point, differing only in ``flags``,
+        ``reason``, and (once) ``confidence``."""
+        return self._finish(
+            ctx,
+            metrics={**base_metrics, "skip_reason": reason},
+            flags=flags,
+            confidence=confidence,
+            status=ProbeEvaluationStatus.FAILED,
+            status_reason=reason,
         )
 
     def _finish(

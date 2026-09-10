@@ -98,7 +98,7 @@ computed, `needs_human_review` is always `true`.
 | `subgroup_f1_spread` | max−min binary F1 across groups |
 
 NLP-only pins (e.g. `sentiment_fairness`) → `unsupported_modality` + evidence; evaluation
-still completes. Optional: `pip install -e ".[fairness]"`.
+still completes.
 
 ## Explainability probe (Phase 4 — tl-explainability-v1.0)
 
