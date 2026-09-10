@@ -539,3 +539,66 @@ export interface ApiErrorBody {
   message: string;
   details: Record<string, unknown>;
 }
+
+// ---- Phase 3: Dataset content and drafts (intake flow) ----
+
+/** GET /v1/dataset-contents/{id} — backend DatasetContentRead. */
+export interface DatasetContentRead {
+  id: string;
+  content_hash: string;
+  byte_size: number;
+  format: string;
+  row_count: number;
+  columns: Record<string, any>[];
+  created_at: string;
+}
+
+/** POST /v1/dataset-fetches — backend DatasetFetchRequest. */
+export interface DatasetFetchRequest {
+  source_url: string;
+}
+
+/** Label mapping entry within DimensionConfigUpdate.label_mapping. */
+export interface LabelMappingEntry {
+  dataset_value: string;
+  model_label_index: number;
+}
+
+/** PATCH /v1/evaluation-drafts/{id}/dimensions — backend DimensionConfigUpdate. */
+export interface DimensionConfigUpdate {
+  dataset_content_id: string;
+  text_column: string;
+  target_column: string;
+  sensitive_column?: string;
+  label_mapping: LabelMappingEntry[];
+  min_group_n?: number;
+}
+
+/** Group preview entry within DimensionValidationRead.group_preview. */
+export interface GroupPreviewEntry {
+  value: string;
+  count: number;
+  meets_min_group_n: boolean;
+}
+
+/** Dimension validation response — backend DimensionValidationRead. */
+export interface DimensionValidationRead {
+  ok: boolean;
+  errors: string[];
+  group_preview?: Record<string, any>[];
+  groups_remaining?: number;
+  n_label_compatible?: number;
+  n_excluded?: number;
+}
+
+/** EvaluationDraft status lifecycle — backend Literal values. */
+export type EvaluationDraftStatus = "incomplete" | "validated" | "consumed" | "stale";
+
+/** GET /v1/evaluation-drafts/{id} — backend EvaluationDraftRead. */
+export interface EvaluationDraftRead {
+  id: string;
+  model_id: number;
+  status: EvaluationDraftStatus;
+  fairness_confirmed: boolean;
+  robustness_confirmed: boolean;
+}
