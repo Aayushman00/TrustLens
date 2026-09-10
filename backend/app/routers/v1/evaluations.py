@@ -11,9 +11,11 @@ from app.api.deps import get_db
 from app.db.enums import EvaluationStatus
 from app.db.repositories.evaluation_event import EvaluationEventRepository
 from app.schemas.common import ErrorResponse
+from app.schemas.evaluation_draft import CreateEvaluationV2Request
 from app.schemas.evaluation_events import EvaluationEventList, EvaluationEventRead
 from app.schemas.evaluations import EvaluationCreate, EvaluationList, EvaluationRead
 from app.services.evaluation_service import EvaluationService
+from app.services.evaluation_service_v2 import EvaluationServiceV2
 
 router = APIRouter(prefix="/evaluations", tags=["evaluations"])
 
@@ -34,6 +36,31 @@ def create_evaluation(
     db: Session = Depends(get_db),
 ) -> EvaluationRead:
     row = EvaluationService(db).create_evaluation(body)
+    return EvaluationRead.model_validate(row)
+
+
+@router.post(
+    "-v2",
+    response_model=EvaluationRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Consume a validated EvaluationDraft into a frozen EvaluationContractV2",
+    description=(
+        "Atomically consumes an EvaluationDraft (Task 2.x intake) into a real, "
+        "frozen Evaluation carrying EvaluationContractV2, stamped with the "
+        "current methodology_version, and enqueues the worker. Does not "
+        "replace or touch POST /v1/evaluations (the legacy contract path), "
+        "which remains unchanged."
+    ),
+    responses={
+        404: {"model": ErrorResponse},
+        409: {"model": ErrorResponse},
+    },
+)
+def create_evaluation_v2(
+    body: CreateEvaluationV2Request,
+    db: Session = Depends(get_db),
+) -> EvaluationRead:
+    row = EvaluationServiceV2(db).create_from_draft(body.draft_id, body.evaluation_mode)
     return EvaluationRead.model_validate(row)
 
 

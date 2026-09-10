@@ -365,6 +365,69 @@ def seeded_dataset_content(
     return content
 
 
+_DRAFT_FAIRNESS_BODY = {
+    "text_column": "text",
+    "target_column": "label",
+    "sensitive_column": "group",
+    "label_mapping": [
+        {"dataset_value": "pos", "model_label_index": 1},
+        {"dataset_value": "neg", "model_label_index": 0},
+    ],
+    "min_group_n": 2,
+}
+
+
+@pytest.fixture
+def confirmed_fairness_draft(
+    db_session: Session, seeded_model: Any, seeded_dataset_content: Any
+) -> Any:
+    """A real EvaluationDraft (built through EvaluationDraftService, not a
+    hand-rolled row) with FAIRNESS validated and confirmed, ROBUSTNESS
+    untouched — the happy path Task 4.4's ``create_from_draft`` consumes."""
+    from unittest.mock import patch
+
+    from app.db.repositories.evaluation_draft import EvaluationDraftRepository
+    from app.inference.model_inspection import ModelLabelSnapshot
+    from app.services.evaluation_draft_service import EvaluationDraftService
+
+    snapshot = ModelLabelSnapshot(num_labels=2, id2label={0: "NEGATIVE", 1: "POSITIVE"}, resolved_sha="sha-1")
+    service = EvaluationDraftService(db_session)
+    draft = service.create(seeded_model.id)
+    with patch("app.services.evaluation_draft_service.inspect_model_config", return_value=snapshot):
+        service.update_dimension(
+            draft.id,
+            "FAIRNESS",
+            {"dataset_content_id": seeded_dataset_content.id, **_DRAFT_FAIRNESS_BODY},
+        )
+    service.confirm_dimension(draft.id, "FAIRNESS")
+    return EvaluationDraftRepository(db_session).get_by_id(draft.id)
+
+
+@pytest.fixture
+def half_confirmed_draft(
+    db_session: Session, seeded_model: Any, seeded_dataset_content: Any
+) -> Any:
+    """A real EvaluationDraft with FAIRNESS validated but never confirmed —
+    the half-filled state Task 4.4's ``create_from_draft`` must reject."""
+    from unittest.mock import patch
+
+    from app.db.repositories.evaluation_draft import EvaluationDraftRepository
+    from app.inference.model_inspection import ModelLabelSnapshot
+    from app.services.evaluation_draft_service import EvaluationDraftService
+
+    snapshot = ModelLabelSnapshot(num_labels=2, id2label={0: "NEGATIVE", 1: "POSITIVE"}, resolved_sha="sha-1")
+    service = EvaluationDraftService(db_session)
+    draft = service.create(seeded_model.id)
+    with patch("app.services.evaluation_draft_service.inspect_model_config", return_value=snapshot):
+        service.update_dimension(
+            draft.id,
+            "FAIRNESS",
+            {"dataset_content_id": seeded_dataset_content.id, **_DRAFT_FAIRNESS_BODY},
+        )
+    # Deliberately not confirmed.
+    return EvaluationDraftRepository(db_session).get_by_id(draft.id)
+
+
 @pytest.fixture
 def _localhost_allowed_for_fetch(monkeypatch: pytest.MonkeyPatch) -> None:
     """Patch SSRF validation and DNS to ensure IPv4-first resolution for httpserver tests.

@@ -7,9 +7,19 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
+from app.db.enums import EvaluationMode
+
 
 class CreateDraftRequest(BaseModel):
     model_id: int
+
+
+class CreateEvaluationV2Request(BaseModel):
+    """Request body for ``POST /v1/evaluations-v2`` (Task 4.4) — same
+    correction noted in Task 2.5: a typed schema, not a raw ``dict``."""
+
+    draft_id: uuid.UUID
+    evaluation_mode: EvaluationMode
 
 
 class DimensionConfigUpdate(BaseModel):
