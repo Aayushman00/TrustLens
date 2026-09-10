@@ -24,8 +24,8 @@ export default function App() {
           <Route path="/models/import" element={<ImportModelPage />} />
           <Route path="/models/:id" element={<ModelDetailPage />} />
           <Route path="/evaluations" element={<EvaluationsHistoryPage />} />
-          <Route path="/evaluations/new" element={<CreateEvaluationPage />} />
-          <Route path="/evaluations/new-v2" element={<CreateEvaluationDraftPage />} />
+          <Route path="/evaluations/new" element={<CreateEvaluationDraftPage />} />
+          <Route path="/evaluations/new-legacy" element={<CreateEvaluationPage />} />
           <Route path="/evaluations/:id" element={<EvaluationDetailPage />} />
           <Route path="/evaluations/:id/review" element={<ReviewPage />} />
           <Route path="/reports/:evaluationId" element={<ReportPage />} />

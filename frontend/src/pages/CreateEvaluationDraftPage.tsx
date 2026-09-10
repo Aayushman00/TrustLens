@@ -1,8 +1,8 @@
 /**
- * New draft-based evaluation creation wizard (Phase 3, Task 3.5), reachable
- * at /evaluations/new-v2 — purely additive alongside the existing
- * /evaluations/new (CreateEvaluationPage.tsx), which stays untouched and
- * remains the default link target everywhere in the app.
+ * Draft-based evaluation creation wizard (Phase 3, Task 3.5; made the
+ * default entry point at /evaluations/new in Phase 6). The old flat-contract
+ * wizard (CreateEvaluationPage.tsx) is still reachable at
+ * /evaluations/new-legacy, unchanged, pending Phase 7 removal.
  *
  * Flow: pick a model -> create an EvaluationDraft -> optionally configure
  * Fairness and/or Robustness (DatasetIntakeForm -> ColumnRoleMappingForm ->
