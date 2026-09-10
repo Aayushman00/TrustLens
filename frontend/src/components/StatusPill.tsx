@@ -2,9 +2,11 @@
  * Semantic dimension-status pill — distinct from EvaluationStatus (StatusBadge).
  *
  * These seven states are never collapsed into a generic color or "N/A":
- * Evaluated, Running, Not applicable, Insufficient evidence, Failed,
- * Withheld, Proxy. See backend ProbeEvaluationStatus (app/db/enums.py) plus
- * the FRIES-withheld state, which has no probe-level equivalent.
+ * Evaluated, Running, Not configured (NOT_APPLICABLE — the dimension wasn't
+ * configured for this evaluation), Insufficient evidence (a genuinely
+ * attempted-but-inconclusive result), Failed, Withheld, Proxy. See backend
+ * ProbeEvaluationStatus (app/db/enums.py) plus the FRIES-withheld state,
+ * which has no probe-level equivalent.
  */
 import type { ProbeStatusValue } from "../api/types";
 
@@ -13,7 +15,7 @@ export type DisplayStatus = ProbeStatusValue | "RUNNING" | "WITHHELD";
 const CONFIG: Record<DisplayStatus, { label: string; icon: string; cls: string }> = {
   EVALUATED: { label: "Evaluated", icon: "✓", cls: "status-pill-evaluated" },
   RUNNING: { label: "Running", icon: "●", cls: "status-pill-running" },
-  NOT_APPLICABLE: { label: "Not applicable", icon: "–", cls: "status-pill-not_applicable" },
+  NOT_APPLICABLE: { label: "Not configured", icon: "–", cls: "status-pill-not_applicable" },
   INSUFFICIENT_EVIDENCE: {
     label: "Insufficient evidence",
     icon: "!",
