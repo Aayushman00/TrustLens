@@ -13,7 +13,6 @@ from app.inference.base import (
 )
 from app.inference.errors import InferenceError
 from app.inference.local_hf import LocalHFBackend
-from app.inference.pairing import resolve_pairing, SupportedPairing
 
 __all__ = [
     "BatchPrediction",
@@ -26,7 +25,5 @@ __all__ = [
     "LoadedModelInfo",
     "LocalHFBackend",
     "PredictionRecord",
-    "SupportedPairing",
     "TaskType",
-    "resolve_pairing",
 ]

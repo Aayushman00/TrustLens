@@ -11,7 +11,6 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Protocol
 
 from app.db.enums import FriesDimension, ProbeEvaluationStatus
-from app.schemas.evaluation_contract import EvaluationContractV1
 from app.schemas.evaluation_contract_v2 import EvaluationContractV2
 from app.schemas.evidence import EvidenceRef
 from app.schemas.probe_config import ProbeConfigV1
@@ -39,12 +38,10 @@ class ProbeContext:
     # From Model ORM columns (Phase 6); not inside metadata JSONB.
     model_revision: str | None = None
     model_checksum: str | None = None
-    # Phase 7: frozen evaluation contract. Task 4.5: widened to also accept
-    # the V1-dataset-redesign EvaluationContractV2 (per-dimension optional
-    # contract, content-addressed dataset). Exactly one shape is populated
-    # for a given evaluation — the schema_version on the raw payload decides
-    # which Pydantic model runner.py parses it into.
-    evaluation_contract: EvaluationContractV1 | EvaluationContractV2 | None = None
+    # Frozen EvaluationContractV2 (per-dimension optional contract,
+    # content-addressed dataset), or None for an evaluation with no contract
+    # attached at all.
+    evaluation_contract: EvaluationContractV2 | None = None
     # User-defined local Fairness dataset path only (kind="user_dataset").
     dataset_store: DatasetStore | None = None
     # Task 4.5: content-addressed DatasetContent bytes for EvaluationContractV2's

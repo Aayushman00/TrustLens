@@ -1,7 +1,8 @@
 """Robustness probe — clean vs discrete char-swap accuracy (tl-methodology-v1.0).
 
-NLP text-classification path only. Vision/ART FGSM deferred. Emits Layer A
-evidence with gates and R-ROB-PERT detection — does **not** map metrics to O/S/D.
+NLP text-classification path only, for a user-defined local dataset. Emits
+Layer A evidence with gates and R-ROB-PERT detection — does **not** map
+metrics to O/S/D.
 """
 
 from __future__ import annotations
@@ -10,26 +11,16 @@ import json
 import logging
 from typing import Any
 
-from app.datasets.loader import DatasetLoadError, load_pinned_subset
-from app.datasets.registry import DatasetSpec, get_dataset_spec
 from app.datasets.user_dataset import (
     UserDatasetError,
     load_samples_for_robustness_with_label_mapping,
 )
 from app.db.enums import FriesDimension, ProbeEvaluationStatus
 from app.db.repositories.dataset_content import DatasetContentRepository
-from app.inference.base import DecisionMode, InferenceConfig
 from app.probes.base import ProbeContext, ProbeOutput
-from app.probes.robustness_compat import RobustnessCompatEntry, resolve_robustness_compat
 from app.probes.robustness_eval import evaluate_classification_robustness
-from app.probes.robustness_nlp import (
-    RobustnessRunner,
-    RobustnessRunResult,
-    TransformersCharSwapRunner,
-    task_type_from_spec,
-)
-from app.probes.robustness_stats import MIN_REQUESTED, SCORED_RISK_ID
-from app.schemas.evaluation_contract import EvaluationContractV1
+from app.probes.robustness_nlp import RobustnessRunner, RobustnessRunResult, TransformersCharSwapRunner
+from app.probes.robustness_stats import SCORED_RISK_ID
 from app.schemas.evaluation_contract_v2 import EvaluationContractV2
 from app.storage.evidence_store import EvidenceStoreError, format_sha256, hashes_equal
 
@@ -43,10 +34,6 @@ _NOTE = "Layer A evidence only — R-ROB-PERT detection does not assign O/S/D"
 
 def _budget_to_max_changes(budget: float) -> int:
     return max(1, min(8, round(budget * 100)))
-
-
-def _clamp_samples(n: int) -> int:
-    return max(MIN_REQUESTED, min(512, n))
 
 
 def _extra_int(extra: dict[str, Any], key: str, default: int) -> int:
@@ -65,91 +52,6 @@ def _extra_float(extra: dict[str, Any], key: str, default: float) -> float:
         return default
 
 
-def _extra_bool(extra: dict[str, Any], key: str, default: bool = False) -> bool:
-    raw = extra.get(key, default)
-    if isinstance(raw, bool):
-        return raw
-    if isinstance(raw, str):
-        return raw.strip().lower() in {"1", "true", "yes"}
-    return default
-
-
-def _is_text_classification(meta: dict[str, Any]) -> bool:
-    tags = meta.get("tags") if isinstance(meta.get("tags"), list) else []
-    tag_blob = " ".join(str(t).lower() for t in tags)
-    candidates = [
-        meta.get("pipeline_tag"),
-        meta.get("task"),
-        meta.get("library_name"),
-    ]
-    for value in candidates:
-        if not value:
-            continue
-        text = str(value).lower().replace("_", "-")
-        if text in {"text-classification", "sentiment-analysis", "text-classif"}:
-            return True
-        if "text-classification" in text or "sentiment" in text:
-            return True
-    if "text-classification" in tag_blob or "sentiment-analysis" in tag_blob:
-        return True
-    return False
-
-
-def _resolve_robustness_dataset(
-    contract: EvaluationContractV1 | None,
-) -> tuple[str | None, str | None, str | None, RobustnessCompatEntry | None]:
-    """Explicit-contract-only dataset resolution (Phase 7).
-
-    ``contract.dataset_key`` is the **only** dataset selection source — there
-    is no ``probe_config.datasets.robustness`` override and no silent
-    auto-selection from ``supported_robustness_compat_v1.yaml`` based on
-    model identity alone. The compat YAML only *validates* that the already
-    selected key is an approved pin for the frozen ``contract.model_ref`` /
-    ``contract.model_revision``; it never substitutes a different dataset.
-
-    Returns ``(logical_key, evaluation_domain, resolution_source, compat)``
-    or ``(None, None, None, None)`` when the contract does not authorize a
-    Robustness run (``documentation_only``/``proxy_lr``, no ``dataset_key``,
-    or a ``dataset_key`` that is not an approved pin for this exact model +
-    revision).
-    """
-    if contract is None or contract.kind in ("documentation_only", "proxy_lr"):
-        return None, None, None, None
-    dataset_key = contract.dataset_key
-    if not dataset_key:
-        return None, None, None, None
-    compat = resolve_robustness_compat(contract.model_ref, revision=contract.model_revision)
-    if compat is None or compat.robustness_dataset_key != dataset_key:
-        return None, None, None, None
-    return dataset_key, compat.evaluation_domain, "contract_validated", compat
-
-
-def _check_domain_compat(
-    *,
-    dataset_domain: str | None,
-    compat_domain: str | None,
-    allow_domain_mismatch: bool,
-) -> tuple[bool, bool]:
-    """Return (hard_domain_mismatch, mapping_blocked_pre)."""
-    if dataset_domain is None:
-        return False, False
-    if compat_domain is None:
-        return False, False
-    if dataset_domain == compat_domain:
-        return False, False
-    if allow_domain_mismatch:
-        return False, True
-    return True, False
-
-
-def _resolve_inference_config(spec: DatasetSpec) -> InferenceConfig:
-    return InferenceConfig(
-        task_type=task_type_from_spec(spec.task_type),
-        decision=DecisionMode.ARGMAX,
-        device="auto",
-    )
-
-
 def _base_metrics(
     *,
     logical_key: str | None,
@@ -158,7 +60,7 @@ def _base_metrics(
     seed: int,
     max_samples: int,
     dataset_info: dict[str, Any],
-    contract: EvaluationContractV1 | None,
+    contract: Any | None,
 ) -> dict[str, Any]:
     return {
         "attack": "char_swap",
@@ -180,21 +82,20 @@ def _base_metrics(
         "risks_triggered": [],
         "proposed_mapping": False,
         "note": _NOTE,
-        # Phase 7: frozen evaluation-contract identity — never a freshly
+        # Frozen evaluation-contract identity — never a freshly
         # substituted/auto-selected dataset or a live Model.revision read.
         "model_ref": contract.model_ref if contract is not None else None,
         "model_revision": contract.model_revision if contract is not None else None,
         "dataset_key": logical_key,
         "dataset_revision": None,
         "task_type": None,
-        "label_space": contract.label_space if contract is not None else None,
-        "evaluation_class": contract.kind if contract is not None else "missing",
+        "evaluation_class": "missing",
         "inference_executed": False,
     }
 
 
 class RobustnessProbe:
-    """NLP robustness via pinned subset + discrete char-swap attack."""
+    """NLP robustness via a user-defined local dataset + discrete char-swap attack."""
 
     def __init__(self, runner: RobustnessRunner | None = None) -> None:
         self._runner = runner
@@ -211,239 +112,23 @@ class RobustnessProbe:
         if isinstance(contract_any, EvaluationContractV2):
             return self._run_v2(ctx, contract_any)
 
-        cfg = ctx.probe_config
-        extra = cfg.extra or {}
-        budget = (
-            float(cfg.attack_budget)
-            if cfg.attack_budget is not None
-            else _extra_float(extra, "attack_budget", _DEFAULT_BUDGET)
-        )
-        if budget <= 0:
-            budget = _DEFAULT_BUDGET
-        seed = _extra_int(extra, "seed", _DEFAULT_SEED)
-        max_samples = _clamp_samples(
-            _extra_int(extra, "max_samples", _DEFAULT_MAX_SAMPLES)
-        )
-        max_changes = _budget_to_max_changes(budget)
-        allow_domain_mismatch = _extra_bool(extra, "allow_domain_mismatch", False)
-
-        contract = ctx.evaluation_contract
-        logical_key, declared_domain, resolution_source, dataset_compat = (
-            _resolve_robustness_dataset(contract)
-        )
-        dataset_info: dict[str, Any] = {
-            "logical_key": logical_key,
-            "resolution_source": resolution_source,
-            "evaluation_domain": declared_domain,
-        }
+        skip_reason = "no EvaluationContractV2 was attached to this evaluation"
         base_metrics = _base_metrics(
-            logical_key=logical_key,
-            budget=budget,
-            max_changes=max_changes,
-            seed=seed,
-            max_samples=max_samples,
-            dataset_info=dataset_info,
-            contract=contract,
+            logical_key=None,
+            budget=_DEFAULT_BUDGET,
+            max_changes=_budget_to_max_changes(_DEFAULT_BUDGET),
+            seed=_DEFAULT_SEED,
+            max_samples=0,
+            dataset_info={"logical_key": None, "resolution_source": None, "evaluation_domain": None},
+            contract=None,
         )
-        flags: list[str] = []
-
-        if logical_key is None:
-            flags.extend(["no_compatible_dataset", "attack_skipped"])
-            skip_reason = (
-                "no Robustness-compatible evaluation contract: dataset_key must be "
-                "an explicitly selected key already approved in "
-                "supported_robustness_compat_v1.yaml for this exact model + "
-                "revision — documentation_only/proxy_lr contracts, an unapproved "
-                "dataset_key, and a mismatched model revision all resolve here; "
-                "never a silently substituted dataset"
-            )
-            return self._finish(
-                ctx,
-                metrics={**base_metrics, "skip_reason": skip_reason},
-                flags=flags,
-                confidence=0.4,
-                status=ProbeEvaluationStatus.NOT_APPLICABLE,
-                status_reason=skip_reason,
-            )
-
-        try:
-            spec = get_dataset_spec(logical_key)
-        except KeyError:
-            flags.extend(["dataset_load_failed", "attack_skipped"])
-            skip_reason = f"unknown dataset logical_key={logical_key}"
-            return self._finish(
-                ctx,
-                metrics={**base_metrics, "skip_reason": skip_reason},
-                flags=flags,
-                confidence=0.35,
-                status=ProbeEvaluationStatus.FAILED,
-                status_reason=skip_reason,
-            )
-
-        if spec.task_type == "regression":
-            flags.extend(["unsupported_task", "attack_skipped"])
-            skip_reason = "regression robustness not pinned for v1.0"
-            return self._finish(
-                ctx,
-                metrics={**base_metrics, "skip_reason": skip_reason},
-                flags=flags,
-                confidence=0.4,
-                status=ProbeEvaluationStatus.NOT_APPLICABLE,
-                status_reason=skip_reason,
-            )
-
-        dataset_info.update(
-            {
-                "hf_path": spec.hf_path,
-                "revision": spec.revision,
-                "modality": spec.modality,
-                "config_name": spec.config_name,
-                "task_type": spec.task_type,
-                "evaluation_domain": spec.evaluation_domain or declared_domain,
-            }
-        )
-        base_metrics["dataset_revision"] = spec.revision
-        base_metrics["task_type"] = spec.task_type
-
-        if spec.modality != "nlp":
-            flags.extend(["unsupported_modality", "attack_skipped"])
-            skip_reason = f"modality={spec.modality} (NLP path only)"
-            return self._finish(
-                ctx,
-                metrics={**base_metrics, "skip_reason": skip_reason},
-                flags=flags,
-                confidence=0.4,
-                status=ProbeEvaluationStatus.NOT_APPLICABLE,
-                status_reason=skip_reason,
-            )
-
-        meta = ctx.model_metadata or {}
-        if not _is_text_classification(meta):
-            flags.extend(["unsupported_modality", "attack_skipped"])
-            skip_reason = "model is not text-classification / sentiment"
-            return self._finish(
-                ctx,
-                metrics={**base_metrics, "skip_reason": skip_reason},
-                flags=flags,
-                confidence=0.4,
-                status=ProbeEvaluationStatus.NOT_APPLICABLE,
-                status_reason=skip_reason,
-            )
-
-        # dataset_compat is the same compat entry that already validated
-        # logical_key against contract.model_ref/model_revision above; the
-        # domain gate is kept as-is (unchanged methodology) for defense in
-        # depth even though it is consistent by construction on this path.
-        compat_domain = dataset_compat.evaluation_domain if dataset_compat else None
-        pin_domain = spec.evaluation_domain
-        domain_mismatch, mapping_blocked_pre = _check_domain_compat(
-            dataset_domain=pin_domain,
-            compat_domain=compat_domain,
-            allow_domain_mismatch=allow_domain_mismatch,
-        )
-
-        try:
-            samples = load_pinned_subset(
-                logical_key, n=max_samples, seed=seed, spec=spec
-            )
-        except DatasetLoadError as exc:
-            logger.warning("robustness_dataset_failed err=%s", exc)
-            flags.extend(["dataset_load_failed", "attack_skipped"])
-            return self._finish(
-                ctx,
-                metrics={**base_metrics, "skip_reason": str(exc)},
-                flags=flags,
-                confidence=0.35,
-                status=ProbeEvaluationStatus.FAILED,
-                status_reason=str(exc),
-            )
-
-        inference_config = _resolve_inference_config(spec)
-        hf_token = self._hf_token()
-        try:
-            result = self._resolve_runner().run(
-                model_ref=contract.model_ref if contract is not None else ctx.model_ref,
-                model_revision=(
-                    contract.model_revision if contract is not None else ctx.model_revision
-                ),
-                samples=samples,
-                max_changes=max_changes,
-                seed=seed,
-                hf_token=hf_token,
-                inference_config=inference_config,
-            )
-        except Exception as exc:  # noqa: BLE001 — execution failure → FAILED
-            logger.warning("robustness_model_or_attack_failed err=%s", exc)
-            flags.extend(["model_load_failed", "attack_skipped"])
-            return self._finish(
-                ctx,
-                metrics={
-                    **base_metrics,
-                    "n_samples": len(samples),
-                    "skip_reason": str(exc),
-                },
-                flags=flags,
-                confidence=0.35,
-                status=ProbeEvaluationStatus.FAILED,
-                status_reason=str(exc),
-            )
-
-        # The model actually loaded and ran; whether predictions were usable
-        # is a separate (unchanged) statistical question decided below.
-        base_metrics["inference_executed"] = not result.insufficient_evidence
-        if result.device_info is not None:
-            base_metrics["inference"] = {
-                "device": result.device_info.device,
-                "device_name": result.device_info.device_name,
-                "backend": result.device_info.backend,
-                "inference_backend": result.device_info.backend,
-                "execution_device": result.device_info.execution_device,
-                "gpu_available": result.device_info.gpu_available,
-                "gpu_name": result.device_info.gpu_name,
-                "cuda_available": result.device_info.cuda_available,
-                "device_reason": result.device_info.device_reason,
-                "fallback_reason": result.device_info.fallback_reason,
-            }
-
-        if result.insufficient_evidence:
-            eval_out = evaluate_classification_robustness(
-                aligned=[],
-                n_requested=result.n_samples,
-                n_label_compatible=result.n_label_compatible,
-                label_compat_fraction=result.label_compat_fraction,
-                n_successfully_perturbed=result.n_successfully_perturbed,
-                perturbation_coverage=result.perturbation_coverage,
-                seed=seed,
-                domain_mismatch=domain_mismatch,
-                allow_domain_mismatch=allow_domain_mismatch,
-                mapping_blocked_pre=mapping_blocked_pre,
-            )
-            return self._finish_from_eval(
-                ctx,
-                eval_out=eval_out,
-                base_metrics=base_metrics,
-                result=result,
-                extra_flags=flags,
-            )
-
-        eval_out = evaluate_classification_robustness(
-            aligned=result.aligned_rows,
-            n_requested=result.n_samples,
-            n_label_compatible=result.n_label_compatible,
-            label_compat_fraction=result.label_compat_fraction,
-            n_successfully_perturbed=result.n_successfully_perturbed,
-            perturbation_coverage=result.perturbation_coverage,
-            seed=seed,
-            domain_mismatch=domain_mismatch,
-            allow_domain_mismatch=allow_domain_mismatch,
-            mapping_blocked_pre=mapping_blocked_pre,
-        )
-        return self._finish_from_eval(
+        return self._finish(
             ctx,
-            eval_out=eval_out,
-            base_metrics=base_metrics,
-            result=result,
-            extra_flags=flags,
+            metrics={**base_metrics, "skip_reason": skip_reason},
+            flags=["no_robustness_contract", "attack_skipped"],
+            confidence=0.4,
+            status=ProbeEvaluationStatus.NOT_APPLICABLE,
+            status_reason=skip_reason,
         )
 
     def _run_v2(self, ctx: ProbeContext, contract: EvaluationContractV2) -> ProbeOutput:

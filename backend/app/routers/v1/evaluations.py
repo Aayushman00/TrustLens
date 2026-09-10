@@ -28,14 +28,14 @@ logger = logging.getLogger("trustlens.routers.evaluations")
     response_model=EvaluationRead,
     status_code=status.HTTP_201_CREATED,
     deprecated=True,
-    summary="[DEPRECATED — use POST /v1/evaluations-v2] Create evaluation and enqueue stub job",
+    summary="[DEPRECATED — use POST /v1/evaluations-v2] Create a bare, contract-free evaluation",
     description=(
-        "Deprecated: use POST /v1/evaluations-v2 with a validated draft instead. "
-        "This endpoint remains functional during the migration window and is "
-        "removed once the new path is fully adopted (see implementation plan "
-        "Phase 7). Creates an evaluation as PENDING and enqueues "
-        "trustlens.evaluate_model. Returns immediately with status=PENDING; "
-        "poll GET /{id} for progress."
+        "Deprecated: use POST /v1/evaluations-v2 with a validated draft to "
+        "configure Fairness/Robustness against a real dataset. This endpoint "
+        "creates an evaluation with no dataset/contract selection of any "
+        "kind — Fairness and Robustness both resolve NOT_APPLICABLE. Kept "
+        "as the minimal, contract-free creation path (e.g. Integrity/"
+        "Explainability/Safety-only evaluations)."
     ),
     responses={404: {"model": ErrorResponse}},
 )
@@ -43,7 +43,6 @@ def create_evaluation(
     body: EvaluationCreate,
     db: Session = Depends(get_db),
 ) -> EvaluationRead:
-    logger.warning("legacy_evaluation_create_used model_id=%s", body.model_id)
     row = EvaluationService(db).create_evaluation(body)
     return EvaluationRead.model_validate(row)
 
@@ -56,9 +55,9 @@ def create_evaluation(
     description=(
         "Atomically consumes an EvaluationDraft (Task 2.x intake) into a real, "
         "frozen Evaluation carrying EvaluationContractV2, stamped with the "
-        "current methodology_version, and enqueues the worker. Does not "
-        "replace or touch POST /v1/evaluations (the legacy contract path), "
-        "which remains unchanged."
+        "current methodology_version, and enqueues the worker. The sole "
+        "evaluation-creation path (Phase 7 — the legacy flat-contract path "
+        "has been removed)."
     ),
     responses={
         404: {"model": ErrorResponse},
