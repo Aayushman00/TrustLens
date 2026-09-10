@@ -106,6 +106,10 @@ class ReportV1(BaseModel):
     schema_version: Literal["report_v1"] = REPORT_SCHEMA_VERSION
     report_version: int = Field(ge=1)
     generated_at: datetime
+    # Copied verbatim from Evaluation.methodology_version — required for
+    # every newly generated report (Task 4.2). Never retroactively
+    # reinterpreted; a legacy Evaluation still carries LEGACY_METHODOLOGY_VERSION.
+    methodology_version: str
     evaluation: ReportEvaluation
     mode_disclosure: ModeDisclosure
     score: ReportScore
@@ -141,6 +145,9 @@ class ReportRead(BaseModel):
     # None exactly when this evaluation's FRIES is withheld — the report is
     # still generated and complete either way.
     fries_score: float | None = None
+    # None = legacy report generated before this field existed; stored
+    # report.json blobs are never rewritten to backfill it.
+    methodology_version: str | None = None
     mode_disclosure: ModeDisclosure
     generated_at: datetime
     report_json: dict[str, Any]

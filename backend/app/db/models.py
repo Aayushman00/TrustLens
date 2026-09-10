@@ -266,6 +266,13 @@ class Evaluation(Base, CreatedUpdatedMixin):
     config: Mapped[str | None] = mapped_column(String(256), nullable=True)
     model_revision: Mapped[str | None] = mapped_column(String(128), nullable=True)
     trustlens_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # Methodology version stamped server-side at Evaluation creation
+    # (Task 4.4), immutable thereafter, never retroactively reinterpreted.
+    # server_default backfills pre-existing rows to the legacy tag; new rows
+    # must always pass this explicitly from application code.
+    methodology_version: Mapped[str] = mapped_column(
+        String(64), nullable=False, server_default="pre-v1-fixed-5dim"
+    )
     # Local execution/device evidence (Phase: GPU hardening) — captured once
     # per pipeline run from whichever probe actually invoked LocalHFBackend
     # (Fairness/Robustness). Null when no probe performed model inference
