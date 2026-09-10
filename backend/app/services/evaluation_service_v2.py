@@ -63,6 +63,7 @@ from app.schemas.evaluation_contract_v2 import (
 )
 from app.schemas.internal import EvaluateModelPayload
 from app.scoring.methodology_version import CURRENT_METHODOLOGY_VERSION
+from app.services.evaluation_enqueue import enqueue_and_record
 from app.tasks.celery_client import enqueue_evaluate_model
 
 logger = logging.getLogger("trustlens.api")
@@ -199,21 +200,22 @@ class EvaluationServiceV2:
             evaluation_contract=probe_config["evaluation_contract"],
             methodology_version=CURRENT_METHODOLOGY_VERSION,
         )
-        task_id = enqueue_evaluate_model(payload)
-        logger.info(
-            "evaluation_created_v2 evaluation_id=%s model_ref=%s enqueue_task_id=%s",
-            row.id,
-            model.hf_repo_id,
-            task_id,
-        )
         # Fix 3: record the same enqueue-outcome event the legacy path
         # records, so a silent broker failure (enqueue_evaluate_model
         # returns None) is observable and POST
         # /v1/evaluations/{id}/reconcile-enqueue can find and retry it —
         # without this, a failed V2 enqueue was stuck PENDING forever.
-        self._events.create(
+        enqueue_and_record(
+            self._events,
+            payload,
             evaluation_id=row.id,
             event_type=EVENT_EVALUATION_CREATED,
-            detail={"enqueued": task_id is not None, "task_id": task_id},
+            enqueue_fn=enqueue_evaluate_model,
+            on_enqueued=lambda task_id: logger.info(
+                "evaluation_created_v2 evaluation_id=%s model_ref=%s enqueue_task_id=%s",
+                row.id,
+                model.hf_repo_id,
+                task_id,
+            ),
         )
         return row

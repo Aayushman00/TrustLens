@@ -100,7 +100,7 @@ def patch_evaluated_fairness(monkeypatch: object) -> None:
             },
             confidence=0.85,
             evidence_refs=[ref],
-            flags=["model_faithful_pairing"],
+            flags=["model_faithful"],
             status=ProbeEvaluationStatus.EVALUATED,
         )
 

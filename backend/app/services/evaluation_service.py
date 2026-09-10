@@ -50,6 +50,7 @@ from app.schemas.modes import (
 )
 from app.schemas.reviews import HumanReviewRead, HumanReviewRequest
 from app.scoring.fries import score_from_finalized_osd
+from app.services.evaluation_enqueue import enqueue_and_record
 from app.tasks.celery_client import enqueue_evaluate_model
 
 logger = logging.getLogger("trustlens.api")
@@ -172,20 +173,18 @@ class EvaluationService:
             probe_config=row.probe_config or {},
             model_revision=row.model_revision,
         )
-        task_id = enqueue_evaluate_model(payload)
-        logger.info(
-            "evaluation_created evaluation_id=%s model_ref=%s enqueue_task_id=%s",
-            row.id,
-            model.hf_repo_id,
-            task_id,
-        )
-        # enqueue_evaluate_model silently returns None on a broker failure,
-        # leaving the row at PENDING with no other visible signal — recording
-        # enqueued/task_id here is what makes that state observable at all.
-        self._events.create(
+        enqueue_and_record(
+            self._events,
+            payload,
             evaluation_id=row.id,
             event_type=EVENT_EVALUATION_CREATED,
-            detail={"enqueued": task_id is not None, "task_id": task_id},
+            enqueue_fn=enqueue_evaluate_model,
+            on_enqueued=lambda task_id: logger.info(
+                "evaluation_created evaluation_id=%s model_ref=%s enqueue_task_id=%s",
+                row.id,
+                model.hf_repo_id,
+                task_id,
+            ),
         )
         return row
 
@@ -249,16 +248,17 @@ class EvaluationService:
             evaluation_contract=probe_config.get("evaluation_contract", {}),
             methodology_version=row.methodology_version,
         )
-        task_id = enqueue_evaluate_model(payload)
-        logger.info(
-            "evaluation_requeued evaluation_id=%s enqueue_task_id=%s",
-            row.id,
-            task_id,
-        )
-        self._events.create(
+        enqueue_and_record(
+            self._events,
+            payload,
             evaluation_id=row.id,
             event_type=EVENT_EVALUATION_REQUEUED,
-            detail={"enqueued": task_id is not None, "task_id": task_id},
+            enqueue_fn=enqueue_evaluate_model,
+            on_enqueued=lambda task_id: logger.info(
+                "evaluation_requeued evaluation_id=%s enqueue_task_id=%s",
+                row.id,
+                task_id,
+            ),
         )
         return row
 

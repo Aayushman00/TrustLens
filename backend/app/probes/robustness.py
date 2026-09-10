@@ -86,6 +86,11 @@ def _base_metrics(
         # substituted/auto-selected dataset or a live Model.revision read.
         "model_ref": contract.model_ref if contract is not None else None,
         "model_revision": contract.model_revision if contract is not None else None,
+        # logical_key is always None on the only live call path (_run_v2) —
+        # V2 has no pinned-dataset-registry identity concept at all. Kept as
+        # an explicit key (not omitted) so ProbeEvidenceRead's generic
+        # metrics.get("dataset_key") read, shared with legacy rows, never
+        # KeyErrors on a V2 row.
         "dataset_key": logical_key,
         "dataset_revision": None,
         "task_type": None,
@@ -132,18 +137,15 @@ class RobustnessProbe:
         )
 
     def _run_v2(self, ctx: ProbeContext, contract: EvaluationContractV2) -> ProbeOutput:
-        """EvaluationContractV2 dispatch (Task 4.5).
+        """Sole Robustness evaluation path: EvaluationContractV2 dispatch.
 
-        Mirrors ``robustness_nlp.TransformersCharSwapRunner.run``'s sample
-        shape (``[{"text": str, "label": int}, ...]``) and this file's own
-        pinned-dataset ``run()`` path below it for the runner-call/
-        ``evaluate_classification_robustness``/``_finish_from_eval`` stages —
-        those are reused completely unchanged. Only the front end differs:
-        samples come from a user CSV (fetched via ``DatasetContentStore`` by
-        ``contract.robustness.dataset_content_id``, hash-verified, then
-        loaded through ``load_samples_for_robustness_with_label_mapping``
-        using the confirmed ``label_mapping``) instead of a pinned HF
-        dataset subset.
+        Fetches ``contract.robustness.dataset_content_id`` via
+        ``DatasetContentStore``, hash-verifies the bytes before use, then
+        loads samples using the user-confirmed ``label_mapping`` via
+        ``load_samples_for_robustness_with_label_mapping`` into
+        ``robustness_nlp.TransformersCharSwapRunner.run``'s expected sample
+        shape (``[{"text": str, "label": int}, ...]``), before scoring via
+        ``evaluate_classification_robustness``/``_finish_from_eval``.
         """
         cfg = ctx.probe_config
         extra = cfg.extra or {}
@@ -208,40 +210,19 @@ class RobustnessProbe:
         if ctx.dataset_content_store is None or ctx.session is None:
             skip_reason = "dataset content storage is not configured on this TrustLens instance"
             flags.append("dataset_store_unavailable")
-            return self._finish(
-                ctx,
-                metrics={**base_metrics, "skip_reason": skip_reason},
-                flags=flags,
-                confidence=0.35,
-                status=ProbeEvaluationStatus.FAILED,
-                status_reason=skip_reason,
-            )
+            return self._fail(ctx, base_metrics=base_metrics, flags=flags, reason=skip_reason)
 
         content_row = DatasetContentRepository(ctx.session).get_by_id(rc.dataset_content_id)
         if content_row is None:
             skip_reason = f"dataset content {rc.dataset_content_id} not found"
             flags.append("dataset_fetch_failed")
-            return self._finish(
-                ctx,
-                metrics={**base_metrics, "skip_reason": skip_reason},
-                flags=flags,
-                confidence=0.35,
-                status=ProbeEvaluationStatus.FAILED,
-                status_reason=skip_reason,
-            )
+            return self._fail(ctx, base_metrics=base_metrics, flags=flags, reason=skip_reason)
 
         try:
             data = ctx.dataset_content_store.get(content_row.storage_uri)
         except EvidenceStoreError as exc:
             flags.append("dataset_fetch_failed")
-            return self._finish(
-                ctx,
-                metrics={**base_metrics, "skip_reason": str(exc)},
-                flags=flags,
-                confidence=0.35,
-                status=ProbeEvaluationStatus.FAILED,
-                status_reason=str(exc),
-            )
+            return self._fail(ctx, base_metrics=base_metrics, flags=flags, reason=str(exc))
 
         # Hash-verify-before-use: see the identical comment in
         # fairness.py::_run_v2 — DatasetContentStore's key is derived from
@@ -251,14 +232,7 @@ class RobustnessProbe:
         if not hashes_equal(format_sha256(data), content_row.content_hash):
             skip_reason = "dataset content hash mismatch — refusing to evaluate drifted data"
             flags.append("dataset_hash_mismatch")
-            return self._finish(
-                ctx,
-                metrics={**base_metrics, "skip_reason": skip_reason},
-                flags=flags,
-                confidence=0.35,
-                status=ProbeEvaluationStatus.FAILED,
-                status_reason=skip_reason,
-            )
+            return self._fail(ctx, base_metrics=base_metrics, flags=flags, reason=skip_reason)
 
         try:
             samples, exclusions = load_samples_for_robustness_with_label_mapping(
@@ -269,14 +243,7 @@ class RobustnessProbe:
             )
         except UserDatasetError as exc:
             flags.extend(["dataset_load_failed", "attack_skipped"])
-            return self._finish(
-                ctx,
-                metrics={**base_metrics, "skip_reason": str(exc)},
-                flags=flags,
-                confidence=0.35,
-                status=ProbeEvaluationStatus.FAILED,
-                status_reason=str(exc),
-            )
+            return self._fail(ctx, base_metrics=base_metrics, flags=flags, reason=str(exc))
 
         base_metrics.update(
             {
@@ -294,14 +261,7 @@ class RobustnessProbe:
         if not samples:
             skip_reason = "no samples remain after missing-value/label-mapping exclusions"
             flags.extend(["dataset_load_failed", "attack_skipped"])
-            return self._finish(
-                ctx,
-                metrics={**base_metrics, "skip_reason": skip_reason},
-                flags=flags,
-                confidence=0.35,
-                status=ProbeEvaluationStatus.FAILED,
-                status_reason=skip_reason,
-            )
+            return self._fail(ctx, base_metrics=base_metrics, flags=flags, reason=skip_reason)
 
         hf_token = self._hf_token()
         try:
@@ -317,18 +277,8 @@ class RobustnessProbe:
         except Exception as exc:  # noqa: BLE001 — execution failure → FAILED
             logger.warning("robustness_v2_model_or_attack_failed err=%s", exc)
             flags.extend(["model_load_failed", "attack_skipped"])
-            return self._finish(
-                ctx,
-                metrics={
-                    **base_metrics,
-                    "n_samples": len(samples),
-                    "skip_reason": str(exc),
-                },
-                flags=flags,
-                confidence=0.35,
-                status=ProbeEvaluationStatus.FAILED,
-                status_reason=str(exc),
-            )
+            base_metrics["n_samples"] = len(samples)
+            return self._fail(ctx, base_metrics=base_metrics, flags=flags, reason=str(exc))
 
         base_metrics["inference_executed"] = not result.insufficient_evidence
         if result.device_info is not None:
@@ -401,6 +351,28 @@ class RobustnessProbe:
             return get_settings().hf_token
         except Exception:  # noqa: BLE001
             return None
+
+    def _fail(
+        self,
+        ctx: ProbeContext,
+        *,
+        base_metrics: dict[str, Any],
+        flags: list[str],
+        reason: str,
+        confidence: float = 0.35,
+    ) -> ProbeOutput:
+        """Shared shape for every FAILED early-return in ``_run_v2`` — same
+        ``metrics={**base_metrics, "skip_reason": reason}``/``status=FAILED``
+        pattern repeated at each failure point, differing only in ``flags``
+        and ``reason``."""
+        return self._finish(
+            ctx,
+            metrics={**base_metrics, "skip_reason": reason},
+            flags=flags,
+            confidence=confidence,
+            status=ProbeEvaluationStatus.FAILED,
+            status_reason=reason,
+        )
 
     def _finish(
         self,

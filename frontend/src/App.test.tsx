@@ -15,5 +15,5 @@ test("evaluations/new renders the draft-based wizard by default", async () => {
 
   render(<App />);
 
-  expect(await screen.findByText("New evaluation (draft wizard)")).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: "New evaluation" })).toBeInTheDocument();
 });

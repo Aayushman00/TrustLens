@@ -78,23 +78,6 @@ export interface UserDatasetRead {
   created_at: string;
 }
 
-export interface UserDatasetList {
-  items: UserDatasetRead[];
-}
-
-export interface ObservedGroup {
-  value: string;
-  count: number;
-}
-
-export interface GroupDiscoveryRead {
-  group_column: string;
-  total_rows: number;
-  observed_groups: ObservedGroup[];
-  missing_count: number;
-  missing_reasons: Record<string, number>;
-}
-
 export type DocumentationType =
   | "model_card"
   | "readme"
@@ -126,27 +109,7 @@ export interface DocumentationSourceList {
   items: DocumentationSourceRead[];
 }
 
-export interface UserDocumentationCreate {
-  url: string;
-  documentation_type: DocumentationType;
-  title?: string | null;
-  description?: string | null;
-}
-
 // ---- evaluations ----
-
-/** Bare, contract-free evaluation creation (Phase 7) — no dataset/contract
- * selection of any kind. Fairness/Robustness both resolve NOT_APPLICABLE;
- * use the draft-based flow (CreateEvaluationDraftPage) for a real
- * Fairness/Robustness configuration. */
-export interface EvaluationCreate {
-  model_id: number;
-  evaluation_mode: EvaluationMode;
-  probe_config?: Record<string, unknown>;
-  task?: string;
-  dataset?: string;
-  config?: string;
-}
 
 export interface ProbeProgress {
   completed: number;
@@ -280,17 +243,6 @@ export interface ExecutionMetadata {
 // (EvaluationRead.status, .probes, .osd_agent, .final_score). Nothing here
 // should ever be used to derive any of those — only to show when a
 // already-decided fact happened.
-
-export type EvaluationEventType =
-  | "evaluation_created"
-  | "evaluation_started"
-  | "probes_completed"
-  | "agent_completed"
-  | "evaluation_failed"
-  | "awaiting_review"
-  | "human_review_submitted"
-  | "evaluation_finalized"
-  | "report_generated";
 
 export interface EvaluationEventRead {
   id: number;
@@ -485,11 +437,6 @@ export interface DatasetContentRead {
   row_count: number;
   columns: { name: string; inferred_type: string }[];
   created_at: string;
-}
-
-/** POST /v1/dataset-fetches — backend DatasetFetchRequest. */
-export interface DatasetFetchRequest {
-  source_url: string;
 }
 
 /** Label mapping entry within DimensionConfigUpdate.label_mapping. */

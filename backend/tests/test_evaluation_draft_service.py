@@ -31,6 +31,21 @@ def test_create_draft(draft_service, seeded_model):
     assert read.model_id == seeded_model.id
 
 
+def test_create_draft_rejects_unpinned_model(draft_service, db_session):
+    """A model with no pinned revision must not be able to start an
+    evaluation at all — reproducibility is a property of the Model row, not
+    just of whatever revision happens to resolve when a draft freezes its
+    own snapshot later."""
+    from app.db.models import Model
+
+    unpinned = Model(hf_repo_id="org/unpinned-model", model_metadata={}, checksum=None, revision=None)
+    db_session.add(unpinned)
+    db_session.flush()
+
+    with pytest.raises(ValidationAppError, match="pinned revision"):
+        draft_service.create(unpinned.id)
+
+
 def test_update_dimension_converts_model_inspection_error_to_validation_error(
     draft_service, seeded_model, seeded_dataset_content
 ):

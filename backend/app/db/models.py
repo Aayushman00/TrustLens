@@ -158,6 +158,13 @@ class EvaluationDraft(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     model_id: Mapped[int] = mapped_column(Integer, ForeignKey("models.id", ondelete="RESTRICT"), nullable=False)
+    # "incomplete" | "validated" | "consumed" | "stale". No code path anywhere
+    # transitions a draft back out of "consumed" or "stale" — both are
+    # permanent dead ends by design (EvaluationDraftService.update_dimension/
+    # confirm_dimension and EvaluationServiceV2.create_from_draft all reject
+    # further mutation once either is reached). This is what guarantees a
+    # frozen EvaluationContractV2 can never be built from a half-confirmed or
+    # stale-revision draft.
     status: Mapped[str] = mapped_column(String(16), nullable=False, server_default="incomplete")
     resolved_model_sha: Mapped[str | None] = mapped_column(String(128), nullable=True)
     model_label_snapshot: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
@@ -267,9 +274,14 @@ class Evaluation(Base, CreatedUpdatedMixin):
     model_revision: Mapped[str | None] = mapped_column(String(128), nullable=True)
     trustlens_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
     # Methodology version stamped server-side at Evaluation creation
-    # (Task 4.4), immutable thereafter, never retroactively reinterpreted.
-    # server_default backfills pre-existing rows to the legacy tag; new rows
-    # must always pass this explicitly from application code.
+    # (Task 4.4), immutable thereafter, never retroactively reinterpreted —
+    # no code path anywhere updates this column after insert. This is what
+    # lets confidence-aggregation/FRIES-completeness (confidence/engine.py,
+    # tasks/evaluate_pipeline.py) branch on it safely: a legacy row's
+    # semantics can never silently drift to V2 behavior (or vice versa)
+    # after the fact. server_default backfills pre-existing rows to the
+    # legacy tag; new rows must always pass this explicitly from application
+    # code.
     methodology_version: Mapped[str] = mapped_column(
         String(64), nullable=False, server_default="pre-v1-fixed-5dim"
     )

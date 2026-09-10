@@ -166,6 +166,34 @@ def _run_osd_agent(
     return result
 
 
+def _fail_transition(
+    evals: EvaluationRepository,
+    events: EvaluationEventRepository,
+    evaluation_id: uuid.UUID,
+    *,
+    expected: EvaluationStatus | set[EvaluationStatus],
+    reason_code: str,
+    from_status: str,
+) -> None:
+    """Shared shape for every FAILED transition inside
+    ``run_evaluation_pipeline`` — same CAS-then-conditionally-record-event
+    pattern repeated at each failure point, differing only in which
+    status(es) the CAS expects and the reason/from_status recorded.
+
+    Event insertion happens only after ``transition_status`` succeeds
+    (returns non-None) — a stale/retried invocation whose CAS fails here
+    (the evaluation already moved on) inserts no event, by construction,
+    never by a special-case dedup check. This invariant applies at every
+    call site below, not just the first.
+    """
+    if evals.transition_status(evaluation_id, expected=expected, new=EvaluationStatus.FAILED) is not None:
+        events.create(
+            evaluation_id=evaluation_id,
+            event_type=EVENT_EVALUATION_FAILED,
+            detail={"reason_code": reason_code, "from_status": from_status},
+        )
+
+
 def fail_stuck_running_evaluation(
     session: Session,
     evaluation_id: uuid.UUID,
@@ -234,11 +262,9 @@ def run_evaluation_pipeline(
             payload.model_ref,
             None if model is None else model.hf_repo_id,
         )
-        # Event insertion happens only after transition_status succeeds
-        # (returns non-None) — a stale/retried invocation whose CAS fails
-        # here (evaluation already moved on) inserts no event, by
-        # construction, never by a special-case dedup check.
-        if evals.transition_status(
+        _fail_transition(
+            evals,
+            events,
             payload.evaluation_id,
             expected={
                 EvaluationStatus.PENDING,
@@ -246,13 +272,9 @@ def run_evaluation_pipeline(
                 EvaluationStatus.PROBES_COMPLETED,
                 EvaluationStatus.AGENT_COMPLETED,
             },
-            new=EvaluationStatus.FAILED,
-        ) is not None:
-            events.create(
-                evaluation_id=payload.evaluation_id,
-                event_type=EVENT_EVALUATION_FAILED,
-                detail={"reason_code": REASON_MODEL_REF_MISMATCH, "from_status": evaluation.status.value},
-            )
+            reason_code=REASON_MODEL_REF_MISMATCH,
+            from_status=evaluation.status.value,
+        )
         return
 
     started = evals.transition_status(
@@ -275,16 +297,14 @@ def run_evaluation_pipeline(
             "pipeline_no_evidence_store evaluation_id=%s",
             payload.evaluation_id,
         )
-        if evals.transition_status(
+        _fail_transition(
+            evals,
+            events,
             payload.evaluation_id,
             expected=EvaluationStatus.RUNNING,
-            new=EvaluationStatus.FAILED,
-        ) is not None:
-            events.create(
-                evaluation_id=payload.evaluation_id,
-                event_type=EVENT_EVALUATION_FAILED,
-                detail={"reason_code": REASON_NO_EVIDENCE_STORE, "from_status": EvaluationStatus.RUNNING.value},
-            )
+            reason_code=REASON_NO_EVIDENCE_STORE,
+            from_status=EvaluationStatus.RUNNING.value,
+        )
         return
 
     try:
@@ -305,16 +325,14 @@ def run_evaluation_pipeline(
             "pipeline_probes_failed evaluation_id=%s",
             payload.evaluation_id,
         )
-        if evals.transition_status(
+        _fail_transition(
+            evals,
+            events,
             payload.evaluation_id,
             expected=EvaluationStatus.RUNNING,
-            new=EvaluationStatus.FAILED,
-        ) is not None:
-            events.create(
-                evaluation_id=payload.evaluation_id,
-                event_type=EVENT_EVALUATION_FAILED,
-                detail={"reason_code": REASON_PROBE_ERROR, "from_status": EvaluationStatus.RUNNING.value},
-            )
+            reason_code=REASON_PROBE_ERROR,
+            from_status=EvaluationStatus.RUNNING.value,
+        )
         return
 
     if evals.transition_status(
@@ -348,16 +366,14 @@ def run_evaluation_pipeline(
             "pipeline_osd_agent_failed evaluation_id=%s",
             payload.evaluation_id,
         )
-        if evals.transition_status(
+        _fail_transition(
+            evals,
+            events,
             payload.evaluation_id,
             expected=EvaluationStatus.PROBES_COMPLETED,
-            new=EvaluationStatus.FAILED,
-        ) is not None:
-            events.create(
-                evaluation_id=payload.evaluation_id,
-                event_type=EVENT_EVALUATION_FAILED,
-                detail={"reason_code": REASON_OSD_AGENT_ERROR, "from_status": EvaluationStatus.PROBES_COMPLETED.value},
-            )
+            reason_code=REASON_OSD_AGENT_ERROR,
+            from_status=EvaluationStatus.PROBES_COMPLETED.value,
+        )
         return
 
     if evals.transition_status(
@@ -428,16 +444,14 @@ def run_evaluation_pipeline(
             "pipeline_fries_scoring_failed evaluation_id=%s",
             payload.evaluation_id,
         )
-        if evals.transition_status(
+        _fail_transition(
+            evals,
+            events,
             payload.evaluation_id,
             expected=EvaluationStatus.AGENT_COMPLETED,
-            new=EvaluationStatus.FAILED,
-        ) is not None:
-            events.create(
-                evaluation_id=payload.evaluation_id,
-                event_type=EVENT_EVALUATION_FAILED,
-                detail={"reason_code": REASON_SCORING_ERROR, "from_status": EvaluationStatus.AGENT_COMPLETED.value},
-            )
+            reason_code=REASON_SCORING_ERROR,
+            from_status=EvaluationStatus.AGENT_COMPLETED.value,
+        )
         return
 
     if evals.transition_status(
