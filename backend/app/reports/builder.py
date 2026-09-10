@@ -234,6 +234,9 @@ def build_report_json(
     report = ReportV1(
         report_version=report_version,
         generated_at=generated_at or datetime.now(UTC),
+        # Copied verbatim from the Evaluation row (stamped at creation time,
+        # Task 4.4) — never recomputed or reinterpreted here.
+        methodology_version=evaluation.methodology_version,
         evaluation=ReportEvaluation(
             id=evaluation.id,
             status=evaluation.status,

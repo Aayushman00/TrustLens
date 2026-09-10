@@ -21,6 +21,7 @@ from app.db.repositories.final_score import FinalScoreRepository
 from app.reports.builder import build_executive_summary, build_report_json
 from app.reports.render import render_html, render_pdf
 from app.schemas.internal import EvaluateModelPayload
+from app.scoring.methodology_version import LEGACY_METHODOLOGY_VERSION
 from app.schemas.modes import (
     ASSISTED_REVIEWED_LEGACY_DISCLAIMER,
     LEGACY_AUTONOMOUS_DISCLAIMER,
@@ -92,6 +93,7 @@ def _sample_report(*, mode: EvaluationMode, human_reviewed: bool) -> dict[str, A
     report = ReportV1(
         report_version=1,
         generated_at=datetime.now(UTC),
+        methodology_version=LEGACY_METHODOLOGY_VERSION,
         evaluation=ReportEvaluation(
             id=uuid.uuid4(),
             status=EvaluationStatus.FINALIZED,
