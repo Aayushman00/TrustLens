@@ -29,7 +29,12 @@ from sqlalchemy.orm import Session
 
 from app.confidence.engine import summarize
 from app.core.config import get_settings
-from app.db.enums import EvaluationMode, EvaluationStatus, FriesDimension
+from app.db.enums import (
+    EvaluationMode,
+    EvaluationStatus,
+    FriesDimension,
+    ProbeEvaluationStatus,
+)
 from app.db.repositories.evaluation import EvaluationRepository
 from app.db.repositories.evaluation_event import (
     EVENT_AGENT_COMPLETED,
@@ -122,7 +127,8 @@ def _run_osd_agent(
         sum(
             1
             for row in probe_rows
-            if (row.metric_values or {}).get("probe_status") == "not_applicable"
+            if (row.metric_values or {}).get("probe_status")
+            == ProbeEvaluationStatus.NOT_APPLICABLE.value
         )
         if payload.methodology_version != LEGACY_METHODOLOGY_VERSION
         else 0

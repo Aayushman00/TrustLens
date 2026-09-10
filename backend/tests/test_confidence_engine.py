@@ -448,7 +448,7 @@ def test_summarize_rederives_when_confidence_missing() -> None:
 
 def _rows_with_not_applicable_fairness():
     return [
-        (FriesDimension.FAIRNESS, 0.4, {"probe_status": "not_applicable"}),
+        (FriesDimension.FAIRNESS, 0.4, {"probe_status": ProbeEvaluationStatus.NOT_APPLICABLE.value}),
         (FriesDimension.ROBUSTNESS, 0.9, {"clean_accuracy": 0.8}),
         (FriesDimension.INTEGRITY, 0.9, {}),
         (FriesDimension.EXPLAINABILITY, 0.9, {}),
