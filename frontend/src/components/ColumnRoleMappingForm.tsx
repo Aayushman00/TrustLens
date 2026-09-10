@@ -1,13 +1,16 @@
 /**
  * Column-role mapping: pick text/target/(sensitive) columns for a dimension
  * and submit them via PUT /v1/evaluation-drafts/{draftId}/{dimension} for
- * server-side validation. Label-mapping rows (per-observed-value dropdowns,
- * populated via a GET-based values discovery call) are deferred to Task 3.4
- * — every row there must start unmapped, per the "never auto-apply without
- * confirm" rule; this task only wires the column-role selects and the
- * save/validate submit flow.
+ * server-side validation. Once a target column is chosen, distinct observed
+ * dataset values are fetched via GET .../target-values and rendered as one
+ * mapping row per value, each defaulting to "unmapped" (model_label_index:
+ * -1) — per the "never auto-apply without confirm" Global Constraint, no
+ * row is ever pre-selected, even when a dataset value's spelling looks like
+ * an obvious match to a model label. The server's "missing entries" check
+ * (_validate_label_mapping) rejects any row left at -1, which is what
+ * actually enforces this — there is no client-side default guess, ever.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { apiFetch } from "../api/client";
 import type { DatasetContentRead, DimensionValidationRead, LabelMappingEntry } from "../api/types";
@@ -27,10 +30,27 @@ export default function ColumnRoleMappingForm({
   const [textColumn, setTextColumn] = useState("");
   const [targetColumn, setTargetColumn] = useState("");
   const [sensitiveColumn, setSensitiveColumn] = useState("");
-  const [labelMapping] = useState<LabelMappingEntry[]>([]);
+  const [labelMapping, setLabelMapping] = useState<LabelMappingEntry[]>([]);
+  const [targetValues, setTargetValues] = useState<string[]>([]);
+  // TODO(Task 4.x): replace with the real id2label once EvaluationDraftRead
+  // exposes model_label_snapshot to the frontend.
+  const modelLabels = ["NEGATIVE", "POSITIVE"];
   const [minGroupN, setMinGroupN] = useState(30);
   const [error, setError] = useState<unknown>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!targetColumn) return;
+    void apiFetch<{ values: string[] }>(
+      `/v1/evaluation-drafts/${draftId}/${dimension}/target-values?dataset_content_id=${content.id}&target_column=${targetColumn}`
+    ).then((res) => {
+      setTargetValues(res.values);
+      // Every row starts unmapped (-1) — never auto-applied, never a
+      // pre-selected guess, no matter how confident a normalized-string
+      // match would look.
+      setLabelMapping(res.values.map((v) => ({ dataset_value: v, model_label_index: -1 })));
+    });
+  }, [targetColumn, draftId, dimension, content.id]);
 
   async function submit() {
     setSubmitting(true);
@@ -107,10 +127,31 @@ export default function ColumnRoleMappingForm({
           </label>
         </>
       ) : null}
-      {/* Label-mapping rows: populated from an explicit "discover values" step
-          not yet wired here — deferred to Task 3.4, which adds a
-          GET-based values discovery call and renders one mapping row per
-          observed dataset value, each defaulting to unmapped. */}
+      {targetValues.length > 0 ? (
+        <fieldset>
+          <legend>Map dataset labels to model labels</legend>
+          {targetValues.map((value, idx) => (
+            <label key={value}>
+              {value} {"→"}
+              <select
+                value={labelMapping[idx]?.model_label_index ?? -1}
+                onChange={(e) => {
+                  const next = [...labelMapping];
+                  next[idx] = { dataset_value: value, model_label_index: Number(e.target.value) };
+                  setLabelMapping(next);
+                }}
+              >
+                <option value={-1}>Select model label…</option>
+                {modelLabels.map((label, i) => (
+                  <option key={label} value={i}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ))}
+        </fieldset>
+      ) : null}
       <button type="button" onClick={() => void submit()} disabled={submitting}>
         {submitting ? "Validating…" : "Save & validate"}
       </button>
