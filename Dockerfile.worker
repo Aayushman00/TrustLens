@@ -16,7 +16,6 @@ COPY worker/pyproject.toml worker/README.md ./
 COPY worker/app ./app
 
 # Shared single-source modules from backend (Option A — no package-name collision).
-# Phase 11: probes/robustness*.py + datasets/loader.py are included via COPY below.
 # First robustness eval may download HF models/datasets — mount HF cache in Compose.
 COPY backend/app/db ./app/db
 COPY backend/app/core/db.py ./app/core/db.py
@@ -29,9 +28,9 @@ COPY backend/app/schemas/evaluation_contract_v2.py ./app/schemas/evaluation_cont
 COPY backend/app/storage ./app/storage
 COPY backend/app/datasets ./app/datasets
 # app/inference is required by probes/fairness.py, robustness.py,
-# robustness_nlp.py (LocalHFBackend, device auto-detection, pairing
-# resolution) — previously missing, which broke every real Fairness/
-# Robustness run inside this container regardless of GPU.
+# robustness_nlp.py (LocalHFBackend, device auto-detection) — previously
+# missing, which broke every real Fairness/Robustness run inside this
+# container regardless of GPU.
 COPY backend/app/inference ./app/inference
 COPY backend/app/probes ./app/probes
 COPY backend/app/confidence ./app/confidence
