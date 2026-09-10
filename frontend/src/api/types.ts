@@ -58,37 +58,6 @@ export interface ImportHfRequest {
   revision?: string;
 }
 
-// ---- Phase 7 evaluation contract ----
-
-/** Mirrors backend EvaluationContractV1 (backend/app/schemas/evaluation_contract.py). */
-export type EvaluationContractKind =
-  | "pairing"
-  | "registry"
-  | "proxy_lr"
-  | "documentation_only"
-  | "user_dataset";
-
-export interface EvaluationContractV1 {
-  schema_version: "v1";
-  kind: EvaluationContractKind;
-  pairing_id: string | null;
-  dataset_key: string | null;
-  dataset_revision: string | null;
-  model_ref: string;
-  model_revision: string;
-  task_type: string | null;
-  label_space: string[] | number[] | null;
-  modality: string | null;
-  input_adapter: string | null;
-  /** kind="user_dataset" only — the user's own local Fairness dataset. */
-  user_dataset_id: string | null;
-  dataset_uri: string | null;
-  dataset_content_hash: string | null;
-  target_column: string | null;
-  group_column: string | null;
-  text_column: string | null;
-}
-
 // ---- user-defined local Fairness datasets ----
 
 export interface UserDatasetColumn {
@@ -124,25 +93,6 @@ export interface GroupDiscoveryRead {
   observed_groups: ObservedGroup[];
   missing_count: number;
   missing_reasons: Record<string, number>;
-}
-
-/** GET /v1/models/{id}/evaluation-options — approved contracts for this model only. */
-export interface FairnessContractOption {
-  kind: "pairing";
-  pairing_id: string;
-  dataset_key: string;
-  dataset_revision: string;
-  task_type: string;
-  label_space: string[] | number[] | null;
-  modality: string;
-  notes: string | null;
-}
-
-export interface RobustnessContractOption {
-  kind: "registry";
-  dataset_key: string;
-  evaluation_domain: string;
-  notes: string | null;
 }
 
 export type DocumentationType =
@@ -183,18 +133,12 @@ export interface UserDocumentationCreate {
   description?: string | null;
 }
 
-export interface EvaluationOptionsRead {
-  model_id: number;
-  hf_repo_id: string;
-  model_revision: string | null;
-  fairness: FairnessContractOption[];
-  robustness: RobustnessContractOption[];
-  documentation_only_available: boolean;
-  proxy_lr_available: boolean;
-}
-
 // ---- evaluations ----
 
+/** Bare, contract-free evaluation creation (Phase 7) — no dataset/contract
+ * selection of any kind. Fairness/Robustness both resolve NOT_APPLICABLE;
+ * use the draft-based flow (CreateEvaluationDraftPage) for a real
+ * Fairness/Robustness configuration. */
 export interface EvaluationCreate {
   model_id: number;
   evaluation_mode: EvaluationMode;
@@ -202,16 +146,6 @@ export interface EvaluationCreate {
   task?: string;
   dataset?: string;
   config?: string;
-  /** Phase 7 contract selection — mutually exclusive; omit all for documentation_only. */
-  pairing_id?: string;
-  dataset_key?: string;
-  contract_kind?: "proxy_lr";
-  /** User-defined local Fairness dataset selection (kind="user_dataset"). */
-  user_dataset_id?: string;
-  target_column?: string;
-  group_column?: string;
-  text_column?: string;
-  included_group_values?: string[];
 }
 
 export interface ProbeProgress {
@@ -531,37 +465,6 @@ export interface ReportRead {
   report_json: ReportV1;
 }
 
-// ---- leaderboard ----
-
-export interface LeaderboardReportRef {
-  version: number;
-  json_uri: string | null;
-  pdf_uri: string | null;
-}
-
-export interface LeaderboardEntry {
-  evaluation_id: string;
-  model_id: number;
-  hf_repo_id: string;
-  model_revision: string | null;
-  evaluation_mode: EvaluationMode;
-  human_reviewed: boolean;
-  task: string | null;
-  dataset: string | null;
-  config: string | null;
-  trustlens_version: string | null;
-  fries_score: number;
-  overall_confidence: number | null;
-  published_at: string | null;
-  report: LeaderboardReportRef | null;
-}
-
-export interface LeaderboardList {
-  items: LeaderboardEntry[];
-  next_cursor: string | null;
-  note: string | null;
-}
-
 // ---- errors ----
 
 /** Backend error envelope (app/api/errors.py). */
@@ -569,4 +472,67 @@ export interface ApiErrorBody {
   code: string;
   message: string;
   details: Record<string, unknown>;
+}
+
+// ---- Phase 3: Dataset content and drafts (intake flow) ----
+
+/** GET /v1/dataset-contents/{id} — backend DatasetContentRead. */
+export interface DatasetContentRead {
+  id: string;
+  content_hash: string;
+  byte_size: number;
+  format: string;
+  row_count: number;
+  columns: { name: string; inferred_type: string }[];
+  created_at: string;
+}
+
+/** POST /v1/dataset-fetches — backend DatasetFetchRequest. */
+export interface DatasetFetchRequest {
+  source_url: string;
+}
+
+/** Label mapping entry within DimensionConfigUpdate.label_mapping. */
+export interface LabelMappingEntry {
+  dataset_value: string;
+  model_label_index: number;
+}
+
+/** PATCH /v1/evaluation-drafts/{id}/dimensions — backend DimensionConfigUpdate. */
+export interface DimensionConfigUpdate {
+  dataset_content_id: string;
+  text_column: string;
+  target_column: string;
+  sensitive_column?: string;
+  label_mapping: LabelMappingEntry[];
+  min_group_n?: number;
+}
+
+/** Group preview entry within DimensionValidationRead.group_preview. */
+export interface GroupPreviewEntry {
+  value: string;
+  count: number;
+  meets_min_group_n: boolean;
+}
+
+/** Dimension validation response — backend DimensionValidationRead. */
+export interface DimensionValidationRead {
+  ok: boolean;
+  errors: string[];
+  group_preview?: GroupPreviewEntry[] | null;
+  groups_remaining?: number | null;
+  n_label_compatible?: number | null;
+  n_excluded?: number | null;
+}
+
+/** EvaluationDraft status lifecycle — backend Literal values. */
+export type EvaluationDraftStatus = "incomplete" | "validated" | "consumed" | "stale";
+
+/** GET /v1/evaluation-drafts/{id} — backend EvaluationDraftRead. */
+export interface EvaluationDraftRead {
+  id: string;
+  model_id: number;
+  status: EvaluationDraftStatus;
+  fairness_confirmed: boolean;
+  robustness_confirmed: boolean;
 }

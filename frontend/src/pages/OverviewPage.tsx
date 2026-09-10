@@ -152,7 +152,7 @@ export default function OverviewPage() {
                             {evaluation.id.slice(0, 8)}…
                           </Link>
                         </td>
-                        <td>{contract ? contractFamilyLabel(contract.kind) : modeLabel(evaluation.evaluation_mode)}</td>
+                        <td>{contract ? contractFamilyLabel(contract) : modeLabel(evaluation.evaluation_mode)}</td>
                         <td>
                           <StatusBadge status={evaluation.status} />
                         </td>

@@ -1,12 +1,11 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
 import Layout from "./components/Layout";
-import CreateEvaluationPage from "./pages/CreateEvaluationPage";
+import CreateEvaluationDraftPage from "./pages/CreateEvaluationDraftPage";
 import DocumentationPage from "./pages/DocumentationPage";
 import EvaluationDetailPage from "./pages/EvaluationDetailPage";
 import EvaluationsHistoryPage from "./pages/EvaluationsHistoryPage";
 import ImportModelPage from "./pages/ImportModelPage";
-import LeaderboardPage from "./pages/LeaderboardPage";
 import ModelDetailPage from "./pages/ModelDetailPage";
 import ModelsPage from "./pages/ModelsPage";
 import OverviewPage from "./pages/OverviewPage";
@@ -24,11 +23,10 @@ export default function App() {
           <Route path="/models/import" element={<ImportModelPage />} />
           <Route path="/models/:id" element={<ModelDetailPage />} />
           <Route path="/evaluations" element={<EvaluationsHistoryPage />} />
-          <Route path="/evaluations/new" element={<CreateEvaluationPage />} />
+          <Route path="/evaluations/new" element={<CreateEvaluationDraftPage />} />
           <Route path="/evaluations/:id" element={<EvaluationDetailPage />} />
           <Route path="/evaluations/:id/review" element={<ReviewPage />} />
           <Route path="/reports/:evaluationId" element={<ReportPage />} />
-          <Route path="/leaderboard" element={<LeaderboardPage />} />
           <Route path="/documentation" element={<DocumentationPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>

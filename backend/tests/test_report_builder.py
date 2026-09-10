@@ -21,6 +21,7 @@ from app.db.repositories.final_score import FinalScoreRepository
 from app.reports.builder import build_executive_summary, build_report_json
 from app.reports.render import render_html, render_pdf
 from app.schemas.internal import EvaluateModelPayload
+from app.scoring.methodology_version import CURRENT_METHODOLOGY_VERSION, LEGACY_METHODOLOGY_VERSION
 from app.schemas.modes import (
     ASSISTED_REVIEWED_LEGACY_DISCLAIMER,
     LEGACY_AUTONOMOUS_DISCLAIMER,
@@ -92,6 +93,7 @@ def _sample_report(*, mode: EvaluationMode, human_reviewed: bool) -> dict[str, A
     report = ReportV1(
         report_version=1,
         generated_at=datetime.now(UTC),
+        methodology_version=LEGACY_METHODOLOGY_VERSION,
         evaluation=ReportEvaluation(
             id=uuid.uuid4(),
             status=EvaluationStatus.FINALIZED,
@@ -541,3 +543,59 @@ def test_finalized_withheld_report_is_complete_not_an_error(
 
     # Not generated via the API for this failing test alone (needs the report
     # service layer 409 removal) — checked separately in test_api_reports.py.
+
+
+# ---------------------------------------------------------------------------
+# Task 5.1: methodology_version threading through build_report_json
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def finalized_evaluation_v2(
+    api_client: TestClient,
+    admin_headers: dict[str, str],
+    db_session: Session,
+) -> Any:
+    """A finalized AUTONOMOUS evaluation with CURRENT_METHODOLOGY_VERSION."""
+    eval_id = _create_and_run(api_client, admin_headers, db_session, mode="AI_AUTONOMOUS")
+    evaluation = EvaluationRepository(db_session).get_by_id(uuid.UUID(eval_id))
+    assert evaluation is not None
+    # Set to current methodology version (simulating creation via v2 API/draft)
+    evaluation.methodology_version = CURRENT_METHODOLOGY_VERSION
+    db_session.flush()
+    return evaluation
+
+
+@pytest.fixture
+def finalized_evaluation_legacy(
+    api_client: TestClient,
+    admin_headers: dict[str, str],
+    db_session: Session,
+) -> Any:
+    """A finalized AUTONOMOUS evaluation with LEGACY_METHODOLOGY_VERSION."""
+    eval_id = _create_and_run(api_client, admin_headers, db_session, mode="AI_AUTONOMOUS")
+    evaluation = EvaluationRepository(db_session).get_by_id(uuid.UUID(eval_id))
+    assert evaluation is not None
+    # Ensure it has the legacy methodology version (default from legacy API)
+    assert evaluation.methodology_version == LEGACY_METHODOLOGY_VERSION
+    return evaluation
+
+
+def test_report_json_records_methodology_version(
+    db_session: Session,
+    finalized_evaluation_v2: Any,
+) -> None:
+    """Task 5.1: Report records CURRENT_METHODOLOGY_VERSION from evaluation."""
+    report = build_report_json(db_session, finalized_evaluation_v2, report_version=1)
+    assert report["methodology_version"] == CURRENT_METHODOLOGY_VERSION
+    assert report["methodology_version"] == "v2-per-dimension-2026"
+
+
+def test_legacy_report_json_records_legacy_methodology_version(
+    db_session: Session,
+    finalized_evaluation_legacy: Any,
+) -> None:
+    """Task 5.1: Report records LEGACY_METHODOLOGY_VERSION from evaluation."""
+    report = build_report_json(db_session, finalized_evaluation_legacy, report_version=1)
+    assert report["methodology_version"] == LEGACY_METHODOLOGY_VERSION
+    assert report["methodology_version"] == "pre-v1-fixed-5dim"

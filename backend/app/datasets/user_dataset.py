@@ -197,3 +197,140 @@ def load_rows_for_evaluation(
         "label_encoding": label_encoding,
     }
     return rows, exclusions
+
+
+def load_rows_for_evaluation_with_label_mapping(
+    data: bytes,
+    *,
+    target_column: str,
+    group_column: str,
+    text_column: str,
+    excluded_group_values: set[str],
+    label_encoding: dict[str, int],
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Task 4.5 (EvaluationContractV2 Fairness): identical row loading/drop
+    semantics to :func:`load_rows_for_evaluation`, except the label encoding
+    is an explicit caller-supplied mapping (dataset value -> model output
+    index, from the confirmed ``label_mapping``) instead of an internally
+    computed alphabetical ``0..k-1`` sort.
+
+    A target value with no entry in ``label_encoding`` is dropped and counted
+    as ``rows_dropped_unmapped_label`` — never silently coerced to a
+    fabricated index and never a hard error here. Draft confirmation already
+    validated ``label_mapping`` covers every value observed in the dataset at
+    confirm time (see ``app.services.draft_validation``); this is a runtime
+    defense against drift between confirmation and evaluation, not the
+    primary enforcement point.
+    """
+    reader = csv.DictReader(_decode(data))
+    fieldnames = reader.fieldnames or []
+    for col in (target_column, group_column, text_column):
+        if col not in fieldnames:
+            raise UserDatasetError(f"column {col!r} not found in dataset")
+
+    rows: list[dict[str, Any]] = []
+    rows_dropped_missing_target = 0
+    rows_dropped_missing_text = 0
+    rows_dropped_missing_group = 0
+    rows_dropped_excluded_group = 0
+    rows_dropped_unmapped_label = 0
+    label_values_seen: set[str] = set()
+
+    for row in reader:
+        target_raw = row.get(target_column)
+        text_raw = row.get(text_column)
+        group_raw = row.get(group_column)
+
+        if _is_missing(target_raw):
+            rows_dropped_missing_target += 1
+            continue
+        if text_raw is None or text_raw.strip() == "":
+            rows_dropped_missing_text += 1
+            continue
+        if _is_missing(group_raw):
+            rows_dropped_missing_group += 1
+            continue
+        group_value = group_raw.strip()
+        if group_value in excluded_group_values:
+            rows_dropped_excluded_group += 1
+            continue
+
+        target_value = target_raw.strip()
+        if target_value not in label_encoding:
+            rows_dropped_unmapped_label += 1
+            continue
+
+        label_values_seen.add(target_value)
+        rows.append(
+            {
+                "text": text_raw,
+                "label": label_encoding[target_value],
+                "sensitive": group_value,
+            }
+        )
+
+    exclusions = {
+        "rows_dropped_missing_target": rows_dropped_missing_target,
+        "rows_dropped_missing_text": rows_dropped_missing_text,
+        "rows_dropped_missing_group": rows_dropped_missing_group,
+        "rows_dropped_excluded_group": rows_dropped_excluded_group,
+        "rows_dropped_unmapped_label": rows_dropped_unmapped_label,
+        "label_values_seen": sorted(label_values_seen),
+        "label_encoding": label_encoding,
+    }
+    return rows, exclusions
+
+
+def load_samples_for_robustness_with_label_mapping(
+    data: bytes,
+    *,
+    target_column: str,
+    text_column: str,
+    label_encoding: dict[str, int],
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Task 4.5 (EvaluationContractV2 Robustness): produces
+    ``[{"text": str, "label": int}, ...]`` — the exact shape
+    ``TransformersCharSwapRunner.run`` consumes as ``samples`` — from a user
+    CSV plus an explicit ``label_mapping``. No group/sensitive column (the
+    Robustness contract has none). Same missing-value and unmapped-label
+    exclusion semantics as ``load_rows_for_evaluation_with_label_mapping``.
+    """
+    reader = csv.DictReader(_decode(data))
+    fieldnames = reader.fieldnames or []
+    for col in (target_column, text_column):
+        if col not in fieldnames:
+            raise UserDatasetError(f"column {col!r} not found in dataset")
+
+    samples: list[dict[str, Any]] = []
+    rows_dropped_missing_target = 0
+    rows_dropped_missing_text = 0
+    rows_dropped_unmapped_label = 0
+    label_values_seen: set[str] = set()
+
+    for row in reader:
+        target_raw = row.get(target_column)
+        text_raw = row.get(text_column)
+
+        if _is_missing(target_raw):
+            rows_dropped_missing_target += 1
+            continue
+        if text_raw is None or text_raw.strip() == "":
+            rows_dropped_missing_text += 1
+            continue
+
+        target_value = target_raw.strip()
+        if target_value not in label_encoding:
+            rows_dropped_unmapped_label += 1
+            continue
+
+        label_values_seen.add(target_value)
+        samples.append({"text": text_raw, "label": label_encoding[target_value]})
+
+    exclusions = {
+        "rows_dropped_missing_target": rows_dropped_missing_target,
+        "rows_dropped_missing_text": rows_dropped_missing_text,
+        "rows_dropped_unmapped_label": rows_dropped_unmapped_label,
+        "label_values_seen": sorted(label_values_seen),
+        "label_encoding": label_encoding,
+    }
+    return samples, exclusions

@@ -7,15 +7,12 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.api.errors import AppError, ConflictError, NotFoundError, ValidationAppError
 from app.confidence.engine import ConfidenceSummary, summarize
-from app.datasets.registry import validate_probe_config_datasets
 from app.db.enums import EvaluationMode, EvaluationStatus
 from app.db.models import Evaluation, HumanReview, ProbeResult
-from app.inference.evaluation_contract import build_evaluation_contract
 from app.db.repositories.evaluation import EvaluationRepository
 from app.db.repositories.evaluation_event import (
     EVENT_EVALUATION_CREATED,
@@ -29,7 +26,6 @@ from app.db.repositories.human_review import HumanReviewRepository
 from app.db.repositories.model import ModelRepository
 from app.db.repositories.osd_agent_output import OsdAgentOutputRepository
 from app.db.repositories.probe_result import ProbeResultRepository
-from app.db.repositories.user_dataset import UserDatasetRepository
 from app.osd.review import (
     build_overrides,
     merge_review_aspects,
@@ -52,7 +48,6 @@ from app.schemas.modes import (
     engine_from_osd_payload,
     fries_status_for,
 )
-from app.schemas.probe_config import parse_probe_config
 from app.schemas.reviews import HumanReviewRead, HumanReviewRequest
 from app.scoring.fries import score_from_finalized_osd
 from app.tasks.celery_client import enqueue_evaluate_model
@@ -143,45 +138,22 @@ class EvaluationService:
         self._osd_outputs = OsdAgentOutputRepository(session)
         self._final_scores = FinalScoreRepository(session)
         self._human_reviews = HumanReviewRepository(session)
-        self._user_datasets = UserDatasetRepository(session)
 
-    def create_evaluation(
-        self,
-        data: EvaluationCreate,
-    ) -> Evaluation:
+    def create_evaluation(self, data: EvaluationCreate) -> Evaluation:
+        """Bare, contract-free creation (Phase 7) — no dataset/contract
+        selection of any kind. The resulting evaluation carries no
+        ``evaluation_contract`` at all, so Fairness/Robustness both resolve
+        NOT_APPLICABLE. Use ``EvaluationServiceV2.create_from_draft`` for a
+        real Fairness/Robustness configuration."""
         model = self._models.get_by_id(data.model_id)
         if model is None:
             raise NotFoundError(
                 f"Model {data.model_id} not found",
                 details={"model_id": data.model_id},
             )
-        try:
-            probe_cfg = parse_probe_config(data.probe_config)
-            validate_probe_config_datasets(probe_cfg)
-        except ValidationError as exc:
-            raise ValidationAppError(
-                "Invalid probe_config",
-                details={"errors": exc.errors()},
-            ) from exc
-        except ValueError as exc:
-            raise ValidationAppError(
-                str(exc),
-                details={"probe_config": data.probe_config},
-            ) from exc
-        probe_config = probe_cfg.model_dump(mode="json")
+        probe_config = dict(data.probe_config or {})
         if probe_config.get("assessment_engine") is None:
             probe_config["assessment_engine"] = "deterministic"
-        # Phase 7: resolve + freeze the evaluation contract from the Model row
-        # (never the client-supplied revision, which may have drifted).
-        contract = build_evaluation_contract(
-            model,
-            data,
-            user_dataset_repo=self._user_datasets,
-        )
-        probe_config["evaluation_contract"] = contract.model_dump(mode="json")
-        if data.included_group_values is not None:
-            probe_config.setdefault("extra", {})
-            probe_config["extra"]["included_group_values"] = data.included_group_values
         row = self._evals.create(
             model_id=data.model_id,
             evaluation_mode=data.evaluation_mode,
@@ -199,7 +171,6 @@ class EvaluationService:
             evaluation_mode=row.evaluation_mode,
             probe_config=row.probe_config or {},
             model_revision=row.model_revision,
-            evaluation_contract=contract.model_dump(mode="json"),
         )
         task_id = enqueue_evaluate_model(payload)
         logger.info(
@@ -276,6 +247,7 @@ class EvaluationService:
             probe_config=probe_config,
             model_revision=row.model_revision,
             evaluation_contract=probe_config.get("evaluation_contract", {}),
+            methodology_version=row.methodology_version,
         )
         task_id = enqueue_evaluate_model(payload)
         logger.info(
@@ -314,8 +286,10 @@ class EvaluationService:
         rows = self._probes.list_for_evaluation(evaluation_id)
         if not rows:
             return None
+        evaluation = self.get_evaluation(evaluation_id)
         return summarize(
-            [(row.dimension, row.confidence, row.metric_values or {}) for row in rows]
+            [(row.dimension, row.confidence, row.metric_values or {}) for row in rows],
+            methodology_version=evaluation.methodology_version,
         )
 
     def get_osd_agent(self, evaluation_id: uuid.UUID) -> OsdAgentRead | None:

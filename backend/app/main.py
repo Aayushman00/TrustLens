@@ -58,9 +58,7 @@ def create_app() -> FastAPI:
             "engine is deterministic: probes emit evidence; O/S/D are not generated "
             "without a validated mapping; FRIES is withheld unless complete O/S/D "
             "exist (legacy_heuristic is admin-only). Evaluation modes AI_AUTONOMOUS "
-            "and AI_ASSISTED are human-review workflow flags, not LLM interpretation. "
-            "GET /v1/leaderboard lists only published evaluations that have an original "
-            "FRIES score (not a universal trust ranking)."
+            "and AI_ASSISTED are human-review workflow flags, not LLM interpretation."
         ),
         lifespan=lifespan,
     )

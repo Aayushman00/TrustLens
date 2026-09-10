@@ -14,6 +14,8 @@ from typing import Any, Protocol
 from app.inference.base import DecisionMode, DeviceInfo, InferenceConfig, InferenceBackend, TaskType
 from app.inference.errors import MODEL_LOAD_ERROR, InferenceError
 from app.inference.local_hf import LocalHFBackend
+from app.inference.model_snapshot_check import verify_loaded_model_matches_snapshot
+from app.schemas.evaluation_contract_v2 import ModelLabelSnapshot
 
 logger = logging.getLogger("trustlens.probes.robustness")
 
@@ -49,6 +51,7 @@ class RobustnessRunner(Protocol):
         seed: int,
         hf_token: str | None = None,
         inference_config: InferenceConfig | None = None,
+        expected_label_snapshot: ModelLabelSnapshot | None = None,
     ) -> RobustnessRunResult: ...
 
 
@@ -106,6 +109,7 @@ class TransformersCharSwapRunner:
         seed: int,
         hf_token: str | None = None,
         inference_config: InferenceConfig | None = None,
+        expected_label_snapshot: ModelLabelSnapshot | None = None,
     ) -> RobustnessRunResult:
         backend = self._resolve_backend()
         config = inference_config or InferenceConfig(
@@ -128,6 +132,13 @@ class TransformersCharSwapRunner:
                 f"failed to load model {model_ref}",
                 details={"cause": str(exc)},
             ) from exc
+
+        if expected_label_snapshot is not None:
+            try:
+                verify_loaded_model_matches_snapshot(loaded, expected_label_snapshot)
+            except InferenceError:
+                backend.close()
+                raise
 
         device_info = backend.device_info()
         num_labels = loaded.num_labels

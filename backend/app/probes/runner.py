@@ -12,10 +12,15 @@ from app.db.repositories.probe_result import ProbeResultRepository
 from app.probes.base import Probe, ProbeContext, ProbeOutput
 from app.probes.errors import ProbeError
 from app.probes.registry import ProbeRegistry, default_registry
-from app.schemas.evaluation_contract import EvaluationContractV1
+from app.schemas.evaluation_contract_v2 import EvaluationContractV2
 from app.schemas.internal import EvaluateModelPayload
 from app.schemas.probe_config import parse_probe_config
-from app.storage.evidence_store import DatasetStore, EvidenceStore, EvidenceStoreError
+from app.storage.evidence_store import (
+    DatasetContentStore,
+    DatasetStore,
+    EvidenceStore,
+    EvidenceStoreError,
+)
 
 logger = logging.getLogger("trustlens.probes")
 
@@ -52,6 +57,7 @@ def run_all_probes(
     model_revision: str | None = None,
     model_checksum: str | None = None,
     dataset_store: DatasetStore | None = None,
+    dataset_content_store: DatasetContentStore | None = None,
 ) -> list[ProbeOutput]:
     """Run F→R→I→E→S; persist each via ProbeResultRepository; return outputs.
 
@@ -63,11 +69,10 @@ def run_all_probes(
     probe_config = parse_probe_config(payload.probe_config)
     reg = registry if registry is not None else default_registry()
     probes_repo = ProbeResultRepository(session)
-    contract = (
-        EvaluationContractV1.model_validate(payload.evaluation_contract)
-        if payload.evaluation_contract
-        else None
-    )
+    raw_contract = payload.evaluation_contract
+    contract: EvaluationContractV2 | None = None
+    if raw_contract and raw_contract.get("schema_version") == "v2":
+        contract = EvaluationContractV2.model_validate(raw_contract)
     ctx = ProbeContext(
         evaluation_id=payload.evaluation_id,
         model_ref=payload.model_ref,
@@ -78,6 +83,8 @@ def run_all_probes(
         model_checksum=model_checksum,
         evaluation_contract=contract,
         dataset_store=dataset_store,
+        dataset_content_store=dataset_content_store,
+        session=session,
     )
     outputs: list[ProbeOutput] = []
     for probe in reg.all_ordered():

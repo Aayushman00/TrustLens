@@ -16,6 +16,14 @@ from app.schemas.reviews import HumanReviewRead
 
 
 class EvaluationCreate(BaseModel):
+    """Bare, contract-free evaluation creation (Phase 7).
+
+    No dataset/contract selection of any kind — an evaluation created here
+    carries no ``EvaluationContractV2`` at all, so Fairness and Robustness
+    both resolve NOT_APPLICABLE. Use ``POST /v1/evaluations-v2`` (via a
+    validated draft) to configure Fairness/Robustness against a real dataset.
+    """
+
     model_id: int
     evaluation_mode: EvaluationMode
     probe_config: dict[str, Any] = Field(default_factory=dict)
@@ -24,26 +32,6 @@ class EvaluationCreate(BaseModel):
     config: str | None = None
     model_revision: str | None = None
     trustlens_version: str | None = None
-
-    # Phase 7 evaluation contract selection. pairing_id, dataset_key,
-    # contract_kind="proxy_lr", and user_dataset_id are mutually exclusive
-    # (enforced in build_evaluation_contract); proxy_lr additionally requires
-    # admin. Nothing selected resolves to kind="documentation_only" — never
-    # Adult.
-    contract_kind: str | None = None
-    pairing_id: str | None = None
-    dataset_key: str | None = None
-
-    # User-defined local Fairness dataset selection (kind="user_dataset").
-    # target_column/group_column/text_column are required together with
-    # user_dataset_id. included_group_values is a run-time filter (not part
-    # of the frozen contract identity) — None means "all non-missing
-    # observed groups".
-    user_dataset_id: str | None = None
-    target_column: str | None = None
-    group_column: str | None = None
-    text_column: str | None = None
-    included_group_values: list[str] | None = None
 
 
 class EvaluationStatusUpdate(BaseModel):

@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 from alembic import command
 from alembic.config import Config
+from alembic.script import ScriptDirectory
 from sqlalchemy import inspect, text
 
 from app.core.db import get_engine, reset_engine
@@ -76,7 +77,12 @@ def test_alembic_downgrade_and_reupgrade(
 
     with engine.connect() as conn:
         row = conn.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-    assert row == "008_remove_auth_and_ownership"
+    # Read the actual head from the script directory rather than hardcoding
+    # a revision id — this test previously pinned an old head literal and
+    # started failing silently-wrong (asserting a stale midpoint) every time
+    # a new migration was added on top.
+    expected_head = ScriptDirectory.from_config(cfg).get_current_head()
+    assert row == expected_head
 
 
 @pytest.mark.slow

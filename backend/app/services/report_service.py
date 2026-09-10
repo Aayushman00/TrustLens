@@ -208,4 +208,5 @@ class ReportService:
             mode_disclosure=ModeDisclosure.model_validate(report_json["mode_disclosure"]),
             generated_at=report_json["generated_at"],
             report_json=report_json,
+            methodology_version=report_json.get("methodology_version"),
         )
