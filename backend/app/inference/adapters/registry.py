@@ -3,12 +3,10 @@
 from __future__ import annotations
 
 from app.inference.adapters.base import ModelInputAdapter
-from app.inference.adapters.hatexplain import HatexplainPostTokensAdapter
 from app.inference.adapters.plain_text import PlainTextAdapter
 
 _REGISTRY: dict[str, ModelInputAdapter] = {
     PlainTextAdapter.adapter_id: PlainTextAdapter(),
-    HatexplainPostTokensAdapter.adapter_id: HatexplainPostTokensAdapter(),
 }
 
 

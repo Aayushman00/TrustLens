@@ -29,7 +29,12 @@ from sqlalchemy.orm import Session
 
 from app.confidence.engine import summarize
 from app.core.config import get_settings
-from app.db.enums import EvaluationMode, EvaluationStatus, FriesDimension
+from app.db.enums import (
+    EvaluationMode,
+    EvaluationStatus,
+    FriesDimension,
+    ProbeEvaluationStatus,
+)
 from app.db.repositories.evaluation import EvaluationRepository
 from app.db.repositories.evaluation_event import (
     EVENT_AGENT_COMPLETED,
@@ -65,9 +70,11 @@ from app.probes.errors import ProbeError
 from app.probes.runner import run_all_probes
 from app.schemas.internal import EvaluateModelPayload
 from app.scoring.fries import score_from_finalized_osd
+from app.scoring.methodology_version import LEGACY_METHODOLOGY_VERSION
 from app.storage.evidence_store import (
     EvidenceStore,
     EvidenceStoreError,
+    get_dataset_content_store,
     get_dataset_store,
     get_evidence_store,
 )
@@ -117,9 +124,20 @@ def _run_osd_agent(
         )
         for row in probe_rows
     ]
+    not_applicable_dimension_count = (
+        sum(
+            1
+            for row in probe_rows
+            if (row.metric_values or {}).get("probe_status")
+            == ProbeEvaluationStatus.NOT_APPLICABLE.value
+        )
+        if payload.methodology_version != LEGACY_METHODOLOGY_VERSION
+        else 0
+    )
     confidence_summary = (
         summarize(
-            [(row.dimension, row.confidence, row.metric_values or {}) for row in probe_rows]
+            [(row.dimension, row.confidence, row.metric_values or {}) for row in probe_rows],
+            methodology_version=payload.methodology_version,
         ).model_dump()
         if probe_rows
         else None
@@ -137,7 +155,10 @@ def _run_osd_agent(
     )
     OsdAgentOutputRepository(session).create(
         evaluation_id=payload.evaluation_id,
-        ai_suggestion=to_ai_suggestion(result),
+        ai_suggestion=to_ai_suggestion(
+            result,
+            required_aspect_count=FRIES_ASPECT_COUNT - not_applicable_dimension_count,
+        ),
         ai_confidence=result.overall_confidence,
         evidence_used=to_evidence_used(result),
         rationale=to_rationale(result),
@@ -277,6 +298,7 @@ def run_evaluation_pipeline(
             model_revision=payload.model_revision,
             model_checksum=model.checksum,
             dataset_store=get_dataset_store(get_settings()),
+            dataset_content_store=get_dataset_content_store(get_settings()),
         )
     except (ProbeError, EvidenceStoreError):
         logger.exception(

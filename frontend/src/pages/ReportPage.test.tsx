@@ -183,4 +183,46 @@ describe("ReportPage", () => {
     expect(screen.queryByText(/^Verified$/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/is a safe model/i)).not.toBeInTheDocument();
   });
+
+  it("renders NOT_APPLICABLE dimension distinctly from INSUFFICIENT_EVIDENCE", async () => {
+    const report = baseReportJson({
+      evidence_traceability: [
+        {
+          dimension: "FAIRNESS",
+          status: "NOT_APPLICABLE",
+          status_reason: "No compatible Fairness contract was selected.",
+          aspect_scoring: null,
+          scored_risk_id: null,
+          risks_triggered: null,
+          gates: null,
+          coverage_ratio: null,
+          confidence: null,
+          evidence_refs: [],
+          limitations: null,
+          human_osd: null,
+          fries_dimension_score: null,
+        },
+        {
+          dimension: "ROBUSTNESS",
+          status: "INSUFFICIENT_EVIDENCE",
+          status_reason: "Not enough perturbation samples were evaluated.",
+          aspect_scoring: null,
+          scored_risk_id: null,
+          risks_triggered: null,
+          gates: null,
+          coverage_ratio: null,
+          confidence: null,
+          evidence_refs: [],
+          limitations: null,
+          human_osd: null,
+          fries_dimension_score: null,
+        },
+      ],
+    });
+    apiFetchMock.mockResolvedValueOnce(reportRead(report));
+    renderReportPage();
+
+    await waitFor(() => expect(screen.getAllByText(/not configured/i).length).toBeGreaterThan(0));
+    expect(screen.getAllByText(/insufficient evidence/i).length).toBeGreaterThan(0);
+  });
 });

@@ -19,7 +19,6 @@ IMPLEMENTED_PATHS = {
     "/v1/evaluations/{evaluation_id}/unpublish",
     "/v1/reports/{evaluation_id}",
     "/v1/reports/{evaluation_id}/generate",
-    "/v1/leaderboard",
 }
 
 

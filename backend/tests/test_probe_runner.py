@@ -93,10 +93,7 @@ def test_run_all_probes_inserts_five_rows(db_session: Session) -> None:
             assert row.metric_values.get("proposed_mapping") is False
             rob_flags = outputs[1].flags or []
             assert outputs[1].status is ProbeEvaluationStatus.NOT_APPLICABLE
-            assert (
-                "no_compatible_dataset" in rob_flags
-                or "unsupported_modality" in rob_flags
-            )
+            assert "no_robustness_contract" in rob_flags
         elif row.dimension == FriesDimension.EXPLAINABILITY:
             assert row.metric_values.get("proposed_mapping") is False
             assert "coverage_ratio" in row.metric_values

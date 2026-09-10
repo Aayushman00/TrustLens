@@ -2,9 +2,8 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import { apiFetch } from "../api/client";
-import type { EvaluationList, EvaluationOptionsRead, EvaluationRead, ModelRead } from "../api/types";
+import type { EvaluationList, EvaluationRead, ModelRead } from "../api/types";
 import ErrorNotice from "../components/ErrorNotice";
-import ContractCatalog from "../components/ContractCatalog";
 import DocumentationSourceForm from "../components/DocumentationSourceForm";
 import Spinner from "../components/Spinner";
 import StatusBadge from "../components/StatusBadge";
@@ -18,7 +17,6 @@ export default function ModelDetailPage() {
   const { id } = useParams();
   const [model, setModel] = useState<ModelRead | null>(null);
   const [history, setHistory] = useState<EvaluationRead[] | null>(null);
-  const [options, setOptions] = useState<EvaluationOptionsRead | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [tab, setTab] = useState<Tab>("overview");
 
@@ -26,15 +24,13 @@ export default function ModelDetailPage() {
     let cancelled = false;
     async function load() {
       try {
-        const [row, evals, opts] = await Promise.all([
+        const [row, evals] = await Promise.all([
           apiFetch<ModelRead>(`/v1/models/${id}`),
           apiFetch<EvaluationList>("/v1/evaluations?limit=200"),
-          apiFetch<EvaluationOptionsRead>(`/v1/models/${id}/evaluation-options`),
         ]);
         if (!cancelled) {
           setModel(row);
           setHistory(evals.items.filter((e) => e.model_id === row.id));
-          setOptions(opts);
         }
       } catch (err) {
         if (!cancelled) setError(err);
@@ -118,14 +114,6 @@ export default function ModelDetailPage() {
 
       {tab === "overview" ? (
         <>
-          <div className="card">
-            <h2>Available evaluation contracts</h2>
-            <p className="muted">
-              These are the only evaluations TrustLens can run model-faithfully for this exact
-              model + revision. Nothing here is inferred or substituted.
-            </p>
-            {options ? <ContractCatalog options={options} /> : <Spinner label="Loading contracts…" />}
-          </div>
           <div className="card">
             <h2>Details</h2>
             <dl className="kv">

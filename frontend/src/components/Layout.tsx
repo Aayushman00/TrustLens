@@ -63,12 +63,6 @@ export default function Layout() {
             </span>
             Evaluations
           </NavLink>
-          <NavLink to="/leaderboard">
-            <span className="nav-icon" aria-hidden="true">
-              ⚑
-            </span>
-            Leaderboard
-          </NavLink>
         </nav>
 
         <div className="nav-section-label">System</div>

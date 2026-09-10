@@ -27,7 +27,9 @@ export default function EvaluationsHistoryPage() {
 
   const [statusFilter, setStatusFilter] = useState<EvaluationStatus | "">("");
   const [modelFilter, setModelFilter] = useState("");
-  const [familyFilter, setFamilyFilter] = useState<"" | "Fairness" | "Robustness" | "Documentation & Governance" | "Fairness (proxy)">("");
+  const [familyFilter, setFamilyFilter] = useState<
+    "" | "Fairness" | "Robustness" | "Fairness + Robustness" | "Documentation & Governance"
+  >("");
 
   const loadPage = useCallback(
     async (cursor: string | null) => {
@@ -58,7 +60,7 @@ export default function EvaluationsHistoryPage() {
       if (modelFilter && !String(e.model_id).includes(modelFilter)) return false;
       if (familyFilter) {
         const contract = getEvaluationContract(e);
-        const label = contractFamilyLabel(contract?.kind);
+        const label = contractFamilyLabel(contract);
         if (label !== familyFilter) return false;
       }
       return true;
@@ -95,8 +97,8 @@ export default function EvaluationsHistoryPage() {
           <select value={familyFilter} onChange={(e) => setFamilyFilter(e.target.value as typeof familyFilter)}>
             <option value="">All</option>
             <option value="Fairness">Fairness</option>
-            <option value="Fairness (proxy)">Fairness (proxy)</option>
             <option value="Robustness">Robustness</option>
+            <option value="Fairness + Robustness">Fairness + Robustness</option>
             <option value="Documentation & Governance">Documentation &amp; Governance</option>
           </select>
         </label>
@@ -134,7 +136,7 @@ export default function EvaluationsHistoryPage() {
                         <Link to={`/models/${evaluation.model_id}`}>#{evaluation.model_id}</Link>
                       </td>
                       <td className="mono">{shortRevision(evaluation.model_revision)}</td>
-                      <td>{contract ? contractFamilyLabel(contract.kind) : "—"}</td>
+                      <td>{contractFamilyLabel(contract)}</td>
                       <td>
                         <StatusBadge status={evaluation.status} />
                       </td>

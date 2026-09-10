@@ -28,70 +28,43 @@ from app.storage.evidence_store import (
 def patch_evaluated_robustness(monkeypatch: object) -> None:
     """Make RobustnessProbe produce EVALUATED metrics without torch/Hub.
 
-    Default pipeline models have no text-classification metadata, so robustness
-    is NOT_APPLICABLE and Autonomous FRIES is withheld. Suites that still need
-    a complete five-aspect FRIES (reports, leaderboard, review) opt into this.
+    Default pipeline evaluations carry no EvaluationContractV2.robustness, so
+    robustness is NOT_APPLICABLE and Autonomous FRIES is withheld. Suites
+    that still need a complete five-aspect FRIES (reports, leaderboard,
+    review) opt into this synthetic model-faithful evidence — mirrors
+    ``patch_evaluated_fairness``'s ``.run``-level patch, bypassing contract
+    dispatch entirely rather than depending on internal V2 plumbing.
     """
-    from app.probes.robustness_nlp import RobustnessRunResult
+    import uuid
 
-    monkeypatch.setattr(  # type: ignore[union-attr]
-        "app.probes.robustness._is_text_classification",
-        lambda _meta: True,
-    )
-    monkeypatch.setattr(  # type: ignore[union-attr]
-        "app.probes.robustness._resolve_robustness_dataset",
-        lambda _ctx: ("ag_news_robustness", "news", "probe_config", None),
-    )
-    monkeypatch.setattr(  # type: ignore[union-attr]
-        "app.probes.robustness.load_pinned_subset",
-        lambda *_a, **_k: [{"text": "hello world", "label": 0}] * 200,
-    )
+    from app.db.enums import FriesDimension, ProbeEvaluationStatus
+    from app.probes.base import ProbeOutput
+    from app.schemas.evidence import EvidenceRef
 
-    def _aligned() -> list[dict]:
-        rows = []
-        for i in range(120):
-            label = i % 2
-            yc = label
-            yr = label if i % 5 else (1 - label)
-            rows.append(
-                {
-                    "label": label,
-                    "y_hat_clean": yc,
-                    "y_hat_robust": yr,
-                    "text": f"sample {i}",
-                    "attacked_text": f"sxmple {i}",
-                }
-            )
-        return rows
-
-    def _run(self, **kwargs):  # noqa: ANN001, ANN003
-        aligned = _aligned()
-        n = len(aligned)
-        clean_correct = sum(1 for r in aligned if r["y_hat_clean"] == r["label"])
-        robust_correct = sum(1 for r in aligned if r["y_hat_robust"] == r["label"])
-        flipped = sum(
-            1
-            for r in aligned
-            if r["y_hat_clean"] == r["label"] and r["y_hat_robust"] != r["label"]
+    def _run(self, ctx):  # noqa: ANN001
+        ref = EvidenceRef(
+            evidence_id=str(uuid.uuid4()),
+            uri="s3://trustlens/test/robustness.json",
+            hash="sha256:" + "0" * 64,
+            content_type="application/json",
+            probe_name="robustness",
         )
-        return RobustnessRunResult(
-            clean_accuracy=clean_correct / n,
-            robust_accuracy=robust_correct / n,
-            attack_success_rate=flipped / n,
-            n_samples=200,
-            n_evaluated=n,
-            n_label_compatible=n,
-            n_successfully_perturbed=n,
-            n_perturb_failed=0,
-            perturbation_coverage=1.0,
-            label_compat_fraction=1.0,
-            aligned_rows=aligned,
+        return ProbeOutput(
+            dimension=FriesDimension.ROBUSTNESS,
+            metric_values={
+                "clean_accuracy": 0.9,
+                "robust_accuracy": 0.8,
+                "attack_success_rate": 0.1,
+                "n_evaluated": 120,
+                "probe_status": ProbeEvaluationStatus.EVALUATED.value,
+            },
+            confidence=0.85,
+            evidence_refs=[ref],
+            flags=["evaluated_robustness_test_fixture"],
+            status=ProbeEvaluationStatus.EVALUATED,
         )
 
-    monkeypatch.setattr(  # type: ignore[union-attr]
-        "app.probes.robustness.TransformersCharSwapRunner.run",
-        _run,
-    )
+    monkeypatch.setattr("app.probes.robustness.RobustnessProbe.run", _run)  # type: ignore[union-attr]
 
 
 def patch_evaluated_fairness(monkeypatch: object) -> None:

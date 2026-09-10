@@ -261,3 +261,225 @@ def auth_headers() -> dict[str, str]:
 def admin_headers() -> dict[str, str]:
     """No-op — TrustLens is a single-user local app with no auth headers."""
     return {}
+
+
+@pytest.fixture
+def seeded_model(db_session: Session) -> Any:
+    """Create and return a test Model row for FK relationships in tests."""
+    import uuid
+
+    from app.db.models import Model
+
+    model = Model(
+        hf_repo_id=f"org/model-{uuid.uuid4().hex[:8]}",
+        model_metadata={"source": "test"},
+        checksum="sha256:deadbeef",
+        revision="main",
+    )
+    db_session.add(model)
+    db_session.flush()
+    return model
+
+
+class FakeS3Client:
+    """Minimal in-memory S3/boto3 client for storage tests."""
+
+    def __init__(self) -> None:
+        self.objects: dict[tuple[str, str], bytes] = {}
+
+    def put_object(
+        self,
+        *,
+        Bucket: str,
+        Key: str,
+        Body: bytes,
+        ContentType: str | None = None,
+        Metadata: dict[str, str] | None = None,
+    ) -> dict:
+        """Store an object in memory."""
+        self.objects[(Bucket, Key)] = Body
+        return {}
+
+    def get_object(self, *, Bucket: str, Key: str) -> dict:
+        """Retrieve an object from memory."""
+        if (Bucket, Key) not in self.objects:
+            from botocore.exceptions import ClientError
+
+            raise ClientError(
+                error_response={"Error": {"Code": "NoSuchKey", "Message": "Not found"}},
+                operation_name="GetObject",
+            )
+        data = self.objects[(Bucket, Key)]
+
+        class FakeBody:
+            def read(self) -> bytes:
+                return data
+
+        return {"Body": FakeBody()}
+
+
+@pytest.fixture
+def fake_s3_client() -> FakeS3Client:
+    """In-memory S3 client for storage tests."""
+    return FakeS3Client()
+
+
+@pytest.fixture
+def seeded_dataset_content(
+    db_session: Session, fake_s3_client: FakeS3Client, monkeypatch: pytest.MonkeyPatch
+) -> Any:
+    """A DatasetContent row backed by an in-memory DatasetContentStore (no
+    real MinIO) so ``EvaluationDraftService.update_dimension`` can fetch
+    ``dataset_bytes`` in tests. Same CSV shape as Task 2.3's draft-validation
+    tests: columns text/label/group, 5 rows."""
+    import uuid
+
+    from app.db.models import DatasetContent
+    from app.storage.evidence_store import DatasetContentStore
+    from app.services import evaluation_draft_service as draft_service_module
+
+    csv_bytes = b"text,label,group\nhello,pos,a\nworld,neg,a\nfoo,pos,b\nbar,neg,b\nbaz,pos,b\n"
+    store = DatasetContentStore(fake_s3_client, "test-bucket")
+    storage_uri, content_hash = store.put(csv_bytes, format="csv")
+    # DatasetContentStore.put() returns "sha256:"-prefixed; the DB column is
+    # bare 64-hex (established boundary convention, see Task 1.5).
+    content_hash = content_hash.removeprefix("sha256:")
+
+    content = DatasetContent(
+        id=uuid.uuid4(),
+        content_hash=content_hash,
+        storage_uri=storage_uri,
+        byte_size=len(csv_bytes),
+        format="csv",
+        row_count=5,
+        columns=[
+            {"name": "text", "inferred_type": "string"},
+            {"name": "label", "inferred_type": "string"},
+            {"name": "group", "inferred_type": "string"},
+        ],
+    )
+    db_session.add(content)
+    db_session.flush()
+
+    monkeypatch.setattr(draft_service_module, "get_dataset_content_store", lambda settings: store)
+    return content
+
+
+_DRAFT_FAIRNESS_BODY = {
+    "text_column": "text",
+    "target_column": "label",
+    "sensitive_column": "group",
+    "label_mapping": [
+        {"dataset_value": "pos", "model_label_index": 1},
+        {"dataset_value": "neg", "model_label_index": 0},
+    ],
+    "min_group_n": 2,
+}
+
+
+@pytest.fixture
+def confirmed_fairness_draft(
+    db_session: Session, seeded_model: Any, seeded_dataset_content: Any
+) -> Any:
+    """A real EvaluationDraft (built through EvaluationDraftService, not a
+    hand-rolled row) with FAIRNESS validated and confirmed, ROBUSTNESS
+    untouched — the happy path Task 4.4's ``create_from_draft`` consumes."""
+    from unittest.mock import patch
+
+    from app.db.repositories.evaluation_draft import EvaluationDraftRepository
+    from app.inference.model_inspection import ModelLabelSnapshot
+    from app.services.evaluation_draft_service import EvaluationDraftService
+
+    snapshot = ModelLabelSnapshot(num_labels=2, id2label={0: "NEGATIVE", 1: "POSITIVE"}, resolved_sha="sha-1")
+    service = EvaluationDraftService(db_session)
+    draft = service.create(seeded_model.id)
+    with patch("app.services.evaluation_draft_service.inspect_model_config", return_value=snapshot):
+        service.update_dimension(
+            draft.id,
+            "FAIRNESS",
+            {"dataset_content_id": seeded_dataset_content.id, **_DRAFT_FAIRNESS_BODY},
+        )
+    service.confirm_dimension(draft.id, "FAIRNESS")
+    return EvaluationDraftRepository(db_session).get_by_id(draft.id)
+
+
+@pytest.fixture
+def half_confirmed_draft(
+    db_session: Session, seeded_model: Any, seeded_dataset_content: Any
+) -> Any:
+    """A real EvaluationDraft with FAIRNESS validated but never confirmed —
+    the half-filled state Task 4.4's ``create_from_draft`` must reject."""
+    from unittest.mock import patch
+
+    from app.db.repositories.evaluation_draft import EvaluationDraftRepository
+    from app.inference.model_inspection import ModelLabelSnapshot
+    from app.services.evaluation_draft_service import EvaluationDraftService
+
+    snapshot = ModelLabelSnapshot(num_labels=2, id2label={0: "NEGATIVE", 1: "POSITIVE"}, resolved_sha="sha-1")
+    service = EvaluationDraftService(db_session)
+    draft = service.create(seeded_model.id)
+    with patch("app.services.evaluation_draft_service.inspect_model_config", return_value=snapshot):
+        service.update_dimension(
+            draft.id,
+            "FAIRNESS",
+            {"dataset_content_id": seeded_dataset_content.id, **_DRAFT_FAIRNESS_BODY},
+        )
+    # Deliberately not confirmed.
+    return EvaluationDraftRepository(db_session).get_by_id(draft.id)
+
+
+@pytest.fixture
+def _localhost_allowed_for_fetch(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Patch SSRF validation and DNS to ensure IPv4-first resolution for httpserver tests.
+
+    Use this fixture in tests that need to connect to pytest-httpserver.
+
+    Fixes: pytest-httpserver on Windows resolves localhost to ::1 (IPv6) first,
+    but the server may bind to 127.0.0.1 (IPv4). We monkeypatch getaddrinfo to
+    return IPv4 first, ensuring pinned connection targets the correct address.
+    """
+    import socket
+    import ipaddress
+    from app.datasets import url_fetch
+
+    # Save original getaddrinfo
+    original_getaddrinfo = socket.getaddrinfo
+
+    def patched_getaddrinfo(host, port, *args, **kwargs):
+        """Return IPv4 addresses before IPv6 for localhost testing."""
+        infos = original_getaddrinfo(host, port, *args, **kwargs)
+        # For localhost, sort to put IPv4 (AF_INET) results before IPv6 (AF_INET6)
+        if host == "localhost":
+            # Separate IPv4 and IPv6 results
+            ipv4_results = [info for info in infos if info[0] == socket.AF_INET]
+            ipv6_results = [info for info in infos if info[0] == socket.AF_INET6]
+            # Return IPv4 first, then IPv6
+            return ipv4_results + ipv6_results
+        return infos
+
+    def patched_resolve_and_validate_host(host: str) -> str:
+        """Allow localhost/127.0.0.1/::1 for testing, otherwise use full SSRF validation."""
+        try:
+            infos = socket.getaddrinfo(host, None)
+        except socket.gaierror as exc:
+            raise url_fetch.UrlFetchError(f"could not resolve host: {exc}") from exc
+
+        for family, _, _, _, sockaddr in infos:
+            ip = ipaddress.ip_address(sockaddr[0])
+            # Allow localhost/loopback only if it's the hostname "localhost", not direct IP
+            # This preserves the test that explicitly uses 127.0.0.1
+            if host == "localhost" or str(ip) in ("127.0.0.1", "::1"):
+                continue
+            if (
+                ip.is_private
+                or ip.is_loopback
+                or ip.is_link_local
+                or ip.is_multicast
+                or ip.is_reserved
+                or ip.is_unspecified
+            ):
+                raise url_fetch.UrlFetchError(f"resolved address is private/loopback/link-local/reserved: {ip}")
+        return str(ipaddress.ip_address(infos[0][4][0]))
+
+    monkeypatch.setattr(socket, "getaddrinfo", patched_getaddrinfo)
+    monkeypatch.setattr(url_fetch, "_resolve_and_validate_host", patched_resolve_and_validate_host)

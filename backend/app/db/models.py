@@ -37,6 +37,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    func,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -116,6 +117,83 @@ class UserDataset(Base, TimestampMixin):
     status_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
+class DatasetContent(Base):
+    """Immutable content-addressed dataset snapshot. Never updated after insert."""
+
+    __tablename__ = "dataset_content"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    content_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    storage_uri: Mapped[str] = mapped_column(Text, nullable=False)
+    byte_size: Mapped[int] = mapped_column(Integer, nullable=False)
+    format: Mapped[str] = mapped_column(String(32), nullable=False)
+    row_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    columns: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False)
+    schema_sniff_version: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class DatasetFetchEvent(Base):
+    """Append-only provenance record — one row per fetch attempt, written once terminal."""
+
+    __tablename__ = "dataset_fetch_event"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    source_url: Mapped[str] = mapped_column(Text, nullable=False)
+    requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    http_status: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    content_type: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source_revision: Mapped[str | None] = mapped_column(Text, nullable=True)
+    resolved_content_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("dataset_content.id", ondelete="RESTRICT"), nullable=True
+    )
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    content: Mapped[DatasetContent | None] = relationship()
+
+
+class EvaluationDraft(Base):
+    __tablename__ = "evaluation_draft"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    model_id: Mapped[int] = mapped_column(Integer, ForeignKey("models.id", ondelete="RESTRICT"), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, server_default="incomplete")
+    resolved_model_sha: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    model_label_snapshot: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    dimensions: Mapped[list[DraftDimensionConfig]] = relationship(
+        back_populates="draft", cascade="all, delete-orphan"
+    )
+
+
+class DraftDimensionConfig(Base):
+    __tablename__ = "draft_dimension_config"
+    __table_args__ = (UniqueConstraint("draft_id", "dimension", name="uq_draft_dimension"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    draft_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("evaluation_draft.id", ondelete="CASCADE"), nullable=False
+    )
+    dimension: Mapped[str] = mapped_column(String(16), nullable=False)
+    dataset_content_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("dataset_content.id", ondelete="RESTRICT"), nullable=True
+    )
+    text_column: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    target_column: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    sensitive_column: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    label_mapping: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB, nullable=True)
+    min_group_n: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    validated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    draft: Mapped[EvaluationDraft] = relationship(back_populates="dimensions")
+
+
 class DocumentationSource(Base, TimestampMixin):
     """First-class documentation evidence for a model (Explainability/Safety Track 1).
 
@@ -188,6 +266,13 @@ class Evaluation(Base, CreatedUpdatedMixin):
     config: Mapped[str | None] = mapped_column(String(256), nullable=True)
     model_revision: Mapped[str | None] = mapped_column(String(128), nullable=True)
     trustlens_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # Methodology version stamped server-side at Evaluation creation
+    # (Task 4.4), immutable thereafter, never retroactively reinterpreted.
+    # server_default backfills pre-existing rows to the legacy tag; new rows
+    # must always pass this explicitly from application code.
+    methodology_version: Mapped[str] = mapped_column(
+        String(64), nullable=False, server_default="pre-v1-fixed-5dim"
+    )
     # Local execution/device evidence (Phase: GPU hardening) — captured once
     # per pipeline run from whichever probe actually invoked LocalHFBackend
     # (Fairness/Robustness). Null when no probe performed model inference
