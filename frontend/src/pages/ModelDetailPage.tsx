@@ -4,7 +4,6 @@ import { Link, useParams } from "react-router-dom";
 import { apiFetch } from "../api/client";
 import type { EvaluationList, EvaluationRead, ModelRead } from "../api/types";
 import ErrorNotice from "../components/ErrorNotice";
-import DocumentationSourceForm from "../components/DocumentationSourceForm";
 import Spinner from "../components/Spinner";
 import StatusBadge from "../components/StatusBadge";
 import { modeLabel } from "../components/ModeDisclosure";
@@ -50,19 +49,24 @@ export default function ModelDetailPage() {
   const cardText = typeof meta.card_text === "string" ? meta.card_text : null;
   const pipelineTag = typeof meta.pipeline_tag === "string" ? meta.pipeline_tag : null;
   const displayName = model.hf_repo_id.split("/").pop() ?? model.hf_repo_id;
+  const isPinned = !!model.revision;
 
   return (
     <>
       <div className="identity-header">
         <div className="identity-title">
           <h1>{displayName}</h1>
-          <span className={`badge ${model.revision ? "badge-yes" : "badge-no"}`}>
-            {model.revision ? "Available locally" : "No pinned revision"}
+          <span className={`badge ${isPinned ? "badge-yes" : "badge-no"}`}>
+            {isPinned ? "Pinned revision" : "Not reproducible — unpinned"}
           </span>
         </div>
-        <Link to={`/evaluations/new?modelId=${model.id}`} className="btn">
-          Evaluate model
-        </Link>
+        {isPinned ? (
+          <Link to={`/evaluations/new?modelId=${model.id}`} className="btn">
+            Evaluate model
+          </Link>
+        ) : (
+          <span className="field-hint">Re-import with a revision to evaluate this model.</span>
+        )}
       </div>
       <div className="identity-meta">
         <span className="identity-meta-item">
@@ -135,7 +139,13 @@ export default function ModelDetailPage() {
           {history == null ? <Spinner label="Loading…" /> : null}
           {history != null && history.length === 0 ? (
             <p className="empty">
-              None yet — <Link to={`/evaluations/new?modelId=${model.id}`}>start one</Link>.
+              {isPinned ? (
+                <>
+                  None yet — <Link to={`/evaluations/new?modelId=${model.id}`}>start one</Link>.
+                </>
+              ) : (
+                "None yet — re-import with a revision to evaluate this model."
+              )}
             </p>
           ) : null}
           {history != null && history.length > 0 ? (
@@ -190,17 +200,6 @@ export default function ModelDetailPage() {
             This is the raw Hugging Face model-card text used by the Integrity, Explainability
             and Safety probes — TrustLens does not rewrite or summarize it.
           </p>
-        </div>
-      ) : null}
-
-      {tab === "card" ? (
-        <div className="card">
-          <h2>Documentation sources</h2>
-          <p className="muted">
-            The pinned-revision Hugging Face card evidence (auto-recorded at import) plus any
-            documentation you attach — papers, safety cards, eval reports.
-          </p>
-          <DocumentationSourceForm modelId={model.id} />
         </div>
       ) : null}
     </>

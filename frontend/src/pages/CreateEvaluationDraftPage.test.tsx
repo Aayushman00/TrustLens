@@ -1,4 +1,5 @@
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { vi } from "vitest";
 
 import { apiFetch } from "../api/client";
@@ -6,20 +7,32 @@ import CreateEvaluationDraftPage from "./CreateEvaluationDraftPage";
 
 vi.mock("../api/client");
 
+function renderPage(initialPath = "/evaluations/new") {
+  return render(
+    <MemoryRouter initialEntries={[initialPath]}>
+      <CreateEvaluationDraftPage />
+    </MemoryRouter>,
+  );
+}
+
+const MODEL = {
+  id: 1,
+  hf_repo_id: "org/model",
+  model_metadata: {},
+  checksum: null,
+  revision: "abc123def456",
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: null,
+};
+
+const UNPINNED_MODEL = { ...MODEL, id: 2, hf_repo_id: "org/unpinned-model", revision: null };
+
 const MODELS_PAGE = {
-  items: [
-    {
-      id: 1,
-      hf_repo_id: "org/model",
-      model_metadata: {},
-      checksum: null,
-      revision: "abc123def456",
-      created_at: "2026-01-01T00:00:00Z",
-      updated_at: null,
-    },
-  ],
+  items: [MODEL],
   next_cursor: null,
 };
+
+const DOCS_EMPTY = { items: [] };
 
 const DRAFT_INCOMPLETE = {
   id: "draft-1",
@@ -58,13 +71,16 @@ const VALIDATION_OK = {
 
 async function selectModelAndCreateDraft() {
   vi.mocked(apiFetch).mockResolvedValueOnce(MODELS_PAGE);
-  render(<CreateEvaluationDraftPage />);
+  renderPage();
 
   const modelCard = await screen.findByText("org/model");
   fireEvent.click(modelCard);
 
   vi.mocked(apiFetch).mockResolvedValueOnce(DRAFT_INCOMPLETE);
-  fireEvent.click(screen.getByRole("button", { name: /start draft/i }));
+  // DocumentationSourceForm mounts alongside Fairness/Robustness the moment
+  // the draft exists and fetches this model's documentation sources.
+  vi.mocked(apiFetch).mockResolvedValueOnce(DOCS_EMPTY);
+  fireEvent.click(screen.getByRole("button", { name: /start evaluation/i }));
   await screen.findByLabelText(/configure fairness/i);
 }
 
@@ -148,4 +164,42 @@ test("unchecking a confirmed dimension resets its confirmed state instead of lea
   expect(within(fairnessCard).queryByRole("button", { name: /fairness confirmed/i })).toBeNull();
   expect(within(fairnessCard).queryByRole("button", { name: /^confirm fairness$/i })).toBeNull();
   expect(continueButton).toBeDisabled();
+});
+
+test("reached with ?modelId= skips model selection entirely", async () => {
+  vi.mocked(apiFetch).mockResolvedValueOnce(MODEL);
+  renderPage("/evaluations/new?modelId=1");
+
+  await screen.findByText("org/model");
+
+  expect(screen.queryByText(/choose a model/i)).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /choose a different model/i })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /start evaluation/i })).toBeInTheDocument();
+});
+
+test("reached without ?modelId= still offers to pick a model, and pick lets you go back", async () => {
+  vi.mocked(apiFetch).mockResolvedValueOnce(MODELS_PAGE);
+  renderPage();
+
+  const modelCard = await screen.findByText("org/model");
+  fireEvent.click(modelCard);
+
+  expect(
+    screen.getByRole("button", { name: /choose a different model/i }),
+  ).toBeInTheDocument();
+});
+
+test("an unpinned model blocks starting an evaluation, with no way around it", async () => {
+  vi.mocked(apiFetch).mockResolvedValueOnce(UNPINNED_MODEL);
+  renderPage("/evaluations/new?modelId=2");
+
+  await screen.findByText(/no pinned revision/i);
+  expect(screen.queryByRole("button", { name: /start evaluation/i })).not.toBeInTheDocument();
+});
+
+test("the model card is included automatically, with room to attach more documentation", async () => {
+  await selectModelAndCreateDraft();
+
+  expect(screen.getByRole("heading", { name: /documentation/i })).toBeInTheDocument();
+  expect(screen.getByText(/pinned model card is included automatically/i)).toBeInTheDocument();
 });
