@@ -51,6 +51,13 @@ def _events(api_client: TestClient, auth_headers: dict[str, str], eval_id: str) 
     return resp.json()["items"]
 
 
+def test_legacy_create_endpoint_marked_deprecated_in_openapi(api_client: TestClient) -> None:
+    """Phase 6, Task 6.2: legacy POST /v1/evaluations stays functional but is
+    flagged deprecated in the OpenAPI schema, ahead of Phase 7 removal."""
+    schema = api_client.get("/openapi.json").json()
+    assert schema["paths"]["/v1/evaluations"]["post"]["deprecated"] is True
+
+
 def test_create_evaluation_enqueues_once(
     api_client: TestClient,
     auth_headers: dict[str, str],
