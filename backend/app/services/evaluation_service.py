@@ -314,8 +314,10 @@ class EvaluationService:
         rows = self._probes.list_for_evaluation(evaluation_id)
         if not rows:
             return None
+        evaluation = self.get_evaluation(evaluation_id)
         return summarize(
-            [(row.dimension, row.confidence, row.metric_values or {}) for row in rows]
+            [(row.dimension, row.confidence, row.metric_values or {}) for row in rows],
+            methodology_version=evaluation.methodology_version,
         )
 
     def get_osd_agent(self, evaluation_id: uuid.UUID) -> OsdAgentRead | None:

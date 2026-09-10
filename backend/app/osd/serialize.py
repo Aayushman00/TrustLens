@@ -80,10 +80,10 @@ def _aspect_payload(aspect: AspectOSD) -> dict[str, Any]:
     return payload
 
 
-def to_ai_suggestion(result: AgentResult) -> dict[str, Any]:
+def to_ai_suggestion(result: AgentResult, *, required_aspect_count: int = FRIES_ASPECT_COUNT) -> dict[str, Any]:
     """JSON for ``osd_agent_outputs.ai_suggestion``."""
     complete_count = sum(1 for aspect in result.aspects if osd_triple_complete(aspect))
-    scoring_complete = complete_count == FRIES_ASPECT_COUNT
+    scoring_complete = complete_count == required_aspect_count
     return {
         "schema_version": "osd-agent-v1",
         "methodology_status": result.methodology_status,
