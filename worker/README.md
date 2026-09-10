@@ -35,15 +35,14 @@ from `backend/app/` into the worker image at build time:
 | `backend/app/osd/` | `./app/osd/` (Phase 16 O/S/D agent — PROPOSED) |
 | `backend/app/scoring/` | `./app/scoring/` (Phase 16 pure FRIES scorer) |
 | `backend/app/schemas/modes.py` | `./app/schemas/modes.py` (Phase 17 disclaimer texts) |
+| `backend/app/schemas/evaluation_contract_v2.py` | `./app/schemas/evaluation_contract_v2.py` |
+| `backend/app/inference/` | `./app/inference/` (LocalHFBackend, device auto-detection) |
 | `backend/app/tasks/evaluate_pipeline.py` | `./app/tasks/evaluate_pipeline.py` |
-| `configs/datasets_v1.yaml` | `./configs/datasets_v1.yaml` |
-
-`DATASETS_CONFIG_PATH=/app/configs/datasets_v1.yaml` is set in the image.
 
 ### ML deps
 
-Worker installs torch/transformers/datasets (Robustness) plus fairlearn/sklearn/numpy
-(Fairness). Explainability and Safety are metadata-only (stdlib card parsing).
+Worker installs torch/transformers (Fairness/Robustness inference). Explainability
+and Safety are metadata-only (stdlib card parsing).
 
 ## Celery CMD
 
