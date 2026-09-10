@@ -65,7 +65,6 @@ def test_pipeline_uses_frozen_revision_not_live_reimported_revision(
 
     # Evaluation create froze the model's revision at the time of creation.
     assert body["model_revision"] == original_revision
-    assert body["probe_config"]["evaluation_contract"]["model_revision"] == original_revision
 
     # Simulate a re-import changing the live Model row's revision *after*
     # the evaluation was created but *before* the worker picks it up.

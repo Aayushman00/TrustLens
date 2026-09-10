@@ -12,7 +12,6 @@ from app.db.repositories.probe_result import ProbeResultRepository
 from app.probes.base import Probe, ProbeContext, ProbeOutput
 from app.probes.errors import ProbeError
 from app.probes.registry import ProbeRegistry, default_registry
-from app.schemas.evaluation_contract import EvaluationContractV1
 from app.schemas.evaluation_contract_v2 import EvaluationContractV2
 from app.schemas.internal import EvaluateModelPayload
 from app.schemas.probe_config import parse_probe_config
@@ -71,12 +70,9 @@ def run_all_probes(
     reg = registry if registry is not None else default_registry()
     probes_repo = ProbeResultRepository(session)
     raw_contract = payload.evaluation_contract
-    contract: EvaluationContractV1 | EvaluationContractV2 | None = None
-    if raw_contract:
-        if raw_contract.get("schema_version") == "v2":
-            contract = EvaluationContractV2.model_validate(raw_contract)
-        else:
-            contract = EvaluationContractV1.model_validate(raw_contract)
+    contract: EvaluationContractV2 | None = None
+    if raw_contract and raw_contract.get("schema_version") == "v2":
+        contract = EvaluationContractV2.model_validate(raw_contract)
     ctx = ProbeContext(
         evaluation_id=payload.evaluation_id,
         model_ref=payload.model_ref,
