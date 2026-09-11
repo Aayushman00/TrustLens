@@ -475,6 +475,13 @@ export interface DimensionValidationRead {
 /** EvaluationDraft status lifecycle — backend Literal values. */
 export type EvaluationDraftStatus = "incomplete" | "validated" | "consumed" | "stale";
 
+/** Frozen model config snapshot (num_labels + id2label) a draft's label-mapping
+ * UI must source its options from exclusively — never a hardcoded list. */
+export interface ModelLabelSnapshot {
+  num_labels: number;
+  id2label: Record<string, string>;
+}
+
 /** GET /v1/evaluation-drafts/{id} — backend EvaluationDraftRead. */
 export interface EvaluationDraftRead {
   id: string;
@@ -482,4 +489,5 @@ export interface EvaluationDraftRead {
   status: EvaluationDraftStatus;
   fairness_confirmed: boolean;
   robustness_confirmed: boolean;
+  model_label_snapshot: ModelLabelSnapshot | null;
 }

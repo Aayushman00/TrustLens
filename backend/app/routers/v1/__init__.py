@@ -6,7 +6,6 @@ from fastapi import APIRouter
 
 from app.routers.v1 import (
     dataset_content,
-    datasets,
     documentation,
     evaluation_actions,
     evaluation_drafts,
@@ -20,7 +19,6 @@ api_router = APIRouter(prefix="/v1")
 api_router.include_router(models.router)
 api_router.include_router(import_hf.router)
 api_router.include_router(documentation.router)
-api_router.include_router(datasets.router)
 api_router.include_router(dataset_content.router)
 api_router.include_router(dataset_content.content_router)
 api_router.include_router(evaluations.router)

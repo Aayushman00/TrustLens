@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+from functools import partial
 from typing import Any
 
 from app.datasets.user_dataset import (
@@ -21,7 +22,12 @@ from app.probes.base import ProbeContext, ProbeOutput
 from app.probes.fairness_metrics import compute_fairness_bundle
 from app.probes.fairness_multiclass import evaluate_multiclass_fairness
 from app.probes.fairness_stats import (
+    CI_WIDE_THRESHOLD,
     METHODOLOGY_VERSION,
+    _dp_gap_from_resampled,
+    _eo_gap_from_resampled,
+    _f1_gap_from_resampled,
+    bootstrap_gap_ci,
     filter_compared_groups,
     group_accuracies_from_aligned,
 )
@@ -297,8 +303,11 @@ class FairnessProbe:
         if is_binary:
             y_true = [r["label"] for r in rows]
             sensitive = [r["sensitive"] for r in rows]
+            positive_label_index = fc.positive_label_index
             try:
-                bundle = compute_fairness_bundle(y_true, y_pred, sensitive)
+                bundle = compute_fairness_bundle(
+                    y_true, y_pred, sensitive, positive_label_index=positive_label_index
+                )
             except ValueError as exc:
                 flags.append("metrics_skipped")
                 return self._fail(ctx, base_metrics=base_metrics, flags=flags, reason=str(exc), confidence=0.4)
@@ -312,6 +321,40 @@ class FairnessProbe:
                 flags.append("thin_groups_excluded")
             if int(bundle["min_group_n_observed"]) < min_group_n:
                 flags.append("insufficient_slice_size")
+
+            # Bootstrap CI on all three point estimates, reusing the same
+            # resampling machinery evaluate_multiclass_fairness uses (via
+            # stat_fn) instead of a second implementation. Only DP's CI
+            # width gates scoring (G-FAIR-CI-WIDE) -- DP is the headline
+            # binary fairness number; EO/F1-spread get a non-blocking
+            # warning flag so a wide CI there is visible without blocking
+            # an otherwise-usable result.
+            dp_ci = bootstrap_gap_ci(
+                aligned_for_report,
+                min_group_n=min_group_n,
+                seed=seed,
+                stat_fn=partial(_dp_gap_from_resampled, positive_label_index=positive_label_index),
+            )
+            eo_ci = bootstrap_gap_ci(
+                aligned_for_report,
+                min_group_n=min_group_n,
+                seed=seed,
+                stat_fn=partial(_eo_gap_from_resampled, positive_label_index=positive_label_index),
+            )
+            f1_ci = bootstrap_gap_ci(
+                aligned_for_report,
+                min_group_n=min_group_n,
+                seed=seed,
+                stat_fn=partial(_f1_gap_from_resampled, positive_label_index=positive_label_index),
+            )
+            for ci_name, ci in (("eo", eo_ci), ("f1", f1_ci)):
+                if (
+                    ci["ci_lower"] is not None
+                    and ci["ci_upper"] is not None
+                    and (ci["ci_upper"] - ci["ci_lower"]) > CI_WIDE_THRESHOLD
+                ):
+                    flags.append(f"wide_ci_{ci_name}")
+
             base_metrics.update(
                 {
                     "fairness_mode": "user_defined_local",
@@ -323,8 +366,31 @@ class FairnessProbe:
                     "excluded_groups": excluded,
                     "proposed_mapping": False,
                     "needs_human_review": True,
+                    "dp_ci": dp_ci,
+                    "eo_ci": eo_ci,
+                    "f1_ci": f1_ci,
+                    "positive_label_index": positive_label_index,
                 }
             )
+
+            if (
+                dp_ci["ci_lower"] is not None
+                and dp_ci["ci_upper"] is not None
+                and (dp_ci["ci_upper"] - dp_ci["ci_lower"]) > CI_WIDE_THRESHOLD
+            ):
+                flags.append("wide_ci_dp")
+                return self._finish(
+                    ctx,
+                    metrics=base_metrics,
+                    flags=flags,
+                    confidence=0.75,
+                    status=ProbeEvaluationStatus.EVALUATED,
+                    status_reason=(
+                        "G-FAIR-CI-WIDE: demographic_parity_difference CI width "
+                        f"exceeds {CI_WIDE_THRESHOLD} — scoring blocked"
+                    ),
+                )
+
             confidence = 0.75 if "insufficient_slice_size" in flags else 0.85
             return self._finish(
                 ctx,
@@ -441,6 +507,9 @@ class FairnessProbe:
                 "subgroup_worst_group_acc_gap": metrics.get(
                     "subgroup_worst_group_acc_gap"
                 ),
+                "dp_ci": metrics.get("dp_ci"),
+                "eo_ci": metrics.get("eo_ci"),
+                "f1_ci": metrics.get("f1_ci"),
                 "groups": metrics.get("groups"),
                 "n_evaluated": metrics.get("n_evaluated"),
                 "skip_reason": metrics.get("skip_reason"),

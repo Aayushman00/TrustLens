@@ -157,6 +157,9 @@ class EvaluationServiceV2:
                     sensitive_column=dim.sensitive_column,
                     label_mapping=label_mapping,
                     min_group_n=dim.min_group_n or 30,
+                    positive_label_index=(
+                        dim.positive_label_index if dim.positive_label_index is not None else 1
+                    ),
                 )
             elif dim.dimension == "ROBUSTNESS":
                 robustness_contract = RobustnessContractV2(

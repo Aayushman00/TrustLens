@@ -75,7 +75,6 @@ from app.storage.evidence_store import (
     EvidenceStore,
     EvidenceStoreError,
     get_dataset_content_store,
-    get_dataset_store,
     get_evidence_store,
 )
 
@@ -317,7 +316,6 @@ def run_evaluation_pipeline(
             # re-read the (possibly re-imported/drifted) live Model row here.
             model_revision=payload.model_revision,
             model_checksum=model.checksum,
-            dataset_store=get_dataset_store(get_settings()),
             dataset_content_store=get_dataset_content_store(get_settings()),
         )
     except (ProbeError, EvidenceStoreError):
