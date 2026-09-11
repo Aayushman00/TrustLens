@@ -1097,6 +1097,7 @@ pre.json-view {
   padding: 0.55rem 0.2rem;
   margin-right: 1.1rem;
   cursor: pointer;
+  transition: border-bottom-color 120ms ease, color 120ms ease;
 }
 
 .tab:hover {
@@ -1198,6 +1199,7 @@ pre.json-view {
   flex-direction: column;
   gap: 0.4rem;
   text-align: left;
+  transition: border-color 120ms ease;
   cursor: pointer;
   font: inherit;
   color: inherit;
@@ -1337,6 +1339,7 @@ pre.json-view {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
+  transition: border-color 120ms ease;
 }
 
 .choice-card:hover:not(:disabled) {
@@ -1568,6 +1571,18 @@ pre.json-view {
 
 .dossier-section-body {
   padding: 1rem 1.1rem 1.15rem;
+  transition: opacity 150ms ease, display 150ms allow-discrete;
+}
+
+.dossier-section:not([open]) .dossier-section-body {
+  opacity: 0;
+  display: none;
+}
+
+@starting-style {
+  .dossier-section[open] .dossier-section-body {
+    opacity: 0;
+  }
 }
 
 .dossier-step-num {
@@ -1687,4 +1702,13 @@ pre.json-view {
 
 .skip-link:focus {
   left: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }

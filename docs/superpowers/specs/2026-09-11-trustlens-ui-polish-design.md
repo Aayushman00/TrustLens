@@ -142,15 +142,32 @@ Add transitions (verified selectors exist as named):
 ```css
 .tab { transition: border-bottom-color 120ms ease, color 120ms ease; }
 
-.dossier-section[open] .dossier-section-body {
-  transition: opacity 150ms ease;
-}
-
 .card, .contract-card, .choice-card {
   transition: border-color 120ms ease;
 }
 ```
 (`.card:hover`, `.contract-card:hover`, `.choice-card:hover:not(:disabled)` already change `border-color`/`box-shadow` per `index.css:1178-1181, 1314-1317` — none currently declare a `transition` property. This just adds it.)
+
+**Dossier open/close — audited, deviated from the original prompt's naive CSS:** the three consumers that actually use `.dossier-section`/`.dossier-section-body` — `EvidenceDossier.tsx` (both `<details>` blocks), `ReportPage.tsx:273-275`, `ReportTraceabilityPanel.tsx` — are native `<details>`/`<summary>` with no JS-controlled open state. (`EvaluationDetailPage.tsx:174`'s `<details>` is a plain, unclassed telemetry toggle — it never gets `.dossier-section` styling and is out of scope here regardless.) A plain `transition: opacity 150ms ease` on `.dossier-section-body` scoped to `[open]` would be inert — native `<details>` unmounts closed content entirely, so there's no rendered box for the browser to transition from; content would just snap in at full opacity, same as today.
+
+**Locked:** use `@starting-style` + `transition-behavior: allow-discrete` (CSS-only, no JS, no new dependency — Baseline 2024, works in current Chrome/Edge/Safari; degrades gracefully to an instant/no-animation open on browsers without it, e.g. current Firefox — never broken, just not always animated):
+```css
+.dossier-section-body {
+  transition: opacity 150ms ease, display 150ms allow-discrete;
+}
+
+.dossier-section:not([open]) .dossier-section-body {
+  opacity: 0;
+  display: none;
+}
+
+@starting-style {
+  .dossier-section[open] .dossier-section-body {
+    opacity: 0;
+  }
+}
+```
+No markup or React change needed — `.dossier-section-body` already exists as a class (`index.css:1569`, wrapping the content inside every dossier `<details>`), and `[open]` is a native `<details>` state, not something the app manages.
 
 `.execution-progress-fill` already has `transition: width 0.3s ease` (`index.css:1575`) — leave as-is, it's the real-number-backed template the original prompt references. No indeterminate variant, confirmed non-goal.
 
