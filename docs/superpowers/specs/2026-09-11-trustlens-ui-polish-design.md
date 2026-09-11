@@ -234,6 +234,8 @@ Usage becomes `<DimensionProgressChip key={dim} label={dim.charAt(0) + dim.slice
 ```
 Scoped to `.table-wrap thead` (not a bare `thead` rule) so it doesn't affect any other table on the site that isn't inside a scrollable wrap.
 
+**Locked, deviates from a literal single-page reading of the original prompt:** `.table-wrap` isn't unique to `EvaluationsHistoryPage` — it's used in 8 places (`OverviewPage.tsx` ×2, `ModelDetailPage.tsx`, `EvaluationDetailPage.tsx`, `ReportPage.tsx` ×2, `ReviewPage.tsx`, `EvaluationsHistoryPage.tsx`). The class-selector rule above applies site-wide the moment it's added. Confirmed with user: apply it site-wide rather than inventing a page-specific wrapper class — sticky+`top: 0` is inert on any table short enough to already fit the viewport, so there's no downside on the other 7 tables, only a consistency win.
+
 ### 5.3 Empty-state copy
 
 Audited: **good examples** already in the codebase — `CreateEvaluationDraftPage.tsx:322` ("No models yet — import one first."), `OverviewPage.tsx:98,132` ("No models yet — ...", "No evaluations yet — ..."). **Bad example to fix:** `ModelsPage.tsx:51` — `"Nothing registered yet — <Link>import a model</Link>."` → change to `"No models registered yet — import one first."` (matching the established pattern's verb-first action clause).
