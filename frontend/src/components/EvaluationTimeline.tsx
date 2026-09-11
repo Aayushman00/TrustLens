@@ -83,7 +83,7 @@ export default function EvaluationTimeline({ events }: { events: EvaluationEvent
               display: "flex",
               gap: "0.75rem",
               padding: "0.35rem 0",
-              borderBottom: "1px solid var(--border, #2a2a2a22)",
+              borderBottom: "1px solid var(--border)",
             }}
           >
             <span className="mono muted" style={{ fontSize: "0.78rem", minWidth: "9.5rem" }}>

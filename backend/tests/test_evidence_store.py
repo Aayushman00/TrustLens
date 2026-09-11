@@ -8,7 +8,6 @@ from unittest.mock import MagicMock
 import pytest
 
 from app.storage.evidence_store import (
-    DatasetStore,
     EvidenceStore,
     EvidenceStoreError,
     format_sha256,
@@ -127,7 +126,7 @@ def test_key_from_uri_rejects_wrong_bucket() -> None:
         store.key_from_uri("s3://other/evidence/x/y.json")
 
 
-# --- sanitize_filename / DatasetStore object-key hygiene (audit P1-1) -------
+# --- sanitize_filename hygiene (audit P1-1) ---------------------------------
 
 
 def test_sanitize_filename_normal_name_is_unchanged() -> None:
@@ -184,36 +183,3 @@ def test_sanitize_filename_never_returns_empty() -> None:
         assert sanitize_filename(raw) != ""
 
 
-class _FakeDatasetBoto:
-    def __init__(self) -> None:
-        self.put_calls: list[dict] = []
-
-    def put_object(self, **kwargs):  # noqa: ANN003
-        self.put_calls.append(kwargs)
-
-
-def test_dataset_store_object_key_stays_within_dataset_prefix() -> None:
-    client = _FakeDatasetBoto()
-    store = DatasetStore(client, "trustlens")
-    dataset_id = uuid.uuid4()
-    expected_prefix = f"datasets/{dataset_id}/"
-
-    for malicious_name in [
-        "../../../etc/passwd.csv",
-        "..\\..\\secrets.csv",
-        "a..b...csv",
-        "evil\x00name.csv",
-        "",
-        "....csv",
-    ]:
-        store.put_dataset(
-            data=b"a,b\n1,2\n",
-            dataset_id=dataset_id,
-            filename=malicious_name,
-        )
-        key = client.put_calls[-1]["Key"]
-        assert key.startswith(expected_prefix)
-        # Object key must resolve to a single path segment under the prefix —
-        # no embedded "/" that could escape it via a MinIO virtual path.
-        assert "/" not in key[len(expected_prefix) :]
-        assert ".." not in key

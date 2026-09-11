@@ -5,7 +5,7 @@ import { apiFetch } from "../api/client";
 import type { EvaluationList, ModelList } from "../api/types";
 import { ACTIVE_STATUSES } from "../api/types";
 import ErrorNotice from "../components/ErrorNotice";
-import Spinner from "../components/Spinner";
+import Skeleton from "../components/Skeleton";
 import StatusBadge from "../components/StatusBadge";
 import { modeLabel } from "../components/ModeDisclosure";
 import { getEvaluationContract, contractFamilyLabel, shortRevision } from "../lib/contract";
@@ -14,31 +14,41 @@ import { fmtDateTime } from "../lib/format";
 export default function OverviewPage() {
   const [models, setModels] = useState<ModelList | null>(null);
   const [evaluations, setEvaluations] = useState<EvaluationList | null>(null);
-  const [error, setError] = useState<unknown>(null);
+  const [modelsError, setModelsError] = useState<unknown>(null);
+  const [evaluationsError, setEvaluationsError] = useState<unknown>(null);
 
   useEffect(() => {
     let cancelled = false;
-    async function load() {
-      try {
-        const [modelPage, evalPage] = await Promise.all([
-          apiFetch<ModelList>("/v1/models?limit=50"),
-          apiFetch<EvaluationList>("/v1/evaluations?limit=50"),
-        ]);
-        if (!cancelled) {
-          setModels(modelPage);
-          setEvaluations(evalPage);
-        }
-      } catch (err) {
-        if (!cancelled) setError(err);
-      }
-    }
-    void load();
+    apiFetch<ModelList>("/v1/models?limit=50")
+      .then((page) => {
+        if (!cancelled) setModels(page);
+      })
+      .catch((err) => {
+        if (!cancelled) setModelsError(err);
+      });
     return () => {
       cancelled = true;
     };
   }, []);
 
-  const loading = models == null && evaluations == null && error == null;
+  useEffect(() => {
+    let cancelled = false;
+    apiFetch<EvaluationList>("/v1/evaluations?limit=50")
+      .then((page) => {
+        if (!cancelled) setEvaluations(page);
+      })
+      .catch((err) => {
+        if (!cancelled) setEvaluationsError(err);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const modelsLoading = models == null && modelsError == null;
+  const evaluationsLoading = evaluations == null && evaluationsError == null;
+  const loading = modelsLoading || evaluationsLoading;
+  const error = modelsError ?? evaluationsError;
   const runningCount =
     evaluations?.items.filter((e) => ACTIVE_STATUSES.includes(e.status)).length ?? null;
   const finalizedCount =
@@ -59,7 +69,7 @@ export default function OverviewPage() {
         </Link>
       </div>
       <ErrorNotice error={error} />
-      {loading ? <Spinner label="Loading…" /> : null}
+      {loading ? <Skeleton rows={4} height="4.6rem" /> : null}
 
       {!loading ? (
         <div className="stat-grid">
@@ -93,6 +103,7 @@ export default function OverviewPage() {
       <div className="grid-2">
         <div className="card">
           <h2>Models</h2>
+          {modelsLoading ? <Skeleton rows={3} height="1.6rem" /> : null}
           {models != null && models.items.length === 0 ? (
             <p className="empty">
               No models yet — <Link to="/models/import">import one from Hugging Face</Link>.
@@ -128,6 +139,7 @@ export default function OverviewPage() {
         </div>
         <div className="card">
           <h2>Recent evaluations</h2>
+          {evaluationsLoading ? <Skeleton rows={3} height="1.6rem" /> : null}
           {evaluations != null && evaluations.items.length === 0 ? (
             <p className="empty">No evaluations yet — open a model to start one.</p>
           ) : null}

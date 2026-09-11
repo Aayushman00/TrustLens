@@ -80,43 +80,6 @@ class Model(Base, TimestampMixin):
     evaluations: Mapped[list[Evaluation]] = relationship(back_populates="model")
 
 
-class UserDataset(Base, TimestampMixin):
-    """Local CSV dataset for the ad-hoc ``user_dataset`` Fairness path.
-
-    Standalone resource — no FK from ``Evaluation``/``ProbeResult`` to this
-    table. An evaluation contract freezes ``storage_uri``/``content_hash`` as
-    immutable strings at create time, so deleting this row later never breaks
-    a past evaluation's evidence trail (the Evidence Dossier reads only the
-    frozen ``probe_results.metric_values`` snapshot, never a live dataset lookup).
-    """
-
-    __tablename__ = "user_datasets"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid.uuid4,
-    )
-    filename: Mapped[str] = mapped_column(String(512), nullable=False)
-    format: Mapped[str] = mapped_column(String(16), nullable=False)
-    content_hash: Mapped[str] = mapped_column(String(80), nullable=False)
-    row_count: Mapped[int] = mapped_column(Integer, nullable=False)
-    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
-    columns: Mapped[list[Any]] = mapped_column(
-        JSONB,
-        nullable=False,
-        server_default="[]",
-    )
-    storage_uri: Mapped[str] = mapped_column(String(1024), nullable=False)
-    status: Mapped[str] = mapped_column(
-        String(32),
-        nullable=False,
-        default="ready",
-        server_default="ready",
-    )
-    status_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
-
-
 class DatasetContent(Base):
     """Immutable content-addressed dataset snapshot. Never updated after insert."""
 
@@ -195,6 +158,12 @@ class DraftDimensionConfig(Base):
     sensitive_column: Mapped[str | None] = mapped_column(String(256), nullable=True)
     label_mapping: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB, nullable=True)
     min_group_n: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Fairness-only: which model_label_index DP/EO/F1-spread treat as the
+    # "positive"/favorable outcome. Nullable+defaulted at the DB level (not
+    # every existing row has one); app code always supplies 1 when omitted.
+    positive_label_index: Mapped[int | None] = mapped_column(
+        Integer, nullable=True, server_default="1"
+    )
     validated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 

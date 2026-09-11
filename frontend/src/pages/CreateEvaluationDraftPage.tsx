@@ -16,13 +16,14 @@
  * /evaluations/new) falls back to picking a model from the full list.
  */
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { apiFetch } from "../api/client";
 import type {
   DatasetContentRead,
   DimensionValidationRead,
   EvaluationDraftRead,
+  EvaluationRead,
   ModelList,
   ModelRead,
 } from "../api/types";
@@ -61,6 +62,8 @@ const DIMENSION_LABEL: Record<Dimension, string> = {
 };
 
 export default function CreateEvaluationDraftPage() {
+  const navigate = useNavigate();
+
   // --- Model step ---
   const [searchParams] = useSearchParams();
   const preselectedModelId = searchParams.get("modelId");
@@ -125,7 +128,12 @@ export default function CreateEvaluationDraftPage() {
         method: "POST",
         body: { model_id: modelId },
       });
-      setDraft(created);
+      // A follow-up GET triggers the backend's model-config inspection right
+      // away (see EvaluationDraftService.get -> _ensure_model_snapshot), so
+      // model_label_snapshot is populated before the user ever opens a
+      // dimension's mapping UI -- not only after their first Save & validate.
+      const withSnapshot = await apiFetch<EvaluationDraftRead>(`/v1/evaluation-drafts/${created.id}`);
+      setDraft(withSnapshot);
     } catch (err) {
       setDraftError(err);
     } finally {
@@ -157,6 +165,15 @@ export default function CreateEvaluationDraftPage() {
       // here, client-side, on the UI's own local copy of that flag).
       setStateFor(dim, () => initialDimensionState());
     }
+  }
+
+  function handleFetchStart(dim: Dimension) {
+    // A (re-)fetch attempt starting -- whatever dataset/validation/
+    // confirmation this dimension had before is no longer current. Clearing
+    // content here (not just on success) unmounts ColumnRoleMappingForm
+    // immediately, so a failed replacement fetch can never leave a stale
+    // dataset's column/label-mapping UI visibly attached.
+    setStateFor(dim, (prev) => ({ ...prev, content: null, validation: null, confirmed: false }));
   }
 
   function handleContentReady(dim: Dimension, content: DatasetContentRead) {
@@ -192,6 +209,27 @@ export default function CreateEvaluationDraftPage() {
     (!fairness.enabled || fairness.confirmed) &&
     (!robustness.enabled || robustness.confirmed);
 
+  // --- Create the real Evaluation from the confirmed draft ---
+  const [creatingEvaluation, setCreatingEvaluation] = useState(false);
+  const [continueError, setContinueError] = useState<unknown>(null);
+
+  async function continueToReview() {
+    if (!draft || !readyToContinue) return;
+    setCreatingEvaluation(true);
+    setContinueError(null);
+    try {
+      const created = await apiFetch<EvaluationRead>("/v1/evaluations-v2", {
+        method: "POST",
+        body: { draft_id: draft.id, evaluation_mode: "AI_ASSISTED" },
+      });
+      navigate(`/evaluations/${created.id}`);
+    } catch (err) {
+      setContinueError(err);
+    } finally {
+      setCreatingEvaluation(false);
+    }
+  }
+
   function renderDimension(dim: Dimension) {
     const state = stateFor(dim);
     const inputId = `configure-${dim.toLowerCase()}`;
@@ -209,7 +247,10 @@ export default function CreateEvaluationDraftPage() {
 
         {state.enabled ? (
           <div style={{ marginTop: "0.8rem" }}>
-            <DatasetIntakeForm onContentReady={(content) => handleContentReady(dim, content)} />
+            <DatasetIntakeForm
+              onContentReady={(content) => handleContentReady(dim, content)}
+              onFetchStart={() => handleFetchStart(dim)}
+            />
 
             {state.content && draft ? (
               <ColumnRoleMappingForm
@@ -217,6 +258,7 @@ export default function CreateEvaluationDraftPage() {
                 draftId={draft.id}
                 dimension={dim}
                 content={state.content}
+                modelLabelSnapshot={draft.model_label_snapshot}
                 onValidated={(result) => handleValidated(dim, result)}
               />
             ) : null}
@@ -354,9 +396,15 @@ export default function CreateEvaluationDraftPage() {
             <DocumentationSourceForm modelId={draft.model_id} />
           </div>
 
+          <ErrorNotice error={continueError} />
           <div className="btn-row" style={{ marginTop: "1rem" }}>
-            <button type="button" className="btn" disabled={!readyToContinue}>
-              Continue to review
+            <button
+              type="button"
+              className="btn"
+              disabled={!readyToContinue || creatingEvaluation}
+              onClick={() => void continueToReview()}
+            >
+              {creatingEvaluation ? "Creating…" : "Continue to review"}
             </button>
           </div>
         </>

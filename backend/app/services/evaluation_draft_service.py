@@ -161,6 +161,7 @@ class EvaluationDraftService:
                 label_mapping=update.label_mapping,
                 model_label_snapshot=snapshot,
                 min_group_n=effective_min_group_n,
+                positive_label_index=update.positive_label_index,
             )
             read = DimensionValidationRead(
                 ok=result.ok,
@@ -192,6 +193,7 @@ class EvaluationDraftService:
             sensitive_column=update.sensitive_column,
             label_mapping=update.label_mapping,
             min_group_n=effective_min_group_n,
+            positive_label_index=update.positive_label_index,
             validated_at=dt.datetime.now(dt.UTC) if result.ok else None,
             confirmed_at=None,  # editing always clears prior confirmation for THIS dimension only
         )
@@ -237,6 +239,12 @@ class EvaluationDraftService:
         draft = self._drafts.get_by_id(draft_id)
         if draft is None:
             raise NotFoundError(f"Draft {draft_id} not found", details={"draft_id": str(draft_id)})
+        # Ensures the frontend can render real label-mapping options on a
+        # freshly-created draft (GET right after POST), not only after the
+        # first PUT — a model with unusable classification metadata blocks
+        # here with a clean ValidationAppError rather than letting the UI
+        # fall back to an invented label list.
+        self._ensure_model_snapshot(draft)
         return self._to_read(draft)
 
     @staticmethod
@@ -248,4 +256,5 @@ class EvaluationDraftService:
             status=draft.status,
             fairness_confirmed=bool(by_dim.get("FAIRNESS") and by_dim["FAIRNESS"].confirmed_at),
             robustness_confirmed=bool(by_dim.get("ROBUSTNESS") and by_dim["ROBUSTNESS"].confirmed_at),
+            model_label_snapshot=draft.model_label_snapshot,
         )

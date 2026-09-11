@@ -11,6 +11,7 @@ import {
   type FriesDimension,
 } from "../api/types";
 import DimensionCard from "../components/DimensionCard";
+import DimensionProgressChip from "../components/DimensionProgressChip";
 import ErrorNotice from "../components/ErrorNotice";
 import EvaluationTimeline from "../components/EvaluationTimeline";
 import EvidenceDossier from "../components/EvidenceDossier";
@@ -154,17 +155,18 @@ export default function EvaluationDetailPage() {
             <Spinner />
             <strong>Running locally — {evaluation.probe_progress?.completed ?? 0}/{evaluation.probe_progress?.total ?? 5} dimensions complete</strong>
           </div>
-          <div className="execution-progress-track">
+          <div className="execution-progress-track" role="status" aria-live="polite">
             <div className="execution-progress-fill" style={{ width: `${pct}%` }} />
           </div>
           <div className="dimension-status-strip">
             {FRIES_DIMENSIONS.map((dim) => {
               const p = probesByDim.get(dim);
               return (
-                <span key={dim} className="dimension-status-chip">
-                  {dim.charAt(0) + dim.slice(1).toLowerCase()}
-                  {p ? " · done" : " · pending"}
-                </span>
+                <DimensionProgressChip
+                  key={dim}
+                  label={dim.charAt(0) + dim.slice(1).toLowerCase()}
+                  done={!!p}
+                />
               );
             })}
           </div>

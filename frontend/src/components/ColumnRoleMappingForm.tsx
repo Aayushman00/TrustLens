@@ -10,21 +10,32 @@
  * (_validate_label_mapping) rejects any row left at -1, which is what
  * actually enforces this — there is no client-side default guess, ever.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { apiFetch } from "../api/client";
-import type { DatasetContentRead, DimensionValidationRead, LabelMappingEntry } from "../api/types";
+import type {
+  DatasetContentRead,
+  DimensionValidationRead,
+  LabelMappingEntry,
+  ModelLabelSnapshot,
+} from "../api/types";
 import ErrorNotice from "./ErrorNotice";
 
 export default function ColumnRoleMappingForm({
   draftId,
   dimension,
   content,
+  modelLabelSnapshot,
   onValidated,
 }: {
   draftId: string;
   dimension: "FAIRNESS" | "ROBUSTNESS";
   content: DatasetContentRead;
+  /** The draft's frozen model config snapshot -- the ONLY source of model
+   * label options for the mapping dropdown below. Never a hardcoded/invented
+   * list: a generic id2label (LABEL_0/LABEL_1/...) is shown exactly as-is,
+   * never renamed or guessed at. */
+  modelLabelSnapshot: ModelLabelSnapshot | null;
   onValidated: (result: DimensionValidationRead) => void;
 }) {
   const [textColumn, setTextColumn] = useState("");
@@ -32,10 +43,27 @@ export default function ColumnRoleMappingForm({
   const [sensitiveColumn, setSensitiveColumn] = useState("");
   const [labelMapping, setLabelMapping] = useState<LabelMappingEntry[]>([]);
   const [targetValues, setTargetValues] = useState<string[]>([]);
-  // TODO(Task 4.x): replace with the real id2label once EvaluationDraftRead
-  // exposes model_label_snapshot to the frontend.
-  const modelLabels = ["NEGATIVE", "POSITIVE"];
+  // Real (index, label) pairs from the model's actual config snapshot --
+  // sorted by index so a 3-class model always shows exactly 3 choices, a
+  // 2-class model exactly 2, in a stable order.
+  const modelLabelOptions = useMemo(
+    () =>
+      modelLabelSnapshot
+        ? Object.entries(modelLabelSnapshot.id2label)
+            .map(([idx, label]) => ({ index: Number(idx), label }))
+            .sort((a, b) => a.index - b.index)
+        : [],
+    [modelLabelSnapshot]
+  );
   const [minGroupN, setMinGroupN] = useState(30);
+  // Fairness-only: which model_label_index DP/EO/F1-spread treat as the
+  // "positive"/favorable outcome. Pre-filled to 1 (the field's own default)
+  // so the form isn't empty, but it is a VISIBLE, editable control the user
+  // must look at and confirm/change -- never applied silently. A mapping
+  // that never points any dataset value at index 1 makes that pre-fill
+  // meaningless (DP/EO/F1 would be computed against a class ground truth
+  // can never attain); the backend rejects that case explicitly.
+  const [positiveLabelIndex, setPositiveLabelIndex] = useState(1);
   const [error, setError] = useState<unknown>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -81,6 +109,7 @@ export default function ColumnRoleMappingForm({
             sensitive_column: dimension === "FAIRNESS" ? sensitiveColumn : undefined,
             label_mapping: labelMapping,
             min_group_n: dimension === "FAIRNESS" ? minGroupN : undefined,
+            positive_label_index: dimension === "FAIRNESS" ? positiveLabelIndex : undefined,
           },
         }
       );
@@ -90,6 +119,21 @@ export default function ColumnRoleMappingForm({
     } finally {
       setSubmitting(false);
     }
+  }
+
+  if (!modelLabelSnapshot) {
+    // A model with unusable/missing classification metadata (or a snapshot
+    // that hasn't loaded) must block configuration here rather than fall
+    // back to an invented label list -- there is nothing safe to map to.
+    return (
+      <div>
+        <ErrorNotice error={error} />
+        <p className="dimension-limitations">
+          Model label metadata is not available for this draft -- column/label mapping cannot be
+          configured until the model's real classification labels are known.
+        </p>
+      </div>
+    );
   }
 
   return (
@@ -139,6 +183,19 @@ export default function ColumnRoleMappingForm({
               onChange={(e) => setMinGroupN(Number(e.target.value))}
             />
           </label>
+          <label>
+            Favorable outcome for fairness metrics
+            <select
+              value={positiveLabelIndex}
+              onChange={(e) => setPositiveLabelIndex(Number(e.target.value))}
+            >
+              {modelLabelOptions.map(({ index, label }) => (
+                <option key={index} value={index}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
         </>
       ) : null}
       {targetValues.length > 0 ? (
@@ -156,8 +213,8 @@ export default function ColumnRoleMappingForm({
                 }}
               >
                 <option value={-1}>Select model label…</option>
-                {modelLabels.map((label, i) => (
-                  <option key={label} value={i}>
+                {modelLabelOptions.map(({ index, label }) => (
+                  <option key={index} value={index}>
                     {label}
                   </option>
                 ))}

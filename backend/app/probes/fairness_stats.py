@@ -1,11 +1,23 @@
-"""Multiclass fairness statistics (tl-methodology-v1.0) — stdlib only."""
+"""Fairness statistics (tl-methodology-v1.0) — stdlib only.
+
+Originally multiclass-only; ``bootstrap_gap_ci``'s resampling/percentile-CI
+machinery is stat-agnostic (it just needs a "row sample -> gap or None"
+function), so binary Fairness's DP/EO/F1-spread bootstrap CI reuses it via
+the ``stat_fn`` parameter instead of duplicating the resampling loop.
+"""
 
 from __future__ import annotations
 
 import math
 import random
 from collections import defaultdict
-from typing import Any, Hashable, Sequence
+from typing import Any, Callable, Hashable, Sequence
+
+from app.probes.fairness_metrics import (
+    demographic_parity_difference,
+    equalized_odds_difference,
+    subgroup_f1_spread,
+)
 
 EPSILON = 0.02
 BOOTSTRAP_B = 1000
@@ -88,14 +100,84 @@ def _gap_from_resampled(
     return subgroup_worst_group_acc_gap(compared)
 
 
+def _filtered_group_rows(
+    sample: Sequence[dict[str, Any]], min_group_n: int
+) -> list[dict[str, Any]] | None:
+    """Same thin-group exclusion as ``_gap_from_resampled``, factored out so
+    the DP/EO/F1 adapters below apply the identical min_group_n policy:
+    drop rows whose group has n < min_group_n, then require at least 2
+    groups remain (a gap needs 2+ groups to compare)."""
+    counts: dict[Any, int] = defaultdict(int)
+    for row in sample:
+        counts[row["sensitive"]] += 1
+    kept_groups = {g for g, n in counts.items() if n >= min_group_n}
+    if len(kept_groups) < 2:
+        return None
+    return [row for row in sample if row["sensitive"] in kept_groups]
+
+
+def _dp_gap_from_resampled(
+    sample: Sequence[dict[str, Any]], min_group_n: int, *, positive_label_index: int = 1
+) -> float | None:
+    """``stat_fn`` adapter: bootstraps demographic_parity_difference instead
+    of accuracy gap, reusing bootstrap_gap_ci's resampling loop unchanged.
+    ``positive_label_index`` must come from the same contract value
+    fairness.py resolves for the point estimate -- never hardcoded 1 here,
+    since a valid label_mapping can assign the favorable outcome elsewhere."""
+    rows = _filtered_group_rows(sample, min_group_n)
+    if rows is None:
+        return None
+    y_pred = [int(r["y_hat"]) for r in rows]
+    sensitive = [r["sensitive"] for r in rows]
+    return demographic_parity_difference(y_pred, sensitive, positive_label_index=positive_label_index)
+
+
+def _eo_gap_from_resampled(
+    sample: Sequence[dict[str, Any]], min_group_n: int, *, positive_label_index: int = 1
+) -> float | None:
+    """``stat_fn`` adapter: bootstraps equalized_odds_difference."""
+    rows = _filtered_group_rows(sample, min_group_n)
+    if rows is None:
+        return None
+    y_true = [int(r["label"]) for r in rows]
+    y_pred = [int(r["y_hat"]) for r in rows]
+    sensitive = [r["sensitive"] for r in rows]
+    return equalized_odds_difference(y_true, y_pred, sensitive, positive_label_index=positive_label_index)
+
+
+def _f1_gap_from_resampled(
+    sample: Sequence[dict[str, Any]], min_group_n: int, *, positive_label_index: int = 1
+) -> float | None:
+    """``stat_fn`` adapter: bootstraps subgroup_f1_spread."""
+    rows = _filtered_group_rows(sample, min_group_n)
+    if rows is None:
+        return None
+    y_true = [int(r["label"]) for r in rows]
+    y_pred = [int(r["y_hat"]) for r in rows]
+    sensitive = [r["sensitive"] for r in rows]
+    return subgroup_f1_spread(y_true, y_pred, sensitive, positive_label_index=positive_label_index)
+
+
 def bootstrap_gap_ci(
     aligned: Sequence[dict[str, Any]],
     *,
     min_group_n: int,
     B: int = BOOTSTRAP_B,
     seed: int,
+    stat_fn: Callable[[Sequence[dict[str, Any]], int], float | None] = _gap_from_resampled,
 ) -> dict[str, Any]:
-    """Bootstrap percentile CI for subgroup_worst_group_acc_gap (row resample)."""
+    """Bootstrap percentile CI for a row-resampled statistic.
+
+    ``stat_fn`` computes the statistic for one row sample (the original full
+    dataset for the point estimate, then each of ``B`` resamples) and
+    returns ``None`` when the sample can't support it (e.g. fewer than 2
+    groups survive thin-group exclusion). Defaults to
+    ``subgroup_worst_group_acc_gap`` (the original, multiclass, behavior) --
+    every existing caller that omits ``stat_fn`` is unaffected. Binary
+    Fairness passes ``_dp_gap_from_resampled``/``_eo_gap_from_resampled``/
+    ``_f1_gap_from_resampled`` instead to bootstrap DP/EO/F1-spread with the
+    exact same resampling machinery.
+    """
     rows = list(aligned)
     n = len(rows)
     if n == 0:
@@ -107,12 +189,12 @@ def bootstrap_gap_ci(
             "B": B,
         }
 
-    point = _gap_from_resampled(rows, min_group_n)
+    point = stat_fn(rows, min_group_n)
     rng = random.Random(seed)
     bootstrap_values: list[float] = []
     for _ in range(B):
         sample = [rows[rng.randrange(n)] for _ in range(n)]
-        gap = _gap_from_resampled(sample, min_group_n)
+        gap = stat_fn(sample, min_group_n)
         if gap is not None:
             bootstrap_values.append(gap)
 

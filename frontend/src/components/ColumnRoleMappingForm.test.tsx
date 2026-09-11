@@ -3,8 +3,19 @@ import { vi } from "vitest";
 
 import ColumnRoleMappingForm from "./ColumnRoleMappingForm";
 import { apiFetch } from "../api/client";
+import type { ModelLabelSnapshot } from "../api/types";
 
 vi.mock("../api/client");
+
+const SNAPSHOT_2CLASS: ModelLabelSnapshot = {
+  num_labels: 2,
+  id2label: { "0": "NEGATIVE", "1": "POSITIVE" },
+};
+
+const SNAPSHOT_3CLASS: ModelLabelSnapshot = {
+  num_labels: 3,
+  id2label: { "0": "LABEL_0", "1": "LABEL_1", "2": "LABEL_2" },
+};
 
 const CONTENT = {
   id: "content-1",
@@ -31,7 +42,7 @@ test("submits column roles and shows validation result", async () => {
     });
   const onValidated = vi.fn();
   render(
-    <ColumnRoleMappingForm draftId="draft-1" dimension="FAIRNESS" content={CONTENT} onValidated={onValidated} />
+    <ColumnRoleMappingForm draftId="draft-1" dimension="FAIRNESS" content={CONTENT} modelLabelSnapshot={SNAPSHOT_2CLASS} onValidated={onValidated} />
   );
 
   fireEvent.change(screen.getByLabelText(/text column/i), { target: { value: "text" } });
@@ -51,7 +62,7 @@ test("submits column roles and shows validation result", async () => {
 test("label-mapping rows default to unmapped and never auto-select a matching label", async () => {
   vi.mocked(apiFetch).mockResolvedValueOnce({ values: ["positive", "negative"] });
   render(
-    <ColumnRoleMappingForm draftId="draft-1" dimension="ROBUSTNESS" content={CONTENT} onValidated={vi.fn()} />
+    <ColumnRoleMappingForm draftId="draft-1" dimension="ROBUSTNESS" content={CONTENT} modelLabelSnapshot={SNAPSHOT_2CLASS} onValidated={vi.fn()} />
   );
 
   fireEvent.change(screen.getByLabelText(/target column/i), { target: { value: "label" } });
@@ -69,7 +80,7 @@ test("label-mapping rows default to unmapped and never auto-select a matching la
 test("shows an ErrorNotice when the target-values fetch fails, instead of failing silently", async () => {
   vi.mocked(apiFetch).mockRejectedValueOnce(new Error("could not read target_column"));
   render(
-    <ColumnRoleMappingForm draftId="draft-1" dimension="ROBUSTNESS" content={CONTENT} onValidated={vi.fn()} />
+    <ColumnRoleMappingForm draftId="draft-1" dimension="ROBUSTNESS" content={CONTENT} modelLabelSnapshot={SNAPSHOT_2CLASS} onValidated={vi.fn()} />
   );
 
   fireEvent.change(screen.getByLabelText(/target column/i), { target: { value: "label" } });
@@ -77,6 +88,88 @@ test("shows an ErrorNotice when the target-values fetch fails, instead of failin
   await screen.findByText(/could not read target_column/i);
   // No mapping rows are rendered when discovery failed — nothing to map.
   expect(screen.queryByText(/map dataset labels to model labels/i)).toBeNull();
+});
+
+test("a 3-class model snapshot shows exactly three real model-label choices", async () => {
+  vi.mocked(apiFetch).mockResolvedValueOnce({ values: ["negative", "neutral", "positive"] });
+  render(
+    <ColumnRoleMappingForm
+      draftId="draft-1"
+      dimension="FAIRNESS"
+      content={CONTENT}
+      modelLabelSnapshot={SNAPSHOT_3CLASS}
+      onValidated={vi.fn()}
+    />
+  );
+
+  fireEvent.change(screen.getByLabelText(/target column/i), { target: { value: "label" } });
+  const negativeRow = (await screen.findByLabelText(/^negative/i)) as HTMLSelectElement;
+
+  // Exactly three options besides the "unmapped" sentinel, and they are the
+  // model's real (generic) labels -- not a hardcoded NEGATIVE/POSITIVE pair
+  // that can't represent a third class.
+  const optionTexts = Array.from(negativeRow.options).map((o) => o.textContent);
+  expect(optionTexts).toEqual(["Select model label…", "LABEL_0", "LABEL_1", "LABEL_2"]);
+  expect(screen.queryByText("NEGATIVE")).toBeNull();
+  expect(screen.queryByText("POSITIVE")).toBeNull();
+});
+
+test("a 2-class model snapshot shows exactly two real model-label choices", async () => {
+  vi.mocked(apiFetch).mockResolvedValueOnce({ values: ["pos", "neg"] });
+  render(
+    <ColumnRoleMappingForm
+      draftId="draft-1"
+      dimension="FAIRNESS"
+      content={CONTENT}
+      modelLabelSnapshot={SNAPSHOT_2CLASS}
+      onValidated={vi.fn()}
+    />
+  );
+
+  fireEvent.change(screen.getByLabelText(/target column/i), { target: { value: "label" } });
+  const posRow = (await screen.findByLabelText(/^pos/i)) as HTMLSelectElement;
+
+  const optionTexts = Array.from(posRow.options).map((o) => o.textContent);
+  expect(optionTexts).toEqual(["Select model label…", "NEGATIVE", "POSITIVE"]);
+});
+
+test("generic LABEL_N values are displayed unchanged, never renamed or inferred", async () => {
+  vi.mocked(apiFetch).mockResolvedValueOnce({ values: ["neutral"] });
+  render(
+    <ColumnRoleMappingForm
+      draftId="draft-1"
+      dimension="ROBUSTNESS"
+      content={CONTENT}
+      modelLabelSnapshot={SNAPSHOT_3CLASS}
+      onValidated={vi.fn()}
+    />
+  );
+
+  fireEvent.change(screen.getByLabelText(/target column/i), { target: { value: "label" } });
+  await screen.findByLabelText(/^neutral/i);
+
+  // The snapshot's generic id2label strings appear verbatim in the DOM.
+  expect(screen.getByText("LABEL_0")).toBeTruthy();
+  expect(screen.getByText("LABEL_1")).toBeTruthy();
+  expect(screen.getByText("LABEL_2")).toBeTruthy();
+});
+
+test("with no model_label_snapshot, configuration is blocked rather than falling back to invented labels", () => {
+  render(
+    <ColumnRoleMappingForm
+      draftId="draft-1"
+      dimension="FAIRNESS"
+      content={CONTENT}
+      modelLabelSnapshot={null}
+      onValidated={vi.fn()}
+    />
+  );
+
+  // No hardcoded NEGATIVE/POSITIVE fallback, no column selects, no submit --
+  // the form blocks with an explicit message instead of guessing.
+  expect(screen.getByText(/model label metadata is not available/i)).toBeTruthy();
+  expect(screen.queryByLabelText(/text column/i)).toBeNull();
+  expect(screen.queryByRole("button", { name: /save.*validate/i })).toBeNull();
 });
 
 test("a stale target-values response does not overwrite a newer selection's rows", async () => {
@@ -97,7 +190,7 @@ test("a stale target-values response does not overwrite a newer selection's rows
     );
 
   render(
-    <ColumnRoleMappingForm draftId="draft-1" dimension="ROBUSTNESS" content={CONTENT} onValidated={vi.fn()} />
+    <ColumnRoleMappingForm draftId="draft-1" dimension="ROBUSTNESS" content={CONTENT} modelLabelSnapshot={SNAPSHOT_2CLASS} onValidated={vi.fn()} />
   );
 
   fireEvent.change(screen.getByLabelText(/target column/i), { target: { value: "label" } });
