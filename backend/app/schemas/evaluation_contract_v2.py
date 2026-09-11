@@ -28,6 +28,11 @@ class FairnessContractV2(BaseModel):
     sensitive_column: str
     label_mapping: list[LabelMappingEntry]
     min_group_n: int = Field(gt=0)
+    # Which model_label_index DP/EO/F1-spread treat as the "positive"/
+    # favorable outcome. Defaults to 1 (preserves every pre-existing
+    # contract's behavior) -- but label_mapping can legitimately assign the
+    # favorable outcome to any index, so this must never be assumed.
+    positive_label_index: int = 1
 
 
 class RobustnessContractV2(BaseModel):

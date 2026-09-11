@@ -29,6 +29,13 @@ class DimensionConfigUpdate(BaseModel):
     sensitive_column: str | None = None
     label_mapping: list[dict[str, Any]]
     min_group_n: int | None = Field(default=None, gt=0)
+    # Fairness-only (like sensitive_column/min_group_n): which model_label_index
+    # DP/EO/F1-spread treat as the "positive"/favorable outcome. Defaults to 1
+    # to preserve every existing caller's behavior, but a valid label_mapping
+    # can legitimately assign the favorable outcome to index 0 -- the
+    # fairness_metrics functions must never silently assume index 1 is
+    # positive regardless of what the user actually mapped.
+    positive_label_index: int = 1
 
 
 class DimensionValidationRead(BaseModel):
@@ -46,3 +53,9 @@ class EvaluationDraftRead(BaseModel):
     status: Literal["incomplete", "validated", "consumed", "stale"]
     fairness_confirmed: bool
     robustness_confirmed: bool
+    # The frozen model config snapshot (Task 2.4's "fetch once, share across
+    # both dimensions" rule) — {"num_labels": int, "id2label": {str: str}}.
+    # None until the first GET/PUT on this draft triggers _ensure_model_snapshot.
+    # The frontend's label-mapping UI must source its options from here only
+    # — never from a hardcoded/invented label list (Global Constraint).
+    model_label_snapshot: dict[str, Any] | None = None

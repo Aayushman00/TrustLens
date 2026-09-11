@@ -21,7 +21,6 @@ from app.storage.evidence_store import (
     EvidenceStoreError,
     format_sha256,
     hashes_equal,
-    sanitize_filename,
 )
 
 
@@ -244,44 +243,6 @@ class FakeEvidenceStore:
 
     def verify_ref(self, ref: EvidenceRef) -> bool:
         return self.verify_artifact(key=self.key_from_uri(ref.uri), expected_hash=ref.hash)
-
-
-class FakeDatasetStore:
-    """Minimal store matching DatasetStore.put/get for unit tests (no MinIO)."""
-
-    def __init__(self, bucket: str = "trustlens") -> None:
-        self.bucket = bucket
-        self.objects: dict[str, bytes] = {}
-
-    def _key(self, *, dataset_id: uuid.UUID, filename: str) -> str:
-        safe_filename = sanitize_filename(filename, default_stem="dataset")
-        return f"datasets/{dataset_id}/{safe_filename}"
-
-    def put_dataset(
-        self,
-        *,
-        data: bytes,
-        dataset_id: uuid.UUID,
-        filename: str,
-        content_type: str = "text/csv",
-    ) -> tuple[str, str]:
-        key = self._key(dataset_id=dataset_id, filename=filename)
-        self.objects[key] = data
-        return f"s3://{self.bucket}/{key}", format_sha256(data)
-
-    def get_dataset(self, *, storage_uri: str) -> bytes:
-        prefix = f"s3://{self.bucket}/"
-        if not storage_uri.startswith(prefix):
-            raise EvidenceStoreError(f"bad uri={storage_uri}")
-        key = storage_uri[len(prefix) :]
-        if key not in self.objects:
-            raise EvidenceStoreError(f"missing key={key}")
-        return self.objects[key]
-
-    def delete_dataset(self, *, storage_uri: str) -> None:
-        prefix = f"s3://{self.bucket}/"
-        key = storage_uri[len(prefix) :] if storage_uri.startswith(prefix) else storage_uri
-        self.objects.pop(key, None)
 
 
 class FakeReportStore:
