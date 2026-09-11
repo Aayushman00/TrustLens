@@ -1,20 +1,32 @@
 :root {
-  --bg: #f1efe5;
-  --surface: #fffdf8;
-  --surface-sunken: #eae7da;
-  --border: #ddd8c8;
-  --border-strong: #c7c0aa;
-  --text: #17160f;
-  --muted: #6c6858;
-  --accent: #1e6b4f;
-  --accent-strong: #123f2e;
-  --accent-soft: #e2ece5;
+  /* raw palette */
+  --c-cream-100: #f1efe5;
+  --c-cream-0: #fffdf8;
+  --c-cream-200: #eae7da;
+  --c-cream-300: #ddd8c8;
+  --c-cream-400: #c7c0aa;
+  --c-ink-900: #17160f;
+  --c-ink-500: #6c6858;
+  --c-green-700: #1e6b4f;
+  --c-green-900: #123f2e;
+  --c-green-100: #e2ece5;
+
+  /* semantic tier */
+  --bg: var(--c-cream-100);
+  --surface: var(--c-cream-0);
+  --surface-sunken: var(--c-cream-200);
+  --border: var(--c-cream-300);
+  --border-strong: var(--c-cream-400);
+  --text: var(--c-ink-900);
+  --muted: var(--c-ink-500);
+  --accent: var(--c-green-700);
+  --accent-strong: var(--c-green-900);
+  --accent-soft: var(--c-green-100);
+
+  /* status colors */
   --ink-accent: #1f3a5f;
   --ink-accent-strong: #16293f;
   --ink-accent-soft: #e4e9ef;
-  --font-display: "Source Serif 4", Georgia, serif;
-  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", Consolas, "Courier New", monospace;
   --amber-bg: #fdf3e1;
   --amber-text: #8a5a0b;
   --amber-border: #eed9ae;
@@ -33,7 +45,18 @@
   --purple-bg: #ece7f6;
   --purple-text: #55388f;
   --purple-border: #d7cbee;
+
+  /* layout */
   --sidebar-w: 232px;
+
+  /* radius */
+  --radius-sm: 7px;
+  --radius-md: 10px;
+  --radius-pill: 999px;
+
+  --font-display: "Source Serif 4", Georgia, serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", Consolas, "Courier New", monospace;
 
   color: var(--text);
   background: var(--bg);
@@ -77,7 +100,7 @@ a:hover {
 code {
   background: var(--gray-bg);
   padding: 0.05rem 0.3rem;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   font-size: 0.85em;
   font-family: var(--font-mono);
 }
@@ -133,7 +156,7 @@ code {
   justify-content: center;
   width: 22px;
   height: 22px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: var(--ink-accent);
   color: #fff;
   font-family: var(--font-mono);
@@ -151,7 +174,7 @@ code {
   font-weight: 600;
   color: var(--accent-strong);
   background: var(--accent-soft);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 0.25rem 0.6rem;
   width: fit-content;
 }
@@ -184,7 +207,7 @@ code {
   font-weight: 600;
   font-size: 0.92rem;
   padding: 0.5rem 0.6rem;
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   gap: 0.55rem;
@@ -348,7 +371,7 @@ code {
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   padding: 1.25rem 1.4rem;
 }
 
@@ -418,7 +441,7 @@ textarea {
   font-weight: 400;
   padding: 0.5rem 0.65rem;
   border: 1px solid var(--border);
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
   background: #fdfcf9;
   color: var(--text);
 }
@@ -477,7 +500,7 @@ textarea:disabled {
   font: inherit;
   font-weight: 600;
   padding: 0.5rem 1rem;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--ink-accent-strong);
   background: var(--ink-accent);
   color: #fff;
@@ -536,7 +559,7 @@ textarea:disabled {
 .badge {
   display: inline-block;
   padding: 0.12rem 0.55rem;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.03em;
@@ -601,7 +624,7 @@ textarea:disabled {
 .chain-tag {
   display: inline-block;
   padding: 0.1rem 0.5rem;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -678,7 +701,7 @@ textarea:disabled {
 /* ---- notices ---- */
 
 .notice {
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 0.8rem 1rem;
   margin: 0.75rem 0;
   border: 1px solid transparent;
@@ -841,7 +864,7 @@ tr:last-child td {
 .score-bar-track {
   height: 9px;
   background: var(--gray-bg);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   overflow: hidden;
 }
 
@@ -849,7 +872,7 @@ tr:last-child td {
   display: block;
   height: 100%;
   background: linear-gradient(90deg, #2c8f66, var(--accent-strong));
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
 }
 
 .score-bar-value {
@@ -894,7 +917,7 @@ tr:last-child td {
 pre.json-view {
   background: #26241d;
   color: #ece9df;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 1rem;
   overflow-x: auto;
   font-size: 0.8rem;
@@ -917,7 +940,7 @@ pre.json-view {
   background: var(--surface);
   border: 1px solid var(--border);
   border-top: 2px solid var(--border-strong);
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   padding: 1.05rem 1.15rem;
 }
 
@@ -960,7 +983,7 @@ pre.json-view {
   color: var(--purple-text);
   background: var(--purple-bg);
   border: 1px solid var(--purple-border);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 0.1rem 0.5rem;
 }
 
@@ -972,7 +995,7 @@ pre.json-view {
   color: var(--purple-text);
   background: var(--purple-bg);
   border: 1px solid var(--purple-border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 0.5rem 0.8rem;
   margin-bottom: 1rem;
 }
@@ -988,7 +1011,7 @@ pre.json-view {
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.02em;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 0.2rem 0.6rem 0.2rem 0.5rem;
   border: 1px solid transparent;
   white-space: nowrap;
@@ -1163,7 +1186,7 @@ pre.json-view {
 
 .contract-card {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   padding: 0.95rem 1.05rem;
   background: var(--surface);
   display: flex;
@@ -1217,7 +1240,7 @@ pre.json-view {
   font-size: 0.68rem;
   font-weight: 600;
   padding: 0.1rem 0.5rem;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--gray-bg);
   color: var(--gray-text);
   border: 1px solid var(--gray-border);
@@ -1233,7 +1256,7 @@ pre.json-view {
   font-size: 0.85rem;
   color: var(--muted);
   border: 1px dashed var(--border-strong);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 0.75rem 0.9rem;
 }
 
@@ -1299,7 +1322,7 @@ pre.json-view {
 
 .choice-card {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   padding: 1.1rem 1.2rem;
   background: var(--surface);
   text-align: left;
@@ -1368,7 +1391,7 @@ pre.json-view {
   justify-content: space-between;
   padding: 0.55rem 0.8rem;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   font-size: 0.88rem;
 }
 
@@ -1376,7 +1399,7 @@ pre.json-view {
 
 .fries-overall-card {
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   padding: 1.4rem 1.5rem;
   margin-bottom: 1.4rem;
 }
@@ -1422,7 +1445,7 @@ pre.json-view {
 .dimension-card {
   border: 1px solid var(--border);
   border-left: 3px solid var(--border-strong);
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   padding: 1.1rem 1.2rem;
   background: var(--surface);
   display: flex;
@@ -1479,7 +1502,7 @@ pre.json-view {
   font-size: 0.82rem;
   color: var(--muted);
   background: var(--surface-sunken);
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
   padding: 0.55rem 0.7rem;
 }
 
@@ -1497,7 +1520,7 @@ pre.json-view {
 
 .dossier-section {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   margin-bottom: 0.9rem;
   overflow: hidden;
 }
@@ -1555,7 +1578,7 @@ pre.json-view {
 
 .execution-card {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   padding: 1.2rem 1.3rem;
   margin-bottom: 1.1rem;
 }
@@ -1563,7 +1586,7 @@ pre.json-view {
 .execution-progress-track {
   height: 10px;
   background: var(--gray-bg);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   overflow: hidden;
   margin: 0.6rem 0 0.4rem;
 }
@@ -1571,7 +1594,7 @@ pre.json-view {
 .execution-progress-fill {
   height: 100%;
   background: linear-gradient(90deg, #2c8f66, var(--accent-strong));
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   transition: width 0.3s ease;
 }
 
@@ -1588,7 +1611,7 @@ pre.json-view {
   gap: 0.4rem;
   font-size: 0.8rem;
   padding: 0.3rem 0.65rem;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--surface-sunken);
   border: 1px solid var(--border);
 }
@@ -1604,13 +1627,13 @@ pre.json-view {
   padding: 0.9rem 1rem;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
 }
 
 .auth-shell-note {
   background: var(--surface-sunken);
   border: 1px dashed var(--border-strong);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 0.9rem 1rem;
   font-size: 0.85rem;
   color: var(--muted);
@@ -1643,7 +1666,7 @@ pre.json-view {
   background: var(--accent-strong);
   color: #fff;
   padding: 0.5rem 0.9rem;
-  border-radius: 0 0 8px 0;
+  border-radius: 0 0 var(--radius-md) 0;
   z-index: 100;
 }
 
