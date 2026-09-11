@@ -256,11 +256,22 @@ This sits inside the existing `max-width: 900px` block's cascade — since CSS a
 
 ## Phase 6 — Dark mode (separate, reviewed on its own — implement last)
 
-### 6.1 Mechanism
+### 6.1 Mechanism, and a pre-existing debt this phase exposed
 
-Per original prompt: light values stay default on bare `:root`; `@media (prefers-color-scheme: dark)` scoped under `:root:not([data-theme="light"])` redefines only the ten semantic tokens (`--bg`, `--surface`, `--surface-sunken`, `--border`, `--border-strong`, `--text`, `--muted`, `--accent`, `--accent-strong`, `--accent-soft`) plus the six status triples; repeat verbatim under `:root[data-theme="dark"]`. Raw tier and every component class are never touched — everything already reads through tokens (confirmed — the only literal-hex-outside-root hit was the one `EvaluationTimeline.tsx` fallback fixed in phase 1).
+Per original prompt: light values stay default on bare `:root`; `@media (prefers-color-scheme: dark)` scoped under `:root:not([data-theme="light"])` redefines only the semantic tokens plus the six status triples; repeat verbatim under `:root[data-theme="dark"]`. Raw tier and every component class are never touched.
 
-### 6.2 Proposed dark values (same hue identity, re-tuned for contrast, not inverted)
+**Audit correction:** phase 1's own rule ("grep for literal hex outside `:root`, fix in this pass") only caught `EvaluationTimeline.tsx`'s fallback — a grep of `index.css`'s own body (not run at the time) turned up ~20 more literal hex values outside `:root`, fixed as a prerequisite to this phase:
+- `.brand-mark`, `.btn`, `.step.done/.current .step-num`, `.skip-link` hardcoded `color: #fff` → new `--on-accent: #fff` token (same value both themes, verified against every dark background it sits on).
+- `.health-ok/-down/-checking` → tokenized (`--health-ok/-down/-checking`), same values both themes (decorative status dots, not text-bearing).
+- `input,select,textarea { background: #fdfcf9 }` → `var(--surface)` (was an undocumented near-duplicate of `--surface`'s `#fffdf8`).
+- `.btn-danger` → new `--danger-solid`/`--danger-solid-strong` tokens.
+- `.notice-error/-warning/-info/-reviewed/-unreviewed` border-colors → replaced with the existing `--red-border`/`--amber-border`/`--blue-border`/`--green-border` tokens they were silently duplicating.
+- `.score-bar-fill`/`.execution-progress-fill` gradient's literal `#2c8f66` → promoted to a raw token, `--c-green-500` (raw tier, unchanged by dark mode — the gradient's second stop, `--accent-strong`, still shifts with theme).
+- `pre.json-view` (`#26241d`/`#ece9df`) — left as-is: an intentionally always-dark code/terminal viewer, not a theme bug.
+
+**Bigger finding — a dual-role token conflict that would have broken dark mode:** `--ink-accent` and `--accent-strong` are each used two incompatible ways — as text/link/border/outline color, AND as a solid button/badge **background** paired with hardcoded white text. Computed contrast proved no single value satisfies both roles simultaneously in dark mode (a legible-as-text pastel blue drops white-on-background contrast to 2.60:1; a background-safe mid-tone drops text-on-bg contrast to 3.35:1). **Resolved by splitting the role:** new `--ink-accent-solid`/`--ink-accent-solid-strong`/`--accent-solid` tokens take over the ~6 background call sites (`.brand-mark`, `.btn`, `.btn:hover`, `.step.done/.current`, `.skip-link`); `--ink-accent`/`--ink-accent-strong`/`--accent-strong` keep serving text/link/border/outline. In light mode the solid tokens alias the original tokens (`--ink-accent-solid: var(--ink-accent)` etc.) — zero visual diff; only in dark mode do the two roles diverge to separately-tuned values.
+
+### 6.2 Implemented dark values
 
 ```css
 --bg: #1a1814;
@@ -276,6 +287,11 @@ Per original prompt: light values stay default on bare `:root`; `@media (prefers
 --ink-accent: #7ba3d9;
 --ink-accent-strong: #a9c6ea;
 --ink-accent-soft: #1f2c3d;
+--ink-accent-solid: #3f6da8;
+--ink-accent-solid-strong: #2c4e78;
+--accent-solid: #245c3f;
+--danger-solid: #7a2a1f;
+--danger-solid-strong: #5c1f17;
 
 --amber-bg: #46350f; --amber-text: #e8b563; --amber-border: #5c4720;
 --red-bg: #46201a;   --red-text: #ef7b68;   --red-border: #5c2b22;
@@ -285,7 +301,7 @@ Per original prompt: light values stay default on bare `:root`; `@media (prefers
 --purple-bg: #332648;--purple-text: #c9a6f0;--purple-border: #453262;
 ```
 
-### 6.3 Computed contrast — dark mode (all six safety pairs + muted/bg)
+### 6.3 Computed contrast — dark mode
 
 | Pair | Ratio | AA |
 |---|---|---|
@@ -294,9 +310,19 @@ Per original prompt: light values stay default on bare `:root`; `@media (prefers
 | green-text / green-bg | 6.33:1 | Pass |
 | red-text / red-bg | 5.20:1 | Pass |
 | blue-text / blue-bg | 5.73:1 | Pass |
-| gray-text / gray-bg | 4.57:1 | Pass (tightest — 0.07 over threshold, don't erode further in implementation) |
+| gray-text / gray-bg | 4.57:1 | Pass (tightest — 0.07 over threshold, don't erode further) |
 | purple-text / purple-bg | 6.75:1 | Pass |
 | amber-text / amber-bg | 6.32:1 | Pass |
+| `--ink-accent` / `--bg` (text role) | 6.82:1 | Pass |
+| `--ink-accent-strong` / `--bg` (text role) | 10.09:1 | Pass |
+| `--accent-strong` / `--bg` (text role, e.g. `.fries-value`) | 9.25:1 | Pass |
+| `--accent-strong` / `--accent-soft` (text-on-soft-bg, e.g. `.local-engine-tag`) | 7.02:1 | Pass |
+| `--ink-accent-strong` / `--ink-accent-soft` (`.nav-links a.active`) | 8.04:1 | Pass |
+| white / `--ink-accent-solid` (`.brand-mark`, `.btn`) | 5.30:1 | Pass |
+| white / `--ink-accent-solid-strong` (`.btn:hover`, `.step.current`) | 8.51:1 | Pass |
+| white / `--accent-solid` (`.skip-link`) | 7.84:1 | Pass |
+| white / `--danger-solid` | 9.64:1 | Pass |
+| white / `--danger-solid-strong` | 12.62:1 | Pass |
 
 ### 6.4 Mandatory safety-distinction re-check (per original prompt — new code, own review)
 
