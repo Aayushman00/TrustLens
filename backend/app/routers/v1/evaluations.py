@@ -68,7 +68,9 @@ def create_evaluation_v2(
     body: CreateEvaluationV2Request,
     db: Session = Depends(get_db),
 ) -> EvaluationRead:
-    row = EvaluationServiceV2(db).create_from_draft(body.draft_id, body.evaluation_mode)
+    row = EvaluationServiceV2(db).create_from_draft(
+        body.draft_id, body.evaluation_mode, assessment_engine=body.assessment_engine
+    )
     return EvaluationRead.model_validate(row)
 
 

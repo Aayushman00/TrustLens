@@ -45,6 +45,7 @@ from __future__ import annotations
 
 import logging
 import uuid
+from typing import Literal
 
 from app.api.errors import ConflictError, NotFoundError, ValidationAppError
 from app.core.config import get_settings
@@ -79,7 +80,12 @@ class EvaluationServiceV2:
         self._evals = EvaluationRepository(session)
         self._events = EvaluationEventRepository(session)
 
-    def create_from_draft(self, draft_id: uuid.UUID, evaluation_mode: EvaluationMode) -> Evaluation:
+    def create_from_draft(
+        self,
+        draft_id: uuid.UUID,
+        evaluation_mode: EvaluationMode,
+        assessment_engine: Literal["deterministic", "legacy_heuristic"] | None = None,
+    ) -> Evaluation:
         draft = self._drafts.get_by_id(draft_id)
         if draft is None:
             raise NotFoundError(f"Draft {draft_id} not found", details={"draft_id": str(draft_id)})
@@ -180,7 +186,10 @@ class EvaluationServiceV2:
             robustness=robustness_contract,
         )
 
-        probe_config = {"evaluation_contract": contract.model_dump(mode="json"), "assessment_engine": "deterministic"}
+        probe_config = {
+            "evaluation_contract": contract.model_dump(mode="json"),
+            "assessment_engine": assessment_engine or "deterministic",
+        }
         row = self._evals.create(
             model_id=model.id,
             evaluation_mode=evaluation_mode,
