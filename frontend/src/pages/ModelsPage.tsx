@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { apiFetch } from "../api/client";
 import type { ModelList, ModelRead } from "../api/types";
 import ErrorNotice from "../components/ErrorNotice";
-import Spinner from "../components/Spinner";
+import Skeleton from "../components/Skeleton";
 import { shortRevision } from "../lib/contract";
 import { fmtDateTime } from "../lib/format";
 
@@ -48,7 +48,7 @@ export default function ModelsPage() {
       {items.length === 0 && !loading ? (
         <div className="card">
           <p className="empty">
-            Nothing registered yet — <Link to="/models/import">import a model</Link>.
+            No models registered yet — <Link to="/models/import">import one first</Link>.
           </p>
         </div>
       ) : (
@@ -84,7 +84,7 @@ export default function ModelsPage() {
           })}
         </div>
       )}
-      {loading ? <Spinner label="Loading…" /> : null}
+      {loading ? <Skeleton rows={3} height="6.5rem" /> : null}
       {nextCursor && !loading ? (
         <p style={{ marginTop: "1rem" }}>
           <button

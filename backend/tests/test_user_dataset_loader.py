@@ -36,6 +36,67 @@ def test_count_rows_excludes_header() -> None:
     assert count_rows(_CSV) == 7
 
 
+_HTML_RESPONSE = (
+    b"<!doctype html>\n<html><head><title>404</title></head>"
+    b"<body>Not found</body></html>\n"
+)
+
+
+def test_sniff_columns_rejects_html_response() -> None:
+    """A webpage returned instead of a raw CSV (e.g. a bad/expired Hugging
+    Face dataset URL) must be rejected at parse time, not accepted as a
+    bogus one-column "<!doctype html>" dataset."""
+    with pytest.raises(UserDatasetError, match="not a raw CSV dataset"):
+        sniff_columns(_HTML_RESPONSE)
+
+
+def test_count_rows_rejects_html_response() -> None:
+    with pytest.raises(UserDatasetError, match="not a raw CSV dataset"):
+        count_rows(_HTML_RESPONSE)
+
+
+def test_sniff_columns_rejects_json_response() -> None:
+    with pytest.raises(UserDatasetError, match="not CSV"):
+        sniff_columns(b'{"error": "not found"}')
+
+
+def test_sniff_columns_still_accepts_valid_csv() -> None:
+    """Regression guard: the HTML/JSON signature check must not reject real CSV."""
+    columns = sniff_columns(_CSV)
+    assert {c["name"] for c in columns} == {"text", "label", "gender"}
+    assert count_rows(_CSV) == 7
+
+
+_GIT_LFS_POINTER = (
+    b"version https://git-lfs.github.com/spec/v1\n"
+    b"oid sha256:" + b"a" * 64 + b"\n"
+    b"size 3421431\n"
+)
+
+
+def test_sniff_columns_rejects_git_lfs_pointer() -> None:
+    """A Git-LFS-tracked raw file URL (GitHub raw, Hugging Face resolve, etc.)
+    serves the pointer blob, not the real dataset -- valid UTF-8 text that
+    csv.DictReader would otherwise happily parse as a bogus one-column,
+    two-row "dataset" (matching the observed 132-byte/2-row bug report)."""
+    with pytest.raises(UserDatasetError, match="Git LFS pointer"):
+        sniff_columns(_GIT_LFS_POINTER)
+
+
+def test_count_rows_rejects_git_lfs_pointer() -> None:
+    with pytest.raises(UserDatasetError, match="Git LFS pointer"):
+        count_rows(_GIT_LFS_POINTER)
+
+
+def test_sniff_columns_does_not_reject_legitimate_one_column_csv() -> None:
+    """Guard against overfitting: a real one-column CSV (no comma, no LFS
+    spec header) must still be accepted -- one column is legitimate."""
+    one_column_csv = b"text\nhello\nworld\n"
+    columns = sniff_columns(one_column_csv)
+    assert [c["name"] for c in columns] == ["text"]
+    assert count_rows(one_column_csv) == 2
+
+
 def test_discover_group_values_reports_missing_explicitly() -> None:
     observed, missing = discover_group_values(_CSV, group_column="gender")
     values = {g["value"]: g["count"] for g in observed}

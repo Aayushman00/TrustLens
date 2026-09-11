@@ -14,7 +14,7 @@ from app.db.enums import FriesDimension, ProbeEvaluationStatus
 from app.schemas.evaluation_contract_v2 import EvaluationContractV2
 from app.schemas.evidence import EvidenceRef
 from app.schemas.probe_config import ProbeConfigV1
-from app.storage.evidence_store import DatasetContentStore, DatasetStore, EvidenceStore
+from app.storage.evidence_store import DatasetContentStore, EvidenceStore
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
@@ -42,8 +42,6 @@ class ProbeContext:
     # content-addressed dataset), or None for an evaluation with no contract
     # attached at all.
     evaluation_contract: EvaluationContractV2 | None = None
-    # User-defined local Fairness dataset path only (kind="user_dataset").
-    dataset_store: DatasetStore | None = None
     # Task 4.5: content-addressed DatasetContent bytes for EvaluationContractV2's
     # fairness.dataset_content_id / robustness.dataset_content_id.
     dataset_content_store: DatasetContentStore | None = None

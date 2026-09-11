@@ -1,16 +1,27 @@
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { vi } from "vitest";
 
-import { apiFetch } from "../api/client";
+import { apiFetch, ApiError } from "../api/client";
 import CreateEvaluationDraftPage from "./CreateEvaluationDraftPage";
 
-vi.mock("../api/client");
+// Real ApiError (not auto-mocked) so tests that reject with it produce a
+// correctly-populated error (code/message/details) for ErrorNotice to render.
+vi.mock("../api/client", async () => {
+  const actual = await vi.importActual<typeof import("../api/client")>("../api/client");
+  return { ...actual, apiFetch: vi.fn() };
+});
 
 function renderPage(initialPath = "/evaluations/new") {
   return render(
     <MemoryRouter initialEntries={[initialPath]}>
-      <CreateEvaluationDraftPage />
+      {/* A stub destination route -- proves navigate(`/evaluations/${id}`)
+       * actually fires, mirroring the real route in App.tsx without pulling
+       * in the full EvaluationDetailPage. */}
+      <Routes>
+        <Route path="/evaluations/new" element={<CreateEvaluationDraftPage />} />
+        <Route path="/evaluations/:id" element={<div data-testid="evaluation-detail-stub" />} />
+      </Routes>
     </MemoryRouter>,
   );
 }
@@ -40,10 +51,18 @@ const DRAFT_INCOMPLETE = {
   status: "incomplete",
   fairness_confirmed: false,
   robustness_confirmed: false,
+  model_label_snapshot: null,
+};
+
+// What the follow-up GET (fired right after POST /evaluation-drafts) returns
+// once the backend has inspected the model's real config.
+const DRAFT_WITH_SNAPSHOT = {
+  ...DRAFT_INCOMPLETE,
+  model_label_snapshot: { num_labels: 2, id2label: { "0": "NEGATIVE", "1": "POSITIVE" } },
 };
 
 const DRAFT_FAIRNESS_CONFIRMED = {
-  ...DRAFT_INCOMPLETE,
+  ...DRAFT_WITH_SNAPSHOT,
   status: "validated",
   fairness_confirmed: true,
 };
@@ -77,6 +96,10 @@ async function selectModelAndCreateDraft() {
   fireEvent.click(modelCard);
 
   vi.mocked(apiFetch).mockResolvedValueOnce(DRAFT_INCOMPLETE);
+  // The page immediately follows the create POST with a GET, so
+  // model_label_snapshot (real model labels for the mapping UI) is
+  // populated before the user ever opens a dimension.
+  vi.mocked(apiFetch).mockResolvedValueOnce(DRAFT_WITH_SNAPSHOT);
   // DocumentationSourceForm mounts alongside Fairness/Robustness the moment
   // the draft exists and fetches this model's documentation sources.
   vi.mocked(apiFetch).mockResolvedValueOnce(DOCS_EMPTY);
@@ -197,9 +220,92 @@ test("an unpinned model blocks starting an evaluation, with no way around it", a
   expect(screen.queryByRole("button", { name: /start evaluation/i })).not.toBeInTheDocument();
 });
 
+test("a failed replacement dataset fetch clears the previously confirmed dimension's stale state", async () => {
+  await selectModelAndCreateDraft();
+  await fillAndConfirmFairness();
+
+  const fairnessCard = screen.getByLabelText(/configure fairness/i).closest(".card") as HTMLElement;
+  expect(within(fairnessCard).getByRole("button", { name: /fairness confirmed/i })).toBeInTheDocument();
+  expect(within(fairnessCard).getByText(/5 rows/i)).toBeInTheDocument();
+
+  // Try to replace the dataset with a URL that turns out to be HTML, not CSV.
+  vi.mocked(apiFetch).mockRejectedValueOnce(
+    new ApiError(422, {
+      code: "VALIDATION_ERROR",
+      message: "downloaded file is not a valid CSV: this URL points to a webpage (HTML), not a raw CSV dataset",
+      details: {},
+    }),
+  );
+  fireEvent.change(within(fairnessCard).getByLabelText(/dataset url/i), {
+    target: { value: "https://huggingface.co/datasets/nyu-mll/glue" },
+  });
+  fireEvent.click(within(fairnessCard).getByRole("button", { name: /fetch dataset/i }));
+
+  await within(fairnessCard).findByText(/not a raw CSV dataset/i);
+
+  // The previously-confirmed dataset's rows/columns and the "confirmed"
+  // state must not remain visible -- a failed replacement fetch drops the
+  // stale confirmation and mapping UI immediately, not just on success.
+  expect(within(fairnessCard).queryByText(/5 rows/i)).not.toBeInTheDocument();
+  expect(within(fairnessCard).queryByRole("button", { name: /fairness confirmed/i })).not.toBeInTheDocument();
+  expect(within(fairnessCard).queryByRole("button", { name: /^confirm fairness$/i })).not.toBeInTheDocument();
+  expect(within(fairnessCard).queryByLabelText(/^text column/i)).not.toBeInTheDocument();
+
+  const continueButton = screen.getByRole("button", { name: /continue to review/i });
+  expect(continueButton).toBeDisabled();
+});
+
 test("the model card is included automatically, with room to attach more documentation", async () => {
   await selectModelAndCreateDraft();
 
   expect(screen.getByRole("heading", { name: /documentation/i })).toBeInTheDocument();
   expect(screen.getByText(/pinned model card is included automatically/i)).toBeInTheDocument();
+});
+
+test("Continue to review creates the real evaluation and navigates to it", async () => {
+  await selectModelAndCreateDraft();
+  await fillAndConfirmFairness();
+
+  const continueButton = screen.getByRole("button", { name: /continue to review/i });
+  await waitFor(() => expect(continueButton).not.toBeDisabled());
+
+  const CREATED_EVALUATION = { id: "eval-999", model_id: 1, status: "PENDING" };
+  vi.mocked(apiFetch).mockResolvedValueOnce(CREATED_EVALUATION);
+  fireEvent.click(continueButton);
+
+  // The exact contract this session's curl call verified the backend
+  // accepts: draft_id + evaluation_mode, POSTed to /v1/evaluations-v2.
+  await waitFor(() =>
+    expect(apiFetch).toHaveBeenCalledWith("/v1/evaluations-v2", {
+      method: "POST",
+      body: { draft_id: "draft-1", evaluation_mode: "AI_ASSISTED" },
+    }),
+  );
+
+  // Navigated to the created evaluation's own page -- the stub route
+  // standing in for EvaluationDetailPage renders, proving the navigation
+  // actually fired rather than the button silently doing nothing.
+  await screen.findByTestId("evaluation-detail-stub");
+});
+
+test("a failed evaluation-creation request surfaces via ErrorNotice, not a silent no-op", async () => {
+  await selectModelAndCreateDraft();
+  await fillAndConfirmFairness();
+
+  const continueButton = screen.getByRole("button", { name: /continue to review/i });
+  await waitFor(() => expect(continueButton).not.toBeDisabled());
+
+  vi.mocked(apiFetch).mockRejectedValueOnce(
+    new ApiError(422, {
+      code: "VALIDATION_ERROR",
+      message: "draft is missing a confirmed dimension",
+      details: {},
+    }),
+  );
+  fireEvent.click(continueButton);
+
+  await screen.findByText(/draft is missing a confirmed dimension/i);
+  // Stays on this page -- no silent navigation on failure.
+  expect(screen.queryByTestId("evaluation-detail-stub")).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /continue to review/i })).not.toBeDisabled();
 });

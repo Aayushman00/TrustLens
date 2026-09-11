@@ -2,8 +2,10 @@
 
 Pure stdlib/numpy-free implementations so unit tests need no ML stack.
 
-Formulas (binary positive class = 1):
-- demographic_parity_difference = max_g P(Ŷ=1|A=g) − min_g P(Ŷ=1|A=g)
+Formulas (binary positive class = ``positive_label_index``, default 1 for
+backward compatibility -- NEVER hardcoded, since label_mapping lets a user
+legitimately assign the favorable outcome to any model_label_index):
+- demographic_parity_difference = max_g P(Ŷ=positive|A=g) − min_g P(Ŷ=positive|A=g)
 - equalized_odds_difference = max( |ΔTPR|, |ΔFPR| ) across groups
   (max_g TPR − min_g TPR and max_g FPR − min_g FPR)
 - subgroup_f1_spread = max_g F1_g − min_g F1_g
@@ -36,24 +38,24 @@ def _groups(
     return buckets
 
 
-def _positive_rate(pairs: list[tuple[int, int]]) -> float:
+def _positive_rate(pairs: list[tuple[int, int]], *, positive_label_index: int = 1) -> float:
     if not pairs:
         return 0.0
-    return sum(1 for _, yp in pairs if yp == 1) / len(pairs)
+    return sum(1 for _, yp in pairs if yp == positive_label_index) / len(pairs)
 
 
-def _tpr_fpr(pairs: list[tuple[int, int]]) -> tuple[float, float]:
-    pos = [(yt, yp) for yt, yp in pairs if yt == 1]
-    neg = [(yt, yp) for yt, yp in pairs if yt == 0]
-    tpr = (sum(1 for _, yp in pos if yp == 1) / len(pos)) if pos else 0.0
-    fpr = (sum(1 for _, yp in neg if yp == 1) / len(neg)) if neg else 0.0
+def _tpr_fpr(pairs: list[tuple[int, int]], *, positive_label_index: int = 1) -> tuple[float, float]:
+    pos = [(yt, yp) for yt, yp in pairs if yt == positive_label_index]
+    neg = [(yt, yp) for yt, yp in pairs if yt != positive_label_index]
+    tpr = (sum(1 for _, yp in pos if yp == positive_label_index) / len(pos)) if pos else 0.0
+    fpr = (sum(1 for _, yp in neg if yp == positive_label_index) / len(neg)) if neg else 0.0
     return tpr, fpr
 
 
-def _f1(pairs: list[tuple[int, int]]) -> float:
-    tp = sum(1 for yt, yp in pairs if yt == 1 and yp == 1)
-    fp = sum(1 for yt, yp in pairs if yt == 0 and yp == 1)
-    fn = sum(1 for yt, yp in pairs if yt == 1 and yp == 0)
+def _f1(pairs: list[tuple[int, int]], *, positive_label_index: int = 1) -> float:
+    tp = sum(1 for yt, yp in pairs if yt == positive_label_index and yp == positive_label_index)
+    fp = sum(1 for yt, yp in pairs if yt != positive_label_index and yp == positive_label_index)
+    fn = sum(1 for yt, yp in pairs if yt == positive_label_index and yp != positive_label_index)
     if tp == 0 and fp == 0 and fn == 0:
         return 0.0
     precision = tp / (tp + fp) if (tp + fp) else 0.0
@@ -66,12 +68,18 @@ def _f1(pairs: list[tuple[int, int]]) -> float:
 def demographic_parity_difference(
     y_pred: Sequence[Any],
     sensitive: Sequence[Hashable],
+    *,
+    positive_label_index: int = 1,
 ) -> float:
-    """Max−min selection rate P(Ŷ=1|A) across sensitive groups."""
+    """Max−min selection rate P(Ŷ=positive_label_index|A) across sensitive
+    groups. ``positive_label_index`` must never be assumed -- label_mapping
+    lets a user legitimately assign the favorable outcome to any model
+    index, and silently treating index 1 as positive regardless would flip
+    the metric's sign for any mapping that doesn't happen to agree."""
     # Pair with dummy y_true for grouping API
     y_true = [0] * len(y_pred)
     buckets = _groups(y_true, y_pred, sensitive)
-    rates = [_positive_rate(pairs) for pairs in buckets.values()]
+    rates = [_positive_rate(pairs, positive_label_index=positive_label_index) for pairs in buckets.values()]
     return float(max(rates) - min(rates))
 
 
@@ -79,13 +87,16 @@ def equalized_odds_difference(
     y_true: Sequence[Any],
     y_pred: Sequence[Any],
     sensitive: Sequence[Hashable],
+    *,
+    positive_label_index: int = 1,
 ) -> float:
-    """Max of (max−min TPR) and (max−min FPR) across groups."""
+    """Max of (max−min TPR) and (max−min FPR) across groups, relative to
+    ``positive_label_index`` (never hardcoded -- see demographic_parity_difference)."""
     buckets = _groups(y_true, y_pred, sensitive)
     tprs: list[float] = []
     fprs: list[float] = []
     for pairs in buckets.values():
-        tpr, fpr = _tpr_fpr(pairs)
+        tpr, fpr = _tpr_fpr(pairs, positive_label_index=positive_label_index)
         tprs.append(tpr)
         fprs.append(fpr)
     return float(max(max(tprs) - min(tprs), max(fprs) - min(fprs)))
@@ -95,10 +106,13 @@ def subgroup_f1_spread(
     y_true: Sequence[Any],
     y_pred: Sequence[Any],
     sensitive: Sequence[Hashable],
+    *,
+    positive_label_index: int = 1,
 ) -> float:
-    """Max−min binary F1 across sensitive groups."""
+    """Max−min binary F1 across sensitive groups, relative to
+    ``positive_label_index`` (never hardcoded -- see demographic_parity_difference)."""
     buckets = _groups(y_true, y_pred, sensitive)
-    scores = [_f1(pairs) for pairs in buckets.values()]
+    scores = [_f1(pairs, positive_label_index=positive_label_index) for pairs in buckets.values()]
     return float(max(scores) - min(scores))
 
 
@@ -106,16 +120,18 @@ def per_group_stats(
     y_true: Sequence[Any],
     y_pred: Sequence[Any],
     sensitive: Sequence[Hashable],
+    *,
+    positive_label_index: int = 1,
 ) -> dict[str, dict[str, float | int]]:
     """Per-group n, F1, positive_rate, TPR, FPR."""
     buckets = _groups(y_true, y_pred, sensitive)
     out: dict[str, dict[str, float | int]] = {}
     for group, pairs in buckets.items():
-        tpr, fpr = _tpr_fpr(pairs)
+        tpr, fpr = _tpr_fpr(pairs, positive_label_index=positive_label_index)
         out[str(group)] = {
             "n": len(pairs),
-            "f1": round(_f1(pairs), 6),
-            "positive_rate": round(_positive_rate(pairs), 6),
+            "f1": round(_f1(pairs, positive_label_index=positive_label_index), 6),
+            "positive_rate": round(_positive_rate(pairs, positive_label_index=positive_label_index), 6),
             "tpr": round(tpr, 6),
             "fpr": round(fpr, 6),
         }
@@ -126,18 +142,22 @@ def compute_fairness_bundle(
     y_true: Sequence[Any],
     y_pred: Sequence[Any],
     sensitive: Sequence[Hashable],
+    *,
+    positive_label_index: int = 1,
 ) -> dict[str, Any]:
-    """Compute all Phase 12 fairness metrics in one pass."""
-    groups = per_group_stats(y_true, y_pred, sensitive)
+    """Compute all Phase 12 fairness metrics in one pass, relative to
+    ``positive_label_index`` (defaults to 1, but must never be assumed --
+    see demographic_parity_difference)."""
+    groups = per_group_stats(y_true, y_pred, sensitive, positive_label_index=positive_label_index)
     return {
         "demographic_parity_difference": round(
-            demographic_parity_difference(y_pred, sensitive), 6
+            demographic_parity_difference(y_pred, sensitive, positive_label_index=positive_label_index), 6
         ),
         "equalized_odds_difference": round(
-            equalized_odds_difference(y_true, y_pred, sensitive), 6
+            equalized_odds_difference(y_true, y_pred, sensitive, positive_label_index=positive_label_index), 6
         ),
         "subgroup_f1_spread": round(
-            subgroup_f1_spread(y_true, y_pred, sensitive), 6
+            subgroup_f1_spread(y_true, y_pred, sensitive, positive_label_index=positive_label_index), 6
         ),
         "groups": groups,
         "min_group_n_observed": min(int(g["n"]) for g in groups.values()),
