@@ -312,6 +312,12 @@ code {
   padding: 1.75rem 2rem 4rem;
 }
 
+@media (max-width: 900px) and (min-width: 601px) {
+  .container {
+    padding: 1.5rem 1.25rem 3.5rem;
+  }
+}
+
 @media (max-width: 900px) {
   .app-shell {
     flex-direction: column;
@@ -761,6 +767,12 @@ textarea:disabled {
 
 .table-wrap {
   overflow-x: auto;
+}
+
+.table-wrap thead th {
+  position: sticky;
+  top: 0;
+  background: var(--surface);
 }
 
 table {

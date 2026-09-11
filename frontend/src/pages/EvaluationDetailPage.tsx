@@ -11,6 +11,7 @@ import {
   type FriesDimension,
 } from "../api/types";
 import DimensionCard from "../components/DimensionCard";
+import DimensionProgressChip from "../components/DimensionProgressChip";
 import ErrorNotice from "../components/ErrorNotice";
 import EvaluationTimeline from "../components/EvaluationTimeline";
 import EvidenceDossier from "../components/EvidenceDossier";
@@ -161,10 +162,11 @@ export default function EvaluationDetailPage() {
             {FRIES_DIMENSIONS.map((dim) => {
               const p = probesByDim.get(dim);
               return (
-                <span key={dim} className="dimension-status-chip">
-                  {dim.charAt(0) + dim.slice(1).toLowerCase()}
-                  {p ? " · done" : " · pending"}
-                </span>
+                <DimensionProgressChip
+                  key={dim}
+                  label={dim.charAt(0) + dim.slice(1).toLowerCase()}
+                  done={!!p}
+                />
               );
             })}
           </div>
