@@ -20,6 +20,7 @@ class CreateEvaluationV2Request(BaseModel):
 
     draft_id: uuid.UUID
     evaluation_mode: EvaluationMode
+    assessment_engine: Literal["deterministic", "legacy_heuristic"] | None = None
 
 
 class DimensionConfigUpdate(BaseModel):

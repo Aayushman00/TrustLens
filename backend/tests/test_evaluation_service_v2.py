@@ -75,6 +75,24 @@ def test_create_from_draft_converts_model_inspection_error_to_validation_error(
             service.create_from_draft(confirmed_fairness_draft.id, EvaluationMode.AI_ASSISTED)
 
 
+def test_create_from_draft_defaults_to_deterministic_engine(db_session, confirmed_fairness_draft):
+    service = EvaluationServiceV2(db_session)
+    with patch(_PATCH_TARGET, return_value=_MATCHING_SNAPSHOT):
+        evaluation = service.create_from_draft(confirmed_fairness_draft.id, EvaluationMode.AI_ASSISTED)
+    assert evaluation.probe_config["assessment_engine"] == "deterministic"
+
+
+def test_create_from_draft_honors_legacy_heuristic_opt_in(db_session, confirmed_fairness_draft):
+    service = EvaluationServiceV2(db_session)
+    with patch(_PATCH_TARGET, return_value=_MATCHING_SNAPSHOT):
+        evaluation = service.create_from_draft(
+            confirmed_fairness_draft.id,
+            EvaluationMode.AI_ASSISTED,
+            assessment_engine="legacy_heuristic",
+        )
+    assert evaluation.probe_config["assessment_engine"] == "legacy_heuristic"
+
+
 def test_create_from_draft_rejects_half_confirmed_dimension(db_session, half_confirmed_draft):
     service = EvaluationServiceV2(db_session)
     with patch(_PATCH_TARGET, return_value=_MATCHING_SNAPSHOT):
