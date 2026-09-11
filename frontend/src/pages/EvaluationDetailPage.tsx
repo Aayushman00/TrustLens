@@ -154,7 +154,7 @@ export default function EvaluationDetailPage() {
             <Spinner />
             <strong>Running locally — {evaluation.probe_progress?.completed ?? 0}/{evaluation.probe_progress?.total ?? 5} dimensions complete</strong>
           </div>
-          <div className="execution-progress-track">
+          <div className="execution-progress-track" role="status" aria-live="polite">
             <div className="execution-progress-fill" style={{ width: `${pct}%` }} />
           </div>
           <div className="dimension-status-strip">
