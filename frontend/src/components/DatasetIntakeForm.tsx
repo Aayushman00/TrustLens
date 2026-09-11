@@ -12,8 +12,17 @@ import ErrorNotice from "./ErrorNotice";
 
 export default function DatasetIntakeForm({
   onContentReady,
+  onFetchStart,
 }: {
   onContentReady: (content: DatasetContentRead) => void;
+  /**
+   * Called the instant a new fetch attempt begins, before the request
+   * resolves either way. Lets the parent drop any dataset/column/label-
+   * mapping state from a *previous* attempt immediately — a failed replace
+   * must never leave stale content (or a stale ColumnRoleMappingForm)
+   * visible, and it must not linger even while the new request is in flight.
+   */
+  onFetchStart?: () => void;
 }) {
   const [url, setUrl] = useState("");
   const [content, setContent] = useState<DatasetContentRead | null>(null);
@@ -26,6 +35,12 @@ export default function DatasetIntakeForm({
     if (!trimmed) return;
     setLoading(true);
     setError(null);
+    // Clear any previous preview/content up front -- a fetch that fails
+    // (or is still in flight) must never leave a prior dataset's rows,
+    // columns, or dropdown options visibly attached, whether that prior
+    // fetch succeeded or was itself an already-rejected invalid dataset.
+    setContent(null);
+    onFetchStart?.();
     try {
       const result = await apiFetch<DatasetContentRead>("/v1/dataset-fetches", {
         method: "POST",

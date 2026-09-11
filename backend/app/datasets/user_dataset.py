@@ -10,15 +10,63 @@ from __future__ import annotations
 
 import csv
 import io
+import re
 from typing import Any
 
 _MISSING_TOKENS = {"", "na", "n/a", "null", "nan", "none"}
 _MISSING_GROUP_LABEL = "(missing)"
 _SAMPLE_ROWS_FOR_TYPE_SNIFF = 2000
 
+# First-non-whitespace-character signature of content that is never a valid
+# CSV header (HTML/XML markup, JSON) but IS valid UTF-8 text — so it would
+# otherwise sail through csv.DictReader as a bogus one-column "dataset". A
+# webpage/API-error response returned instead of a raw CSV (e.g. a Hugging
+# Face URL resolving to an HTML page) must be caught here, not downstream.
+_NON_CSV_LEADING_CHARS = "<{["
+
+# Git LFS pointer files are a fixed, spec-defined text format (see
+# https://github.com/git-lfs/git-lfs/blob/main/docs/spec.md#the-pointer):
+# a "version" line, then "oid sha256:<64 hex>", then "size <bytes>", with no
+# other content. Any raw-file host (raw.githubusercontent.com, Hugging Face
+# resolve URLs, GitLab, etc.) that stores a large file under LFS will serve
+# exactly this text — a few hundred bytes standing in for the real payload —
+# for the *pointer* blob, not the actual dataset content. It is valid UTF-8
+# and, because "oid ..."/"size ..." have no comma, sails through
+# csv.DictReader as a bogus one-column, two-row "dataset" (matches this
+# module's own header + 2 data rows shape), so it must be rejected here by
+# its literal spec structure rather than left to look like a real CSV.
+_GIT_LFS_POINTER_RE = re.compile(
+    r"\Aversion https://git-lfs\.github\.com/spec/v1\r?\n"
+    r"oid sha256:[0-9a-f]{64}\r?\n"
+    r"size [0-9]+\r?\n?",
+)
+
 
 class UserDatasetError(Exception):
     """Malformed/unreadable local dataset file."""
+
+
+def _reject_non_csv_signature(text: str) -> None:
+    stripped = text.lstrip("﻿ \t\r\n")
+    if not stripped:
+        return
+    if _GIT_LFS_POINTER_RE.match(stripped):
+        raise UserDatasetError(
+            "this URL returned a Git LFS pointer file, not the actual dataset "
+            "content — the file is stored via Git LFS and the host served the "
+            "pointer blob instead of the real data; resolve/download the actual "
+            "LFS object and host that file directly"
+        )
+    lowered = stripped[:15].lower()
+    if lowered.startswith(("<!doctype html", "<html")):
+        raise UserDatasetError(
+            "this URL points to a webpage (HTML), not a raw CSV dataset — "
+            "use a direct/raw dataset file URL instead"
+        )
+    if stripped[0] in _NON_CSV_LEADING_CHARS:
+        raise UserDatasetError(
+            "file content is not CSV (looks like HTML/XML/JSON, not a raw CSV dataset)"
+        )
 
 
 def _decode(data: bytes) -> io.StringIO:
@@ -26,6 +74,7 @@ def _decode(data: bytes) -> io.StringIO:
         text = data.decode("utf-8-sig")
     except UnicodeDecodeError as exc:
         raise UserDatasetError(f"file is not valid UTF-8 text: {exc}") from exc
+    _reject_non_csv_signature(text)
     return io.StringIO(text)
 
 

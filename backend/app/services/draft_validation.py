@@ -30,7 +30,15 @@ class RobustnessValidationResult:
     n_excluded: int = 0
 
 
-def _validate_label_mapping(label_mapping: list[dict], target_values: set[str], snapshot: ModelLabelSnapshot) -> list[str]:
+def _validate_label_mapping(
+    label_mapping: list[dict], target_values: set[str], snapshot: ModelLabelSnapshot
+) -> tuple[list[str], set[int]]:
+    """Returns (errors, reachable_indices) -- reachable_indices is every
+    model_label_index a *valid* label_mapping entry actually points at, i.e.
+    every index ground truth can attain once this mapping is applied. Used
+    by callers (e.g. positive_label_index validation) that must not accept
+    an index merely because the model happens to have it -- it also has to
+    be one this specific mapping can ever produce."""
     errors: list[str] = []
     valid_entries = []
     for entry in label_mapping:
@@ -39,15 +47,36 @@ def _validate_label_mapping(label_mapping: list[dict], target_values: set[str], 
             continue
         valid_entries.append(entry)
 
+    # A dataset_value appearing more than once is a contradiction, not a
+    # policy choice: one ground-truth row can only carry one true label, so
+    # two entries for the same dataset_value can never both be honored.
+    # Reject explicitly rather than silently keeping whichever entry a
+    # downstream dict comprehension happens to see last.
+    seen_values: dict[str, int] = {}
+    duplicate_values: set[str] = set()
+    for entry in valid_entries:
+        value = entry["dataset_value"]
+        if value in seen_values:
+            duplicate_values.add(value)
+        else:
+            seen_values[value] = 0
+    if duplicate_values:
+        errors.append(
+            f"label_mapping has duplicate entries for dataset_value(s): {sorted(duplicate_values)}"
+        )
+
     mapped_values = {entry["dataset_value"] for entry in valid_entries}
     missing = target_values - mapped_values
     if missing:
         errors.append(f"label_mapping is missing entries for observed target values: {sorted(missing)}")
+    reachable_indices: set[int] = set()
     for entry in valid_entries:
         idx = entry["model_label_index"]
         if idx not in snapshot.id2label:
             errors.append(f"label_mapping entry {entry!r} references unknown model_label_index={idx}")
-    return errors
+        else:
+            reachable_indices.add(idx)
+    return errors, reachable_indices
 
 
 def _observed_target_values(data: bytes, target_column: str) -> set[str]:
@@ -71,6 +100,7 @@ def validate_fairness_config(
     label_mapping: list[dict],
     model_label_snapshot: ModelLabelSnapshot,
     min_group_n: int,
+    positive_label_index: int = 1,
 ) -> FairnessValidationResult:
     errors: list[str] = []
     try:
@@ -83,7 +113,26 @@ def validate_fairness_config(
     except UserDatasetError as exc:
         return FairnessValidationResult(ok=False, errors=[f"could not read target_column={target_column!r}: {exc}"])
 
-    errors.extend(_validate_label_mapping(label_mapping, target_values, model_label_snapshot))
+    mapping_errors, reachable_indices = _validate_label_mapping(
+        label_mapping, target_values, model_label_snapshot
+    )
+    errors.extend(mapping_errors)
+
+    # positive_label_index must be reachable: not merely a valid model
+    # index, but one this specific label_mapping actually points a dataset
+    # value at. An index the model has but no mapped dataset value ever
+    # produces means ground truth can never take that value -- TPR/F1 are
+    # then computed against a class that structurally never occurs (tp is
+    # always 0), producing a numerically well-formed but meaningless result
+    # that still reports EVALUATED at high confidence. Confirmed by real
+    # execution this session: positive_label_index defaulted to 1 while the
+    # mapping only ever produced 0/2, giving TPR=0/F1=0 for every group.
+    if positive_label_index not in reachable_indices:
+        errors.append(
+            f"positive_label_index={positive_label_index} is not reachable by this "
+            f"label_mapping (mapped model_label_index values: {sorted(reachable_indices)}) "
+            "-- ground truth could never attain it, making DP/EO/F1 meaningless"
+        )
 
     group_preview = [
         {"value": g["value"], "count": g["count"], "meets_min_group_n": g["count"] >= min_group_n}
@@ -114,7 +163,7 @@ def validate_robustness_config(
     except UserDatasetError as exc:
         return RobustnessValidationResult(ok=False, errors=[f"could not read target_column={target_column!r}: {exc}"])
 
-    errors = _validate_label_mapping(label_mapping, target_values, model_label_snapshot)
+    errors, _reachable_indices = _validate_label_mapping(label_mapping, target_values, model_label_snapshot)
 
     try:
         reader = csv.DictReader(_decode(dataset_bytes))

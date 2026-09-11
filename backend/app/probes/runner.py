@@ -17,7 +17,6 @@ from app.schemas.internal import EvaluateModelPayload
 from app.schemas.probe_config import parse_probe_config
 from app.storage.evidence_store import (
     DatasetContentStore,
-    DatasetStore,
     EvidenceStore,
     EvidenceStoreError,
 )
@@ -56,7 +55,6 @@ def run_all_probes(
     registry: ProbeRegistry | None = None,
     model_revision: str | None = None,
     model_checksum: str | None = None,
-    dataset_store: DatasetStore | None = None,
     dataset_content_store: DatasetContentStore | None = None,
 ) -> list[ProbeOutput]:
     """Run F→R→I→E→S; persist each via ProbeResultRepository; return outputs.
@@ -82,7 +80,6 @@ def run_all_probes(
         model_revision=model_revision,
         model_checksum=model_checksum,
         evaluation_contract=contract,
-        dataset_store=dataset_store,
         dataset_content_store=dataset_content_store,
         session=session,
     )

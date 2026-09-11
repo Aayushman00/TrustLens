@@ -100,3 +100,119 @@ def test_post_dataset_fetches_rejects_ssrf_target(
 ) -> None:
     resp = api_client.post("/v1/dataset-fetches", json={"source_url": "http://127.0.0.1/x.csv"})
     assert resp.status_code == 422
+
+
+def test_post_dataset_fetches_rejects_html_response(
+    api_client: TestClient,
+    httpserver,
+    _localhost_allowed_for_fetch,
+    dataset_content_store_override: FakeDatasetContentStore,
+    db_session,
+) -> None:
+    """A webpage returned where a raw CSV was expected (e.g. a Hugging Face URL
+    resolving to an HTML page) must be rejected at the ingestion boundary --
+    not accepted as a bogus one-column "<!doctype html>" dataset."""
+    html_body = b"<!doctype html>\n<html><head><title>Not a dataset</title></head><body>hi</body></html>\n"
+    httpserver.expect_request("/not-a-dataset").respond_with_data(
+        html_body, content_type="text/csv"  # server lies about content-type on purpose
+    )
+    url = httpserver.url_for("/not-a-dataset")
+
+    resp = api_client.post("/v1/dataset-fetches", json={"source_url": url})
+
+    assert resp.status_code == 422, resp.text
+    assert "html" in resp.json()["message"].lower()
+
+    from app.db.models import DatasetContent, DatasetFetchEvent
+
+    assert db_session.query(DatasetContent).count() == 0
+
+    events = db_session.query(DatasetFetchEvent).filter_by(source_url=url).all()
+    assert len(events) == 1
+    assert events[0].resolved_content_id is None
+    assert events[0].error_message is not None
+    assert "not a valid csv" in events[0].error_message.lower() or "html" in events[0].error_message.lower()
+
+
+def test_post_dataset_fetches_rejects_json_response(
+    api_client: TestClient,
+    httpserver,
+    _localhost_allowed_for_fetch,
+    dataset_content_store_override: FakeDatasetContentStore,
+) -> None:
+    """Audit finding: a JSON API-error payload (also valid UTF-8 text) must be
+    rejected the same way as HTML, not silently parsed as a one-column CSV."""
+    httpserver.expect_request("/api-error").respond_with_data(
+        b'{"error": "not found"}', content_type="text/csv"
+    )
+    url = httpserver.url_for("/api-error")
+
+    resp = api_client.post("/v1/dataset-fetches", json={"source_url": url})
+
+    assert resp.status_code == 422, resp.text
+
+
+def test_post_dataset_fetches_rejects_git_lfs_pointer(
+    api_client: TestClient,
+    httpserver,
+    _localhost_allowed_for_fetch,
+    dataset_content_store_override: FakeDatasetContentStore,
+    db_session,
+) -> None:
+    """A dataset URL backed by Git LFS (e.g. a GitHub raw URL for an
+    LFS-tracked file, or a Hugging Face resolve URL) serves the LFS pointer
+    text, not the actual dataset -- must be rejected at ingestion, not
+    stored as DatasetContent and not surfaced to column/label-mapping UI."""
+    pointer_body = (
+        b"version https://git-lfs.github.com/spec/v1\n"
+        b"oid sha256:" + b"b" * 64 + b"\n"
+        b"size 3421431\n"
+    )
+    httpserver.expect_request("/tweets.csv").respond_with_data(
+        pointer_body, content_type="text/plain; charset=utf-8"
+    )
+    url = httpserver.url_for("/tweets.csv")
+
+    resp = api_client.post("/v1/dataset-fetches", json={"source_url": url})
+
+    assert resp.status_code == 422, resp.text
+    assert "git lfs" in resp.json()["message"].lower()
+
+    from app.db.models import DatasetContent, DatasetFetchEvent
+
+    # No DatasetContent must ever be created for pointer bytes -- there is
+    # nothing for a column-role/label-mapping UI to load.
+    assert db_session.query(DatasetContent).count() == 0
+
+    events = db_session.query(DatasetFetchEvent).filter_by(source_url=url).all()
+    assert len(events) == 1
+    assert events[0].resolved_content_id is None
+    assert events[0].error_message is not None
+    assert "git lfs" in events[0].error_message.lower()
+
+
+def test_post_dataset_fetches_accepts_real_csv(
+    api_client: TestClient,
+    httpserver,
+    _localhost_allowed_for_fetch,
+    dataset_content_store_override: FakeDatasetContentStore,
+    db_session,
+) -> None:
+    """Regression guard: the Git LFS pointer check must not reject a normal
+    CSV dataset -- normal ingestion keeps working end to end."""
+    csv_body = b"text,label\nhello,1\nworld,0\n"
+    httpserver.expect_request("/real.csv").respond_with_data(
+        csv_body, content_type="text/csv"
+    )
+    url = httpserver.url_for("/real.csv")
+
+    resp = api_client.post("/v1/dataset-fetches", json={"source_url": url})
+
+    assert resp.status_code == 201, resp.text
+    body = resp.json()
+    assert body["row_count"] == 2
+    assert {c["name"] for c in body["columns"]} == {"text", "label"}
+
+    from app.db.models import DatasetContent
+
+    assert db_session.query(DatasetContent).count() == 1

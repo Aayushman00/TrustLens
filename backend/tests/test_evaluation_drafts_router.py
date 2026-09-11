@@ -53,6 +53,23 @@ def test_full_draft_lifecycle(api_client: TestClient, seeded_model, seeded_datas
     assert get_resp.json()["fairness_confirmed"]
 
 
+def test_get_draft_exposes_model_label_snapshot_over_http(
+    api_client: TestClient, seeded_model
+) -> None:
+    """The label-mapping UI reads model_label_snapshot straight off
+    GET /v1/evaluation-drafts/{id} -- verify the real JSON wire shape (id2label
+    keys always come back as JSON strings) matches what the frontend expects,
+    without needing any dimension to have been configured first."""
+    created = api_client.post("/v1/evaluation-drafts", json={"model_id": seeded_model.id}).json()
+
+    with patch("app.services.evaluation_draft_service.inspect_model_config", return_value=FAKE_SNAPSHOT):
+        get_resp = api_client.get(f"/v1/evaluation-drafts/{created['id']}")
+
+    assert get_resp.status_code == 200, get_resp.text
+    snapshot = get_resp.json()["model_label_snapshot"]
+    assert snapshot == {"num_labels": 2, "id2label": {"0": "NEGATIVE", "1": "POSITIVE"}}
+
+
 def test_create_draft_unknown_model_returns_404(api_client: TestClient) -> None:
     resp = api_client.post("/v1/evaluation-drafts", json={"model_id": 999999})
     assert resp.status_code == 404

@@ -62,11 +62,29 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
 
 
 def configure_request_id_logging() -> None:
-    """Attach RequestIdFilter to root / trustlens loggers (idempotent)."""
+    """Attach RequestIdFilter to root/trustlens loggers AND root's handlers
+    (idempotent).
+
+    A Logger's own ``.filters`` only run for records that *originate* at
+    that logger -- propagation from an unrelated logger (e.g. httpx's own
+    ``logging.getLogger("httpx")``, emitted from its internal thread pool)
+    only re-checks each **handler's** filters as the record climbs to
+    ancestors, never the ancestor logger's own filters. Attaching the filter
+    only to loggers (as before) left every non-trustlens logger's records
+    reaching the root handler with no ``request_id`` attribute at all, and
+    the format string (``%(request_id)s``) raised on every such line --
+    aborting whatever request happened to be in flight when it was logged,
+    even though the actual work (e.g. the dataset fetch) had already
+    succeeded. Attaching to the handler closes this for every logger,
+    regardless of origin.
+    """
     root = logging.getLogger()
     filt = RequestIdFilter()
     if not any(isinstance(f, RequestIdFilter) for f in root.filters):
         root.addFilter(filt)
+    for handler in root.handlers:
+        if not any(isinstance(f, RequestIdFilter) for f in handler.filters):
+            handler.addFilter(filt)
     for name in ("trustlens.api", "trustlens.api.access"):
         log = logging.getLogger(name)
         if not any(isinstance(f, RequestIdFilter) for f in log.filters):
