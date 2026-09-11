@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { apiFetch } from "../api/client";
 import type { EvaluationList, EvaluationRead, EvaluationStatus } from "../api/types";
 import ErrorNotice from "../components/ErrorNotice";
-import Spinner from "../components/Spinner";
+import Skeleton from "../components/Skeleton";
 import StatusBadge from "../components/StatusBadge";
 import { contractFamilyLabel, getEvaluationContract, shortRevision } from "../lib/contract";
 import { fmtDateTime } from "../lib/format";
@@ -148,7 +148,7 @@ export default function EvaluationsHistoryPage() {
             </table>
           </div>
         )}
-        {loading ? <Spinner label="Loading…" /> : null}
+        {loading ? <Skeleton rows={5} height="2.2rem" /> : null}
         {nextCursor && !loading ? (
           <p>
             <button type="button" className="btn btn-secondary" onClick={() => void loadPage(nextCursor)}>
