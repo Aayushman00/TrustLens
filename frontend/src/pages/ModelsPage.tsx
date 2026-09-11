@@ -48,7 +48,7 @@ export default function ModelsPage() {
       {items.length === 0 && !loading ? (
         <div className="card">
           <p className="empty">
-            Nothing registered yet — <Link to="/models/import">import a model</Link>.
+            No models registered yet — <Link to="/models/import">import one first</Link>.
           </p>
         </div>
       ) : (
