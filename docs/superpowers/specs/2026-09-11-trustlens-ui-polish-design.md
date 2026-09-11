@@ -79,13 +79,24 @@ outline-offset: 2px;
 ```
 **Deviation from the original prompt, flagged for review:** the prompt's instruction text says to reuse `outline: 2px solid var(--accent)` — but `--accent` (green, `#1e6b4f`) is a different token from the one actually used (`--ink-accent`, blue, `#1f3a5f`). Since the stated goal is "reuse the existing pattern exactly — don't invent a second focus style," and the only real precedent uses `--ink-accent`, this spec uses `--ink-accent` for every new rule below. If you want `--accent` instead, say so before the plan is written — it's a one-line change once decided.
 
-Add to the elements confirmed missing it (grepped — none of these currently have `:focus-visible`):
+**Second deviation, audited and locked:** there is no `<input type="radio">` anywhere in the codebase — grepped. `.radio-row` (`ReviewPage.tsx:274`) actually wraps a `type="checkbox"` (`ReviewPage.tsx:276`), not a radio. The only two checkboxes in the app are `CreateEvaluationDraftPage.tsx:241` and `ReviewPage.tsx:276`; the "radios" half of the original prompt's bullet is dead scope.
+
+Checkboxes are also not cleanly "missing" `:focus-visible` — the existing bare `input:focus, select:focus, textarea:focus` rule (`index.css:449-454`, `outline: 2px solid var(--accent-soft); border-color: var(--accent)`) already matches them on *every* focus, mouse included, not just keyboard. Bolting on a separate `input[type="checkbox"]:focus-visible` rule would leave two competing focus treatments on the same element (accent-soft on mouse focus, ink-accent on keyboard focus) — a worse UX bug than the scope creep of touching the shared rule.
+
+**Locked decision:** convert the shared rule itself to `:focus-visible`, unifying every text input/select/textarea/checkbox under one focus treatment instead of adding a parallel checkbox-only rule:
+```css
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--accent-soft);
+  border-color: var(--accent);
+}
+```
+This keeps the existing `--accent-soft`/`--accent` colors (that pair is untouched — only the pseudo-class changes), and is separate from the new `--ink-accent` `:focus-visible` rules added for elements that had no focus treatment at all:
 ```css
 .tab:focus-visible,
 .choice-card:focus-visible,
-.dossier-section > summary:focus-visible,
-input[type="checkbox"]:focus-visible,
-input[type="radio"]:focus-visible {
+.dossier-section > summary:focus-visible {
   outline: 2px solid var(--ink-accent);
   outline-offset: 2px;
 }
