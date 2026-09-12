@@ -1,12 +1,12 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { apiFetch, ApiError } from "../api/client";
+import { apiFetch, apiUpload, ApiError } from "../api/client";
 import DatasetIntakeForm from "./DatasetIntakeForm";
 
 vi.mock("../api/client", async () => {
   const actual = await vi.importActual<typeof import("../api/client")>("../api/client");
-  return { ...actual, apiFetch: vi.fn() };
+  return { ...actual, apiFetch: vi.fn(), apiUpload: vi.fn() };
 });
 
 describe("DatasetIntakeForm", () => {
@@ -123,5 +123,42 @@ describe("DatasetIntakeForm", () => {
     // The parent must be told to drop its own stale dataset/label-mapping
     // state the instant the replacement attempt begins, not only on success.
     expect(onFetchStart).toHaveBeenCalledTimes(2);
+  });
+
+  it("uploads a local CSV file and reports content to parent", async () => {
+    vi.mocked(apiUpload).mockResolvedValueOnce({
+      id: "content-2",
+      content_hash: "def",
+      byte_size: 42,
+      format: "csv",
+      row_count: 5,
+      columns: [{ name: "label", inferred_type: "numeric" }],
+      created_at: "2026-01-01T00:00:00Z",
+    });
+    const onReady = vi.fn();
+    render(<DatasetIntakeForm onContentReady={onReady} />);
+
+    const file = new File(["text,label\nhi,0\n"], "local.csv", { type: "text/csv" });
+    fireEvent.change(screen.getByLabelText(/upload a local csv/i), { target: { files: [file] } });
+
+    await waitFor(() => expect(onReady).toHaveBeenCalledWith(expect.objectContaining({ id: "content-2" })));
+    expect(screen.getByText(/5 rows/i)).toBeInTheDocument();
+    expect(apiUpload).toHaveBeenCalledWith("/v1/dataset-uploads", file);
+  });
+
+  it("surfaces an upload rejection without leaving the form stuck loading", async () => {
+    vi.mocked(apiUpload).mockRejectedValueOnce(
+      new ApiError(422, {
+        code: "VALIDATION_ERROR",
+        message: "uploaded file is not a valid CSV: CSV file has no header row",
+        details: {},
+      }),
+    );
+    render(<DatasetIntakeForm onContentReady={vi.fn()} />);
+
+    const file = new File(["not,a,csv,header,issue"], "bad.csv", { type: "text/csv" });
+    fireEvent.change(screen.getByLabelText(/upload a local csv/i), { target: { files: [file] } });
+
+    expect(await screen.findByText(/no header row/i)).toBeInTheDocument();
   });
 });
