@@ -7,7 +7,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import type { EvaluationEventRead } from "../api/types";
-import EvaluationTimeline from "./EvaluationTimeline";
+import EvaluationTimeline, { attemptNumbers, gapLabel } from "./EvaluationTimeline";
 
 function event(overrides: Partial<EvaluationEventRead>): EvaluationEventRead {
   return {
@@ -60,5 +60,49 @@ describe("EvaluationTimeline", () => {
     // placeholder like "just now" or the current wall-clock time.
     const item = screen.getByRole("listitem");
     expect(item.textContent).not.toMatch(/just now/i);
+  });
+});
+
+describe("gapLabel", () => {
+  it("returns 'same instant' for sub-second differences", () => {
+    expect(gapLabel("2026-01-01T00:00:00.000Z", "2026-01-01T00:00:00.400Z")).toBe("same instant");
+  });
+
+  it("returns '+Ns' for a sub-minute gap", () => {
+    expect(gapLabel("2026-01-01T00:00:00Z", "2026-01-01T00:00:42Z")).toBe("+42s");
+  });
+
+  it("returns '+Nm' for an exact-minute gap", () => {
+    expect(gapLabel("2026-01-01T00:00:00Z", "2026-01-01T00:03:00Z")).toBe("+3m");
+  });
+
+  it("returns '+Nm Ss' for a gap with both minutes and seconds", () => {
+    expect(gapLabel("2026-01-01T00:00:00Z", "2026-01-01T00:03:05Z")).toBe("+3m 5s");
+  });
+
+  it("returns null for an unparseable date", () => {
+    expect(gapLabel("not-a-date", "2026-01-01T00:00:00Z")).toBeNull();
+  });
+});
+
+describe("attemptNumbers", () => {
+  it("assigns attempt 1 to every event when there is no requeue", () => {
+    const events = [
+      event({ id: 1, event_type: "evaluation_created" }),
+      event({ id: 2, event_type: "evaluation_started" }),
+      event({ id: 3, event_type: "evaluation_finalized" }),
+    ];
+    expect(attemptNumbers(events)).toEqual([1, 1, 1]);
+  });
+
+  it("increments after a requeue, keeping the requeue event itself on the old attempt", () => {
+    const events = [
+      event({ id: 1, event_type: "evaluation_created" }),
+      event({ id: 2, event_type: "evaluation_requeued" }),
+      event({ id: 3, event_type: "evaluation_started" }),
+      event({ id: 4, event_type: "evaluation_requeued" }),
+      event({ id: 5, event_type: "evaluation_finalized" }),
+    ];
+    expect(attemptNumbers(events)).toEqual([1, 1, 2, 2, 3]);
   });
 });
