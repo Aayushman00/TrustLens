@@ -61,6 +61,28 @@ describe("EvaluationTimeline", () => {
     const item = screen.getByRole("listitem");
     expect(item.textContent).not.toMatch(/just now/i);
   });
+
+  it("labels a re-queued evaluation and summarizes its enqueue detail like a fresh create", () => {
+    const events = [
+      event({
+        id: 1,
+        event_type: "evaluation_requeued",
+        detail: { enqueued: true, task_id: "abcdef0123456789" },
+      }),
+    ];
+    render(<EvaluationTimeline events={events} />);
+    const item = screen.getByRole("listitem");
+    expect(item).toHaveTextContent("Evaluation re-queued");
+    expect(item).toHaveTextContent("Task abcdef012345");
+  });
+
+  it("shows the stuck-PENDING warning on a requeue whose enqueue also failed", () => {
+    const events = [
+      event({ id: 1, event_type: "evaluation_requeued", detail: { enqueued: false } }),
+    ];
+    render(<EvaluationTimeline events={events} />);
+    expect(screen.getByText(/may be stuck at PENDING/i)).toBeInTheDocument();
+  });
 });
 
 describe("gapLabel", () => {

@@ -12,6 +12,7 @@ import { fmtDateTime } from "../lib/format";
 
 const EVENT_LABELS: Record<string, string> = {
   evaluation_created: "Evaluation created",
+  evaluation_requeued: "Evaluation re-queued",
   evaluation_started: "Evaluation started",
   probes_completed: "Probes completed",
   agent_completed: "O/S/D representation proposed",
@@ -49,16 +50,20 @@ function labelFor(eventType: string): string {
   return EVENT_LABELS[eventType] ?? eventType.replaceAll("_", " ");
 }
 
+function enqueueDetailSummary(detail: Record<string, unknown>): string | null {
+  const enqueued = detail.enqueued;
+  if (enqueued === false) {
+    return "Not enqueued — the evaluation may be stuck at PENDING (no worker task was sent).";
+  }
+  return typeof detail.task_id === "string" ? `Task ${String(detail.task_id).slice(0, 12)}…` : null;
+}
+
 function detailSummary(eventType: string, detail: Record<string, unknown> | null): string | null {
   if (!detail) return null;
   switch (eventType) {
-    case "evaluation_created": {
-      const enqueued = detail.enqueued;
-      if (enqueued === false) {
-        return "Not enqueued — the evaluation may be stuck at PENDING (no worker task was sent).";
-      }
-      return typeof detail.task_id === "string" ? `Task ${String(detail.task_id).slice(0, 12)}…` : null;
-    }
+    case "evaluation_created":
+    case "evaluation_requeued":
+      return enqueueDetailSummary(detail);
     case "probes_completed":
       return typeof detail.probe_count === "number" ? `${detail.probe_count} probe(s) ran` : null;
     case "evaluation_failed":
