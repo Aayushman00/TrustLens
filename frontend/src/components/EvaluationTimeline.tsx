@@ -22,6 +22,29 @@ const EVENT_LABELS: Record<string, string> = {
   report_generated: "Report generated",
 };
 
+export function gapLabel(prevIso: string, currIso: string): string | null {
+  const prev = new Date(prevIso).getTime();
+  const curr = new Date(currIso).getTime();
+  if (Number.isNaN(prev) || Number.isNaN(curr)) return null;
+  const diffMs = curr - prev;
+  if (diffMs < 1000) return "same instant";
+  const totalSeconds = Math.round(diffMs / 1000);
+  if (totalSeconds < 60) return `+${totalSeconds}s`;
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return seconds === 0 ? `+${minutes}m` : `+${minutes}m ${seconds}s`;
+}
+
+export function attemptNumbers(events: EvaluationEventRead[]): number[] {
+  const result: number[] = [];
+  let attempt = 1;
+  for (const evt of events) {
+    result.push(attempt);
+    if (evt.event_type === "evaluation_requeued") attempt += 1;
+  }
+  return result;
+}
+
 function labelFor(eventType: string): string {
   return EVENT_LABELS[eventType] ?? eventType.replaceAll("_", " ");
 }
