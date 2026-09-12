@@ -4,9 +4,9 @@
  * column preview. Scope is intake + preview only — column-to-role mapping
  * (text/target/sensitive column selection) is a separate step (Task 3.5).
  */
-import { useState, type FormEvent } from "react";
+import { useState, type ChangeEvent, type FormEvent } from "react";
 
-import { apiFetch } from "../api/client";
+import { apiFetch, apiUpload } from "../api/client";
 import type { DatasetContentRead } from "../api/types";
 import ErrorNotice from "./ErrorNotice";
 
@@ -55,6 +55,25 @@ export default function DatasetIntakeForm({
     }
   }
 
+  async function uploadDataset(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file after a failed upload
+    if (!file) return;
+    setLoading(true);
+    setError(null);
+    setContent(null);
+    onFetchStart?.();
+    try {
+      const result = await apiUpload<DatasetContentRead>("/v1/dataset-uploads", file);
+      setContent(result);
+      onContentReady(result);
+    } catch (err) {
+      setError(err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div>
       <ErrorNotice error={error} />
@@ -73,6 +92,13 @@ export default function DatasetIntakeForm({
           {loading ? "Fetching…" : "Fetch dataset"}
         </button>
       </form>
+
+      <div className="form-grid" style={{ marginTop: "0.75rem" }}>
+        <label>
+          Or upload a local CSV
+          <input type="file" accept=".csv,text/csv" disabled={loading} onChange={(e) => void uploadDataset(e)} />
+        </label>
+      </div>
 
       {content ? (
         <div className="dimension-limitations" style={{ marginTop: "1rem" }}>
