@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, File, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
@@ -17,6 +17,9 @@ from app.storage.evidence_store import DatasetContentStore, get_dataset_content_
 
 router = APIRouter(prefix="/dataset-fetches", tags=["dataset-content"])
 content_router = APIRouter(prefix="/dataset-contents", tags=["dataset-content"])
+upload_router = APIRouter(prefix="/dataset-uploads", tags=["dataset-content"])
+
+_MAX_UPLOAD_BYTES = 10_000_000
 
 
 def get_dataset_content_store_dep() -> DatasetContentStore | None:
@@ -43,6 +46,17 @@ def create_dataset_fetch(
     service: DatasetContentService = Depends(_get_service),
 ) -> DatasetContentRead:
     return service.fetch_and_store(body)
+
+
+@upload_router.post("", response_model=DatasetContentRead, status_code=status.HTTP_201_CREATED)
+async def create_dataset_upload(
+    file: UploadFile = File(...),
+    service: DatasetContentService = Depends(_get_service),
+) -> DatasetContentRead:
+    data = await file.read(_MAX_UPLOAD_BYTES + 1)
+    if len(data) > _MAX_UPLOAD_BYTES:
+        raise ValidationAppError(f"uploaded file exceeds {_MAX_UPLOAD_BYTES} byte limit")
+    return service.store_uploaded_file(data, filename=file.filename or "upload.csv")
 
 
 @content_router.get("/{content_id}", response_model=DatasetContentRead)

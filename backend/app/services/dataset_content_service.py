@@ -76,3 +76,45 @@ class DatasetContentService:
             resolved_content_id=content.id,
         )
         return DatasetContentRead.model_validate(content, from_attributes=True)
+
+    def store_uploaded_file(self, data: bytes, *, filename: str) -> DatasetContentRead:
+        """Same ingestion/validation/storage path as :meth:`fetch_and_store`,
+        for a file the caller already has bytes for (a local upload) instead
+        of one fetched from a URL. Reuses sniff_columns/count_rows verbatim
+        (format-agnostic over raw bytes) -- no separate validation path to
+        drift from the URL-fetch one. DatasetFetchEvent.source_url is
+        NOT NULL with no upload-specific column, so a local upload is
+        recorded with a synthetic ``local-upload://<filename>`` marker
+        rather than a schema migration.
+        """
+        source_marker = f"local-upload://{filename}"
+        try:
+            columns = sniff_columns(data)
+            row_count = count_rows(data)
+        except Exception as exc:
+            self._event_repo.create(
+                source_url=source_marker,
+                http_status=None,
+                content_type=None,
+                resolved_content_id=None,
+                error_message=f"malformed CSV: {exc}",
+            )
+            raise ValidationAppError(f"uploaded file is not a valid CSV: {exc}") from exc
+
+        storage_uri, content_hash = self._store.put(data, format=_SUPPORTED_FORMAT)
+        bare_content_hash = content_hash.removeprefix("sha256:")
+        content = self._content_repo.upsert(
+            content_hash=bare_content_hash,
+            storage_uri=storage_uri,
+            byte_size=len(data),
+            format=_SUPPORTED_FORMAT,
+            row_count=row_count,
+            columns=columns,
+        )
+        self._event_repo.create(
+            source_url=source_marker,
+            http_status=None,
+            content_type=None,
+            resolved_content_id=content.id,
+        )
+        return DatasetContentRead.model_validate(content, from_attributes=True)
