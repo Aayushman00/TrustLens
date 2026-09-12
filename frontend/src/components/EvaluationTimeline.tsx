@@ -7,8 +7,9 @@
  * probe results, O/S/D, and FRIES remain sourced from their own existing
  * displays elsewhere on this page.
  */
+import type { ReactNode } from "react";
 import type { EvaluationEventRead } from "../api/types";
-import { fmtDateTime } from "../lib/format";
+import { fmtTimeSeconds } from "../lib/format";
 
 const EVENT_LABELS: Record<string, string> = {
   evaluation_created: "Evaluation created",
@@ -88,42 +89,83 @@ function detailSummary(eventType: string, detail: Record<string, unknown> | null
   }
 }
 
-export default function EvaluationTimeline({ events }: { events: EvaluationEventRead[] | null }) {
+export default function EvaluationTimeline({
+  events,
+  live = false,
+}: {
+  events: EvaluationEventRead[] | null;
+  live?: boolean;
+}) {
+  const liveBadge = live ? (
+    <div className="live-badge">
+      <span className="live-badge-dot" />
+      Live — updating automatically
+    </div>
+  ) : null;
+
   if (events == null) {
-    return <p className="muted">Loading timeline…</p>;
+    return (
+      <>
+        {liveBadge}
+        <p className="muted">Loading timeline…</p>
+      </>
+    );
   }
   if (events.length === 0) {
     return (
-      <p className="empty">
-        No recorded timeline events for this evaluation — either it predates event
-        tracking, or it has not progressed yet.
-      </p>
+      <>
+        {liveBadge}
+        <p className="empty">
+          No recorded timeline events for this evaluation — either it predates event
+          tracking, or it has not progressed yet.
+        </p>
+      </>
     );
   }
+
+  const attempts = attemptNumbers(events);
+  const showAttempts = attempts[attempts.length - 1] > 1;
+
   return (
-    <ol className="timeline-list" style={{ listStyle: "none", padding: 0, margin: 0 }}>
-      {events.map((event) => {
-        const summary = detailSummary(event.event_type, event.detail);
-        return (
-          <li
-            key={event.id}
-            style={{
-              display: "flex",
-              gap: "0.75rem",
-              padding: "0.35rem 0",
-              borderBottom: "1px solid var(--border)",
-            }}
-          >
-            <span className="mono muted" style={{ fontSize: "0.78rem", minWidth: "9.5rem" }}>
-              {fmtDateTime(event.created_at)}
-            </span>
-            <span style={{ flex: 1 }}>
-              <strong>{labelFor(event.event_type)}</strong>
-              {summary ? <span className="muted"> — {summary}</span> : null}
-            </span>
-          </li>
-        );
-      })}
-    </ol>
+    <>
+      {liveBadge}
+      <ol className="timeline-list" style={{ listStyle: "none", padding: 0, margin: 0 }}>
+        {events.map((event, idx) => {
+          const summary = detailSummary(event.event_type, event.detail);
+          const gap = idx > 0 ? gapLabel(events[idx - 1].created_at, event.created_at) : null;
+          const hasDetail = event.detail != null && Object.keys(event.detail).length > 0;
+          const rows: ReactNode[] = [];
+
+          if (showAttempts && (idx === 0 || attempts[idx] !== attempts[idx - 1])) {
+            rows.push(
+              <li key={`attempt-${attempts[idx]}`} className="timeline-attempt-divider">
+                Attempt {attempts[idx]}
+              </li>,
+            );
+          }
+
+          rows.push(
+            <li key={event.id} className="timeline-row">
+              <span className="mono muted timeline-row-time">
+                {fmtTimeSeconds(event.created_at)}
+                {gap ? <span className="timeline-row-gap"> · {gap}</span> : null}
+              </span>
+              <span className="timeline-row-body">
+                <strong>{labelFor(event.event_type)}</strong>
+                {summary ? <span className="muted"> — {summary}</span> : null}
+                {hasDetail ? (
+                  <details className="timeline-row-details">
+                    <summary>Details</summary>
+                    <pre className="mono">{JSON.stringify(event.detail, null, 2)}</pre>
+                  </details>
+                ) : null}
+              </span>
+            </li>,
+          );
+
+          return rows;
+        })}
+      </ol>
+    </>
   );
 }

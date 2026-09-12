@@ -406,7 +406,7 @@ export default function EvaluationDetailPage() {
           This is evidence of what occurred — not a separate status; the evaluation's
           own status, probes, O/S/D, and FRIES above remain authoritative.
         </p>
-        <EvaluationTimeline events={events} />
+        <EvaluationTimeline events={events} live={isActive} />
       </div>
     </>
   );
