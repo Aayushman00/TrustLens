@@ -274,11 +274,17 @@ test("Continue to review creates the real evaluation and navigates to it", async
   fireEvent.click(continueButton);
 
   // The exact contract this session's curl call verified the backend
-  // accepts: draft_id + evaluation_mode, POSTed to /v1/evaluations-v2.
+  // accepts: draft_id + evaluation_mode + assessment_engine, POSTed to
+  // /v1/evaluations-v2. assessment_engine defaults to "deterministic"
+  // (the toggle below is unchecked unless the user opts in).
   await waitFor(() =>
     expect(apiFetch).toHaveBeenCalledWith("/v1/evaluations-v2", {
       method: "POST",
-      body: { draft_id: "draft-1", evaluation_mode: "AI_ASSISTED" },
+      body: {
+        draft_id: "draft-1",
+        evaluation_mode: "AI_ASSISTED",
+        assessment_engine: "deterministic",
+      },
     }),
   );
 
@@ -286,6 +292,31 @@ test("Continue to review creates the real evaluation and navigates to it", async
   // standing in for EvaluationDetailPage renders, proving the navigation
   // actually fired rather than the button silently doing nothing.
   await screen.findByTestId("evaluation-detail-stub");
+});
+
+test("checking the legacy-heuristic toggle sends assessment_engine: legacy_heuristic", async () => {
+  await selectModelAndCreateDraft();
+  await fillAndConfirmFairness();
+
+  const continueButton = screen.getByRole("button", { name: /continue to review/i });
+  await waitFor(() => expect(continueButton).not.toBeDisabled());
+
+  fireEvent.click(screen.getByLabelText(/use legacy heuristic scoring/i));
+
+  const CREATED_EVALUATION = { id: "eval-999", model_id: 1, status: "PENDING" };
+  vi.mocked(apiFetch).mockResolvedValueOnce(CREATED_EVALUATION);
+  fireEvent.click(continueButton);
+
+  await waitFor(() =>
+    expect(apiFetch).toHaveBeenCalledWith("/v1/evaluations-v2", {
+      method: "POST",
+      body: {
+        draft_id: "draft-1",
+        evaluation_mode: "AI_ASSISTED",
+        assessment_engine: "legacy_heuristic",
+      },
+    }),
+  );
 });
 
 test("a failed evaluation-creation request surfaces via ErrorNotice, not a silent no-op", async () => {
