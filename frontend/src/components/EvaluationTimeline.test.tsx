@@ -83,6 +83,64 @@ describe("EvaluationTimeline", () => {
     render(<EvaluationTimeline events={events} />);
     expect(screen.getByText(/may be stuck at PENDING/i)).toBeInTheDocument();
   });
+
+  it("shows a gap label between consecutive events with different timestamps", () => {
+    const events = [
+      event({ id: 1, created_at: "2026-01-01T00:00:00Z" }),
+      event({ id: 2, event_type: "evaluation_started", created_at: "2026-01-01T00:00:05Z" }),
+    ];
+    render(<EvaluationTimeline events={events} />);
+    const items = screen.getAllByRole("listitem");
+    expect(items[1]).toHaveTextContent("+5s");
+  });
+
+  it("shows 'same instant' rather than a fabricated duration for identical timestamps", () => {
+    const events = [
+      event({ id: 1, created_at: "2026-01-01T00:00:00Z" }),
+      event({ id: 2, event_type: "evaluation_started", created_at: "2026-01-01T00:00:00Z" }),
+    ];
+    render(<EvaluationTimeline events={events} />);
+    const items = screen.getAllByRole("listitem");
+    expect(items[1]).toHaveTextContent("same instant");
+  });
+
+  it("renders no attempt dividers for a single-attempt evaluation", () => {
+    const events = [
+      event({ id: 1, event_type: "evaluation_created" }),
+      event({ id: 2, event_type: "evaluation_finalized" }),
+    ];
+    render(<EvaluationTimeline events={events} />);
+    expect(screen.queryByText(/Attempt \d/)).not.toBeInTheDocument();
+    expect(screen.getAllByRole("listitem")).toHaveLength(2);
+  });
+
+  it("renders an attempt divider at each requeue boundary", () => {
+    const events = [
+      event({ id: 1, event_type: "evaluation_created" }),
+      event({ id: 2, event_type: "evaluation_requeued", detail: { enqueued: true } }),
+      event({ id: 3, event_type: "evaluation_started" }),
+    ];
+    render(<EvaluationTimeline events={events} />);
+    expect(screen.getByText("Attempt 2")).toBeInTheDocument();
+  });
+
+  it("renders an expandable detail disclosure only when the event has detail", () => {
+    const events = [
+      event({ id: 1, event_type: "probes_completed", detail: { probe_count: 3 } }),
+      event({ id: 2, event_type: "evaluation_started", detail: null }),
+    ];
+    render(<EvaluationTimeline events={events} />);
+    const disclosures = screen.getAllByText("Details");
+    expect(disclosures).toHaveLength(1);
+  });
+
+  it("shows a live badge only when live is true, even before any events arrive", () => {
+    const { rerender } = render(<EvaluationTimeline events={null} live />);
+    expect(screen.getByText(/Live/i)).toBeInTheDocument();
+
+    rerender(<EvaluationTimeline events={null} />);
+    expect(screen.queryByText(/Live/i)).not.toBeInTheDocument();
+  });
 });
 
 describe("gapLabel", () => {
