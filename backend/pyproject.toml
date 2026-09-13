@@ -25,6 +25,7 @@ dependencies = [
   "jinja2>=3.1.0",
   "weasyprint>=61.0",
   "python-multipart>=0.0.9",
+  "google-genai>=0.3.0",
   # Config-only (AutoConfig) model inspection at draft intake
   # (app/inference/model_inspection.py) — no torch/weights required, but the
   # API process needs transformers installed for it, not just the worker.

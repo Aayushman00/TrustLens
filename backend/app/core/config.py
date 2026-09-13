@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     s3_region: str = "us-east-1"
 
     hf_token: str | None = None
+    gemini_api_key: str | None = None
 
     # Celery producer (Phase 7). When true, tasks run inline (tests).
     celery_task_always_eager: bool = False
