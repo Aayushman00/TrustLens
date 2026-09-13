@@ -48,6 +48,13 @@ class HybridOSDAgent:
                 if aspect.D is not None:
                     aspect.D_source = _FALLBACK_SOURCE
                 continue
+            if aspect.O is None:
+                # Heuristic baseline abstained (no probe evidence at all for
+                # this dimension) — never apply the LLM's judgment here, even
+                # though the batched prompt doesn't know that and may still
+                # return a well-formed triple. Leave the aspect exactly as
+                # the heuristic produced it (O=S=D=None, source tags as-is).
+                continue
             dim_judgment = getattr(judgment, dimension.value)
             aspect.O, aspect.S, aspect.D = dim_judgment.O, dim_judgment.S, dim_judgment.D
             aspect.O_source = aspect.S_source = aspect.D_source = _LLM_SOURCE
