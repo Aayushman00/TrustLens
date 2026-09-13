@@ -58,6 +58,7 @@ from app.db.repositories.probe_result import ProbeResultRepository
 from app.osd.agent import HeuristicOSDAgent
 from app.osd.base import AgentContext, AgentResult, ProbeSnapshot
 from app.osd.deterministic import DeterministicOSDMapper, resolve_assessment_engine
+from app.osd.hybrid import HybridOSDAgent
 from app.osd.serialize import (
     FRIES_ASPECT_COUNT,
     to_ai_suggestion,
@@ -142,7 +143,12 @@ def _run_osd_agent(
         else None
     )
     engine = resolve_assessment_engine(probe_config)
-    mapper = HeuristicOSDAgent() if engine == "legacy_heuristic" else DeterministicOSDMapper()
+    if engine == "llm_v1":
+        mapper = HybridOSDAgent()
+    elif engine == "legacy_heuristic":
+        mapper = HeuristicOSDAgent()
+    else:
+        mapper = DeterministicOSDMapper()
     result = mapper.propose(
         AgentContext(
             evaluation_id=payload.evaluation_id,

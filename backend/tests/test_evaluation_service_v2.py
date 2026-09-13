@@ -93,6 +93,17 @@ def test_create_from_draft_honors_legacy_heuristic_opt_in(db_session, confirmed_
     assert evaluation.probe_config["assessment_engine"] == "legacy_heuristic"
 
 
+def test_create_from_draft_honors_llm_v1_opt_in(db_session, confirmed_fairness_draft):
+    service = EvaluationServiceV2(db_session)
+    with patch(_PATCH_TARGET, return_value=_MATCHING_SNAPSHOT):
+        evaluation = service.create_from_draft(
+            confirmed_fairness_draft.id,
+            EvaluationMode.AI_ASSISTED,
+            assessment_engine="llm_v1",
+        )
+    assert evaluation.probe_config["assessment_engine"] == "llm_v1"
+
+
 def test_create_from_draft_rejects_half_confirmed_dimension(db_session, half_confirmed_draft):
     service = EvaluationServiceV2(db_session)
     with patch(_PATCH_TARGET, return_value=_MATCHING_SNAPSHOT):

@@ -84,7 +84,7 @@ class EvaluationServiceV2:
         self,
         draft_id: uuid.UUID,
         evaluation_mode: EvaluationMode,
-        assessment_engine: Literal["deterministic", "legacy_heuristic"] | None = None,
+        assessment_engine: Literal["deterministic", "legacy_heuristic", "llm_v1"] | None = None,
     ) -> Evaluation:
         draft = self._drafts.get_by_id(draft_id)
         if draft is None:
