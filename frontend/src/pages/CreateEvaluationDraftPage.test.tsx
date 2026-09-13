@@ -301,7 +301,7 @@ test("checking the legacy-heuristic toggle sends assessment_engine: legacy_heuri
   const continueButton = screen.getByRole("button", { name: /continue to review/i });
   await waitFor(() => expect(continueButton).not.toBeDisabled());
 
-  fireEvent.click(screen.getByLabelText(/use legacy heuristic scoring/i));
+  fireEvent.click(screen.getByLabelText(/legacy heuristic scoring/i));
 
   const CREATED_EVALUATION = { id: "eval-999", model_id: 1, status: "PENDING" };
   vi.mocked(apiFetch).mockResolvedValueOnce(CREATED_EVALUATION);

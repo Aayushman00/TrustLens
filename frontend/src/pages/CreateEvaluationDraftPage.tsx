@@ -27,6 +27,7 @@ import type {
   ModelList,
   ModelRead,
 } from "../api/types";
+import AssessmentEngineSelector, { type AssessmentEngine } from "../components/AssessmentEngineSelector";
 import ColumnRoleMappingForm from "../components/ColumnRoleMappingForm";
 import DatasetIntakeForm from "../components/DatasetIntakeForm";
 import DocumentationSourceForm from "../components/DocumentationSourceForm";
@@ -212,9 +213,7 @@ export default function CreateEvaluationDraftPage() {
   // --- Create the real Evaluation from the confirmed draft ---
   const [creatingEvaluation, setCreatingEvaluation] = useState(false);
   const [continueError, setContinueError] = useState<unknown>(null);
-  const [assessmentEngine, setAssessmentEngine] = useState<"deterministic" | "legacy_heuristic">(
-    "deterministic",
-  );
+  const [assessmentEngine, setAssessmentEngine] = useState<AssessmentEngine>("deterministic");
 
   async function continueToReview() {
     if (!draft || !readyToContinue) return;
@@ -404,24 +403,7 @@ export default function CreateEvaluationDraftPage() {
           </div>
 
           <div className="card">
-            <label className="radio-row" htmlFor="assessment-engine-toggle">
-              <input
-                id="assessment-engine-toggle"
-                type="checkbox"
-                checked={assessmentEngine === "legacy_heuristic"}
-                onChange={(e) =>
-                  setAssessmentEngine(e.target.checked ? "legacy_heuristic" : "deterministic")
-                }
-              />
-              <span>
-                Use legacy heuristic scoring
-                <span className="field-hint" style={{ display: "block" }}>
-                  Opt-in, non-default. Proposes O/S/D bands from probe metrics for you to
-                  review instead of abstaining — the default (off) is more conservative and
-                  never fabricates a score without validated evidence.
-                </span>
-              </span>
-            </label>
+            <AssessmentEngineSelector value={assessmentEngine} onChange={setAssessmentEngine} />
           </div>
 
           <ErrorNotice error={continueError} />
