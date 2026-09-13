@@ -191,6 +191,45 @@ def test_post_dataset_fetches_rejects_git_lfs_pointer(
     assert "git lfs" in events[0].error_message.lower()
 
 
+def test_post_dataset_uploads_creates_content(
+    api_client: TestClient,
+    dataset_content_store_override: FakeDatasetContentStore,
+) -> None:
+    csv_body = b"text,label\nhello,0\nworld,1\n"
+    resp = api_client.post(
+        "/v1/dataset-uploads",
+        files={"file": ("mydata.csv", csv_body, "text/csv")},
+    )
+    assert resp.status_code == 201, resp.text
+    body = resp.json()
+    assert body["row_count"] == 2
+    assert {c["name"] for c in body["columns"]} == {"text", "label"}
+
+    # re-uploading the same bytes dedupes to the same DatasetContent
+    resp2 = api_client.post(
+        "/v1/dataset-uploads",
+        files={"file": ("mydata.csv", csv_body, "text/csv")},
+    )
+    assert resp2.json()["id"] == body["id"]
+
+
+def test_post_dataset_uploads_rejects_malformed_csv(
+    api_client: TestClient,
+    dataset_content_store_override: FakeDatasetContentStore,
+    db_session,
+) -> None:
+    html_body = b"<!doctype html>\n<html><body>not a dataset</body></html>\n"
+    resp = api_client.post(
+        "/v1/dataset-uploads",
+        files={"file": ("mydata.csv", html_body, "text/csv")},
+    )
+    assert resp.status_code == 422, resp.text
+
+    from app.db.models import DatasetContent
+
+    assert db_session.query(DatasetContent).count() == 0
+
+
 def test_post_dataset_fetches_accepts_real_csv(
     api_client: TestClient,
     httpserver,

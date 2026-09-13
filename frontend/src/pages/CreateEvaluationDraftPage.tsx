@@ -212,6 +212,9 @@ export default function CreateEvaluationDraftPage() {
   // --- Create the real Evaluation from the confirmed draft ---
   const [creatingEvaluation, setCreatingEvaluation] = useState(false);
   const [continueError, setContinueError] = useState<unknown>(null);
+  const [assessmentEngine, setAssessmentEngine] = useState<"deterministic" | "legacy_heuristic">(
+    "deterministic",
+  );
 
   async function continueToReview() {
     if (!draft || !readyToContinue) return;
@@ -220,7 +223,11 @@ export default function CreateEvaluationDraftPage() {
     try {
       const created = await apiFetch<EvaluationRead>("/v1/evaluations-v2", {
         method: "POST",
-        body: { draft_id: draft.id, evaluation_mode: "AI_ASSISTED" },
+        body: {
+          draft_id: draft.id,
+          evaluation_mode: "AI_ASSISTED",
+          assessment_engine: assessmentEngine,
+        },
       });
       navigate(`/evaluations/${created.id}`);
     } catch (err) {
@@ -394,6 +401,27 @@ export default function CreateEvaluationDraftPage() {
               other documentation for the Integrity, Explainability, and Safety probes.
             </p>
             <DocumentationSourceForm modelId={draft.model_id} />
+          </div>
+
+          <div className="card">
+            <label className="radio-row" htmlFor="assessment-engine-toggle">
+              <input
+                id="assessment-engine-toggle"
+                type="checkbox"
+                checked={assessmentEngine === "legacy_heuristic"}
+                onChange={(e) =>
+                  setAssessmentEngine(e.target.checked ? "legacy_heuristic" : "deterministic")
+                }
+              />
+              <span>
+                Use legacy heuristic scoring
+                <span className="field-hint" style={{ display: "block" }}>
+                  Opt-in, non-default. Proposes O/S/D bands from probe metrics for you to
+                  review instead of abstaining — the default (off) is more conservative and
+                  never fabricates a score without validated evidence.
+                </span>
+              </span>
+            </label>
           </div>
 
           <ErrorNotice error={continueError} />
