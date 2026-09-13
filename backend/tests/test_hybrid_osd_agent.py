@@ -5,6 +5,7 @@ import uuid
 from unittest.mock import patch
 
 from app.db.enums import FriesDimension
+from app.osd.agent import HeuristicOSDAgent
 from app.osd.base import AgentContext, ProbeSnapshot
 from app.osd.hybrid import HybridOSDAgent
 
@@ -88,11 +89,10 @@ def test_llm_success_overwrites_only_the_three_target_aspects(mock_settings, moc
 @patch("app.osd.hybrid.get_settings")
 def test_llm_api_error_falls_back_to_heuristic_values(mock_settings, mock_call) -> None:
     mock_settings.return_value.gemini_api_key = "fake-key"
-    heuristic_only = HybridOSDAgent()
-    from app.osd.agent import HeuristicOSDAgent
+    agent = HybridOSDAgent()
 
     baseline = HeuristicOSDAgent().propose(_full_context())
-    result = heuristic_only.propose(_full_context())
+    result = agent.propose(_full_context())
 
     by_aspect = {a.aspect: a for a in result.aspects}
     baseline_by_aspect = {a.aspect: a for a in baseline.aspects}
@@ -107,19 +107,33 @@ def test_llm_api_error_falls_back_to_heuristic_values(mock_settings, mock_call) 
 @patch("app.osd.hybrid.get_settings")
 def test_llm_malformed_json_falls_back_to_heuristic_values(mock_settings, mock_call) -> None:
     mock_settings.return_value.gemini_api_key = "fake-key"
+    baseline = HeuristicOSDAgent().propose(_full_context())
     result = HybridOSDAgent().propose(_full_context())
-    safety = next(a for a in result.aspects if a.aspect == FriesDimension.SAFETY)
-    assert safety.D_source == "heuristic_fallback"
+
+    by_aspect = {a.aspect: a for a in result.aspects}
+    baseline_by_aspect = {a.aspect: a for a in baseline.aspects}
+    for dimension in (FriesDimension.INTEGRITY, FriesDimension.EXPLAINABILITY, FriesDimension.SAFETY):
+        aspect = by_aspect[dimension]
+        base_aspect = baseline_by_aspect[dimension]
+        assert (aspect.O, aspect.S, aspect.D) == (base_aspect.O, base_aspect.S, base_aspect.D)
+        assert aspect.O_source == aspect.S_source == aspect.D_source == "heuristic_fallback"
 
 
 @patch("app.osd.hybrid.get_settings")
 def test_missing_api_key_falls_back_without_calling_gemini(mock_settings) -> None:
     mock_settings.return_value.gemini_api_key = None
+    baseline = HeuristicOSDAgent().propose(_full_context())
     with patch("app.osd.hybrid.call_gemini") as mock_call:
         result = HybridOSDAgent().propose(_full_context())
         mock_call.assert_not_called()
-    integrity = next(a for a in result.aspects if a.aspect == FriesDimension.INTEGRITY)
-    assert integrity.O_source == "heuristic_fallback"
+
+    by_aspect = {a.aspect: a for a in result.aspects}
+    baseline_by_aspect = {a.aspect: a for a in baseline.aspects}
+    for dimension in (FriesDimension.INTEGRITY, FriesDimension.EXPLAINABILITY, FriesDimension.SAFETY):
+        aspect = by_aspect[dimension]
+        base_aspect = baseline_by_aspect[dimension]
+        assert (aspect.O, aspect.S, aspect.D) == (base_aspect.O, base_aspect.S, base_aspect.D)
+        assert aspect.O_source == aspect.S_source == aspect.D_source == "heuristic_fallback"
 
 
 @patch("app.osd.hybrid.call_gemini", return_value=_GOOD_RAW)
@@ -130,3 +144,5 @@ def test_fairness_and_robustness_never_carry_llm_or_fallback_tags(mock_settings,
     for dimension in (FriesDimension.FAIRNESS, FriesDimension.ROBUSTNESS):
         aspect = next(a for a in result.aspects if a.aspect == dimension)
         assert aspect.O_source not in ("llm_v1", "heuristic_fallback")
+        assert aspect.S_source not in ("llm_v1", "heuristic_fallback")
+        assert aspect.D_source not in ("llm_v1", "heuristic_fallback")
