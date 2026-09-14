@@ -26,11 +26,18 @@ dimensions: INTEGRITY, EXPLAINABILITY, SAFETY. For each dimension, propose O \
 always means safer/better — matching the FRIES convention. Base your judgment \
 strictly on the evidence given below; do not invent facts not present in it.
 
+For each dimension's "rationale", write 3-5 sentences, not a one-line verdict. \
+Name the specific things you found or found missing: quote or closely paraphrase \
+the exact card sections/phrases that informed your score, name any required \
+section that is absent, and name any risk flag from the evidence block that \
+affected your score. A rationale that could apply to any model regardless of \
+its actual card text is not acceptable.
+
 Respond with ONLY a JSON object of this exact shape, no prose, no markdown fences:
 {{
-  "INTEGRITY": {{"O": <int 1-9>, "S": <int 1-9>, "D": <int 1-9>, "rationale": "<string>"}},
-  "EXPLAINABILITY": {{"O": <int 1-9>, "S": <int 1-9>, "D": <int 1-9>, "rationale": "<string>"}},
-  "SAFETY": {{"O": <int 1-9>, "S": <int 1-9>, "D": <int 1-9>, "rationale": "<string>"}}
+  "INTEGRITY": {{"O": <int 1-9>, "S": <int 1-9>, "D": <int 1-9>, "rationale": "<3-5 sentences citing specific evidence>"}},
+  "EXPLAINABILITY": {{"O": <int 1-9>, "S": <int 1-9>, "D": <int 1-9>, "rationale": "<3-5 sentences citing specific evidence>"}},
+  "SAFETY": {{"O": <int 1-9>, "S": <int 1-9>, "D": <int 1-9>, "rationale": "<3-5 sentences citing specific evidence>"}}
 }}
 
 Model card text:
@@ -63,7 +70,11 @@ class DimensionJudgment(BaseModel):
     O: int = Field(ge=1, le=9)
     S: int = Field(ge=1, le=9)
     D: int = Field(ge=1, le=9)
-    rationale: str
+    # Guards against a degenerate one-word/generic response slipping through
+    # as a "success" — the prompt asks for 3-5 evidence-citing sentences, so
+    # anything this short could not possibly satisfy that and should instead
+    # be treated as an LLM failure (falls back to the heuristic in hybrid.py).
+    rationale: str = Field(min_length=40)
 
 
 class GeminiOSDResponse(BaseModel):

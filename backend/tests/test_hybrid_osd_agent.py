@@ -10,9 +10,15 @@ from app.osd.base import AgentContext, ProbeSnapshot
 from app.osd.hybrid import HybridOSDAgent
 
 _GOOD_RAW = (
-    '{"INTEGRITY": {"O": 7, "S": 7, "D": 8, "rationale": "checks pass"}, '
-    '"EXPLAINABILITY": {"O": 5, "S": 5, "D": 5, "rationale": "thin coverage but present"}, '
-    '"SAFETY": {"O": 3, "S": 3, "D": 4, "rationale": "governance gap detected"}}'
+    '{"INTEGRITY": {"O": 7, "S": 7, "D": 8, '
+    '"rationale": "All metadata checks pass per the evidence block, and the card discloses '
+    'licensing information clearly."}, '
+    '"EXPLAINABILITY": {"O": 5, "S": 5, "D": 5, '
+    '"rationale": "The card has a Limitations section but coverage_ratio of 0.8 shows other '
+    'required sections are thin or missing."}, '
+    '"SAFETY": {"O": 3, "S": 3, "D": 4, '
+    '"rationale": "A governance gap was detected: no explicit safety disclosure section is '
+    'present in the model card."}}'
 )
 
 
@@ -78,7 +84,7 @@ def test_llm_success_overwrites_only_the_three_target_aspects(mock_settings, moc
     integrity = by_aspect[FriesDimension.INTEGRITY]
     assert (integrity.O, integrity.S, integrity.D) == (7, 7, 8)
     assert integrity.O_source == integrity.S_source == integrity.D_source == "llm_v1"
-    assert integrity.rationale == "checks pass"
+    assert "licensing information" in integrity.rationale
 
     safety = by_aspect[FriesDimension.SAFETY]
     assert (safety.O, safety.S, safety.D) == (3, 3, 4)

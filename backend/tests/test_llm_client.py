@@ -55,18 +55,64 @@ def test_build_prompt_includes_only_the_three_target_dimensions_and_card_text() 
     assert "demographic_parity_difference" not in prompt  # FAIRNESS excluded
 
 
+def test_build_prompt_instructs_multi_sentence_evidence_citing_rationale() -> None:
+    prompt = build_prompt(_ctx())
+    assert "3-5 sentences" in prompt
+    assert "quote or closely paraphrase" in prompt
+
+
 def test_parse_gemini_response_accepts_well_formed_json() -> None:
     raw = json.dumps(
         {
-            "INTEGRITY": {"O": 7, "S": 7, "D": 8, "rationale": "metadata checks pass"},
-            "EXPLAINABILITY": {"O": 6, "S": 6, "D": 6, "rationale": "decent coverage"},
-            "SAFETY": {"O": 4, "S": 4, "D": 5, "rationale": "governance gap"},
+            "INTEGRITY": {
+                "O": 7,
+                "S": 7,
+                "D": 8,
+                "rationale": "Metadata checks pass: the license field and pass_count in the "
+                "evidence block confirm all required integrity checks succeeded.",
+            },
+            "EXPLAINABILITY": {
+                "O": 6,
+                "S": 6,
+                "D": 6,
+                "rationale": "The card has a Limitations section but coverage_ratio of 0.8 "
+                "shows other required sections are thin or missing.",
+            },
+            "SAFETY": {
+                "O": 4,
+                "S": 4,
+                "D": 5,
+                "rationale": "The gov_disclosure_gap risk flag was triggered, and coverage_ratio "
+                "of 0.6 indicates governance disclosure is incomplete.",
+            },
         }
     )
     result = parse_gemini_response(raw)
     assert isinstance(result, GeminiOSDResponse)
     assert result.INTEGRITY.O == 7
-    assert result.SAFETY.rationale == "governance gap"
+    assert "gov_disclosure_gap" in result.SAFETY.rationale
+
+
+def test_parse_gemini_response_rejects_too_short_rationale() -> None:
+    raw = json.dumps(
+        {
+            "INTEGRITY": {"O": 7, "S": 7, "D": 8, "rationale": "checks pass"},
+            "EXPLAINABILITY": {
+                "O": 6,
+                "S": 6,
+                "D": 6,
+                "rationale": "The card has a Limitations section but other required sections are thin.",
+            },
+            "SAFETY": {
+                "O": 4,
+                "S": 4,
+                "D": 5,
+                "rationale": "The gov_disclosure_gap risk flag was triggered during evaluation.",
+            },
+        }
+    )
+    with pytest.raises(ValidationError):
+        parse_gemini_response(raw)
 
 
 def test_parse_gemini_response_rejects_malformed_json() -> None:
