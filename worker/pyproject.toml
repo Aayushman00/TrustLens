@@ -25,6 +25,10 @@ dependencies = [
   # installed.
   "torch>=2.2.0",
   "transformers>=4.44.0",
+  # Gemini client for app.osd.hybrid.HybridOSDAgent (llm_v1 engine, vendored
+  # verbatim from backend/app/osd via Dockerfile.worker) — must be kept in
+  # sync with backend/pyproject.toml's dependency of the same name.
+  "google-genai>=0.3.0",
 ]
 
 [project.optional-dependencies]
