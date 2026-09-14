@@ -1,9 +1,14 @@
 """backend/app/osd/hybrid.py — HybridOSDAgent (Phase 20).
 
 Baseline is always HeuristicOSDAgent's full five-dimension proposal. One
-batched Gemini call then re-scores INTEGRITY/EXPLAINABILITY/SAFETY; on any
+batched LLM call then re-scores INTEGRITY/EXPLAINABILITY/SAFETY; on any
 failure those three keep the heuristic's numbers, tagged as a fallback.
 FAIRNESS/ROBUSTNESS are never touched by this engine.
+
+The LLM call tries providers in order (Gemini -> Groq -> NVIDIA NIM) so a
+single provider outage doesn't force every evaluation onto the heuristic —
+first provider that returns a valid, parseable response wins; only a
+failure from all three falls back to the heuristic.
 """
 
 from __future__ import annotations
@@ -14,7 +19,14 @@ from app.core.config import get_settings
 from app.db.enums import FriesDimension
 from app.osd.agent import HeuristicOSDAgent
 from app.osd.base import AgentContext, AgentResult, LEGACY_HEURISTIC_METHODOLOGY_STATUS
-from app.osd.llm_client import GeminiOSDResponse, build_prompt, call_gemini, parse_gemini_response
+from app.osd.llm_client import (
+    GeminiOSDResponse,
+    build_prompt,
+    call_gemini,
+    call_groq,
+    call_nvidia,
+    parse_gemini_response,
+)
 
 logger = logging.getLogger("trustlens.osd")
 
@@ -70,21 +82,28 @@ class HybridOSDAgent:
 
     def _get_llm_judgment(self, ctx: AgentContext) -> GeminiOSDResponse | None:
         settings = get_settings()
-        api_key = settings.gemini_api_key
-        if not api_key:
-            logger.warning(
-                "osd_agent_llm_v1_no_api_key evaluation_id=%s — falling back to heuristic",
-                ctx.evaluation_id,
-            )
-            return None
-        try:
-            prompt = build_prompt(ctx)
-            raw = call_gemini(prompt, api_key=api_key)
-            return parse_gemini_response(raw)
-        except Exception:  # noqa: BLE001 — any LLM/parse failure falls back, never propagates
-            logger.warning(
-                "osd_agent_llm_v1_failed evaluation_id=%s — falling back to heuristic",
-                ctx.evaluation_id,
-                exc_info=True,
-            )
-            return None
+        providers = (
+            ("gemini", settings.gemini_api_key, call_gemini),
+            ("groq", getattr(settings, "groq_api_key", None), call_groq),
+            ("nvidia", getattr(settings, "nvidia_api_key", None), call_nvidia),
+        )
+        prompt = build_prompt(ctx)
+        for name, api_key, call_fn in providers:
+            if not api_key:
+                continue
+            try:
+                raw = call_fn(prompt, api_key=api_key)
+                return parse_gemini_response(raw)
+            except Exception:  # noqa: BLE001 — try the next provider, never propagate
+                logger.warning(
+                    "osd_agent_llm_v1_provider_failed evaluation_id=%s provider=%s — trying next",
+                    ctx.evaluation_id,
+                    name,
+                    exc_info=True,
+                )
+                continue
+        logger.warning(
+            "osd_agent_llm_v1_all_providers_failed evaluation_id=%s — falling back to heuristic",
+            ctx.evaluation_id,
+        )
+        return None

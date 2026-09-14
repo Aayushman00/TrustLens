@@ -9,6 +9,16 @@ from app.osd.agent import HeuristicOSDAgent
 from app.osd.base import AgentContext, ProbeSnapshot
 from app.osd.hybrid import HybridOSDAgent
 
+
+def _mock_settings(mock_settings, *, gemini=None, groq=None, nvidia=None) -> None:
+    """Explicitly set all three provider keys on a mocked Settings — a
+    MagicMock auto-creates a truthy attribute for any name never explicitly
+    set, so leaving groq_api_key/nvidia_api_key untouched would make the
+    fallback chain think they're configured and try a real HTTP call."""
+    mock_settings.return_value.gemini_api_key = gemini
+    mock_settings.return_value.groq_api_key = groq
+    mock_settings.return_value.nvidia_api_key = nvidia
+
 _GOOD_RAW = (
     '{"INTEGRITY": {"O": 7, "S": 7, "D": 8, '
     '"rationale": "All metadata checks pass per the evidence block, and the card discloses '
@@ -70,7 +80,7 @@ def _full_context() -> AgentContext:
 @patch("app.osd.hybrid.call_gemini", return_value=_GOOD_RAW)
 @patch("app.osd.hybrid.get_settings")
 def test_llm_success_overwrites_only_the_three_target_aspects(mock_settings, mock_call) -> None:
-    mock_settings.return_value.gemini_api_key = "fake-key"
+    _mock_settings(mock_settings, gemini="fake-key")
     result = HybridOSDAgent().propose(_full_context())
 
     assert result.assessment_engine == "llm_v1"
@@ -94,7 +104,7 @@ def test_llm_success_overwrites_only_the_three_target_aspects(mock_settings, moc
 @patch("app.osd.hybrid.call_gemini", side_effect=RuntimeError("timeout"))
 @patch("app.osd.hybrid.get_settings")
 def test_llm_api_error_falls_back_to_heuristic_values(mock_settings, mock_call) -> None:
-    mock_settings.return_value.gemini_api_key = "fake-key"
+    _mock_settings(mock_settings, gemini="fake-key")
     agent = HybridOSDAgent()
 
     baseline = HeuristicOSDAgent().propose(_full_context())
@@ -112,7 +122,7 @@ def test_llm_api_error_falls_back_to_heuristic_values(mock_settings, mock_call) 
 @patch("app.osd.hybrid.call_gemini", return_value="not valid json")
 @patch("app.osd.hybrid.get_settings")
 def test_llm_malformed_json_falls_back_to_heuristic_values(mock_settings, mock_call) -> None:
-    mock_settings.return_value.gemini_api_key = "fake-key"
+    _mock_settings(mock_settings, gemini="fake-key")
     baseline = HeuristicOSDAgent().propose(_full_context())
     result = HybridOSDAgent().propose(_full_context())
 
@@ -127,7 +137,7 @@ def test_llm_malformed_json_falls_back_to_heuristic_values(mock_settings, mock_c
 
 @patch("app.osd.hybrid.get_settings")
 def test_missing_api_key_falls_back_without_calling_gemini(mock_settings) -> None:
-    mock_settings.return_value.gemini_api_key = None
+    _mock_settings(mock_settings, gemini=None)
     baseline = HeuristicOSDAgent().propose(_full_context())
     with patch("app.osd.hybrid.call_gemini") as mock_call:
         result = HybridOSDAgent().propose(_full_context())
@@ -198,7 +208,7 @@ def test_llm_success_does_not_fabricate_triple_for_dimension_with_no_evidence(
     an aspect the heuristic baseline abstained on, even if Gemini returns a
     well-formed triple for that dimension in the batched response.
     """
-    mock_settings.return_value.gemini_api_key = "fake-key"
+    _mock_settings(mock_settings, gemini="fake-key")
     ctx = _context_missing_explainability_evidence()
 
     # Sanity-check the premise: the heuristic really does abstain here.
@@ -240,10 +250,80 @@ def test_llm_success_does_not_fabricate_triple_for_dimension_with_no_evidence(
 @patch("app.osd.hybrid.call_gemini", return_value=_GOOD_RAW)
 @patch("app.osd.hybrid.get_settings")
 def test_fairness_and_robustness_never_carry_llm_or_fallback_tags(mock_settings, mock_call) -> None:
-    mock_settings.return_value.gemini_api_key = "fake-key"
+    _mock_settings(mock_settings, gemini="fake-key")
     result = HybridOSDAgent().propose(_full_context())
     for dimension in (FriesDimension.FAIRNESS, FriesDimension.ROBUSTNESS):
         aspect = next(a for a in result.aspects if a.aspect == dimension)
         assert aspect.O_source not in ("llm_v1", "heuristic_fallback")
         assert aspect.S_source not in ("llm_v1", "heuristic_fallback")
         assert aspect.D_source not in ("llm_v1", "heuristic_fallback")
+
+
+@patch("app.osd.hybrid.call_groq", return_value=_GOOD_RAW)
+@patch("app.osd.hybrid.call_gemini", side_effect=RuntimeError("gemini down"))
+@patch("app.osd.hybrid.get_settings")
+def test_gemini_failure_falls_through_to_groq(mock_settings, mock_gemini, mock_groq) -> None:
+    _mock_settings(mock_settings, gemini="fake-gemini-key", groq="fake-groq-key")
+    result = HybridOSDAgent().propose(_full_context())
+
+    mock_gemini.assert_called_once()
+    mock_groq.assert_called_once()
+    integrity = next(a for a in result.aspects if a.aspect == FriesDimension.INTEGRITY)
+    assert (integrity.O, integrity.S, integrity.D) == (7, 7, 8)
+    assert integrity.O_source == integrity.S_source == integrity.D_source == "llm_v1"
+
+
+@patch("app.osd.hybrid.call_nvidia", return_value=_GOOD_RAW)
+@patch("app.osd.hybrid.call_groq", side_effect=RuntimeError("groq down"))
+@patch("app.osd.hybrid.call_gemini", side_effect=RuntimeError("gemini down"))
+@patch("app.osd.hybrid.get_settings")
+def test_gemini_and_groq_failure_falls_through_to_nvidia(
+    mock_settings, mock_gemini, mock_groq, mock_nvidia
+) -> None:
+    _mock_settings(mock_settings, gemini="fake-gemini-key", groq="fake-groq-key", nvidia="fake-nvidia-key")
+    result = HybridOSDAgent().propose(_full_context())
+
+    mock_gemini.assert_called_once()
+    mock_groq.assert_called_once()
+    mock_nvidia.assert_called_once()
+    integrity = next(a for a in result.aspects if a.aspect == FriesDimension.INTEGRITY)
+    assert (integrity.O, integrity.S, integrity.D) == (7, 7, 8)
+    assert integrity.O_source == integrity.S_source == integrity.D_source == "llm_v1"
+
+
+@patch("app.osd.hybrid.call_nvidia", side_effect=RuntimeError("nvidia down"))
+@patch("app.osd.hybrid.call_groq", side_effect=RuntimeError("groq down"))
+@patch("app.osd.hybrid.call_gemini", side_effect=RuntimeError("gemini down"))
+@patch("app.osd.hybrid.get_settings")
+def test_all_three_providers_failing_falls_back_to_heuristic(
+    mock_settings, mock_gemini, mock_groq, mock_nvidia
+) -> None:
+    _mock_settings(mock_settings, gemini="fake-gemini-key", groq="fake-groq-key", nvidia="fake-nvidia-key")
+    baseline = HeuristicOSDAgent().propose(_full_context())
+    result = HybridOSDAgent().propose(_full_context())
+
+    mock_gemini.assert_called_once()
+    mock_groq.assert_called_once()
+    mock_nvidia.assert_called_once()
+    by_aspect = {a.aspect: a for a in result.aspects}
+    baseline_by_aspect = {a.aspect: a for a in baseline.aspects}
+    for dimension in (FriesDimension.INTEGRITY, FriesDimension.EXPLAINABILITY, FriesDimension.SAFETY):
+        aspect = by_aspect[dimension]
+        base_aspect = baseline_by_aspect[dimension]
+        assert (aspect.O, aspect.S, aspect.D) == (base_aspect.O, base_aspect.S, base_aspect.D)
+        assert aspect.O_source == aspect.S_source == aspect.D_source == "heuristic_fallback"
+
+
+@patch("app.osd.hybrid.call_nvidia")
+@patch("app.osd.hybrid.call_groq")
+@patch("app.osd.hybrid.call_gemini", return_value=_GOOD_RAW)
+@patch("app.osd.hybrid.get_settings")
+def test_gemini_success_never_tries_groq_or_nvidia(
+    mock_settings, mock_gemini, mock_groq, mock_nvidia
+) -> None:
+    _mock_settings(mock_settings, gemini="fake-gemini-key", groq="fake-groq-key", nvidia="fake-nvidia-key")
+    HybridOSDAgent().propose(_full_context())
+
+    mock_gemini.assert_called_once()
+    mock_groq.assert_not_called()
+    mock_nvidia.assert_not_called()

@@ -105,3 +105,39 @@ def call_gemini(prompt: str, *, api_key: str, model: str = "gemini-3.6-flash") -
     client = genai.Client(api_key=api_key)
     response = client.models.generate_content(model=model, contents=prompt)
     return response.text or ""
+
+
+def _call_openai_compatible(prompt: str, *, api_key: str, base_url: str, model: str) -> str:
+    """Shared caller for any OpenAI-compatible chat-completions endpoint
+    (Groq, NVIDIA NIM). Raises on any HTTP/transport error or unexpected
+    response shape — callers treat that as an LLM failure, same as
+    ``call_gemini``.
+    """
+    import httpx
+
+    response = httpx.post(
+        f"{base_url}/chat/completions",
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+        json={
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.2,
+        },
+        timeout=30.0,
+    )
+    response.raise_for_status()
+    return response.json()["choices"][0]["message"]["content"] or ""
+
+
+def call_groq(prompt: str, *, api_key: str, model: str = "llama-3.3-70b-versatile") -> str:
+    """Groq fallback for the batched OSD prompt — same contract as ``call_gemini``."""
+    return _call_openai_compatible(
+        prompt, api_key=api_key, base_url="https://api.groq.com/openai/v1", model=model
+    )
+
+
+def call_nvidia(prompt: str, *, api_key: str, model: str = "meta/llama-3.1-70b-instruct") -> str:
+    """NVIDIA NIM fallback for the batched OSD prompt — same contract as ``call_gemini``."""
+    return _call_openai_compatible(
+        prompt, api_key=api_key, base_url="https://integrate.api.nvidia.com/v1", model=model
+    )

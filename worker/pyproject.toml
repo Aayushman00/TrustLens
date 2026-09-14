@@ -29,6 +29,9 @@ dependencies = [
   # verbatim from backend/app/osd via Dockerfile.worker) — must be kept in
   # sync with backend/pyproject.toml's dependency of the same name.
   "google-genai>=0.3.0",
+  # Groq/NVIDIA NIM fallback calls in app/osd/llm_client.py — was working
+  # only via google-genai's own transitive dependency; declared explicitly.
+  "httpx>=0.27.0",
 ]
 
 [project.optional-dependencies]
