@@ -39,6 +39,10 @@ class Settings(BaseSettings):
 
     worker_heartbeat_seconds: int = 30
     hf_token: str | None = None
+    # Read by app.osd.hybrid.HybridOSDAgent (vendored verbatim from backend/app/osd
+    # via Dockerfile.worker) — must be kept in sync with backend/app/core/config.py's
+    # field of the same name.
+    gemini_api_key: str | None = None
 
 
 @lru_cache
