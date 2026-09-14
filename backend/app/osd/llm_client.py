@@ -129,14 +129,14 @@ def _call_openai_compatible(prompt: str, *, api_key: str, base_url: str, model: 
     return response.json()["choices"][0]["message"]["content"] or ""
 
 
-def call_groq(prompt: str, *, api_key: str, model: str = "llama-3.3-70b-versatile") -> str:
+def call_groq(prompt: str, *, api_key: str, model: str = "openai/gpt-oss-120b") -> str:
     """Groq fallback for the batched OSD prompt — same contract as ``call_gemini``."""
     return _call_openai_compatible(
         prompt, api_key=api_key, base_url="https://api.groq.com/openai/v1", model=model
     )
 
 
-def call_nvidia(prompt: str, *, api_key: str, model: str = "meta/llama-3.1-70b-instruct") -> str:
+def call_nvidia(prompt: str, *, api_key: str, model: str = "mistralai/mistral-large-2-instruct") -> str:
     """NVIDIA NIM fallback for the batched OSD prompt — same contract as ``call_gemini``."""
     return _call_openai_compatible(
         prompt, api_key=api_key, base_url="https://integrate.api.nvidia.com/v1", model=model
