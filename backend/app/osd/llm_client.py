@@ -94,7 +94,7 @@ def parse_gemini_response(raw_text: str) -> GeminiOSDResponse:
     return GeminiOSDResponse.model_validate(data)
 
 
-def call_gemini(prompt: str, *, api_key: str, model: str = "gemini-2.0-flash") -> str:
+def call_gemini(prompt: str, *, api_key: str, model: str = "gemini-3.6-flash") -> str:
     """Make the one Gemini call for this batched prompt. Returns raw response text.
 
     Isolated in its own function so tests can monkeypatch this exact name
