@@ -10,6 +10,24 @@ from typing import Any
 
 MIN_BODY_CHARS = 20
 
+# HF auto-generates these into every unfilled model-card template section
+# (e.g. "[More Information Needed]"). Several are long enough to clear
+# MIN_BODY_CHARS on character count alone, so they need their own check —
+# a body normalizing to exactly one of these phrases is boilerplate, not
+# disclosed content, regardless of length.
+_PLACEHOLDER_PHRASES = frozenset(
+    {
+        "more information needed",
+        "n a",
+        "na",
+        "tbd",
+        "to be determined",
+        "coming soon",
+        "none",
+        "not available",
+    }
+)
+
 _HEADING_RE = re.compile(r"^(#{1,3})\s+(.+?)\s*$")
 _PUNCT_RE = re.compile(r"[^\w\s]+", re.UNICODE)
 
@@ -19,8 +37,19 @@ def normalize_heading(text: str) -> str:
     return " ".join(cleaned.split())
 
 
+def _is_placeholder_body(stripped_text: str) -> bool:
+    normalized = _PUNCT_RE.sub(" ", stripped_text.lower())
+    normalized = " ".join(normalized.split())
+    return normalized in _PLACEHOLDER_PHRASES
+
+
 def nontrivial(text: str | None) -> bool:
-    return bool(text and len(text.strip()) >= MIN_BODY_CHARS)
+    if not text:
+        return False
+    stripped = text.strip()
+    if len(stripped) < MIN_BODY_CHARS:
+        return False
+    return not _is_placeholder_body(stripped)
 
 
 def field_nontrivial(value: Any) -> bool:
