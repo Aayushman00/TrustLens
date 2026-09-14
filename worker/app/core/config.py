@@ -41,8 +41,10 @@ class Settings(BaseSettings):
     hf_token: str | None = None
     # Read by app.osd.hybrid.HybridOSDAgent (vendored verbatim from backend/app/osd
     # via Dockerfile.worker) — must be kept in sync with backend/app/core/config.py's
-    # field of the same name.
+    # fields of the same names.
     gemini_api_key: str | None = None
+    groq_api_key: str | None = None
+    nvidia_api_key: str | None = None
 
 
 @lru_cache
