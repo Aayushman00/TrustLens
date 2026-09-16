@@ -7,7 +7,7 @@ from typing import Any
 
 from app.db.enums import FriesDimension, ProbeEvaluationStatus
 from app.osd.base import METHODOLOGY_STATUS_DETERMINISTIC, AgentContext, ProbeSnapshot
-from app.osd.deterministic import DeterministicOSDMapper
+from app.osd.deterministic import DeterministicOSDMapper, resolve_assessment_engine
 from app.osd.serialize import osd_triple_complete, to_ai_suggestion
 from app.probes.fairness_stats import SCORED_RISK_ID as FAIR_SCORED_RISK_ID
 from app.probes.robustness_stats import SCORED_RISK_ID as ROB_SCORED_RISK_ID
@@ -254,3 +254,15 @@ def test_deterministic_accept_all_no_fabricated_triples() -> None:
     approved, human_changed = merge_review_aspects(suggestion, None, accept_all=True)
     assert approved == []
     assert human_changed is False
+
+
+def test_resolve_assessment_engine_llm_v1() -> None:
+    assert resolve_assessment_engine({"assessment_engine": "llm_v1"}) == "llm_v1"
+
+
+def test_resolve_assessment_engine_unknown_value_defaults_to_deterministic() -> None:
+    assert resolve_assessment_engine({"assessment_engine": "not_a_real_engine"}) == "deterministic"
+
+
+def test_resolve_assessment_engine_none_defaults_to_deterministic() -> None:
+    assert resolve_assessment_engine(None) == "deterministic"

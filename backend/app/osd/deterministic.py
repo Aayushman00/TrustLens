@@ -85,15 +85,15 @@ _PROBE_METADATA_KEYS = (
 
 
 def resolve_assessment_engine(probe_config: dict[str, Any] | None) -> str:
-    """Return ``deterministic`` (default) or ``legacy_heuristic``.
+    """Return ``deterministic`` (default), ``legacy_heuristic``, or ``llm_v1``.
 
     Only the top-level ``assessment_engine`` field is honored. ``extra`` cannot
     select the engine (including the historical ``heuristic`` alias).
     """
     cfg = probe_config or {}
     engine = cfg.get("assessment_engine")
-    if engine == "legacy_heuristic":
-        return "legacy_heuristic"
+    if engine in ("legacy_heuristic", "llm_v1"):
+        return engine
     return "deterministic"
 
 
