@@ -159,3 +159,32 @@
 .tl-penta__dot { fill: var(--tl-uv); transition: cx var(--tl-dur-land) var(--tl-ease-land), cy var(--tl-dur-land) var(--tl-ease-land); }
 .tl-penta__missing { fill: none; stroke: var(--tl-text-3); stroke-width: 1.5; stroke-dasharray: 2 2; }
 .tl-penta__label { font-family: var(--tl-font-mono); font-size: 12px; font-weight: 500; }
+
+/* ---- Spine ---- */
+.tl-spine { list-style: none; margin: 0; padding: 0; display: flex; gap: var(--tl-s-2); overflow-x: auto; }
+.tl-spine__stage {
+  flex: 1 0 120px; display: grid; gap: 2px; padding: var(--tl-s-2) var(--tl-s-3);
+  border-top: 2px solid var(--tl-line-1); color: var(--tl-text-3);
+}
+.tl-spine__stage[data-state="done"] { border-top-color: var(--tl-text-2); color: var(--tl-text-1); }
+.tl-spine__stage[data-state="current"] { border-top-color: var(--tl-uv); color: var(--tl-text-1); }
+.tl-spine__stage[data-state="failed"] { border-top-color: var(--tl-fail); color: var(--tl-fail); }
+.tl-spine__stage[data-state="not_required"] { border-top-style: dashed; }
+.tl-spine__glyph { font-size: var(--tl-fs-12); }
+.tl-spine__stage[data-state="current"] .tl-spine__glyph { color: var(--tl-uv); }
+.tl-spine__label { font-weight: 500; }
+.tl-spine__state, .tl-spine__time, .tl-spine__note { font-size: var(--tl-fs-12); }
+
+/* ---- Timeline ---- */
+.tl-timeline__filter { display: flex; gap: var(--tl-s-2); align-items: center; margin-bottom: var(--tl-s-2); font-size: var(--tl-fs-14); }
+.tl-timeline__filter select { font: inherit; color: var(--tl-text-1); background: var(--tl-ink-1); border: 1px solid var(--tl-line-2); border-radius: var(--tl-r-card); padding: 2px var(--tl-s-2); }
+.tl-timeline__list { list-style: none; margin: 0; padding: 0; border-left: 1px solid var(--tl-line-1); }
+.tl-timeline__item { content-visibility: auto; contain-intrinsic-size: auto 32px; }
+.tl .tl-timeline__row {
+  display: grid; grid-template-columns: 12px 1fr auto auto; gap: var(--tl-s-3); align-items: center;
+  width: 100%; text-align: left; padding: var(--tl-s-1) var(--tl-s-3); border: 0; border-radius: 0; font-size: var(--tl-fs-14);
+}
+.tl-timeline__node { width: 7px; height: 7px; border-radius: 50%; background: var(--tl-text-2); margin-left: -16px; }
+.tl-timeline__node[data-kind="fail"] { background: var(--tl-fail); border-radius: 0; }
+.tl-timeline__delta { color: var(--tl-text-3); }
+.tl-timeline__empty { color: var(--tl-text-3); }
