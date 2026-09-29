@@ -103,7 +103,7 @@ confetti on completion.
 | `line-2` | `#606A7E` | control borders | 3.6:1 / 3.4:1 on `ink-1` (non-text UI ✔) |
 | `text-1` | `#E8EAF0` | primary text | 16.2:1 ✔ |
 | `text-2` | `#A3ABBA` | secondary text | 8.4:1 ✔ |
-| `text-3` | `#7A8394` | tertiary / captions | 5.1:1 (4.8:1 on `ink-1`) ✔ AA body |
+| `text-3` | `#7F889A` | tertiary / captions | 5.5:1 (4.7:1 on `ink-2`) ✔ AA body |
 
 Light theme mirrors roles: `ink-0 #F6F5F1` (warm paper), `ink-1 #FFFFFF`, `text-1 #14161B` (16.6:1),
 `text-2 #4A5160` (7.3:1), `text-3 #636B7A` (4.9:1), lines `#D9D7D0` (decorative) / `#7E8490`
