@@ -44,3 +44,44 @@
 .tl [data-pulse] { animation: tl-pulse 2s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .tl [data-pulse] { animation: none; } }
 .tl[data-motion="reduce"] [data-pulse] { animation: none; }
+
+/* ---- Card / Slip ---- */
+.tl-card {
+  background: var(--tl-ink-1);
+  border: 1px solid var(--tl-line-1);
+  border-radius: var(--tl-r-card);
+  padding: var(--tl-s-5);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.03);
+}
+.tl-card__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--tl-s-3); margin-bottom: var(--tl-s-4); }
+.tl-card__title { margin: 0; font-size: var(--tl-fs-14); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tl-text-2); }
+.tl-slip {
+  border: 1px solid var(--tl-line-1);
+  border-radius: var(--tl-r-slip);
+  padding: var(--tl-s-2) var(--tl-s-3);
+  font-family: var(--tl-font-mono);
+  font-size: var(--tl-fs-14);
+  color: var(--tl-text-1);
+  background: transparent;
+}
+.tl-slip__label { font-size: var(--tl-fs-12); color: var(--tl-text-3); margin-bottom: var(--tl-s-1); }
+
+/* ---- StatusChip ---- */
+.tl-chip {
+  display: inline-flex; align-items: center; gap: var(--tl-s-1);
+  padding: 2px var(--tl-s-2);
+  border: 1px solid var(--tl-line-2);
+  border-radius: var(--tl-r-chip);
+  font-size: var(--tl-fs-12);
+  color: var(--tl-text-2);
+}
+.tl-chip[data-tone="ok"] { color: var(--tl-text-1); }
+.tl-chip[data-tone="fail"] { color: var(--tl-fail); border-color: var(--tl-fail); }
+.tl-chip[data-tone="warn"] { border-style: dashed; color: var(--tl-text-1); }
+.tl-chip__glyph { font-size: 0.9em; }
+
+/* ---- DimensionMark ---- */
+.tl-dim { display: inline-flex; align-items: center; gap: var(--tl-s-1); color: var(--tl-dim-c); }
+.tl-dim__glyph { fill: none; stroke: currentColor; stroke-width: 1.6; }
+.tl-dim__mono { font-family: var(--tl-font-mono); font-weight: 500; font-size: var(--tl-fs-12); }
+.tl-dim__label { color: var(--tl-text-1); }
