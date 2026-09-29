@@ -120,3 +120,31 @@
 .tl-gauge__mark { stroke: var(--tl-text-1); stroke-width: 2; }
 .tl-gauge__value { font-size: var(--tl-fs-16); }
 .tl-gauge__key { grid-column: 1 / -1; font-size: var(--tl-fs-12); color: var(--tl-text-3); }
+
+/* ---- Dial (assessment) ---- */
+.tl-dial { position: relative; display: inline-grid; justify-items: center; width: 72px; }
+.tl-dial svg { width: 64px; height: 64px; }
+.tl-dial__track { fill: none; stroke: var(--tl-line-1); stroke-width: 4; stroke-linecap: round; }
+.tl-dial__tick { stroke: var(--tl-line-2); stroke-width: 1; }
+.tl-dial__arc { fill: none; stroke-width: 4; stroke-linecap: round; transition: d var(--tl-dur-std) var(--tl-ease-spring); }
+.tl-dial__letter { position: absolute; top: 18px; font-size: var(--tl-fs-12); color: var(--tl-text-3); }
+.tl-dial__value { position: absolute; top: 30px; font-size: var(--tl-fs-16); }
+.tl-dial__source { font-size: var(--tl-fs-12); color: var(--tl-text-3); }
+
+/* ---- ScoreRing (score / lens) ---- */
+.tl-ring { position: relative; display: inline-grid; place-items: center; }
+.tl-ring--sm { width: 56px; } .tl-ring--md { width: 112px; } .tl-ring--lg { width: 200px; }
+.tl-ring svg { width: 100%; height: auto; grid-area: 1 / 1; }
+.tl-ring__track { fill: none; stroke: var(--tl-line-1); stroke-width: 6; }
+.tl-ring[data-state="unscored"] .tl-ring__track { stroke-dasharray: 3 5; stroke: var(--tl-line-2); }
+.tl-ring__arc {
+  fill: none; stroke-width: 6; stroke-linecap: round;
+  transition: stroke-dashoffset var(--tl-dur-land) var(--tl-ease-land);
+}
+.tl-ring[data-state="proposed"] .tl-ring__arc { opacity: 0.6; }
+.tl-ring__hatch { stroke: var(--tl-text-2); stroke-width: 2; }
+.tl-ring__num { grid-area: 1 / 1; font-size: var(--tl-fs-25); }
+.tl-ring--lg .tl-ring__num { font-size: var(--tl-fs-49); }
+.tl-ring--sm .tl-ring__num { font-size: var(--tl-fs-14); }
+.tl-ring__flag { font-size: var(--tl-fs-12); letter-spacing: 0.08em; text-transform: uppercase; color: var(--tl-text-2); }
+.tl-ring--lg { filter: drop-shadow(var(--tl-glow)); }
