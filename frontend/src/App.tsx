@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
 import Layout from "./components/Layout";
+import GalleryPage from "./ds/gallery/GalleryPage";
 import CreateEvaluationDraftPage from "./pages/CreateEvaluationDraftPage";
 import DocumentationPage from "./pages/DocumentationPage";
 import EvaluationDetailPage from "./pages/EvaluationDetailPage";
@@ -30,6 +31,7 @@ export default function App() {
           <Route path="/documentation" element={<DocumentationPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
+        <Route path="/gallery" element={<GalleryPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
