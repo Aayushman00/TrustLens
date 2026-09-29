@@ -85,3 +85,20 @@
 .tl-dim__glyph { fill: none; stroke: currentColor; stroke-width: 1.6; }
 .tl-dim__mono { font-family: var(--tl-font-mono); font-weight: 500; font-size: var(--tl-fs-12); }
 .tl-dim__label { color: var(--tl-text-1); }
+
+/* ---- HashBadge / EvidenceChip (evidence material: neutral only) ---- */
+.tl-hash { display: inline-flex; align-items: center; gap: var(--tl-s-1); font-size: var(--tl-fs-12); }
+.tl-hash code { color: var(--tl-text-1); }
+.tl-hash__algo { color: var(--tl-text-3); }
+.tl-hash--none { color: var(--tl-text-3); font-family: var(--tl-font-mono); }
+.tl .tl-copy { padding: 0 var(--tl-s-1); border-color: transparent; color: var(--tl-text-3); line-height: 1.4; }
+.tl .tl-copy:hover { color: var(--tl-text-1); }
+.tl-copy__status { font-size: var(--tl-fs-12); color: var(--tl-text-2); min-width: 0; }
+.tl-evchip {
+  display: inline-flex; align-items: center; gap: var(--tl-s-2);
+  border: 1px solid var(--tl-line-1); border-radius: var(--tl-r-slip);
+  padding: 2px var(--tl-s-2); font-family: var(--tl-font-mono); font-size: var(--tl-fs-12);
+}
+.tl .tl-evchip__main { display: inline-flex; gap: var(--tl-s-2); border: 0; padding: 0; border-radius: 0; }
+.tl-evchip__id { color: var(--tl-text-1); }
+.tl-evchip__type { color: var(--tl-text-3); }
