@@ -9,6 +9,13 @@
   -webkit-font-smoothing: antialiased;
 }
 .tl *, .tl *::before, .tl *::after { box-sizing: border-box; }
+/* Isolate from legacy src/index.css element selectors (code, h1–h3, a, th/td, select)
+   while both stylesheets coexist. Remove once every page is migrated. */
+.tl code { background: none; padding: 0; border-radius: 0; font-size: inherit; }
+.tl h1, .tl h2, .tl h3 { font-family: inherit; font-weight: inherit; letter-spacing: normal; margin: 0; }
+.tl a { color: var(--tl-uv); }
+.tl th, .tl td { font-size: inherit; text-transform: none; letter-spacing: normal; color: inherit; }
+.tl select { font: inherit; }
 .tl code, .tl .num, .tl .mono {
   font-family: var(--tl-font-mono);
   font-variant-numeric: tabular-nums lining-nums;
@@ -98,6 +105,7 @@
   display: inline-flex; align-items: center; gap: var(--tl-s-2);
   border: 1px solid var(--tl-line-1); border-radius: var(--tl-r-slip);
   padding: 2px var(--tl-s-2); font-family: var(--tl-font-mono); font-size: var(--tl-fs-12);
+  flex-wrap: wrap; max-width: 100%;
 }
 .tl .tl-evchip__main { display: inline-flex; gap: var(--tl-s-2); border: 0; padding: 0; border-radius: 0; }
 .tl-evchip__id { color: var(--tl-text-1); }
@@ -219,6 +227,7 @@
 .tl-gallery__note { margin: var(--tl-s-2) 0 0; color: var(--tl-text-3); font-size: var(--tl-fs-14); }
 .tl-gallery__toggles { display: flex; gap: var(--tl-s-2); }
 .tl-gallery__section { padding: var(--tl-s-6) 0; border-top: 1px solid var(--tl-line-1); display: grid; gap: var(--tl-s-4); }
+.tl-gallery__section > * { min-width: 0; }
 .tl-gallery__h2 { margin: 0; font-size: var(--tl-fs-14); letter-spacing: 0.08em; text-transform: uppercase; color: var(--tl-text-2); font-weight: 600; }
 .tl-gallery__row { display: flex; flex-wrap: wrap; gap: var(--tl-s-5); align-items: start; }
 .tl-gallery__col { display: grid; gap: var(--tl-s-3); justify-items: start; }
