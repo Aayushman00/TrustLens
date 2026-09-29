@@ -28,7 +28,7 @@ def test_health_structure_without_deps() -> None:
     with (
         patch("app.routers.health.check_postgres", return_value="skipped"),
         patch("app.routers.health.check_redis", return_value="skipped"),
-        patch("app.routers.health.check_s3", return_value="skipped"),
+        patch("app.routers.health.check_storage", return_value="skipped"),
     ):
         client = TestClient(app)
         response = client.get("/health")
@@ -44,7 +44,7 @@ def test_health_returns_503_when_critical_deps_down() -> None:
     with (
         patch("app.routers.health.check_postgres", return_value="error"),
         patch("app.routers.health.check_redis", return_value="ok"),
-        patch("app.routers.health.check_s3", return_value="ok"),
+        patch("app.routers.health.check_storage", return_value="ok"),
     ):
         client = TestClient(app)
         response = client.get("/health")
@@ -56,13 +56,13 @@ def test_run_health_checks_payload_keys() -> None:
     with (
         patch("app.routers.health.check_postgres", return_value="ok"),
         patch("app.routers.health.check_redis", return_value="ok"),
-        patch("app.routers.health.check_s3", return_value="ok"),
+        patch("app.routers.health.check_storage", return_value="ok"),
     ):
         payload = run_health_checks()
     assert payload == {
         "status": "ok",
         "service": "trustlens-api",
-        "checks": {"postgres": "ok", "redis": "ok", "minio": "ok"},
+        "checks": {"postgres": "ok", "redis": "ok", "storage": "ok"},
     }
 
 

@@ -1,4 +1,4 @@
-"""Worker settings — Phase 2 Redis / S3 connectivity (no Celery tasks yet)."""
+"""Worker settings — Phase 2 Redis / storage connectivity (no Celery tasks yet)."""
 
 from functools import lru_cache
 from pathlib import Path
@@ -31,11 +31,8 @@ class Settings(BaseSettings):
     database_url: str | None = None
     redis_url: str | None = None
 
-    s3_endpoint: str | None = None
-    s3_access_key: str | None = None
-    s3_secret_key: str | None = None
-    s3_bucket: str = "trustlens"
-    s3_region: str = "us-east-1"
+    # Must match the API's STORAGE_DIR (shared volume in Compose).
+    storage_dir: str | None = None
 
     worker_heartbeat_seconds: int = 30
     hf_token: str | None = None

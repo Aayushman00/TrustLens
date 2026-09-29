@@ -3,7 +3,7 @@
 Celery worker that consumes `trustlens.evaluate_model` from the Redis `trustlens`
 queue and runs FRIES probes (F→R→I→E→S). **All five dimensions are real** after
 Phase 14 (Fairness, Robustness, Integrity, Explainability, Safety). Each probe
-writes MinIO evidence (ADR 0004). Phase 15: the runner refines each probe's
+writes filesystem evidence (ADR 0004, ADR 0014). Phase 15: the runner refines each probe's
 confidence via the shared Confidence Engine (geometric mean of `data_quality` ×
 `probe_reliability` × `evidence_completeness`) before persisting, and stores the
 factors under `metric_values.confidence_factors`. Phase 16: after probes the
@@ -24,7 +24,7 @@ from `backend/app/` into the worker image at build time:
 |------------------|----------------------------|
 | `backend/app/db/` | `./app/db/` |
 | `backend/app/core/db.py` | `./app/core/db.py` |
-| `backend/app/core/s3.py` | `./app/core/s3.py` |
+| `backend/app/core/storage.py` | `./app/core/storage.py` |
 | `backend/app/schemas/internal.py` | `./app/schemas/internal.py` |
 | `backend/app/schemas/evidence.py` | `./app/schemas/evidence.py` |
 | `backend/app/schemas/probe_config.py` | `./app/schemas/probe_config.py` |
@@ -80,7 +80,7 @@ worker is untouched; reports read the rows this pipeline persists.
 |----------|---------|
 | `REDIS_URL` | Celery broker + result backend |
 | `DATABASE_URL` | Postgres (same ORM as API) |
-| `S3_ENDPOINT` / keys / bucket | MinIO evidence store |
+| `STORAGE_DIR` | Artifact directory (shared with API) |
 | `DATASETS_CONFIG_PATH` | Pinned datasets YAML |
 | `HF_TOKEN` / `HF_HOME` | Hub auth + cache |
 

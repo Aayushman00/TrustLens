@@ -20,7 +20,7 @@ def _settings_env_files() -> tuple[str, ...]:
 
 
 class Settings(BaseSettings):
-    """Application settings — DB / Redis / S3 config."""
+    """Application settings — DB / Redis / storage config."""
 
     model_config = SettingsConfigDict(
         env_file=_settings_env_files(),
@@ -38,11 +38,9 @@ class Settings(BaseSettings):
     database_url: str | None = None
     redis_url: str | None = None
 
-    s3_endpoint: str | None = None
-    s3_access_key: str | None = None
-    s3_secret_key: str | None = None
-    s3_bucket: str = "trustlens"
-    s3_region: str = "us-east-1"
+    # Artifact storage root (evidence, dataset content, reports). Unset =
+    # storage disabled; API and worker must point at the same directory.
+    storage_dir: str | None = None
 
     hf_token: str | None = None
     gemini_api_key: str | None = None

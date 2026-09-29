@@ -27,7 +27,7 @@ if (-not (Test-Path $EnvFile)) {
     (Get-Content $EnvFile -Raw) `
         -replace '@postgres:', '@127.0.0.1:' `
         -replace 'redis://redis:', 'redis://127.0.0.1:' `
-        -replace 'http://minio:', 'http://127.0.0.1:' |
+        -replace 'STORAGE_DIR=./data/artifacts', "STORAGE_DIR=$RepoRoot/data/artifacts" |
         Set-Content $EnvFile -NoNewline
     Write-Host "Created .env with 127.0.0.1 service hostnames (native host -> Compose infra)."
 } else {
@@ -37,7 +37,7 @@ if (-not (Test-Path $EnvFile)) {
 Write-Host ""
 Write-Host "Next steps:"
 Write-Host "  1. .\.venv\Scripts\Activate.ps1"
-Write-Host "  2. docker compose up -d postgres redis minio minio-init"
+Write-Host "  2. docker compose up -d postgres redis"
 Write-Host "  3. cd backend; alembic upgrade head"
 Write-Host "  4. python -m app.scripts.seed_users   (from backend/, venv active)"
 Write-Host "  5. uvicorn app.main:app --reload --host 127.0.0.1 --port 8000"

@@ -42,10 +42,9 @@ def main() -> int:
         settings.app_env,
     )
     log.info(
-        "config: redis=%s s3_endpoint=%s bucket=%s heartbeat=%ss",
+        "config: redis=%s storage_dir=%s heartbeat=%ss",
         "set" if settings.redis_url else "unset",
-        settings.s3_endpoint or "unset",
-        settings.s3_bucket,
+        settings.storage_dir or "unset",
         settings.worker_heartbeat_seconds,
     )
 

@@ -30,40 +30,6 @@ services:
       retries: 10
       start_period: 5s
 
-  minio:
-    image: minio/minio:latest
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
-    ports:
-      - "${MINIO_API_PORT:-9000}:9000"
-      - "${MINIO_CONSOLE_PORT:-9001}:9001"
-    volumes:
-      - minio_data:/data
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
-
-  minio-init:
-    image: minio/mc:latest
-    depends_on:
-      minio:
-        condition: service_healthy
-    environment:
-      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
-      S3_SECRET_KEY: ${S3_SECRET_KEY:-minioadmin}
-      S3_BUCKET: ${S3_BUCKET:-trustlens}
-    entrypoint: ["/bin/sh", "-c"]
-    command:
-      - |
-        mc alias set local http://minio:9000 "$$S3_ACCESS_KEY" "$$S3_SECRET_KEY"
-        mc mb --ignore-existing "local/$$S3_BUCKET"
-    restart: "no"
-
   api:
     build:
       context: .
@@ -78,12 +44,10 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
       DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg2://trustlens:trustlens@postgres:5432/trustlens}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
-      S3_ENDPOINT: ${S3_ENDPOINT:-http://minio:9000}
-      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
-      S3_SECRET_KEY: ${S3_SECRET_KEY:-minioadmin}
-      S3_BUCKET: ${S3_BUCKET:-trustlens}
-      S3_REGION: ${S3_REGION:-us-east-1}
+      STORAGE_DIR: /data/artifacts
       HF_TOKEN: ${HF_TOKEN:-}
+    volumes:
+      - artifacts_data:/data/artifacts
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     depends_on:
@@ -91,10 +55,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      minio:
-        condition: service_healthy
-      minio-init:
-        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
@@ -112,17 +72,14 @@ services:
       APP_ENV: ${APP_ENV:-development}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
-      S3_ENDPOINT: ${S3_ENDPOINT:-http://minio:9000}
-      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
-      S3_SECRET_KEY: ${S3_SECRET_KEY:-minioadmin}
-      S3_BUCKET: ${S3_BUCKET:-trustlens}
-      S3_REGION: ${S3_REGION:-us-east-1}
+      STORAGE_DIR: /data/artifacts
       DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg2://trustlens:trustlens@postgres:5432/trustlens}
       WORKER_HEARTBEAT_SECONDS: ${WORKER_HEARTBEAT_SECONDS:-30}
       HF_TOKEN: ${HF_TOKEN:-}
       HF_HOME: /cache/huggingface
     volumes:
       - hf_cache:/cache/huggingface
+      - artifacts_data:/data/artifacts
     # GPU passthrough is requested by default (Compose Spec device
     # reservation below). This REQUIRES the NVIDIA Container Toolkit (Linux)
     # or Docker Desktop with the WSL2 backend + a WSL2-capable NVIDIA driver
@@ -152,10 +109,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      minio:
-        condition: service_healthy
-      minio-init:
-        condition: service_completed_successfully
 
   # Optional: Vite frontend. Omit with: docker compose up --build api worker
   frontend:
@@ -172,5 +125,5 @@ services:
 
 volumes:
   postgres_data:
-  minio_data:
+  artifacts_data:
   hf_cache:

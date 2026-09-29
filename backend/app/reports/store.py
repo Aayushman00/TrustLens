@@ -1,4 +1,4 @@
-"""Versioned report artifact storage in MinIO/S3 (Phase 19).
+"""Versioned report artifact storage on the local filesystem (Phase 19).
 
 Append-only like the evidence store, but with deterministic keys:
 ``reports/{evaluation_id}/v{version}/report.json`` (+ ``report.pdf``).
@@ -12,9 +12,7 @@ import logging
 import uuid
 from typing import TYPE_CHECKING
 
-from botocore.client import BaseClient
-
-from app.core.s3 import get_s3_client
+from app.core.storage import BUCKET, LocalObjectClient, get_object_client
 from app.storage.evidence_store import format_sha256
 
 if TYPE_CHECKING:
@@ -24,13 +22,13 @@ logger = logging.getLogger("trustlens.reports")
 
 
 class ReportStoreError(Exception):
-    """S3/MinIO I/O or configuration failure for report artifacts."""
+    """Storage I/O or configuration failure for report artifacts."""
 
 
 class ReportStore:
     """Append-only writer/reader for versioned report artifacts."""
 
-    def __init__(self, client: BaseClient, bucket: str) -> None:
+    def __init__(self, client: LocalObjectClient, bucket: str) -> None:
         self._client = client
         self._bucket = bucket
 
@@ -90,13 +88,6 @@ class ReportStore:
 
 
 def get_report_store(settings: Settings) -> ReportStore | None:
-    """Build a ReportStore from settings, or None if S3 is not configured."""
-    client = get_s3_client(
-        endpoint=settings.s3_endpoint,
-        access_key=settings.s3_access_key,
-        secret_key=settings.s3_secret_key,
-        region=settings.s3_region,
-    )
-    if client is None:
-        return None
-    return ReportStore(client, settings.s3_bucket)
+    """Build a ReportStore from settings, or None if storage is not configured."""
+    client = get_object_client(settings.storage_dir)
+    return ReportStore(client, BUCKET) if client is not None else None

@@ -5,7 +5,7 @@
 help:
 	@echo "TrustLens targets:"
 	@echo "  make compose-up      - docker compose up --build -d (full stack)"
-	@echo "  make compose-infra   - postgres + redis + minio only (native API dev)"
+	@echo "  make compose-infra   - postgres + redis only (native API dev)"
 	@echo "  make compose-down    - docker compose down"
 	@echo "  make migrate         - alembic upgrade head (via api container)"
 	@echo "  make migrate-native  - alembic upgrade head (host, needs DATABASE_URL)"
@@ -24,7 +24,7 @@ compose-up:
 	docker compose up --build -d
 
 compose-infra:
-	docker compose up -d postgres redis minio minio-init
+	docker compose up -d postgres redis
 
 compose-down:
 	docker compose down

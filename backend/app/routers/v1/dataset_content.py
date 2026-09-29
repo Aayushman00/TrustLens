@@ -23,7 +23,7 @@ _MAX_UPLOAD_BYTES = 10_000_000
 
 
 def get_dataset_content_store_dep() -> DatasetContentStore | None:
-    """FastAPI dependency wrapper -- overridable in tests (no live MinIO needed)."""
+    """FastAPI dependency wrapper -- overridable in tests (no real storage needed)."""
     return get_dataset_content_store(get_settings())
 
 

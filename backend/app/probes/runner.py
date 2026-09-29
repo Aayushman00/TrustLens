@@ -71,7 +71,7 @@ def run_all_probes(
 
     Raises:
         ProbeError: invalid output or probe execution failure.
-        EvidenceStoreError: MinIO/store failures from probes.
+        EvidenceStoreError: storage failures from probes.
         ValidationError: invalid ``probe_config`` schema.
     """
     probe_config = parse_probe_config(payload.probe_config)

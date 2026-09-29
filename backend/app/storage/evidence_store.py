@@ -11,10 +11,7 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Protocol
 from urllib.parse import urlparse
 
-import boto3
-from botocore.client import BaseClient
-from botocore.config import Config
-
+from app.core.storage import BUCKET, LocalObjectClient, get_object_client
 from app.schemas.evidence import EvidenceRef
 
 if TYPE_CHECKING:
@@ -22,23 +19,12 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("trustlens.storage")
 
-_STORE_BOTO_CONFIG = Config(
-    connect_timeout=5,
-    read_timeout=30,
-    retries={"max_attempts": 2},
-)
-
-
 class EvidenceStoreError(Exception):
-    """S3/MinIO I/O or configuration failure for evidence artifacts."""
+    """Storage I/O or configuration failure for evidence artifacts."""
 
 
 class _SettingsLike(Protocol):
-    s3_endpoint: str | None
-    s3_access_key: str | None
-    s3_secret_key: str | None
-    s3_bucket: str
-    s3_region: str
+    storage_dir: str | None
 
 
 def _sha256_hex(data: bytes) -> str:
@@ -99,9 +85,9 @@ def sanitize_filename(filename: str, *, default_stem: str = "upload") -> str:
 
 
 class EvidenceStore:
-    """Probe-agnostic MinIO/S3 evidence writer — append-only, metrics JSON only."""
+    """Probe-agnostic filesystem evidence writer — append-only, metrics JSON only."""
 
-    def __init__(self, client: BaseClient, bucket: str) -> None:
+    def __init__(self, client: LocalObjectClient, bucket: str) -> None:
         self._client = client
         self._bucket = bucket
 
@@ -211,18 +197,9 @@ class EvidenceStore:
 
 
 def get_evidence_store(settings: Settings | _SettingsLike) -> EvidenceStore | None:
-    """Build an EvidenceStore from settings, or None if S3 is not configured."""
-    if not settings.s3_endpoint or not settings.s3_access_key or not settings.s3_secret_key:
-        return None
-    client: BaseClient = boto3.client(
-        "s3",
-        endpoint_url=settings.s3_endpoint,
-        aws_access_key_id=settings.s3_access_key,
-        aws_secret_access_key=settings.s3_secret_key,
-        region_name=settings.s3_region,
-        config=_STORE_BOTO_CONFIG,
-    )
-    return EvidenceStore(client, settings.s3_bucket)
+    """Build an EvidenceStore from settings, or None if storage is not configured."""
+    client = get_object_client(settings.storage_dir)
+    return EvidenceStore(client, BUCKET) if client is not None else None
 
 
 
@@ -235,7 +212,7 @@ class DatasetContentStore:
     to the same key; puts are idempotent.
     """
 
-    def __init__(self, client: BaseClient, bucket: str) -> None:
+    def __init__(self, client: LocalObjectClient, bucket: str) -> None:
         self._client = client
         self._bucket = bucket
 
@@ -269,14 +246,5 @@ class DatasetContentStore:
 
 
 def get_dataset_content_store(settings: Settings | _SettingsLike) -> DatasetContentStore | None:
-    if not settings.s3_endpoint or not settings.s3_access_key or not settings.s3_secret_key:
-        return None
-    client: BaseClient = boto3.client(
-        "s3",
-        endpoint_url=settings.s3_endpoint,
-        aws_access_key_id=settings.s3_access_key,
-        aws_secret_access_key=settings.s3_secret_key,
-        region_name=settings.s3_region,
-        config=_STORE_BOTO_CONFIG,
-    )
-    return DatasetContentStore(client, settings.s3_bucket)
+    client = get_object_client(settings.storage_dir)
+    return DatasetContentStore(client, BUCKET) if client is not None else None

@@ -2,9 +2,9 @@
 
 - JSON is canonical; the PDF is a projection of the same document.
 - Versioning is append-only: every generation inserts a new ``reports`` row and
-  writes new MinIO keys ``reports/{evaluation_id}/v{n}/report.json`` (+ ``.pdf``);
+  writes new storage keys ``reports/{evaluation_id}/v{n}/report.json`` (+ ``.pdf``);
   existing artifacts are never rewritten.
-- GET returns the latest stored JSON read back from MinIO (not rebuilt), so the
+- GET returns the latest stored JSON read back from storage (not rebuilt), so the
   served report is exactly the persisted artifact.
 """
 
@@ -73,7 +73,7 @@ class ReportService:
         if self._store is None:
             raise AppError(
                 "STORAGE_UNAVAILABLE",
-                "Report storage (S3/MinIO) is not configured",
+                "Report storage (STORAGE_DIR) is not configured",
                 status_code=503,
             )
         return self._store
@@ -94,7 +94,7 @@ class ReportService:
         return self._read_existing(latest)
 
     def generate(self, evaluation_id: uuid.UUID) -> ReportRead:
-        """Force a new report version (append-only: latest+1, new MinIO keys)."""
+        """Force a new report version (append-only: latest+1, new storage keys)."""
         evaluation = self._get_finalized_evaluation(evaluation_id)
         self._evals.lock_for_report_generation(evaluation.id)
         latest = self._reports.latest_for_evaluation(evaluation.id)
@@ -183,7 +183,7 @@ class ReportService:
                 details={"json_uri": row.json_uri, "error": str(exc)},
             ) from exc
         report_json = json.loads(data)
-        # pdf_hash is not persisted in the DB (it lives in S3 object metadata);
+        # pdf_hash is not persisted in the DB (storage keeps bytes only);
         # re-reads return it as null while fresh generations include it.
         return self._to_read(
             row, report_json, json_hash=format_sha256(data), pdf_hash=None

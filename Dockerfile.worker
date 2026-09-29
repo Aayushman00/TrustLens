@@ -19,7 +19,7 @@ COPY worker/app ./app
 # First robustness eval may download HF models/datasets — mount HF cache in Compose.
 COPY backend/app/db ./app/db
 COPY backend/app/core/db.py ./app/core/db.py
-COPY backend/app/core/s3.py ./app/core/s3.py
+COPY backend/app/core/storage.py ./app/core/storage.py
 COPY backend/app/schemas/internal.py ./app/schemas/internal.py
 COPY backend/app/schemas/evidence.py ./app/schemas/evidence.py
 COPY backend/app/schemas/probe_config.py ./app/schemas/probe_config.py

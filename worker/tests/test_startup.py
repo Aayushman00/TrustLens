@@ -32,8 +32,7 @@ def test_heartbeat_loop_exits_on_shutdown() -> None:
         mock_settings.return_value.app_env = "test"
         mock_settings.return_value.log_level = "INFO"
         mock_settings.return_value.redis_url = "redis://localhost:6379/0"
-        mock_settings.return_value.s3_endpoint = None
-        mock_settings.return_value.s3_bucket = "trustlens"
+        mock_settings.return_value.storage_dir = None
         mock_settings.return_value.worker_heartbeat_seconds = 30
         rc = worker_main.main()
     assert rc == 0

@@ -10,7 +10,7 @@ from fastapi import APIRouter, Request, Response
 from app.core.config import get_settings
 from app.core.db import check_postgres
 from app.core.redis_client import check_redis
-from app.core.s3 import check_s3
+from app.core.storage import check_storage
 
 router = APIRouter(tags=["health"])
 logger = logging.getLogger("trustlens.api")
@@ -22,13 +22,7 @@ def run_health_checks() -> dict[str, Any]:
     checks = {
         "postgres": check_postgres(settings.database_url),
         "redis": check_redis(settings.redis_url),
-        "minio": check_s3(
-            endpoint=settings.s3_endpoint,
-            access_key=settings.s3_access_key,
-            secret_key=settings.s3_secret_key,
-            bucket=settings.s3_bucket,
-            region=settings.s3_region,
-        ),
+        "storage": check_storage(settings.storage_dir),
     }
 
     critical_failed = any(checks[name] == "error" for name in ("postgres", "redis"))

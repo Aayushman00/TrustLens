@@ -1,6 +1,6 @@
 # =============================================================================
 # TrustLens — root .gitignore
-# Stack: Python (FastAPI/Celery) + React/Vite + Docker + PostgreSQL/Redis/MinIO
+# Stack: Python (FastAPI/Celery) + React/Vite + Docker + PostgreSQL/Redis
 # =============================================================================
 
 # -----------------------------------------------------------------------------

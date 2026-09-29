@@ -23,7 +23,7 @@ export default function SettingsPage() {
             <dt>Backend</dt>
             <dd>FastAPI + PostgreSQL + Celery worker</dd>
             <dt>Evidence storage</dt>
-            <dd>Local object storage (MinIO)</dd>
+            <dd>Local filesystem</dd>
           </dl>
         </details>
       </div>

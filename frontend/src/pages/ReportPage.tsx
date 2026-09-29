@@ -427,7 +427,7 @@ export default function ReportPage() {
           ) : null}
         </dl>
         <p className="field-hint">
-          URIs point at MinIO object storage (s3://) — use the JSON download above for the
+          URIs are logical refs into server-side artifact storage (s3://) — use the JSON download above for the
           canonical report; artifacts are fetched server-side, not from the browser.
         </p>
       </div>

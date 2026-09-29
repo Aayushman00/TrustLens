@@ -97,7 +97,7 @@ When an entire aspect cannot be evaluated, the overall FRIES score should be mar
 
 ## Current implementation
 
-TrustLens today is a **working v1 product** over **Layer A probe evidence**: FastAPI + Celery + React, Hugging Face **metadata** import, five FRIES probes, a default **deterministic** O/S/D mapper that **abstains**, original FRIES math when complete O/S/D exist, dual **workflow** modes, human review, versioned JSON/PDF reports, an opt-in FRIES-only leaderboard, and append-only MinIO evidence.
+TrustLens today is a **working v1 product** over **Layer A probe evidence**: FastAPI + Celery + React, Hugging Face **metadata** import, five FRIES probes, a default **deterministic** O/S/D mapper that **abstains**, original FRIES math when complete O/S/D exist, dual **workflow** modes, human review, versioned JSON/PDF reports, an opt-in FRIES-only leaderboard, and append-only filesystem evidence.
 
 Default evaluations **do not invent O/S/D**. FRIES is **withheld** (status still `FINALIZED`; no `final_scores` row). That is not a low trust score.
 
@@ -115,9 +115,9 @@ Default evaluations **do not invent O/S/D**. FRIES is **withheld** (status still
   - `AI_AUTONOMOUS` — pipeline may finalize without a reviewer (`human_reviewed=false`).
   - `AI_ASSISTED` — stops at `AWAITING_REVIEW`; a reviewer records or edits O/S/D, then finalize.
 - **Original FRIES scorer** — cube-root risk scores, veto, aspect mean, weighted total; frozen vectors in `shared/scoring/fixtures/fries_test_vectors.json`. Runs only when complete numeric O/S/D exist (legacy/admin or human-supplied complete triples).
-- **Reports** — canonical `report_v1` JSON in MinIO when FRIES was scored; PDF is a projection. Append-only versions. Finalized + withheld FRIES returns 409 (not “not finalized yet”).
+- **Reports** — canonical `report_v1` JSON in artifact storage when FRIES was scored; PDF is a projection. Append-only versions. Finalized + withheld FRIES returns 409 (not “not finalized yet”).
 - **Leaderboard** — private by default; owner/admin publish after FINALIZED **and** a FRIES score exists. Not a universal trust ranking.
-- **Evidence store** — SHA-256 artifacts in MinIO, evaluation-scoped.
+- **Evidence store** — SHA-256 artifacts on the local filesystem (`STORAGE_DIR`), evaluation-scoped.
 
 ### Open methodology questions (recorded, not solved in this freeze)
 
@@ -261,7 +261,6 @@ make seed-users
 | Frontend | 5173 |
 | Postgres | 5432 |
 | Redis | 6379 |
-| MinIO | 9000 / 9001 |
 
 **GPU:** `docker compose up --build -d` requests NVIDIA GPU passthrough for the `worker` service by default (Compose Spec device reservation). On a host with an NVIDIA GPU:
 - Linux: install the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) and restart Docker.

@@ -50,9 +50,10 @@ def _bootstrap_test_env() -> None:
     if redis_url and "redis://redis:" in redis_url:
         os.environ["REDIS_URL"] = redis_url.replace("redis://redis:", "redis://127.0.0.1:")
 
-    s3_endpoint = os.environ.get("S3_ENDPOINT")
-    if s3_endpoint and "http://minio:" in s3_endpoint:
-        os.environ["S3_ENDPOINT"] = s3_endpoint.replace("http://minio:", "http://127.0.0.1:")
+    # Tests never write into the dev artifact dir from .env.
+    import tempfile
+
+    os.environ["STORAGE_DIR"] = tempfile.mkdtemp(prefix="trustlens-test-storage-")
 
 
 _bootstrap_test_env()
@@ -315,12 +316,7 @@ class FakeS3Client:
     def get_object(self, *, Bucket: str, Key: str) -> dict:
         """Retrieve an object from memory."""
         if (Bucket, Key) not in self.objects:
-            from botocore.exceptions import ClientError
-
-            raise ClientError(
-                error_response={"Error": {"Code": "NoSuchKey", "Message": "Not found"}},
-                operation_name="GetObject",
-            )
+            raise FileNotFoundError(Key)
         data = self.objects[(Bucket, Key)]
 
         class FakeBody:

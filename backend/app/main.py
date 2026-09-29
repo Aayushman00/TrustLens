@@ -11,7 +11,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.errors import register_exception_handlers
 from app.api.middleware import RequestIdMiddleware, configure_request_id_logging
 from app.core.config import get_settings
-from app.core.s3 import get_s3_client
 from app.routers import health
 from app.routers.v1 import api_router
 
@@ -30,20 +29,7 @@ async def lifespan(app: FastAPI):
     _configure_logging(settings.log_level)
     log = logging.getLogger("trustlens.api")
     log.info("trustlens-api starting (env=%s, phase=22)", settings.app_env)
-    client = get_s3_client(
-        endpoint=settings.s3_endpoint,
-        access_key=settings.s3_access_key,
-        secret_key=settings.s3_secret_key,
-        region=settings.s3_region,
-    )
-    if client is not None:
-        log.info(
-            "s3 client configured (endpoint=%s, bucket=%s)",
-            settings.s3_endpoint,
-            settings.s3_bucket,
-        )
-    else:
-        log.info("s3 client not configured (skipped)")
+    log.info("artifact storage_dir=%s", settings.storage_dir or "unset (storage disabled)")
     yield
     log.info("trustlens-api shutting down")
 
