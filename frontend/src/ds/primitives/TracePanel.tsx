@@ -26,8 +26,11 @@ export function TracePanel({ chain, onClose }: { chain: TraceChain | null; onClo
   const closeRef = useRef(onClose);
   useEffect(() => { closeRef.current = onClose; });
 
+  // Keyed on open/closed, not chain identity: a polling parent that rebuilds
+  // the chain every render must not yank focus back to the heading.
+  const open = chain !== null;
   useEffect(() => {
-    if (!chain) return;
+    if (!open) return;
     const returnTo = document.activeElement as HTMLElement | null;
     headingRef.current?.focus();
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") closeRef.current(); };
@@ -36,7 +39,7 @@ export function TracePanel({ chain, onClose }: { chain: TraceChain | null; onClo
       document.removeEventListener("keydown", onKey);
       returnTo?.focus?.();
     };
-  }, [chain]);
+  }, [open]);
 
   if (!chain) return null;
   return (

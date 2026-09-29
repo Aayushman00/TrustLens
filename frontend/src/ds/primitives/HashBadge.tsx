@@ -38,9 +38,10 @@ export function HashBadge({ hash, label = "hash" }: { hash: string | null | unde
   const algo = colon > 0 ? hash.slice(0, colon) : null;
   return (
     <span className="tl-hash">
-      <code title={hash} aria-label={`${label} ${hash}`}>
+      <code title={hash}>
         {algo && <span className="tl-hash__algo" aria-hidden="true">{algo}:</span>}
         <span aria-hidden="true">{shortHash(hash)}</span>
+        <span className="tl-sr-only">{label} {hash}</span>
       </code>
       <CopyButton text={hash} label={`Copy ${label}`} />
     </span>

@@ -14,11 +14,14 @@ const X0 = 8;
 const X1 = 232;
 
 /** Evidence-layer readout: neutral ink only, never the trust ramp. */
-export function Gauge({ label, metricKey, value, min = 0, max = 1, ci = null, digits = 3 }: {
+export function Gauge({ label, metricKey, value: raw, min = 0, max = 1, ci = null, digits = 3 }: {
   label: string; metricKey: string; value: number | null;
   min?: number; max?: number; ci?: MetricCI | null; digits?: number;
 }) {
-  const x = (v: number) => X0 + ((Math.min(max, Math.max(min, v)) - min) / (max - min)) * (X1 - X0);
+  // Non-finite (NaN/Infinity) is treated exactly like null: not reported.
+  const value = raw != null && Number.isFinite(raw) ? raw : null;
+  const span = max > min ? max - min : 1;
+  const x = (v: number) => X0 + ((Math.min(max, Math.max(min, v)) - min) / span) * (X1 - X0);
   const fmt = (v: number) => v.toFixed(digits);
   const summary =
     value == null

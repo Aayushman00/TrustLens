@@ -21,7 +21,8 @@ test("null hash says not recorded and offers no copy", () => {
 
 test("full hash is exposed to assistive tech", () => {
   render(<HashBadge hash={FULL} label="evidence hash" />);
-  expect(screen.getByLabelText(`evidence hash ${FULL}`)).toBeInTheDocument();
+  // aria-label on <code> is ignored by screen readers; the full hash must be real (sr-only) text
+  expect(screen.getByText(`evidence hash ${FULL}`)).toHaveClass("tl-sr-only");
 });
 
 test("copy writes the full hash and confirms", async () => {

@@ -28,6 +28,7 @@ export function Timeline({ events, onSelect }: { events: TimelineEvent[]; onSele
   const t0 = Date.parse(sorted[0].created_at);
   const types = [...new Set(sorted.map((e) => e.event_type))];
   const shown = filter === "all" ? sorted : sorted.filter((e) => e.event_type === filter);
+  const latest = sorted[sorted.length - 1];
 
   return (
     <div className="tl-timeline">
@@ -38,7 +39,9 @@ export function Timeline({ events, onSelect }: { events: TimelineEvent[]; onSele
           {types.map((t) => <option key={t} value={t}>{eventLabel(t)}</option>)}
         </select>
       </div>
-      <ol className="tl-timeline__list" role="log" aria-live="polite" aria-label="Evaluation events">
+      {/* Live region announces only newly appended events — never re-reads the list on filter changes. */}
+      <div role="log" aria-live="polite" className="tl-sr-only">Latest event: {eventLabel(latest.event_type)}</div>
+      <ol className="tl-timeline__list" aria-label="Evaluation events">
         {shown.map((e) => {
           const delta = (Date.parse(e.created_at) - t0) / 1000;
           const body = (

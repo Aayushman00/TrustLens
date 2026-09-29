@@ -162,9 +162,10 @@
 .tl-penta__grid { fill: none; stroke: var(--tl-line-1); stroke-width: 1; }
 .tl-penta__axis { stroke-width: 1; opacity: 0.55; }
 .tl-penta__ghost { fill: none; stroke: var(--tl-text-3); stroke-width: 1; stroke-dasharray: 3 3; }
-.tl-penta__shape { fill: none; stroke: var(--tl-uv); stroke-width: 2; stroke-linejoin: round; }
-.tl-penta__shape--filled { fill: color-mix(in oklch, var(--tl-uv) 16%, transparent); }
-.tl-penta__dot { fill: var(--tl-uv); transition: cx var(--tl-dur-land) var(--tl-ease-land), cy var(--tl-dur-land) var(--tl-ease-land); }
+.tl-penta__shape { fill: none; stroke: var(--tl-text-1); stroke-width: 2; stroke-linejoin: round; }
+.tl-penta__shape--filled { fill: color-mix(in oklch, var(--tl-text-1) 10%, transparent); }
+.tl-penta { filter: drop-shadow(var(--tl-glow)); }
+.tl-penta__dot { fill: var(--tl-text-1); transition: cx var(--tl-dur-land) var(--tl-ease-land), cy var(--tl-dur-land) var(--tl-ease-land); }
 .tl-penta__missing { fill: none; stroke: var(--tl-text-3); stroke-width: 1.5; stroke-dasharray: 2 2; }
 .tl-penta__label { font-family: var(--tl-font-mono); font-size: 12px; font-weight: 500; }
 

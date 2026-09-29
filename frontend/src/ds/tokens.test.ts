@@ -41,7 +41,7 @@ const RAMP = NON_TEXT.slice(1);
 
 for (const [name, theme] of [["dark", dark], ["light", light]] as const) {
   describe(`${name} theme contrast`, () => {
-    for (const bg of ["--tl-ink-0", "--tl-ink-1"]) {
+    for (const bg of ["--tl-ink-0", "--tl-ink-1", "--tl-ink-2"]) {
       test.each(TEXT)(`%s on ${bg} >= 4.5:1`, (fg) => {
         expect(ratio(theme[fg], theme[bg])).toBeGreaterThanOrEqual(4.5);
       });

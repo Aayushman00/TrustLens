@@ -14,8 +14,10 @@ export function arcPath(cx: number, cy: number, r: number, startDeg: number, end
 }
 
 /** Assessment-layer instrument. Inverted FMEA: higher = safer. */
-export function Dial({ letter, value, source }: { letter: "O" | "S" | "D"; value: number | null; source?: string | null }) {
+export function Dial({ letter, value: raw, source }: { letter: "O" | "S" | "D"; value: number | null; source?: string | null }) {
   const name = NAMES[letter];
+  // Non-finite (NaN/Infinity) is treated exactly like null: unavailable.
+  const value = raw != null && Number.isFinite(raw) ? raw : null;
   const end = value == null ? START : START + (SWEEP * Math.min(10, Math.max(0, value))) / 10;
   return (
     <div

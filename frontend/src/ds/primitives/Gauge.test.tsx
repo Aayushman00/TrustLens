@@ -34,3 +34,15 @@ test("table view lists the metric key", () => {
   fireEvent.click(screen.getByRole("button", { name: "Show as table" }));
   expect(screen.getByRole("cell", { name: "subgroup_f1_spread" })).toBeInTheDocument();
 });
+
+test("NaN value is 'not reported', never NaN", () => {
+  render(<Gauge label="X" metricKey="x" value={Number.NaN} />);
+  expect(screen.getByText("— not reported")).toBeInTheDocument();
+  expect(screen.queryByText(/NaN/)).toBeNull();
+  expect(screen.queryByTestId("gauge-mark")).toBeNull();
+});
+
+test("degenerate range (min === max) keeps the marker finite", () => {
+  render(<Gauge label="X" metricKey="x" value={1} min={1} max={1} />);
+  expect(Number.isFinite(Number(screen.getByTestId("gauge-mark").getAttribute("x1")))).toBe(true);
+});

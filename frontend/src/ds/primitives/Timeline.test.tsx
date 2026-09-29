@@ -46,3 +46,12 @@ test("empty state is explicit", () => {
   render(<Timeline events={[]} />);
   expect(screen.getByText("No events recorded yet.")).toBeInTheDocument();
 });
+
+test("list keeps list semantics; the live log announces only the latest event", () => {
+  render(<Timeline events={EVENTS} />);
+  expect(screen.getByRole("list", { name: "Evaluation events" })).toBeInTheDocument();
+  const log = screen.getByRole("log");
+  expect(log).toHaveTextContent("Latest event: probe_heartbeat_v9");
+  fireEvent.change(screen.getByLabelText("Filter"), { target: { value: "evaluation_started" } });
+  expect(screen.getByRole("log")).toHaveTextContent("Latest event: probe_heartbeat_v9");
+});

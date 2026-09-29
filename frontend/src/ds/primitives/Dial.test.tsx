@@ -27,3 +27,10 @@ test("zero shows 0 with no arc", () => {
   expect(screen.getByText("0")).toBeInTheDocument();
   expect(screen.queryByTestId("dial-arc")).toBeNull();
 });
+
+test.each([Number.NaN, Number.POSITIVE_INFINITY])("non-finite %s is unavailable and does not crash", (bad) => {
+  render(<Dial letter="O" value={bad} />);
+  expect(screen.getByRole("meter", { name: "Occurrence" })).toHaveAttribute("aria-valuetext", "Occurrence unavailable");
+  expect(screen.queryByText(/NaN|Infinity/)).toBeNull();
+  expect(screen.queryByTestId("dial-arc")).toBeNull();
+});

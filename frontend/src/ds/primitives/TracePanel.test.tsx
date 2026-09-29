@@ -54,3 +54,23 @@ test("focus returns to the trigger after closing", () => {
   fireEvent.click(screen.getByRole("button", { name: "Close trace" }));
   expect(trigger).toHaveFocus();
 });
+
+test("a parent re-render with an equal-content chain does not steal focus", () => {
+  function Poller() {
+    const [tick, setTick] = useState(0);
+    // new object identity every render, as a polling page would produce
+    const chain: TraceChain = { ...CHAIN, levels: [...CHAIN.levels] };
+    return (
+      <>
+        <button onClick={() => setTick(tick + 1)}>poll</button>
+        <TracePanel chain={chain} onClose={() => {}} />
+      </>
+    );
+  }
+  render(<Poller />);
+  const summary = screen.getByText("Raw JSON");
+  summary.setAttribute("tabindex", "0");
+  summary.focus();
+  fireEvent.click(screen.getByRole("button", { name: "poll" }));
+  expect(summary).toHaveFocus();
+});
