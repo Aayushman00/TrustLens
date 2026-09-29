@@ -13,7 +13,7 @@ export default defineConfig({
     // registers — without it, DOM from one test leaks into the next.
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
-    include: ["src/**/*.test.tsx"],
+    include: ["src/**/*.test.tsx", "src/ds/**/*.test.ts"],
     css: false,
   },
 });

@@ -1,0 +1,106 @@
+/* TrustLens design tokens (spec §3–§6). Scoped to the tl root class so legacy
+   pages that use src/index.css are untouched until they are migrated. Dark is primary. */
+.tl {
+  color-scheme: dark;
+  --tl-ink-0: #0B0D12;
+  --tl-ink-1: #12151C;
+  --tl-ink-2: #1A1E27;
+  --tl-line-1: #262C38;
+  --tl-line-2: #606A7E;
+  --tl-text-1: #E8EAF0;
+  --tl-text-2: #A3ABBA;
+  --tl-text-3: #7A8394;
+  --tl-uv: #A594FF;
+  --tl-fail: #FF8A7A;
+  --tl-dim-f: #E6A23C;
+  --tl-dim-r: #5DB8EC;
+  --tl-dim-i: #E57A5A;
+  --tl-dim-e: #D286B6;
+  --tl-dim-s: #35C29A;
+  --tl-ramp-0: #5E7AB0;
+  --tl-ramp-3: #7D8290;
+  --tl-ramp-5: #8E8A7E;
+  --tl-ramp-7: #A89A70;
+  --tl-ramp-8_5: #C6AE5E;
+  --tl-ramp-10: #F2D65A;
+  --tl-glow: 0 0 32px rgb(165 148 255 / 0.18);
+
+  --tl-font-display: "Fraunces Variable", Georgia, serif;
+  --tl-font-ui: "IBM Plex Sans", system-ui, sans-serif;
+  --tl-font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --tl-fs-12: 0.75rem;
+  --tl-fs-14: 0.875rem;
+  --tl-fs-16: 1rem;
+  --tl-fs-20: 1.25rem;
+  --tl-fs-25: 1.5625rem;
+  --tl-fs-31: 1.9375rem;
+  --tl-fs-39: 2.4375rem;
+  --tl-fs-49: 3.0625rem;
+  --tl-fs-61: 3.8125rem;
+  --tl-fs-76: 4.75rem;
+
+  --tl-s-1: 4px;
+  --tl-s-2: 8px;
+  --tl-s-3: 12px;
+  --tl-s-4: 16px;
+  --tl-s-5: 24px;
+  --tl-s-6: 32px;
+  --tl-s-7: 40px;
+  --tl-s-8: 48px;
+  --tl-s-9: 64px;
+  --tl-s-10: 80px;
+  --tl-s-11: 96px;
+  --tl-s-12: 128px;
+  --tl-r-slip: 2px;
+  --tl-r-card: 8px;
+  --tl-r-chip: 999px;
+
+  --tl-dur-micro: 150ms;
+  --tl-dur-std: 240ms;
+  --tl-dur-land: 400ms;
+  --tl-ease-micro: cubic-bezier(0.2, 0, 0, 1);
+  /* critically damped spring */
+  --tl-ease-spring: linear(0, 0.25 8%, 0.53 18%, 0.76 30%, 0.9 44%, 0.97 60%, 1);
+  /* landing spring, overshoot <= 4% */
+  --tl-ease-land: linear(0, 0.3 8%, 0.62 18%, 0.88 30%, 1.02 44%, 1.04 54%, 1.01 72%, 1);
+}
+
+.tl[data-theme="light"] {
+  color-scheme: light;
+  --tl-ink-0: #F6F5F1;
+  --tl-ink-1: #FFFFFF;
+  --tl-ink-2: #EFEDE7;
+  --tl-line-1: #D9D7D0;
+  --tl-line-2: #7E8490;
+  --tl-text-1: #14161B;
+  --tl-text-2: #4A5160;
+  --tl-text-3: #636B7A;
+  --tl-uv: #5B45E0;
+  --tl-fail: #B42318;
+  --tl-dim-f: #9A5F00;
+  --tl-dim-r: #0A6AA6;
+  --tl-dim-i: #B0452A;
+  --tl-dim-e: #A0467F;
+  --tl-dim-s: #0B7F5E;
+  --tl-ramp-0: #6F86B8;
+  --tl-ramp-3: #7A7F8C;
+  --tl-ramp-5: #807A62;
+  --tl-ramp-7: #86743A;
+  --tl-ramp-8_5: #8A6F1C;
+  --tl-ramp-10: #7A5C00;
+  --tl-glow: 0 0 24px rgb(91 69 224 / 0.12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tl {
+    --tl-dur-micro: 0ms;
+    --tl-dur-std: 0ms;
+    --tl-dur-land: 0ms;
+  }
+}
+
+.tl[data-motion="reduce"] {
+  --tl-dur-micro: 0ms;
+  --tl-dur-std: 0ms;
+  --tl-dur-land: 0ms;
+}
