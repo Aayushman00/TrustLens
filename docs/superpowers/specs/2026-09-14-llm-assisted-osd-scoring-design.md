@@ -41,17 +41,18 @@ A new class in `backend/app/osd/hybrid.py` implementing the existing `OSDAgent` 
 
 Three Literal types and one call site need a new `"llm_v1"` value:
 
-- `ProbeConfigV1.assessment_engine: Literal["deterministic", "legacy_heuristic", "llm_v1"] | None` (`backend/app/schemas/probe_config.py:33`)
+- `ProbeConfigV1.assessment_engine: Literal["deterministic", "legacy_heuristic", "llm_v1"] | None` (`backend/app/schemas/probe_config.py:14`)
 - `CreateEvaluationV2Request.assessment_engine: Literal["deterministic", "legacy_heuristic", "llm_v1"] | None` (`backend/app/schemas/evaluation_draft.py:23`)
 - `resolve_assessment_engine()` (`backend/app/osd/deterministic.py:87-97`) gains a branch returning `"llm_v1"` when `probe_config["assessment_engine"] == "llm_v1"`.
-- `evaluate_pipeline.py:144-145` gains a third branch: `mapper = HybridOSDAgent() if engine == "llm_v1" else (HeuristicOSDAgent() if engine == "legacy_heuristic" else DeterministicOSDMapper())`.
-- Frontend: `CreateEvaluationDraftPage.tsx`'s existing engine toggle gets a third option, `"llm_v1"`, labeled to make clear it's LLM-assisted for integrity/explainability/safety only (not a general "better" mode).
+- `backend/app/tasks/evaluate_pipeline.py:144-145` gains a third branch: `mapper = HybridOSDAgent() if engine == "llm_v1" else (HeuristicOSDAgent() if engine == "legacy_heuristic" else DeterministicOSDMapper())`.
+- Frontend: `CreateEvaluationDraftPage.tsx`'s engine control is currently a boolean checkbox (`"deterministic" | "legacy_heuristic"`, state declared ~line 215, checkbox UI ~lines 419-440) — a third value doesn't fit a checkbox. This needs restructuring to a radio group or select before adding `"llm_v1"`, labeled to make clear it's LLM-assisted for integrity/explainability/safety only (not a general "better" mode). Track as its own small subtask, not a one-line add.
+- New dependency: `google-genai` SDK is not currently in `backend/pyproject.toml` — add it there.
 
 ### LLM call
 
 - Provider: Google Gemini (free tier), via the `google-genai` SDK. API key read from `GEMINI_API_KEY` environment variable — never hardcoded, never committed.
 - One batched call per evaluation run under this engine, covering all three dimensions in a single prompt/response (trades independent-failure isolation for lower free-tier quota usage — an explicit tradeoff; if any one dimension's JSON is bad, all three fall back together per the failure rule above).
-- Input per dimension: the corresponding `ProbeSnapshot.metric_values` and `evidence_refs` already computed by the existing probes (e.g. explainability's `checks`, `flags`, `risks_triggered`, `coverage_ratio`), plus the raw `ctx.model_metadata["card_text"]` shared across dimensions. No changes needed to `AgentContext`/`ProbeSnapshot` — this data already flows into `AgentContext` today; the heuristic agent simply doesn't read `card_text`.
+- Input per dimension: the corresponding `ProbeSnapshot.metric_values` and `evidence_refs` already computed by the existing probes (e.g. explainability's `checks`, `flags`, `risks_triggered`, `coverage_ratio`), plus the raw `ctx.model_metadata["card_text"]` shared across dimensions. `card_text` already reaches `ctx.model_metadata` today (written by `hf_hub.py:149`, read today only by the probe-eval stage — `explainability_eval.py`, `integrity_eval.py`, `safety_eval.py`) so no schema change is needed to `AgentContext`/`ProbeSnapshot`. But no existing OSD agent reads `card_text` directly — `HybridOSDAgent` reading it at the agent level is new code, not a pass-through of existing behavior. Add a test case for missing/empty `card_text`.
 - Output: a single JSON object, one entry per dimension, each with `O`/`S`/`D` (ints, 1-9, same clamp convention as the heuristic) and `rationale` (string). Validated against a Pydantic response model before use; validation failure is treated as an LLM failure (triggers fallback).
 
 ### Review/merge compatibility

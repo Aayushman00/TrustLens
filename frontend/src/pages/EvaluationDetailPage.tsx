@@ -24,15 +24,43 @@ import { contractFamilyLabel, getEvaluationContract, shortRevision } from "../li
 import { fmtDateTime, fmtNumber, fmtOsd } from "../lib/format";
 import { mockExecutionTelemetry } from "../mocks/telemetry";
 
-const POLL_MS = 2500;
+// Short enough to actually catch a fast local run mid-flight: 5 probes on a
+// small model + tiny dataset can finish in a couple of seconds end-to-end
+// (confirmed by measurement), so a slower interval polls through the whole
+// run without ever landing between two probe commits. Polling only happens
+// while the evaluation is in an ACTIVE_STATUSES state (see below), so this
+// only costs extra requests during an actual run on this single-user local
+// instance, never once it's finished.
+const POLL_MS = 500;
+
+// Plain-language gist of what each probe checks — for someone with no ML
+// background watching the progress strip, not a technical spec.
+const PROBE_GIST: Record<FriesDimension, string> = {
+  FAIRNESS: "Checking whether the model treats different groups in your data evenly",
+  ROBUSTNESS: "Testing whether small wording changes trick the model",
+  INTEGRITY: "Checking the model's identity and files for signs of tampering",
+  EXPLAINABILITY: "Checking how well the model's documentation explains its own decisions",
+  SAFETY: "Checking the model's documentation for safety warnings and known risks",
+};
+
+function currentStageGist(
+  status: EvaluationRead["status"],
+  currentDim: FriesDimension | undefined,
+): string {
+  if (status === "PENDING") return "Getting ready to check the model…";
+  if (status === "RUNNING") {
+    return currentDim ? PROBE_GIST[currentDim] : "Running checks on the model…";
+  }
+  if (status === "PROBES_COMPLETED") return "Checks finished — putting the findings into a draft assessment";
+  if (status === "AGENT_COMPLETED") return "Draft assessment ready — preparing it for review";
+  return "";
+}
 
 export default function EvaluationDetailPage() {
   const { id } = useParams();
   const [evaluation, setEvaluation] = useState<EvaluationRead | null>(null);
   const [events, setEvents] = useState<EvaluationEventRead[] | null>(null);
   const [error, setError] = useState<unknown>(null);
-  const [actionError, setActionError] = useState<unknown>(null);
-  const [acting, setActing] = useState(false);
   const timerRef = useRef<number | undefined>(undefined);
 
   const load = useCallback(async (): Promise<EvaluationRead | null> => {
@@ -74,29 +102,12 @@ export default function EvaluationDetailPage() {
     };
   }, [load, loadEvents]);
 
-  async function publishAction(action: "publish" | "unpublish") {
-    setActionError(null);
-    setActing(true);
-    try {
-      const row = await apiFetch<EvaluationRead>(`/v1/evaluations/${id}/${action}`, {
-        method: "POST",
-      });
-      setEvaluation(row);
-      await load();
-    } catch (err) {
-      setActionError(err);
-    } finally {
-      setActing(false);
-    }
-  }
-
   if (error != null && evaluation == null) return <ErrorNotice error={error} />;
   if (evaluation == null) return <Spinner label="Loading evaluation…" />;
 
   const isActive = ACTIVE_STATUSES.includes(evaluation.status);
-  // Single-user local instance — no RBAC/ownership gate on review or publish.
+  // Single-user local instance — no RBAC/ownership gate on review.
   const isReviewerRole = true;
-  const canPublish = true;
   const awaitingAssistedReview =
     evaluation.evaluation_mode === "AI_ASSISTED" &&
     evaluation.status === "AWAITING_REVIEW";
@@ -106,14 +117,30 @@ export default function EvaluationDetailPage() {
   const friesWithheld = evaluation.status === "FINALIZED" && evaluation.final_score == null;
   const t = mockExecutionTelemetry;
   const exec = evaluation.execution_metadata ?? null;
+  // The only two probes that ever run local inference are Fairness and
+  // Robustness (see _INFERENCE_CAPABLE_DIMENSIONS in evaluate_pipeline.py).
+  // Until at least one of them has actually finished, a null
+  // execution_metadata means "not decided yet", not "never happened" —
+  // those are different facts and deserve different copy.
+  const inferenceCapableProbeRan = probesByDim.has("FAIRNESS") || probesByDim.has("ROBUSTNESS");
   const gpuStatus = exec
     ? exec.execution_device === "cuda"
       ? `GPU (${exec.gpu_name ?? "CUDA device"})`
       : `CPU${exec.fallback_reason ? ` — ${exec.fallback_reason}` : ""}`
-    : "Not recorded (no probe ran local inference in this run)";
+    : isActive && !inferenceCapableProbeRan
+      ? "Not yet known — determined once the Fairness or Robustness check runs"
+      : "Not recorded (no probe ran local inference in this run)";
   const pct = isActive
     ? Math.round(((evaluation.probe_progress?.completed ?? 0) / (evaluation.probe_progress?.total ?? 5)) * 100)
     : 100;
+  // The probe currently executing, if any — only meaningful while RUNNING;
+  // once PROBES_COMPLETED is reached every dimension has a row (even
+  // NOT_APPLICABLE ones persist a row), so this is naturally undefined then.
+  const currentDim =
+    evaluation.status === "RUNNING"
+      ? FRIES_DIMENSIONS.find((dim) => !probesByDim.has(dim))
+      : undefined;
+  const stageGist = currentStageGist(evaluation.status, currentDim);
 
   return (
     <>
@@ -155,17 +182,27 @@ export default function EvaluationDetailPage() {
             <Spinner />
             <strong>Running locally — {evaluation.probe_progress?.completed ?? 0}/{evaluation.probe_progress?.total ?? 5} dimensions complete</strong>
           </div>
+          <p className="muted stage-gist" aria-live="polite" style={{ fontSize: "0.85rem", margin: "0.3rem 0 0" }}>
+            {stageGist}
+          </p>
           <div className="execution-progress-track" role="status" aria-live="polite">
             <div className="execution-progress-fill" style={{ width: `${pct}%` }} />
           </div>
           <div className="dimension-status-strip">
             {FRIES_DIMENSIONS.map((dim) => {
               const p = probesByDim.get(dim);
+              const state = p
+                ? p.status === "NOT_APPLICABLE"
+                  ? "not-applicable"
+                  : "done"
+                : dim === currentDim
+                  ? "running"
+                  : "pending";
               return (
                 <DimensionProgressChip
                   key={dim}
                   label={dim.charAt(0) + dim.slice(1).toLowerCase()}
-                  done={!!p}
+                  state={state}
                 />
               );
             })}
@@ -261,34 +298,7 @@ export default function EvaluationDetailPage() {
                 <Link to={`/reports/${evaluation.id}`} className="btn btn-secondary">
                   View report
                 </Link>
-                {canPublish ? (
-                  evaluation.is_published ? (
-                    <button
-                      type="button"
-                      className="btn btn-danger"
-                      disabled={acting}
-                      onClick={() => void publishAction("unpublish")}
-                    >
-                      {acting ? "Working…" : "Unpublish"}
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className="btn"
-                      disabled={acting}
-                      onClick={() => void publishAction("publish")}
-                    >
-                      {acting ? "Working…" : "Publish"}
-                    </button>
-                  )
-                ) : (
-                  <span className="field-hint">Only the evaluation owner or an admin can publish.</span>
-                )}
               </div>
-              <ErrorNotice error={actionError} />
-              {evaluation.published_at ? (
-                <p className="field-hint">Published {fmtDateTime(evaluation.published_at)}</p>
-              ) : null}
             </>
           ) : (
             <p className="muted">Evaluation failed — no FRIES assessment is available.</p>

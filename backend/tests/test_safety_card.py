@@ -57,6 +57,23 @@ def test_ethical_considerations_does_not_count_as_misuse() -> None:
     assert checks["data_disclosure"]["present"] is True
 
 
+def test_placeholder_boilerplate_section_does_not_count_as_present() -> None:
+    """detect_safety_checks routes through card_markdown.nontrivial() (shared
+    with Explainability, see commit bf79fa2), so a heading with only HF's
+    auto-generated placeholder body must not satisfy the check — a template
+    section merely existing is not a disclosed misuse-risk section."""
+    text = (
+        "## Misuse and Malicious Use\n\n"
+        "[More Information Needed]\n\n"
+        "## Privacy\n\n"
+        "Personal data and PII are removed prior to training.\n"
+    )
+    checks = detect_safety_checks(text, {})
+    assert checks["misuse_risks"]["present"] is False
+    assert checks["privacy"]["present"] is True
+    assert safety_coverage_ratio(checks) == 0.25
+
+
 def test_card_data_fallback_data_disclosure() -> None:
     text = "## Privacy\n\nPersonal data and PII must be redacted before inference runs.\n"
     checks = detect_safety_checks(

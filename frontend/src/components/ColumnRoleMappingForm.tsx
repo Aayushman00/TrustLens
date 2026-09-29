@@ -139,80 +139,57 @@ export default function ColumnRoleMappingForm({
   return (
     <div>
       <ErrorNotice error={error} />
-      <label>
-        Text column
-        <select value={textColumn} onChange={(e) => setTextColumn(e.target.value)}>
-          <option value="">Select…</option>
-          {content.columns.map((c) => (
-            <option key={c.name} value={c.name}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label>
-        Target column
-        <select value={targetColumn} onChange={(e) => setTargetColumn(e.target.value)}>
-          <option value="">Select…</option>
-          {content.columns.map((c) => (
-            <option key={c.name} value={c.name}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      {dimension === "FAIRNESS" ? (
-        <>
-          <label>
-            Sensitive column
-            <select value={sensitiveColumn} onChange={(e) => setSensitiveColumn(e.target.value)}>
-              <option value="">Select…</option>
-              {content.columns.map((c) => (
-                <option key={c.name} value={c.name}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Minimum group size
-            <input
-              type="number"
-              min={1}
-              value={minGroupN}
-              onChange={(e) => setMinGroupN(Number(e.target.value))}
-            />
-          </label>
-          <label>
-            Favorable outcome for fairness metrics
-            <select
-              value={positiveLabelIndex}
-              onChange={(e) => setPositiveLabelIndex(Number(e.target.value))}
-            >
-              {modelLabelOptions.map(({ index, label }) => (
-                <option key={index} value={index}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-        </>
-      ) : null}
-      {targetValues.length > 0 ? (
-        <fieldset>
-          <legend>Map dataset labels to model labels</legend>
-          {targetValues.map((value, idx) => (
-            <label key={value}>
-              {value} {"→"}
+      <div className="mapping-grid">
+        <label>
+          Text column
+          <select value={textColumn} onChange={(e) => setTextColumn(e.target.value)}>
+            <option value="">Select…</option>
+            {content.columns.map((c) => (
+              <option key={c.name} value={c.name}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Target column
+          <select value={targetColumn} onChange={(e) => setTargetColumn(e.target.value)}>
+            <option value="">Select…</option>
+            {content.columns.map((c) => (
+              <option key={c.name} value={c.name}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        {dimension === "FAIRNESS" ? (
+          <>
+            <label>
+              Sensitive column
+              <select value={sensitiveColumn} onChange={(e) => setSensitiveColumn(e.target.value)}>
+                <option value="">Select…</option>
+                {content.columns.map((c) => (
+                  <option key={c.name} value={c.name}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Minimum group size
+              <input
+                type="number"
+                min={1}
+                value={minGroupN}
+                onChange={(e) => setMinGroupN(Number(e.target.value))}
+              />
+            </label>
+            <label>
+              Favorable outcome for fairness metrics
               <select
-                value={labelMapping[idx]?.model_label_index ?? -1}
-                onChange={(e) => {
-                  const next = [...labelMapping];
-                  next[idx] = { dataset_value: value, model_label_index: Number(e.target.value) };
-                  setLabelMapping(next);
-                }}
+                value={positiveLabelIndex}
+                onChange={(e) => setPositiveLabelIndex(Number(e.target.value))}
               >
-                <option value={-1}>Select model label…</option>
                 {modelLabelOptions.map(({ index, label }) => (
                   <option key={index} value={index}>
                     {label}
@@ -220,10 +197,45 @@ export default function ColumnRoleMappingForm({
                 ))}
               </select>
             </label>
-          ))}
+          </>
+        ) : null}
+      </div>
+      {targetValues.length > 0 ? (
+        <fieldset style={{ marginTop: "1rem", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", padding: "0.9rem 1rem" }}>
+          <legend style={{ padding: "0 0.4rem", fontWeight: 600, fontSize: "0.85rem" }}>
+            Map dataset labels to model labels
+          </legend>
+          <div className="mapping-grid">
+            {targetValues.map((value, idx) => (
+              <label key={value}>
+                {value} {"→"}
+                <select
+                  value={labelMapping[idx]?.model_label_index ?? -1}
+                  onChange={(e) => {
+                    const next = [...labelMapping];
+                    next[idx] = { dataset_value: value, model_label_index: Number(e.target.value) };
+                    setLabelMapping(next);
+                  }}
+                >
+                  <option value={-1}>Select model label…</option>
+                  {modelLabelOptions.map(({ index, label }) => (
+                    <option key={index} value={index}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ))}
+          </div>
         </fieldset>
       ) : null}
-      <button type="button" onClick={() => void submit()} disabled={submitting}>
+      <button
+        type="button"
+        className="btn"
+        style={{ marginTop: "1rem" }}
+        onClick={() => void submit()}
+        disabled={submitting}
+      >
         {submitting ? "Validating…" : "Save & validate"}
       </button>
     </div>

@@ -6,6 +6,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
+from app.adapters.base import HfHubUnavailableError
 from app.inference.base import (
     BatchPrediction,
     DeviceInfo,
@@ -22,6 +23,22 @@ from app.storage.evidence_store import (
     format_sha256,
     hashes_equal,
 )
+
+
+class FakeUnavailableHubAdapter:
+    """Default stand-in for ``app.probes.integrity.HfHubModelAdapter`` across
+    the whole test suite (see conftest's autouse ``_integrity_hub_reverify_offline``).
+
+    Simulates the Hub being unreachable for Integrity's live file-listing
+    re-verification — the probe degrades this to 'not_performed', exactly as
+    it does in production when the Hub can't be reached. A fake that instead
+    returned an empty/different listing would misreport as false drift across
+    every test with a non-empty ``files`` snapshot, so this must raise, not
+    return a value.
+    """
+
+    def list_current_files(self, ref: str, revision: str | None = None) -> list[str]:
+        raise HfHubUnavailableError("simulated: no Hub network in test suite")
 
 
 def patch_evaluated_robustness(monkeypatch: object) -> None:

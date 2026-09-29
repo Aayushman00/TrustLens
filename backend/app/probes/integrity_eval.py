@@ -11,12 +11,17 @@ from app.db.enums import ProbeEvaluationStatus
 from app.probes.integrity_stats import (
     CLAIM_BYTES_DIVERGE,
     CLAIM_HASH_UNVERIFIED,
+    CLAIM_LISTING_CURRENT,
+    CLAIM_LISTING_DRIFT,
+    CLAIM_LISTING_UNVERIFIED,
     G_HASH_LOCAL_MISSING,
     G_HASH_REF_MISSING,
     G_IDENTITY_EMPTY,
+    G_LISTING_UNVERIFIED,
     GATE_HASH_UNVERIFIED,
     LIMITATIONS,
     RISK_BYTES_DIVERGE,
+    RISK_FILES_LISTING_DRIFT,
     RISK_LICENSE_UNDISCLOSED,
     RISK_MANIFEST_MISSING,
     RISK_REV_UNPINNED,
@@ -132,6 +137,8 @@ def evaluate_integrity(
     model_revision: str | None,
     model_metadata: dict[str, Any],
     integrity_extra: dict[str, Any] | None = None,
+    live_files: list[str] | None = None,
+    live_files_error: str | None = None,
 ) -> IntegrityEvalResult:
     """Evaluate Integrity from an imported Hub metadata snapshot."""
     meta = model_metadata or {}
@@ -188,6 +195,8 @@ def evaluate_integrity(
                 "weight_hash": None,
                 "trusted_reference": None,
                 "hash_comparison": "not_performed",
+                "live_files_fingerprint": None,
+                "files_listing_reverification": "not_performed",
             },
             disclosure={
                 "license_structured": None,
@@ -208,8 +217,15 @@ def evaluate_integrity(
                     "status": ProbeEvaluationStatus.INSUFFICIENT_EVIDENCE.value,
                     "reason": CLAIM_HASH_UNVERIFIED,
                 },
+                "files_listing_currency": {
+                    "status": ProbeEvaluationStatus.INSUFFICIENT_EVIDENCE.value,
+                    "reason": CLAIM_LISTING_UNVERIFIED,
+                },
             },
-            claim_boundary={"cryptographic_identity": CLAIM_HASH_UNVERIFIED},
+            claim_boundary={
+                "cryptographic_identity": CLAIM_HASH_UNVERIFIED,
+                "files_listing_currency": CLAIM_LISTING_UNVERIFIED,
+            },
             reliability={"gates_passed": False, "failed_gates": [G_IDENTITY_EMPTY]},
             uncertainty={},
             limitations=list(LIMITATIONS),
@@ -324,6 +340,35 @@ def evaluate_integrity(
         "files_listing_fingerprint": fingerprint,
     }
 
+    # --- files_listing_reverification (Track 1 metadata-only re-check; ADR 0012:
+    # never downloads weight bytes) — compares a live re-resolution of the Hub
+    # file *listing* at the same pinned revision against the fingerprint
+    # recorded at import time, to catch post-import listing drift/tampering.
+    live_files_fingerprint: str | None = None
+    if live_files_error is not None or not files:
+        listing_reverification = "not_performed"
+        listing_currency_status = ProbeEvaluationStatus.INSUFFICIENT_EVIDENCE.value
+        listing_currency_reason = CLAIM_LISTING_UNVERIFIED
+        failed_gates.append(G_LISTING_UNVERIFIED)
+    elif live_files is None:
+        listing_reverification = "not_performed"
+        listing_currency_status = ProbeEvaluationStatus.INSUFFICIENT_EVIDENCE.value
+        listing_currency_reason = CLAIM_LISTING_UNVERIFIED
+        failed_gates.append(G_LISTING_UNVERIFIED)
+    else:
+        live_files_fingerprint = files_fingerprint(live_files)
+        if live_files_fingerprint == fingerprint:
+            listing_reverification = "match"
+            listing_currency_status = ProbeEvaluationStatus.EVALUATED.value
+            listing_currency_reason = CLAIM_LISTING_CURRENT
+        else:
+            listing_reverification = "drift"
+            listing_currency_status = ProbeEvaluationStatus.EVALUATED.value
+            listing_currency_reason = CLAIM_LISTING_DRIFT
+            risks.append(RISK_FILES_LISTING_DRIFT)
+            flags.append("files_listing_drift")
+    claim_boundary["files_listing_currency"] = listing_currency_reason
+
     trusted_reference = _parse_trusted_reference(extra.get("trusted_reference"))
     weight_hash = _parse_hash_entry(extra.get("local_artifact_hash"))
 
@@ -388,6 +433,8 @@ def evaluate_integrity(
             "weight_hash": weight_hash,
             "trusted_reference": trusted_reference,
             "hash_comparison": hash_comparison,
+            "live_files_fingerprint": live_files_fingerprint,
+            "files_listing_reverification": listing_reverification,
         },
         disclosure={
             "license_structured": structured_license,
@@ -407,6 +454,10 @@ def evaluate_integrity(
             "cryptographic_identity": {
                 "status": crypto_status,
                 "reason": crypto_reason,
+            },
+            "files_listing_currency": {
+                "status": listing_currency_status,
+                "reason": listing_currency_reason,
             },
         },
         claim_boundary=claim_boundary,

@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import logging
 import uuid
+from typing import Callable
 
 from sqlalchemy.orm import Session
 
@@ -241,11 +242,17 @@ def run_evaluation_pipeline(
     payload: EvaluateModelPayload,
     *,
     evidence_store: EvidenceStore | None = None,
+    on_progress: Callable[[], None] | None = None,
 ) -> None:
     """Drive PENDING → … → AWAITING_REVIEW | FINALIZED (or FAILED).
 
     All writes flush only; the caller commits (Celery ``get_session`` or test
-    fixture).
+    fixture) — UNLESS ``on_progress`` is given, in which case it is also
+    called after each probe and after each status transition below, so a
+    caller that passes ``session.commit`` (the worker task does) gets live,
+    probe-by-probe visibility for other DB connections instead of a single
+    all-at-the-end commit. Left ``None`` in tests, which rely on flush-only
+    writes inside one outer transaction that always rolls back.
     """
     evals = EvaluationRepository(session)
     models = ModelRepository(session)
@@ -295,6 +302,8 @@ def run_evaluation_pipeline(
         )
         return
     events.create(evaluation_id=payload.evaluation_id, event_type=EVENT_EVALUATION_STARTED)
+    if on_progress is not None:
+        on_progress()
 
     store = evidence_store if evidence_store is not None else get_evidence_store(get_settings())
     if store is None:
@@ -323,6 +332,7 @@ def run_evaluation_pipeline(
             model_revision=payload.model_revision,
             model_checksum=model.checksum,
             dataset_content_store=get_dataset_content_store(get_settings()),
+            on_probe_complete=on_progress,
         )
     except (ProbeError, EvidenceStoreError):
         logger.exception(
@@ -349,6 +359,8 @@ def run_evaluation_pipeline(
             event_type=EVENT_PROBES_COMPLETED,
             detail={"probe_count": len(outputs)},
         )
+    if on_progress is not None:
+        on_progress()
 
     execution_metadata = _extract_execution_metadata(outputs)
     if execution_metadata is not None:
@@ -386,6 +398,8 @@ def run_evaluation_pipeline(
         new=EvaluationStatus.AGENT_COMPLETED,
     ) is not None:
         events.create(evaluation_id=payload.evaluation_id, event_type=EVENT_AGENT_COMPLETED)
+    if on_progress is not None:
+        on_progress()
 
     if payload.evaluation_mode == EvaluationMode.AI_ASSISTED:
         # Human finalize (Phase 18) reviews the agent suggestion; no final_scores.

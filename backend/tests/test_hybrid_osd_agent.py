@@ -314,6 +314,62 @@ def test_all_three_providers_failing_falls_back_to_heuristic(
         assert aspect.O_source == aspect.S_source == aspect.D_source == "heuristic_fallback"
 
 
+_GOOD_RAW_WITH_CONTENT_QUALITY = (
+    '{"INTEGRITY": {"O": 7, "S": 7, "D": 8, '
+    '"rationale": "All metadata checks pass per the evidence block, and the card discloses '
+    'licensing information clearly."}, '
+    '"EXPLAINABILITY": {"O": 4, "S": 5, "D": 5, '
+    '"rationale": "The Limitations section is present per coverage_ratio but only restates '
+    'generic ML disclaimer language with no model-specific detail.", '
+    '"content_quality": "generic"}, '
+    '"SAFETY": {"O": 7, "S": 7, "D": 7, '
+    '"rationale": "The privacy section names specific PII-handling steps and retention '
+    'limits, which is concrete and model-specific disclosure.", '
+    '"content_quality": "substantive"}}'
+)
+
+
+@patch("app.osd.hybrid.call_gemini", return_value=_GOOD_RAW_WITH_CONTENT_QUALITY)
+@patch("app.osd.hybrid.get_settings")
+def test_content_quality_flows_into_osd_metadata_for_explainability_and_safety_only(
+    mock_settings, mock_call
+) -> None:
+    _mock_settings(mock_settings, gemini="fake-key")
+    result = HybridOSDAgent().propose(_full_context())
+    by_aspect = {a.aspect: a for a in result.aspects}
+
+    integrity = by_aspect[FriesDimension.INTEGRITY]
+    assert "content_quality" not in integrity.osd_metadata
+
+    explainability = by_aspect[FriesDimension.EXPLAINABILITY]
+    assert explainability.osd_metadata["content_quality"] == "generic"
+
+    safety = by_aspect[FriesDimension.SAFETY]
+    assert safety.osd_metadata["content_quality"] == "substantive"
+
+
+@patch("app.osd.hybrid.call_gemini", return_value=_GOOD_RAW)
+@patch("app.osd.hybrid.get_settings")
+def test_content_quality_absent_when_llm_omits_it_is_not_a_failure(mock_settings, mock_call) -> None:
+    """_GOOD_RAW (module-level fixture) has no content_quality at all — the
+    LLM path must still succeed and simply carry no osd_metadata entry."""
+    _mock_settings(mock_settings, gemini="fake-key")
+    result = HybridOSDAgent().propose(_full_context())
+    by_aspect = {a.aspect: a for a in result.aspects}
+    for dimension in (FriesDimension.INTEGRITY, FriesDimension.EXPLAINABILITY, FriesDimension.SAFETY):
+        assert "content_quality" not in by_aspect[dimension].osd_metadata
+
+
+@patch("app.osd.hybrid.call_gemini", side_effect=RuntimeError("timeout"))
+@patch("app.osd.hybrid.get_settings")
+def test_content_quality_absent_on_heuristic_fallback(mock_settings, mock_call) -> None:
+    _mock_settings(mock_settings, gemini="fake-key")
+    result = HybridOSDAgent().propose(_full_context())
+    by_aspect = {a.aspect: a for a in result.aspects}
+    for dimension in (FriesDimension.INTEGRITY, FriesDimension.EXPLAINABILITY, FriesDimension.SAFETY):
+        assert "content_quality" not in by_aspect[dimension].osd_metadata
+
+
 @patch("app.osd.hybrid.call_nvidia")
 @patch("app.osd.hybrid.call_groq")
 @patch("app.osd.hybrid.call_gemini", return_value=_GOOD_RAW)

@@ -100,7 +100,11 @@ def evaluate_model(self, **kwargs: object) -> dict[str, str]:
         self.request.retries + 1,
     )
     with get_session(settings.database_url) as session:
-        run_evaluation_pipeline(session, payload)
+        # Passing session.commit lets the pipeline commit after each probe
+        # and status transition, so a client polling GET /evaluations/{id}
+        # on another DB connection sees live progress instead of everything
+        # appearing at once when this `with` block's own final commit fires.
+        run_evaluation_pipeline(session, payload, on_progress=session.commit)
     logger.info("evaluate_model_done evaluation_id=%s", payload.evaluation_id)
     return {
         "evaluation_id": str(payload.evaluation_id),

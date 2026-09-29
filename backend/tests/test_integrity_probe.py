@@ -17,6 +17,7 @@ from app.probes.integrity_stats import (
     G_IDENTITY_EMPTY,
     METHODOLOGY_VERSION,
     RISK_BYTES_DIVERGE,
+    RISK_FILES_LISTING_DRIFT,
     RISK_LICENSE_UNDISCLOSED,
     RISK_MANIFEST_MISSING,
     RISK_REV_UNPINNED,
@@ -34,6 +35,12 @@ _DIVERGE_REF = "sha256:" + "d" * 64
 class _BoomStore(FakeEvidenceStore):
     def put_artifact(self, **kwargs: Any):  # type: ignore[no-untyped-def]
         raise EvidenceStoreError("boom")
+
+
+# Note: every test here already runs offline by default via conftest's
+# autouse `_integrity_hub_reverify_offline` (Hub-unreachable stand-in for
+# `app.probes.integrity.HfHubModelAdapter`); the 'match'/'drift' tests below
+# override it per-test with their own monkeypatch.
 
 
 def _ctx(
@@ -273,3 +280,57 @@ def test_no_material_risk_when_clean() -> None:
     out = IntegrityProbe().run(ctx)
     assert out.metric_values["aspect_scoring"] == "no_material_risk"
     assert out.metric_values["risks_triggered"] == []
+
+
+def test_listing_reverification_not_performed_when_hub_unavailable() -> None:
+    # Default fixture (_no_hub_network) simulates an unreachable Hub.
+    ctx, _ = _ctx(metadata=_good_metadata())
+    out = IntegrityProbe().run(ctx)
+    assert out.status == ProbeEvaluationStatus.EVALUATED
+    assert out.metric_values["identity"]["files_listing_reverification"] == "not_performed"
+    assert out.metric_values["identity"]["live_files_fingerprint"] is None
+    assert RISK_FILES_LISTING_DRIFT not in out.metric_values["risks_triggered"]
+
+
+def test_listing_reverification_skipped_when_no_import_time_files() -> None:
+    meta = _good_metadata()
+    meta["files"] = []
+    ctx, _ = _ctx(metadata=meta)
+    out = IntegrityProbe().run(ctx)
+    assert out.metric_values["identity"]["files_listing_reverification"] == "not_performed"
+    assert RISK_FILES_LISTING_DRIFT not in out.metric_values["risks_triggered"]
+
+
+def test_listing_reverification_match(monkeypatch: pytest.MonkeyPatch) -> None:
+    meta = _good_metadata()
+
+    class _MatchAdapter:
+        def list_current_files(self, ref: str, revision: str | None = None) -> list[str]:
+            return list(meta["files"])
+
+    monkeypatch.setattr("app.probes.integrity.HfHubModelAdapter", _MatchAdapter)
+    ctx, _ = _ctx(metadata=meta)
+    out = IntegrityProbe().run(ctx)
+    assert out.metric_values["identity"]["files_listing_reverification"] == "match"
+    assert (
+        out.metric_values["identity"]["live_files_fingerprint"]
+        == out.metric_values["identity"]["files_listing_fingerprint"]
+    )
+    assert RISK_FILES_LISTING_DRIFT not in out.metric_values["risks_triggered"]
+    assert out.metric_values["aspect_scoring"] == "no_material_risk"
+
+
+def test_listing_reverification_drift_triggers_risk(monkeypatch: pytest.MonkeyPatch) -> None:
+    meta = _good_metadata()
+
+    class _DriftAdapter:
+        def list_current_files(self, ref: str, revision: str | None = None) -> list[str]:
+            return ["config.json", "a-new-unexpected-file.bin"]
+
+    monkeypatch.setattr("app.probes.integrity.HfHubModelAdapter", _DriftAdapter)
+    ctx, _ = _ctx(metadata=meta)
+    out = IntegrityProbe().run(ctx)
+    assert out.metric_values["identity"]["files_listing_reverification"] == "drift"
+    assert RISK_FILES_LISTING_DRIFT in out.metric_values["risks_triggered"]
+    assert out.metric_values["aspect_scoring"] == "risk_detected"
+    assert "files_listing_drift" in out.flags

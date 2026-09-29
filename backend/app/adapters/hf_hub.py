@@ -205,6 +205,46 @@ class HfHubModelAdapter:
             logger.warning("hf_list_repo_files_failed hf_repo_id=%s", ref)
             return []
 
+    def list_current_files(self, ref: str, revision: str | None = None) -> list[str]:
+        """Live re-fetch of the Hub file *listing* only (ADR 0012: metadata only,
+        never downloads weight bytes) — used by Integrity's post-import
+        file-listing re-verification, never by model import itself.
+
+        Unlike ``_fetch_file_list`` (import path, swallows errors into ``[]``
+        so import still succeeds), this raises on failure — a re-verification
+        caller must be able to tell "Hub unreachable" apart from "listing is
+        now genuinely empty" and degrade to not-performed rather than
+        misreport the former as drift.
+        """
+        _validate_repo_id(ref)
+        try:
+            return list(self._api.list_repo_files(ref, revision=revision, token=self._token))
+        except GatedRepoError as exc:
+            raise HfAuthRequiredError(
+                f"Model '{ref}' is gated — set HF_TOKEN with access",
+                details={"hf_repo_id": ref},
+            ) from exc
+        except RepositoryNotFoundError as exc:
+            raise ModelNotFoundError(
+                f"Model '{ref}' was not found on Hugging Face Hub",
+                details={"hf_repo_id": ref},
+            ) from exc
+        except RevisionNotFoundError as exc:
+            raise ModelNotFoundError(
+                f"Revision '{revision}' not found for model '{ref}'",
+                details={"hf_repo_id": ref, "revision": revision},
+            ) from exc
+        except HfHubHTTPError as exc:
+            raise HfHubUnavailableError(
+                "Hugging Face Hub request failed",
+                details={"hf_repo_id": ref},
+            ) from exc
+        except Exception as exc:
+            raise HfHubUnavailableError(
+                "Hugging Face Hub is unreachable",
+                details={"hf_repo_id": ref},
+            ) from exc
+
     def _fetch_documentation_evidence(self, ref: str, revision: str | None):  # noqa: ANN201
         doc_evidence = resolve_hf_documentation_evidence(ref, revision, token=self._token)
         if doc_evidence.retrieval_status != "ok":

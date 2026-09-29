@@ -6,7 +6,12 @@ import httpx
 import pytest
 from huggingface_hub.utils import GatedRepoError, RepositoryNotFoundError, RevisionNotFoundError
 
-from app.adapters.base import HfAuthRequiredError, ModelNotFoundError, NormalizedModelRecord
+from app.adapters.base import (
+    HfAuthRequiredError,
+    HfHubUnavailableError,
+    ModelNotFoundError,
+    NormalizedModelRecord,
+)
 from app.adapters.hf_hub import HfHubModelAdapter, parse_hf_ref
 from app.api.errors import AppError
 from app.documentation.evidence import DocumentationEvidence
@@ -89,10 +94,12 @@ class _FakeHfApi:
         model_info_result: object = None,
         model_info_error: Exception | None = None,
         files: list[str] | None = None,
+        list_files_error: Exception | None = None,
     ) -> None:
         self._model_info_result = model_info_result
         self._model_info_error = model_info_error
         self._files = files or []
+        self._list_files_error = list_files_error
 
     def model_info(self, repo_id: str, *, revision: str | None = None, token: object = None) -> object:
         if self._model_info_error:
@@ -106,6 +113,8 @@ class _FakeHfApi:
         revision: str | None = None,
         token: object = None,
     ) -> list[str]:
+        if self._list_files_error:
+            raise self._list_files_error
         return self._files
 
 
@@ -228,5 +237,63 @@ def test_resolve_never_calls_download_apis(monkeypatch: pytest.MonkeyPatch) -> N
     _install_fake_documentation_evidence(monkeypatch)
     assert not hasattr(fake_api, "snapshot_download")
     assert not hasattr(fake_api, "hf_hub_download")
+
+
+def test_list_current_files_returns_listing(monkeypatch: pytest.MonkeyPatch) -> None:
+    _install_fake_api(monkeypatch, files=["config.json", "model.safetensors"])
+    adapter = HfHubModelAdapter()
+    assert adapter.list_current_files("org/model", "abc123") == [
+        "config.json",
+        "model.safetensors",
+    ]
+
+
+def test_list_current_files_never_downloads_weights(monkeypatch: pytest.MonkeyPatch) -> None:
+    """ADR 0012 — re-verification stays metadata-only, same guarantee as import."""
+    fake_api = _install_fake_api(monkeypatch, files=["model.safetensors"])
+    adapter = HfHubModelAdapter()
+    adapter.list_current_files("org/model", "abc123")
+    assert not hasattr(fake_api, "snapshot_download")
+    assert not hasattr(fake_api, "hf_hub_download")
+
+
+def test_list_current_files_repo_not_found_raises_404(monkeypatch: pytest.MonkeyPatch) -> None:
+    _install_fake_api(
+        monkeypatch, list_files_error=_hub_error(RepositoryNotFoundError, "not found")
+    )
+    adapter = HfHubModelAdapter()
+    with pytest.raises(ModelNotFoundError):
+        adapter.list_current_files("nobody/does-not-exist")
+
+
+def test_list_current_files_revision_not_found_raises_404(monkeypatch: pytest.MonkeyPatch) -> None:
+    _install_fake_api(
+        monkeypatch, list_files_error=_hub_error(RevisionNotFoundError, "bad revision")
+    )
+    adapter = HfHubModelAdapter()
+    with pytest.raises(ModelNotFoundError):
+        adapter.list_current_files("org/model", "nonexistent")
+
+
+def test_list_current_files_gated_raises_hf_auth_required_403(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_fake_api(
+        monkeypatch, list_files_error=_hub_error(GatedRepoError, "gated", status_code=403)
+    )
+    adapter = HfHubModelAdapter()
+    with pytest.raises(HfAuthRequiredError) as exc_info:
+        adapter.list_current_files("org/gated-model")
+    assert exc_info.value.status_code == 403
+
+
+def test_list_current_files_unexpected_error_raises_hub_unavailable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_fake_api(monkeypatch, list_files_error=RuntimeError("connection reset"))
+    adapter = HfHubModelAdapter()
+    with pytest.raises(HfHubUnavailableError) as exc_info:
+        adapter.list_current_files("org/model")
+    assert exc_info.value.status_code == 502
 
     HfHubModelAdapter().resolve("org/model")

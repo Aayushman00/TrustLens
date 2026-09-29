@@ -71,6 +71,14 @@ class HybridOSDAgent:
             aspect.O, aspect.S, aspect.D = dim_judgment.O, dim_judgment.S, dim_judgment.D
             aspect.O_source = aspect.S_source = aspect.D_source = _LLM_SOURCE
             aspect.rationale = dim_judgment.rationale
+            # EXPLAINABILITY/SAFETY only (see llm_client._PROMPT_TEMPLATE) —
+            # an audit-visible companion to the rationale, never a mechanical
+            # override of O/S/D and never required for a "successful" judgment.
+            if dim_judgment.content_quality is not None:
+                aspect.osd_metadata = {
+                    **aspect.osd_metadata,
+                    "content_quality": dim_judgment.content_quality,
+                }
 
         return AgentResult(
             aspects=baseline.aspects,

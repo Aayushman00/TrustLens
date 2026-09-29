@@ -77,8 +77,8 @@ export default function DatasetIntakeForm({
   return (
     <div>
       <ErrorNotice error={error} />
-      <form onSubmit={(e) => void fetchDataset(e)} className="form-grid">
-        <label>
+      <form onSubmit={(e) => void fetchDataset(e)} className="field-row">
+        <label className="field">
           Dataset URL
           <input
             type="url"
@@ -93,9 +93,13 @@ export default function DatasetIntakeForm({
         </button>
       </form>
 
-      <div className="form-grid" style={{ marginTop: "0.75rem" }}>
-        <label>
-          Or upload a local CSV
+      <div className="or-divider" style={{ margin: "0.9rem 0" }}>
+        <span>or</span>
+      </div>
+
+      <div className="field-row">
+        <label className="field">
+          Upload a local CSV<span className="optional-tag">optional</span>
           <input type="file" accept=".csv,text/csv" disabled={loading} onChange={(e) => void uploadDataset(e)} />
         </label>
       </div>

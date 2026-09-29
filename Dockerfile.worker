@@ -32,6 +32,18 @@ COPY backend/app/datasets ./app/datasets
 # missing, which broke every real Fairness/Robustness run inside this
 # container regardless of GPU.
 COPY backend/app/inference ./app/inference
+# app/probes/integrity.py imports app.adapters.hf_hub.HfHubModelAdapter,
+# which in turn needs app.documentation.evidence and app.api.errors
+# (AppError) — none of these three were previously copied, which broke
+# every evaluation in this container the moment integrity.py's import chain
+# was exercised (ModuleNotFoundError: No module named 'app.adapters').
+# Worker keeps its own app/core/config.py (see worker/app/core) — do not
+# copy backend's, hf_hub.py's `from app.core.config import get_settings`
+# resolves to the worker's own Settings class at this container's runtime.
+COPY backend/app/adapters ./app/adapters
+COPY backend/app/documentation ./app/documentation
+COPY backend/app/api/__init__.py ./app/api/__init__.py
+COPY backend/app/api/errors.py ./app/api/errors.py
 COPY backend/app/probes ./app/probes
 COPY backend/app/confidence ./app/confidence
 COPY backend/app/osd ./app/osd

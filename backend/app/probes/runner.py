@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, Callable
 
 from sqlalchemy.orm import Session
 
@@ -56,8 +56,18 @@ def run_all_probes(
     model_revision: str | None = None,
     model_checksum: str | None = None,
     dataset_content_store: DatasetContentStore | None = None,
+    on_probe_complete: Callable[[], None] | None = None,
 ) -> list[ProbeOutput]:
     """Run F→R→I→E→S; persist each via ProbeResultRepository; return outputs.
+
+    ``on_probe_complete``, if given, is called immediately after each probe's
+    row is persisted (flushed) — the worker task passes ``session.commit``
+    here so live progress becomes visible to other DB connections (e.g. the
+    API polled by the evaluation detail page) probe-by-probe instead of only
+    once the whole pipeline transaction commits at the end. Left ``None`` by
+    every caller that must keep this flush-only (backend tests share one
+    outer transaction that rolls back at test end; committing here would
+    break that isolation) — the default preserves that contract exactly.
 
     Raises:
         ProbeError: invalid output or probe execution failure.
@@ -135,4 +145,6 @@ def run_all_probes(
             output.confidence,
             len(output.evidence_refs),
         )
+        if on_probe_complete is not None:
+            on_probe_complete()
     return outputs

@@ -32,6 +32,15 @@ dependencies = [
   # Groq/NVIDIA NIM fallback calls in app/osd/llm_client.py — was working
   # only via google-genai's own transitive dependency; declared explicitly.
   "httpx>=0.27.0",
+  # app.api.errors (vendored into app.adapters.hf_hub's import chain via
+  # app.probes.integrity) defines AppError but imports fastapi at module
+  # level for its exception-handler registration helpers. Not otherwise
+  # used by the worker's own request handling (it has none), but the import
+  # must succeed. huggingface_hub is app.adapters.hf_hub's own direct
+  # dependency (was working only via transformers'/torch's transitive
+  # dependency; declared explicitly, matching the httpx precedent above).
+  "fastapi>=0.115.0",
+  "huggingface-hub>=0.24.0",
 ]
 
 [project.optional-dependencies]

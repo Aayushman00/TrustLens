@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from app.adapters.hf_hub import HfHubModelAdapter
 from app.db.enums import FriesDimension, ProbeEvaluationStatus
 from app.probes.base import ProbeContext, ProbeOutput
 from app.probes.integrity_eval import evaluate_integrity
@@ -27,11 +28,27 @@ class IntegrityProbe:
         extra = ctx.probe_config.extra if ctx.probe_config.extra else {}
         integrity_extra = extra.get("integrity") if isinstance(extra.get("integrity"), dict) else {}
 
+        live_files: list[str] | None = None
+        live_files_error: str | None = None
+        imported_files = (ctx.model_metadata or {}).get("files")
+        if isinstance(imported_files, list) and imported_files:
+            # Metadata-only re-check (ADR 0012: never downloads weight bytes) —
+            # re-resolves the Hub file *listing* at the same pinned revision to
+            # detect post-import drift/tampering in the listing itself. Never
+            # allowed to fail the whole probe: any error degrades to
+            # "not_performed" in evaluate_integrity, same as an unsupplied hash.
+            try:
+                live_files = HfHubModelAdapter().list_current_files(ctx.model_ref, ctx.model_revision)
+            except Exception as exc:  # noqa: BLE001 — degrade, never fail the probe
+                live_files_error = str(exc)
+
         result = evaluate_integrity(
             model_ref=ctx.model_ref,
             model_revision=ctx.model_revision,
             model_metadata=ctx.model_metadata or {},
             integrity_extra=integrity_extra,
+            live_files=live_files,
+            live_files_error=live_files_error,
         )
 
         metrics: dict[str, Any] = {

@@ -209,6 +209,18 @@ export default function CreateEvaluationDraftPage() {
     anyEnabled &&
     (!fairness.enabled || fairness.confirmed) &&
     (!robustness.enabled || robustness.confirmed);
+  // Told the person exactly what's missing rather than leaving the disabled
+  // "Continue to review" button unexplained — it used to just silently
+  // refuse clicks with no visible reason.
+  const continueHint = readyToContinue
+    ? null
+    : !anyEnabled
+      ? "Configure Fairness or Robustness above with a dataset before continuing — at least one is required."
+      : fairness.enabled && !fairness.confirmed
+        ? "Validate and confirm the Fairness dataset above before continuing."
+        : robustness.enabled && !robustness.confirmed
+          ? "Validate and confirm the Robustness dataset above before continuing."
+          : null;
 
   // --- Create the real Evaluation from the confirmed draft ---
   const [creatingEvaluation, setCreatingEvaluation] = useState(false);
@@ -241,18 +253,26 @@ export default function CreateEvaluationDraftPage() {
     const inputId = `configure-${dim.toLowerCase()}`;
     return (
       <div className="card" key={dim}>
-        <label htmlFor={inputId}>
-          <input
-            id={inputId}
-            type="checkbox"
-            checked={state.enabled}
-            onChange={(e) => toggleDimension(dim, e.target.checked)}
-          />{" "}
-          Configure {DIMENSION_LABEL[dim]}
-        </label>
+        <div className="dimension-config-head">
+          <div>
+            <h2>{DIMENSION_LABEL[dim]}</h2>
+            <p className="section-desc">
+              Optional. Provide a labeled dataset to evaluate {DIMENSION_LABEL[dim].toLowerCase()}.
+            </p>
+          </div>
+          <label className="toggle-row" htmlFor={inputId}>
+            <input
+              id={inputId}
+              type="checkbox"
+              checked={state.enabled}
+              onChange={(e) => toggleDimension(dim, e.target.checked)}
+            />
+            Configure {DIMENSION_LABEL[dim]}
+          </label>
+        </div>
 
         {state.enabled ? (
-          <div style={{ marginTop: "0.8rem" }}>
+          <div className="dimension-config-body">
             <DatasetIntakeForm
               onContentReady={(content) => handleContentReady(dim, content)}
               onFetchStart={() => handleFetchStart(dim)}
@@ -281,7 +301,7 @@ export default function CreateEvaluationDraftPage() {
             ) : null}
 
             {state.validation?.ok ? (
-              <>
+              <div>
                 <ErrorNotice error={state.confirmError} />
                 <button
                   type="button"
@@ -295,7 +315,7 @@ export default function CreateEvaluationDraftPage() {
                       ? "Confirming…"
                       : `Confirm ${DIMENSION_LABEL[dim]}`}
                 </button>
-              </>
+              </div>
             ) : null}
           </div>
         ) : null}
@@ -304,7 +324,7 @@ export default function CreateEvaluationDraftPage() {
   }
 
   return (
-    <>
+    <div className="eval-page">
       <div className="page-header">
         <div>
           <h1>New evaluation</h1>
@@ -395,30 +415,40 @@ export default function CreateEvaluationDraftPage() {
 
           <div className="card">
             <h2>Documentation</h2>
-            <p className="muted">
+            <p className="section-desc">
               The pinned model card is included automatically. Add papers, safety cards, or
               other documentation for the Integrity, Explainability, and Safety probes.
             </p>
+            <div className="pinned-model-block">
+              <span className="pinned-model-block-title">Pinned model card</span>
+              <span className="pinned-model-block-value">{model?.hf_repo_id}</span>
+              <span className="muted mono">Revision {shortRevision(model?.revision)}</span>
+            </div>
             <DocumentationSourceForm modelId={draft.model_id} />
           </div>
 
           <div className="card">
             <AssessmentEngineSelector value={assessmentEngine} onChange={setAssessmentEngine} />
-          </div>
 
-          <ErrorNotice error={continueError} />
-          <div className="btn-row" style={{ marginTop: "1rem" }}>
-            <button
-              type="button"
-              className="btn"
-              disabled={!readyToContinue || creatingEvaluation}
-              onClick={() => void continueToReview()}
-            >
-              {creatingEvaluation ? "Creating…" : "Continue to review"}
-            </button>
+            <ErrorNotice error={continueError} />
+            <div className="continue-bar">
+              <button
+                type="button"
+                className="btn btn-lg"
+                disabled={!readyToContinue || creatingEvaluation}
+                onClick={() => void continueToReview()}
+              >
+                {creatingEvaluation ? "Creating…" : "Continue to review"}
+              </button>
+              {continueHint ? (
+                <p className="muted continue-hint" role="status">
+                  {continueHint}
+                </p>
+              ) : null}
+            </div>
           </div>
         </>
       ) : null}
-    </>
+    </div>
   );
 }

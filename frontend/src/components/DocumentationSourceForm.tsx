@@ -147,8 +147,8 @@ export default function DocumentationSourceForm({ modelId }: { modelId: number }
         </div>
       )}
 
-      <form onSubmit={(e) => void submit(e)} className="form-grid">
-        <label>
+      <form onSubmit={(e) => void submit(e)} className="doc-form-grid">
+        <label className="full-row">
           Documentation URL
           <input
             type="url"
@@ -169,16 +169,28 @@ export default function DocumentationSourceForm({ modelId }: { modelId: number }
           </select>
         </label>
         <label>
-          Title (optional)
-          <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} />
+          Title<span className="optional-tag">optional</span>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="e.g. Model card v2"
+          />
         </label>
-        <label>
-          Description (optional)
-          <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} />
+        <label className="full-row">
+          Description<span className="optional-tag">optional</span>
+          <input
+            type="text"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="What this source covers and why it's relevant"
+          />
         </label>
-        <button type="submit" className="btn" disabled={submitting}>
-          {submitting ? "Adding…" : "Add documentation source"}
-        </button>
+        <div className="doc-form-actions">
+          <button type="submit" className="btn" disabled={submitting || !url.trim()}>
+            {submitting ? "Adding…" : "Add documentation source"}
+          </button>
+        </div>
       </form>
       <p className="field-hint">
         TrustLens does not fetch or hash this URL's content — it is recorded as a declared

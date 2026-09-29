@@ -61,6 +61,13 @@ def test_build_prompt_instructs_multi_sentence_evidence_citing_rationale() -> No
     assert "quote or closely paraphrase" in prompt
 
 
+def test_build_prompt_instructs_content_quality_for_explainability_and_safety_only() -> None:
+    prompt = build_prompt(_ctx())
+    assert "content_quality" in prompt
+    assert "substantive" in prompt and "generic" in prompt and "irrelevant_or_absent" in prompt
+    assert "do not apply this content-quality lens to INTEGRITY" in prompt
+
+
 def test_parse_gemini_response_accepts_well_formed_json() -> None:
     raw = json.dumps(
         {
@@ -91,6 +98,64 @@ def test_parse_gemini_response_accepts_well_formed_json() -> None:
     assert isinstance(result, GeminiOSDResponse)
     assert result.INTEGRITY.O == 7
     assert "gov_disclosure_gap" in result.SAFETY.rationale
+
+
+def test_parse_gemini_response_accepts_content_quality_for_explainability_and_safety() -> None:
+    raw = json.dumps(
+        {
+            "INTEGRITY": {
+                "O": 7, "S": 7, "D": 8,
+                "rationale": "Metadata checks pass: the license field and pass_count in the "
+                "evidence block confirm all required integrity checks succeeded.",
+            },
+            "EXPLAINABILITY": {
+                "O": 4, "S": 5, "D": 5,
+                "rationale": "The Limitations section is present per coverage_ratio but only "
+                "restates generic ML disclaimer language with no model-specific detail.",
+                "content_quality": "generic",
+            },
+            "SAFETY": {
+                "O": 7, "S": 7, "D": 7,
+                "rationale": "The privacy section names specific PII-handling steps and data "
+                "retention limits, which is concrete and model-specific disclosure.",
+                "content_quality": "substantive",
+            },
+        }
+    )
+    result = parse_gemini_response(raw)
+    assert result.INTEGRITY.content_quality is None
+    assert result.EXPLAINABILITY.content_quality == "generic"
+    assert result.SAFETY.content_quality == "substantive"
+
+
+def test_parse_gemini_response_content_quality_omitted_is_not_a_failure() -> None:
+    """content_quality is a companion signal, never a required field — an
+    otherwise well-formed response without it must still parse successfully."""
+    raw = json.dumps(
+        {
+            "INTEGRITY": {"O": 7, "S": 7, "D": 8, "rationale": "x" * 40},
+            "EXPLAINABILITY": {"O": 6, "S": 6, "D": 6, "rationale": "y" * 40},
+            "SAFETY": {"O": 4, "S": 4, "D": 5, "rationale": "z" * 40},
+        }
+    )
+    result = parse_gemini_response(raw)
+    assert result.EXPLAINABILITY.content_quality is None
+    assert result.SAFETY.content_quality is None
+
+
+def test_parse_gemini_response_rejects_invalid_content_quality_value() -> None:
+    raw = json.dumps(
+        {
+            "INTEGRITY": {"O": 7, "S": 7, "D": 8, "rationale": "x" * 40},
+            "EXPLAINABILITY": {
+                "O": 6, "S": 6, "D": 6, "rationale": "y" * 40,
+                "content_quality": "kind of okay I guess",
+            },
+            "SAFETY": {"O": 4, "S": 4, "D": 5, "rationale": "z" * 40},
+        }
+    )
+    with pytest.raises(ValidationError):
+        parse_gemini_response(raw)
 
 
 def test_parse_gemini_response_rejects_too_short_rationale() -> None:

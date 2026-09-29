@@ -318,13 +318,14 @@ class EvaluationEvent(Base, TimestampMixin):
     ``final_scores``. No code should ever read this table to decide any of
     those facts — only to display when they happened.
 
-    Ordering is by ``id`` (autoincrement), not ``created_at``: a full
-    pipeline run and an HTTP-request-scoped write both execute inside one
-    DB transaction, and PostgreSQL's ``now()`` (what ``server_default=
-    func.now()`` compiles to) is frozen for the whole transaction — several
-    events from one run can share an identical timestamp. This matches the
-    existing convention (``ProbeResult``, ``HumanReview``, etc. are all
-    ordered by ``.id``, never ``created_at``, for the same reason.
+    Ordering is by ``id`` (autoincrement), not ``created_at`` — kept as a
+    belt-and-suspenders match for ``ProbeResult``/``HumanReview``/etc., which
+    all order by ``.id`` for the same reason. ``created_at`` itself uses
+    ``clock_timestamp()`` rather than ``TimestampMixin``'s ``now()``: a full
+    pipeline run creates several of these rows inside one DB transaction, and
+    Postgres's ``now()`` is frozen for the whole transaction — every row would
+    otherwise get an identical, user-visible timestamp on the evaluation
+    timeline. ``clock_timestamp()`` reads the real wall clock per statement.
     """
 
     __tablename__ = "evaluation_events"
@@ -334,6 +335,11 @@ class EvaluationEvent(Base, TimestampMixin):
     evaluation_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("evaluations.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.clock_timestamp(),
         nullable=False,
     )
     event_type: Mapped[str] = mapped_column(String(64), nullable=False)

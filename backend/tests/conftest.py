@@ -66,7 +66,7 @@ if TYPE_CHECKING:
 
 from app.core.config import get_settings
 from app.core.db import get_engine, reset_engine
-from tests.fakes import patch_evaluated_fairness, patch_evaluated_robustness
+from tests.fakes import FakeUnavailableHubAdapter, patch_evaluated_fairness, patch_evaluated_robustness
 
 LEGACY_HEURISTIC_PROBE_CONFIG = {
     "schema_version": "v1",
@@ -249,6 +249,18 @@ def evaluated_robustness(monkeypatch: pytest.MonkeyPatch) -> None:
 def evaluated_fairness(monkeypatch: pytest.MonkeyPatch) -> None:
     """Opt-in: fairness probe emits EVALUATED disparity metrics (complete FRIES path)."""
     patch_evaluated_fairness(monkeypatch)
+
+
+@pytest.fixture(autouse=True)
+def _integrity_hub_reverify_offline(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Integrity's live post-import file-listing re-verification
+    (``IntegrityProbe.run`` -> ``HfHubModelAdapter.list_current_files``) is a
+    real Hub network call by default. This whole suite is offline unless a
+    test explicitly opts in, so default every test to a Hub-unreachable
+    stand-in (degrading to 'not_performed', same as production when the Hub
+    can't be reached) rather than let it hit the network. A test exercising
+    the 'match'/'drift' outcomes overrides this via its own monkeypatch."""
+    monkeypatch.setattr("app.probes.integrity.HfHubModelAdapter", FakeUnavailableHubAdapter)
 
 
 @pytest.fixture

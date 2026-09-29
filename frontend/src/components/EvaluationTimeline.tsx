@@ -146,6 +146,7 @@ export default function EvaluationTimeline({
 
           rows.push(
             <li key={event.id} className="timeline-row">
+              <span className="timeline-row-node" aria-hidden="true" />
               <span className="mono muted timeline-row-time">
                 {fmtTimeSeconds(event.created_at)}
                 {gap ? <span className="timeline-row-gap"> · {gap}</span> : null}

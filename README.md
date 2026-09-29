@@ -106,7 +106,8 @@ Default evaluations **do not invent O/S/D**. FRIES is **withheld** (status still
 - **Auth and RBAC** — researcher / reviewer / admin JWT roles.
 - **Model registry** — `POST /v1/models/import-hf` resolves Hub **metadata only** (card, tags, license, file list). It does **not** download weights.
 - **Async evaluations** — `POST /v1/evaluations` enqueues `trustlens.evaluate_model`; probes run F → R → I → E → S.
-- **Probes emit metrics and evidence**, not FRIES scores. Confidence is an **uncalibrated evidence-strength** geometric mean (`data_quality`, `probe_reliability`, `evidence_completeness`) — not correctness and not O/S/D.
+- **Probes emit metrics and evidence**, not FRIES scores. Each probe result carries a first-class `ProbeEvaluationStatus` (`EVALUATED` / `INSUFFICIENT_EVIDENCE` / `NOT_APPLICABLE` / `SKIPPED` / `FAILED` / `PROXY`). Confidence is an **uncalibrated evidence-strength** geometric mean (`data_quality`, `probe_reliability`, `evidence_completeness`) — not correctness and not O/S/D. Under the current `methodology_version` (`v2-per-dimension-2026`), dimensions marked `NOT_APPLICABLE` are excluded from the overall confidence figure (still shown as `None` per-dimension); legacy evaluations keep the old fold-in-at-value behavior byte-for-byte.
+- **Every evaluation is stamped with an immutable `methodology_version`** at creation (`backend/app/scoring/methodology_version.py`), copied verbatim into its report. Historical evaluations predating this field carry a `LEGACY_METHODOLOGY_VERSION` sentinel.
 - **Assessment engine (orthogonal to workflow mode)**
   - **Default `deterministic`** — O/S/D are not generated (no validated mapping). FRIES withheld.
   - **`legacy_heuristic`** — admin-only, **top-level** `probe_config.assessment_engine` only. `extra.assessment_engine` (including `"heuristic"`) is ignored. HeuristicOSDAgent still exists for this path; it is not an LLM.
@@ -139,17 +140,15 @@ Default evaluations **do not invent O/S/D**. FRIES is **withheld** (status still
 These are the main deviations from the target architecture:
 
 1. **One O/S/D triple per dimension**, not a catalog of 1–3 selected FRIES risks with structured mapping traces (`rule_id`, band, rationale, methodology version).
-2. **Heuristic agent always proposes numbers**, including skip/empty-card defaults such as `(4, 4, 3)` or `(2, 2, 3)`. Skipped fairness/robustness and missing evidence still become numeric O/S/D.
-3. **No first-class evaluation statuses** (`EVALUATED`, `INSUFFICIENT_EVIDENCE`, `NOT_APPLICABLE`, `SKIPPED`, `FAILED`, `PROXY`). Soft skips complete the job and still feed the scorer.
-4. **Fairness does not evaluate the imported model.** Proxy behavior is documented in code comments but is not a first-class `PROXY` path in the product.
-5. **Coverage ratios and integrity pass rates are still easy to confuse with aspect scores.** The scorer uses O/S/D, but the agent bands those O/S/D values directly from coverage / pass rate / disparity — closer to “metric → dimension rating” than “evidence → named risk → O/S/D”.
-6. **Overall FRIES always assumes five aspects.** Missing dimensions are not withheld or reweighted; empty risk lists currently score as `0`.
-7. **No resource checker, compatibility states, or benchmark-first runtime estimate** before download. HF import never downloads weights; robustness may download a sequence-classification model at probe time with no VRAM/RAM/disk gate.
-8. **No shared inference backend.** Only the robustness NLP runner loads the imported model.
-9. **Integrity Phase 3** records named Layer-A risks (`I-INT-*`) from Hub metadata; it does not claim tampering, true lineage, or a generic integrity score. Production hash verification is deferred; optional injected compare for tests/operators only.
-10. **Safety has no behavioral test set.** Governance coverage is the evidence.
-11. **Reports are still score-centric** relative to the target (limited hardware, mapping-trace, and limitation sections).
-12. **Historical results** are version-stamped (`evaluations.trustlens_version`) but there is no separate methodology version for heuristic bands vs scorer math.
+2. **Explainability and Safety still fall back to a fixed empty-card band `(2, 2, 3)`** when there is no card evidence, instead of abstaining. Fairness, Robustness, and Integrity now abstain (`None`) on missing evidence rather than inventing a number.
+3. **Fairness does not evaluate the imported model.** Proxy behavior is documented in code comments but is not a first-class `PROXY` path in the product.
+4. **Coverage ratios and integrity pass rates are still easy to confuse with aspect scores.** The scorer uses O/S/D, but the agent bands those O/S/D values directly from coverage / pass rate / disparity — closer to “metric → dimension rating” than “evidence → named risk → O/S/D”.
+5. **Overall FRIES always assumes five aspects.** Missing dimensions are not withheld or reweighted; empty risk lists currently score as `0`. (The separate confidence-engine `overall` figure already excludes `NOT_APPLICABLE` dimensions under `methodology_version="v2-per-dimension-2026"` — this gap is about the FRIES score itself, not confidence.)
+6. **No resource checker, compatibility states, or benchmark-first runtime estimate** before download. HF import never downloads weights; robustness may download a sequence-classification model at probe time with no VRAM/RAM/disk gate.
+7. **No shared inference backend.** Only the robustness NLP runner loads the imported model.
+8. **Integrity Phase 3** records named Layer-A risks (`I-INT-*`) from Hub metadata; it does not claim tampering, true lineage, or a generic integrity score. Production hash verification is deferred; optional injected compare for tests/operators only.
+9. **Safety has no behavioral test set.** Governance coverage is the evidence.
+10. **Reports are still score-centric** relative to the target (limited hardware, mapping-trace, and limitation sections).
 
 The research experiment CSVs under `results/` were produced under this older methodology. They must not be silently rewritten.
 
@@ -207,7 +206,7 @@ Work is ordered to match the specification’s implementation phases. Items alre
 
 | Phase | Intent | Status |
 | ----- | ------ | ------ |
-| 1 | Probe evaluation statuses, nullable O/S/D, status-aware runner | **Absent** |
+| 1 | Probe evaluation statuses, nullable O/S/D, status-aware runner | **Partial** (`ProbeEvaluationStatus` + methodology-version-gated confidence exclusion exist; Explainability/Safety still band a fixed empty-card default instead of abstaining) |
 | 2 | Model analyzer + disk/RAM/VRAM compatibility (`SUPPORTED` / `CONSTRAINED` / `UNSUPPORTED` / `UNKNOWN`) | **Absent** |
 | 3 | `InferenceBackend` / `LocalInferenceBackend`; evaluation separated from execution | **Partial** (robustness NLP load only) |
 | 4 | Short benchmark, throughput, runtime estimate, optional cache | **Absent** |
