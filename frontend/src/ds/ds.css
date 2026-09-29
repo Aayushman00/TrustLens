@@ -102,3 +102,21 @@
 .tl .tl-evchip__main { display: inline-flex; gap: var(--tl-s-2); border: 0; padding: 0; border-radius: 0; }
 .tl-evchip__id { color: var(--tl-text-1); }
 .tl-evchip__type { color: var(--tl-text-3); }
+
+/* ---- ChartFrame ---- */
+.tl-chart { margin: 0; }
+.tl-chart__head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--tl-s-3); margin-bottom: var(--tl-s-2); }
+.tl-chart__title { font-size: var(--tl-fs-14); color: var(--tl-text-2); }
+.tl .tl-chart__toggle { font-size: var(--tl-fs-12); padding: 0 var(--tl-s-2); }
+.tl-chart__table { border-collapse: collapse; font-size: var(--tl-fs-14); width: 100%; }
+.tl-chart__table th, .tl-chart__table td { text-align: left; padding: var(--tl-s-1) var(--tl-s-2); border-bottom: 1px solid var(--tl-line-1); }
+.tl-chart__table th { color: var(--tl-text-3); font-weight: 500; }
+
+/* ---- Gauge (evidence) ---- */
+.tl-gauge { display: grid; grid-template-columns: 1fr auto; gap: 0 var(--tl-s-3); align-items: center; }
+.tl-gauge__svg { width: 100%; height: 24px; }
+.tl-gauge__track { stroke: var(--tl-line-2); stroke-width: 1; }
+.tl-gauge__ci { fill: var(--tl-text-3); opacity: 0.35; }
+.tl-gauge__mark { stroke: var(--tl-text-1); stroke-width: 2; }
+.tl-gauge__value { font-size: var(--tl-fs-16); }
+.tl-gauge__key { grid-column: 1 / -1; font-size: var(--tl-fs-12); color: var(--tl-text-3); }
