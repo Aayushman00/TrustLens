@@ -145,3 +145,20 @@ def test_legacy_draft_without_problem_type_cannot_submit_multilabel_model(db_ses
     with patch("app.services.evaluation_service_v2.inspect_model_config", return_value=current):
         with pytest.raises(ConflictError, match="MULTILABEL_TARGET_REQUIRED"):
             EvaluationServiceV2(db_session).create_from_draft(confirmed_fairness_draft.id, EvaluationMode.AI_ASSISTED)
+
+
+def test_native_multilabel_decode_survives_extreme_logits():
+    backend = LocalHFBackend()
+    backend._config = InferenceConfig(  # noqa: SLF001
+        task_type=TaskType.BINARY_CLASSIFICATION, multilabel_positive_index=0
+    )
+    assert backend._decode_logits([-1000.0, 0.0]).y_hat == 0  # noqa: SLF001
+    assert backend._decode_logits([1000.0, 0.0]).y_hat == 1  # noqa: SLF001
+
+
+def test_compat_error_does_not_store_severe_column_for_fairness(db_session, seeded_model, seeded_dataset_content):
+    from app.db.repositories.evaluation_draft import EvaluationDraftRepository
+
+    _, draft, read = _update(db_session, seeded_model, seeded_dataset_content, severe_column="x")
+    assert read.ok is False
+    assert EvaluationDraftRepository(db_session).get_dimension(draft.id, "FAIRNESS").severe_column is None

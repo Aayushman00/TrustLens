@@ -111,7 +111,7 @@ class EvaluationServiceV2:
         touched_dimensions = [dim for dim in draft.dimensions if dim.dataset_content_id is not None]
         if not touched_dimensions:
             raise ConflictError(
-                "At least one dimension (Fairness or Robustness) must be configured before submitting",
+                "At least one dimension (Fairness, Robustness or Safety) must be configured before submitting",
                 details={"draft_id": str(draft_id)},
             )
 

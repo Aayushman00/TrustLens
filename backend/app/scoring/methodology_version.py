@@ -8,6 +8,6 @@ Global Constraints)."""
 
 # v3-hardening-2026: robustness band from accuracy drop (osd/agent.py),
 # constant-predictor gate, behavioural safety band.
+# Previous: "v2-per-dimension-2026" (stored evaluations keep their stamp).
 CURRENT_METHODOLOGY_VERSION = "v3-hardening-2026"
-PREVIOUS_METHODOLOGY_VERSIONS = ("v2-per-dimension-2026",)
 LEGACY_METHODOLOGY_VERSION = "pre-v1-fixed-5dim"

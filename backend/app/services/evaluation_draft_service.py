@@ -199,7 +199,7 @@ class EvaluationDraftService:
                 label_mapping=update.label_mapping,
                 min_group_n=update.min_group_n,
                 positive_label_index=update.positive_label_index,
-                severe_column=update.severe_column,
+                severe_column=update.severe_column if dimension == "SAFETY" else None,
                 multilabel_target_index=update.multilabel_target_index,
                 validated_at=None,
                 confirmed_at=None,

@@ -260,7 +260,9 @@ class LocalHFBackend:
 
         k = self._config.multilabel_positive_index
         if k is not None:
-            p = 1.0 / (1.0 + math.exp(-row_logits[k]))
+            z = row_logits[k]
+            # Numerically stable sigmoid (math.exp overflows below about -709).
+            p = 1.0 / (1.0 + math.exp(-z)) if z >= 0 else math.exp(z) / (1.0 + math.exp(z))
             return PredictionRecord(
                 y_hat=1 if p >= self._config.binary_threshold else 0,
                 probabilities=[1.0 - p, p],

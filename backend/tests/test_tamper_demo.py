@@ -15,6 +15,7 @@ def test_untouched_file_matches(tmp_path):
     f.write_bytes(WEIGHTS)
     res = _run(integrity_extra_for(f, f))
     assert "I-INT-BYTES-DIVERGE" not in res.risks_triggered
+    assert res.identity["hash_comparison"] == "match"
 
 
 def test_tampered_copy_diverges(tmp_path):
