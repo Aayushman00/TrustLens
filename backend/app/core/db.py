@@ -16,7 +16,12 @@ _SessionLocal: sessionmaker[Session] | None = None
 def get_engine(database_url: str) -> Engine:
     """Return a process-wide sync engine."""
     global _engine, _SessionLocal
-    if _engine is None or str(_engine.url) != database_url:
+    # render_as_string(hide_password=False): str(url) masks the password, so
+    # comparing it to the raw URL rebuilt the engine (leaking its whole
+    # connection pool) on every call until Postgres ran out of connections.
+    if _engine is None or _engine.url.render_as_string(hide_password=False) != database_url:
+        if _engine is not None:
+            _engine.dispose()
         _engine = create_engine(
             database_url,
             pool_pre_ping=True,
