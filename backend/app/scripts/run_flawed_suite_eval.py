@@ -18,7 +18,7 @@ container to have `results/flawed_model_suite/models` bind-mounted at
 
 Usage (from backend/, against http://localhost:8000)::
 
-    python -m app.scripts.run_flawed_suite_eval
+    python -m app.scripts.run_flawed_suite_eval --out eval_results_<new-name>
 """
 
 from __future__ import annotations
@@ -33,7 +33,6 @@ import httpx
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SUITE_DIR = REPO_ROOT / "results" / "flawed_model_suite"
 CARDS_DIR = SUITE_DIR / "cards"
-OUT_DIR = SUITE_DIR / "eval_results"
 
 API_BASE = "http://localhost:8000/v1"
 WORKER_MODEL_ROOT = "/models/flawed_model_suite"  # bind-mount path inside the worker container
@@ -51,6 +50,15 @@ LOCAL_VARIANTS = [
     "variant6_compound",
 ]
 TRUSTWORTHY_HF_REPO = "unitary/toxic-bert"
+
+
+def fresh_out_dir(path: Path) -> Path:
+    """Create ``path`` for a new run; refuse to write into a non-empty one so a
+    re-run can never overwrite historical results (eval_results, _v2, _v3)."""
+    if path.exists() and any(path.iterdir()):
+        raise FileExistsError(f"{path} already holds results; pass a new --out name")
+    path.mkdir(parents=True, exist_ok=True)
+    return path
 
 
 def _client() -> httpx.Client:
@@ -178,7 +186,17 @@ def create_and_run_evaluation(client: httpx.Client, model_id: int, dataset_conte
 
 
 def main() -> None:
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    import argparse
+
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--out", required=True, help="new directory name under results/flawed_model_suite")
+    ap.add_argument(
+        "--hub-prefix",
+        help="register variants via import-hf from <prefix>/trustlens-suite-<variant> "
+        "(see publish_suite_to_hub) instead of the local bind mount",
+    )
+    args = ap.parse_args()
+    out_dir = fresh_out_dir(SUITE_DIR / args.out)
     summary: list[dict[str, Any]] = []
 
     with _client() as client:
@@ -188,7 +206,12 @@ def main() -> None:
         targets: list[tuple[str, int]] = []
         print("Registering models...")
         for variant in LOCAL_VARIANTS:
-            model_id = register_local_model(client, variant)
+            if args.hub_prefix:
+                from app.scripts.publish_suite_to_hub import hub_repo_id
+
+                model_id = register_hf_model(client, hub_repo_id(args.hub_prefix, variant))
+            else:
+                model_id = register_local_model(client, variant)
             targets.append((variant, model_id))
         trustworthy_model_id = register_hf_model(client, TRUSTWORTHY_HF_REPO)
         targets.append(("trustworthy_" + TRUSTWORTHY_HF_REPO.replace("/", "_"), trustworthy_model_id))
@@ -196,7 +219,7 @@ def main() -> None:
         for name, model_id in targets:
             print(f"Running evaluation for {name} (model_id={model_id})...")
             evaluation = create_and_run_evaluation(client, model_id, dataset_content_id)
-            (OUT_DIR / f"{name}.json").write_text(json.dumps(evaluation, indent=2), encoding="utf-8")
+            (out_dir / f"{name}.json").write_text(json.dumps(evaluation, indent=2), encoding="utf-8")
 
             final_score = evaluation.get("final_score") or {}
             dims = final_score.get("dimension_scores") or {}
@@ -210,7 +233,7 @@ def main() -> None:
                 }
             )
 
-    (OUT_DIR / "_summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    (out_dir / "_summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
     print("\n=== Summary ===")
     for row in summary:
         print(f"{row['name']:40s} status={row['status']:12s} FRIES={row['fries_score']}  dims={row['dimension_scores']}")
