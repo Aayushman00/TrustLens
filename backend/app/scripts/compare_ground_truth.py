@@ -55,6 +55,63 @@ def _probe_metrics(ev: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return {p["dimension"]: p.get("metric_values") or {} for p in ev.get("probes", [])}
 
 
+def _ranks(v: list[float]) -> list[float]:
+    order = sorted(range(len(v)), key=lambda i: v[i])
+    r = [0.0] * len(v)
+    i = 0
+    while i < len(v):
+        j = i
+        while j + 1 < len(v) and v[order[j + 1]] == v[order[i]]:
+            j += 1
+        for k in range(i, j + 1):
+            r[order[k]] = (i + j) / 2 + 1
+        i = j + 1
+    return r
+
+
+def spearman(x: list[float], y: list[float]) -> float | None:
+    """Pearson on average ranks; None when either side is constant."""
+    a, b = _ranks(x), _ranks(y)
+    ma, mb = statistics.fmean(a), statistics.fmean(b)
+    den = math.sqrt(sum((p - ma) ** 2 for p in a) * sum((q - mb) ** 2 for q in b))
+    return sum((p - ma) * (q - mb) for p, q in zip(a, b, strict=True)) / den if den else None
+
+
+_SWEEP_METRICS = {
+    "fairness": [("FAIRNESS", "demographic_parity_difference"), ("FAIRNESS", "excess_dpd"),
+                 ("FAIRNESS", "equalized_odds_difference")],
+    "safety": [("SAFETY", "severe_fnr"), ("SAFETY", "harmful_recall"), ("SAFETY", "benign_fpr")],
+}
+_SWEEP_SCORE = {"fairness": "FAIRNESS", "safety": "SAFETY"}
+
+
+def severity_sweep(runs: dict[str, list[dict[str, Any]]], truth: dict[str, Any]) -> dict[str, Any]:
+    out: dict[str, Any] = {}
+    for kind, levels in ((k, truth["severity_sweep"][k]) for k in ("fairness", "safety")):
+        table = []
+        for model, rate in sorted(levels.items(), key=lambda kv: kv[1]):
+            evs = [e for e in runs.get(model, []) if e.get("status") == "FINALIZED"]
+            if not evs:
+                continue
+            pm = _probe_metrics(evs[0])  # deterministic evidence: identical across runs
+            row: dict[str, Any] = {"model": model, "rate": rate, "n_runs": len(evs)}
+            for dim, key in _SWEEP_METRICS[kind]:
+                m = pm.get(dim, {})
+                row[key] = (m.get("behavior") or {}).get(key) if dim == "SAFETY" else m.get(key)
+            dim = _SWEEP_SCORE[kind]
+            vals = [e["final_score"]["dimension_scores"][dim] for e in evs
+                    if dim in ((e.get("final_score") or {}).get("dimension_scores") or {})]
+            row[f"{dim}_score_mean"] = statistics.fmean(vals) if vals else None
+            table.append(row)
+        rates = [r["rate"] for r in table]
+        corr = {}
+        for key in [k for _, k in _SWEEP_METRICS[kind]] + [f"{_SWEEP_SCORE[kind]}_score_mean"]:
+            pairs = [(r["rate"], r[key]) for r in table if r.get(key) is not None]
+            corr[key] = spearman([p[0] for p in pairs], [p[1] for p in pairs]) if len(pairs) >= 3 else None
+        out[kind] = {"levels": table, "spearman_vs_rate": corr, "n_levels": len(rates)}
+    return out
+
+
 def _rates(rows: list[tuple[bool, bool]]) -> dict[str, Any]:
     tp = sum(1 for flagged, truth in rows if flagged and truth)
     fp = sum(1 for flagged, truth in rows if flagged and not truth)
@@ -133,6 +190,7 @@ def analyze(run_dirs: list[Path], truth: dict[str, Any]) -> dict[str, Any]:
         "evidence_level": _rates(evid_rows),
         "per_dimension_detection": per_dim_recall,
         "severity": truth["severity_levels"],
+        "severity_sweep": severity_sweep(runs, truth) if "severity_sweep" in truth else None,
         "models": per_model,
     }
 
@@ -153,6 +211,13 @@ def to_markdown(a: dict[str, Any]) -> str:
     for m, v in a["models"].items():
         cells = [f"{f(v['dimensions'][d]['score_mean'])} ± {f(v['dimensions'][d]['score_std'])}" for d in DIMS]
         out.append(f"| {m} | " + " | ".join(cells) + " |")
+    sw = a.get("severity_sweep") or {}
+    for kind, v in sw.items():
+        keys = [k for k in v["levels"][0] if k not in ("model", "rate", "n_runs")] if v["levels"] else []
+        out += ["", f"## Severity sweep: {kind}", "", "| model | rate | " + " | ".join(keys) + " |", "|---|---|" + "---|" * len(keys)]
+        for r in v["levels"]:
+            out.append(f"| {r['model']} | {r['rate']} | " + " | ".join(f(r[k]) for k in keys) + " |")
+        out.append("| Spearman vs rate | | " + " | ".join(f(v["spearman_vs_rate"].get(k)) for k in keys) + " |")
     out += ["", f"Severity: {a['severity']}", ""]
     return "\n".join(out)
 

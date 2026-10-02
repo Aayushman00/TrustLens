@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import time
 
 from app.core.config import get_settings
 from app.db.enums import FriesDimension
@@ -50,6 +51,19 @@ def _has_behavioural_safety(ctx: AgentContext) -> bool:
     return snap is not None and isinstance((snap.metric_values or {}).get("severe_fnr"), (int, float))
 
 
+_MAX_ATTEMPTS = 3
+_BACKOFF_S = 10.0
+
+
+def _transient(exc: Exception) -> bool:
+    """Rate limit (429), 5xx, or a connection-level failure."""
+    import httpx
+
+    if isinstance(exc, httpx.HTTPStatusError):
+        return exc.response.status_code == 429 or exc.response.status_code >= 500
+    return isinstance(exc, (httpx.TransportError, ConnectionError, TimeoutError))
+
+
 class HybridOSDAgent:
     """Heuristic baseline + Gemini-judged INTEGRITY/EXPLAINABILITY/SAFETY."""
 
@@ -63,6 +77,7 @@ class HybridOSDAgent:
             if aspect is None:
                 continue
             if judgment is None:
+                aspect.osd_metadata = {**aspect.osd_metadata, **provenance}
                 if aspect.O is not None:
                     aspect.O_source = _FALLBACK_SOURCE
                 if aspect.S is not None:
@@ -121,28 +136,35 @@ class HybridOSDAgent:
         )
         prompt = build_prompt(ctx)
         prompt_sha256 = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
+        errors: list[str] = []
         for name, api_key, call_fn, model, temperature in providers:
             if not api_key:
                 continue
-            try:
-                raw = call_fn(prompt, api_key=api_key)
-                return parse_gemini_response(raw), {
-                    "llm_provider": name,
-                    "llm_model": model,
-                    # None = provider default (Gemini call sets no temperature).
-                    "llm_temperature": temperature,
-                    "llm_prompt_sha256": prompt_sha256,
-                }
-            except Exception:  # noqa: BLE001 — try the next provider, never propagate
-                logger.warning(
-                    "osd_agent_llm_v1_provider_failed evaluation_id=%s provider=%s — trying next",
-                    ctx.evaluation_id,
-                    name,
-                    exc_info=True,
-                )
-                continue
+            for attempt in range(1, _MAX_ATTEMPTS + 1):
+                try:
+                    raw = call_fn(prompt, api_key=api_key)
+                    return parse_gemini_response(raw), {
+                        "llm_provider": name,
+                        "llm_model": model,
+                        # None = provider default (Gemini call sets no temperature).
+                        "llm_temperature": temperature,
+                        "llm_prompt_sha256": prompt_sha256,
+                        "llm_attempts": attempt,
+                    }
+                except Exception as exc:  # noqa: BLE001 — retry/next provider, never propagate
+                    errors.append(f"{name}#{attempt}: {type(exc).__name__}: {exc}"[:300])
+                    logger.warning(
+                        "osd_agent_llm_v1_provider_failed evaluation_id=%s provider=%s attempt=%s",
+                        ctx.evaluation_id, name, attempt, exc_info=True,
+                    )
+                    if not _transient(exc) or attempt == _MAX_ATTEMPTS:
+                        break
+                    # Same provider again after a back-off: rate limits and DNS
+                    # blips were most fallbacks in the final experiment.
+                    time.sleep(_BACKOFF_S * 2 ** (attempt - 1))
         logger.warning(
             "osd_agent_llm_v1_all_providers_failed evaluation_id=%s — falling back to heuristic",
             ctx.evaluation_id,
         )
-        return None, {}
+        return None, {"llm_fallback_reason": " | ".join(errors) or "no LLM provider configured",
+                      "llm_prompt_sha256": prompt_sha256}

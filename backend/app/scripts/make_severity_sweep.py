@@ -7,7 +7,7 @@ adds the remaining levels, trains each like variant1/5 (3 epochs, lr 2e-5,
 batch 16, wd 0.01, seed 42) and gives each the variant1/5 card so only the
 flip rate differs.
 
-Usage (from backend/, GPU free)::  python -m app.scripts.make_severity_sweep
+Usage (from backend/, GPU free)::  python -m app.scripts.make_severity_sweep [--kind fairness|safety]
 """
 from __future__ import annotations
 
@@ -35,12 +35,18 @@ def sweep_name(kind: str, rate: float) -> str:
 
 
 def main() -> None:
+    import argparse
+
     from app.scripts.train_flawed_suite import MODELS_DIR, VariantSpec, train_variant
+
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--kind", choices=sorted(LEVELS), help="only this sweep (default: both)")
+    kinds = [ap.parse_args().kind] if ap.parse_args().kind else list(LEVELS)
 
     primary = [json.loads(line) for line in (DATA_DIR / "variant3_explainability_train.jsonl").read_text(encoding="utf-8").splitlines()]
     flip = {"fairness": _apply_fairness_flip, "safety": _apply_safety_flip}
-    for kind, rates in LEVELS.items():
-        for rate in rates:
+    for kind in kinds:
+        for rate in LEVELS[kind]:
             name = sweep_name(kind, rate)
             rows, flipped = flip[kind](primary, seed=SEED, rate=rate)
             _write_jsonl(DATA_DIR / f"{name}_train.jsonl", rows)

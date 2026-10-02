@@ -434,3 +434,35 @@ def test_behavioural_safety_band_is_not_overridden_by_llm(mock_settings, mock_ca
     assert (s.O, s.S, s.D) == (1, 3, 8)  # heuristic behavioural band, not the LLM's (3, 3, 4)
     assert s.osd_metadata["llm_card_judgment"]["O"] == 3
     assert aspects[FriesDimension.INTEGRITY].O == 7  # LLM still rates the other two
+
+
+@patch("app.osd.hybrid.time.sleep")
+@patch("app.osd.hybrid.get_settings")
+def test_rate_limited_provider_is_retried_not_dropped(mock_settings, _sleep) -> None:
+    import httpx
+
+    _mock_settings(mock_settings, groq="k")
+    req = httpx.Request("POST", "https://x")
+    calls = []
+
+    def flaky(prompt, *, api_key):
+        calls.append(1)
+        if len(calls) == 1:
+            raise httpx.HTTPStatusError("429", request=req, response=httpx.Response(429, request=req))
+        return _GOOD_RAW
+
+    with patch("app.osd.hybrid.call_groq", side_effect=flaky):
+        aspects = {a.aspect: a for a in HybridOSDAgent().propose(_full_context()).aspects}
+    assert aspects[FriesDimension.INTEGRITY].O_source == "llm_v1"
+    assert aspects[FriesDimension.INTEGRITY].osd_metadata["llm_attempts"] == 2
+
+
+@patch("app.osd.hybrid.time.sleep")
+@patch("app.osd.hybrid.call_gemini", side_effect=RuntimeError("boom"))
+@patch("app.osd.hybrid.get_settings")
+def test_fallback_reason_is_stored_on_the_aspect(mock_settings, _call, _sleep) -> None:
+    _mock_settings(mock_settings, gemini="k")
+    aspects = {a.aspect: a for a in HybridOSDAgent().propose(_full_context()).aspects}
+    meta = aspects[FriesDimension.INTEGRITY].osd_metadata
+    assert aspects[FriesDimension.INTEGRITY].O_source == "heuristic_fallback"
+    assert "RuntimeError: boom" in meta["llm_fallback_reason"]
