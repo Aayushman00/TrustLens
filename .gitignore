@@ -180,6 +180,11 @@ results/flawed_model_suite/models/**/*.bin
 results/flawed_model_suite/models/**/tokenizer.json
 results/flawed_model_suite/models/**/_trainer_tmp/
 results/flawed_model_suite/data/*_train.jsonl
+# Round 3 L5 confirmatory fairness setup: same policy (data reproducible from --seed).
+results/fairness_confirm_*/models/**/*.safetensors
+results/fairness_confirm_*/models/**/tokenizer.json
+results/fairness_confirm_*/models/**/_trainer_tmp/
+results/fairness_confirm_*/data/*_train.jsonl
 # Exported TrustLens reports (JSON+PDF) and raw evidence per experiment run.
 !results/flawed_model_suite/*/artifacts/
 !results/flawed_model_suite/*/artifacts/*/evidence/

@@ -1,0 +1,531 @@
+{
+  "rates": {
+    "clean_control": 0.0,
+    "fairness_r020": 0.2,
+    "fairness_r040": 0.4,
+    "fairness_r070": 0.7,
+    "fairness_r100": 1.0
+  },
+  "models": {
+    "clean_control": {
+      "group_sizes": {
+        "0": 2500,
+        "1": 500
+      },
+      "group_positive_label_rates": {
+        "0": 0.1128,
+        "1": 0.636
+      },
+      "group_tpr": {
+        "0": 0.510638,
+        "1": 0.616352
+      },
+      "group_fpr": {
+        "0": 0.023445,
+        "1": 0.098901
+      },
+      "demographic_parity_difference": 0.3496,
+      "equal_opportunity_difference": 0.105714,
+      "eopp_ci": {
+        "point": 0.105714,
+        "ci_lower": 0.027885,
+        "ci_upper": 0.180817,
+        "method": "bootstrap_percentile",
+        "B": 1000
+      },
+      "fpr_gap": 0.075456,
+      "subgroup_f1_spread": 0.134332,
+      "equalized_odds_difference": 0.105714,
+      "excess_dpd_v1": 0.0,
+      "label_rate_gap": 0.5232,
+      "dp_ci": {
+        "point": 0.3496,
+        "ci_lower": 0.30495,
+        "ci_upper": 0.391053,
+        "method": "bootstrap_percentile",
+        "B": 1000
+      },
+      "fairness_finding": "INSUFFICIENT_EVIDENCE",
+      "risks_triggered": [],
+      "aspect_scoring": "mapping_blocked",
+      "methodology_version": "tl-fairness-binary-v1.2",
+      "status": "EVALUATED",
+      "status_reason": "G-FAIR-CI-WIDE: equal_opportunity_difference CI width exceeds 0.15 \u2014 scoring blocked",
+      "probe_flags": [
+        "evaluation_contract_v2",
+        "user_defined_local_dataset",
+        "wide_ci_eopp"
+      ],
+      "equal_opportunity_difference_per_run": [
+        0.105714,
+        0.105714,
+        0.105714
+      ],
+      "fairness_finding_per_run": [
+        "INSUFFICIENT_EVIDENCE",
+        "INSUFFICIENT_EVIDENCE",
+        "INSUFFICIENT_EVIDENCE"
+      ],
+      "aspect_scoring_per_run": [
+        "mapping_blocked",
+        "mapping_blocked",
+        "mapping_blocked"
+      ],
+      "flags_per_run": [
+        false,
+        false,
+        false
+      ],
+      "flagged": false,
+      "repeatable": true
+    },
+    "fairness_r020": {
+      "group_sizes": {
+        "0": 2500,
+        "1": 500
+      },
+      "group_positive_label_rates": {
+        "0": 0.1128,
+        "1": 0.636
+      },
+      "group_tpr": {
+        "0": 0.553191,
+        "1": 0.666667
+      },
+      "group_fpr": {
+        "0": 0.025248,
+        "1": 0.115385
+      },
+      "demographic_parity_difference": 0.3812,
+      "equal_opportunity_difference": 0.113475,
+      "eopp_ci": {
+        "point": 0.113475,
+        "ci_lower": 0.033134,
+        "ci_upper": 0.188905,
+        "method": "bootstrap_percentile",
+        "B": 1000
+      },
+      "fpr_gap": 0.090137,
+      "subgroup_f1_spread": 0.137931,
+      "equalized_odds_difference": 0.113475,
+      "excess_dpd_v1": 0.0,
+      "label_rate_gap": 0.5232,
+      "dp_ci": {
+        "point": 0.3812,
+        "ci_lower": 0.334619,
+        "ci_upper": 0.424899,
+        "method": "bootstrap_percentile",
+        "B": 1000
+      },
+      "fairness_finding": "INSUFFICIENT_EVIDENCE",
+      "risks_triggered": [],
+      "aspect_scoring": "mapping_blocked",
+      "methodology_version": "tl-fairness-binary-v1.2",
+      "status": "EVALUATED",
+      "status_reason": "G-FAIR-CI-WIDE: equal_opportunity_difference CI width exceeds 0.15 \u2014 scoring blocked",
+      "probe_flags": [
+        "evaluation_contract_v2",
+        "user_defined_local_dataset",
+        "wide_ci_eopp"
+      ],
+      "equal_opportunity_difference_per_run": [
+        0.113475,
+        0.113475,
+        0.113475
+      ],
+      "fairness_finding_per_run": [
+        "INSUFFICIENT_EVIDENCE",
+        "INSUFFICIENT_EVIDENCE",
+        "INSUFFICIENT_EVIDENCE"
+      ],
+      "aspect_scoring_per_run": [
+        "mapping_blocked",
+        "mapping_blocked",
+        "mapping_blocked"
+      ],
+      "flags_per_run": [
+        false,
+        false,
+        false
+      ],
+      "flagged": false,
+      "repeatable": true
+    },
+    "fairness_r040": {
+      "group_sizes": {
+        "0": 2500,
+        "1": 500
+      },
+      "group_positive_label_rates": {
+        "0": 0.1128,
+        "1": 0.636
+      },
+      "group_tpr": {
+        "0": 0.578014,
+        "1": 0.745283
+      },
+      "group_fpr": {
+        "0": 0.034265,
+        "1": 0.175824
+      },
+      "demographic_parity_difference": 0.4424,
+      "equal_opportunity_difference": 0.167269,
+      "eopp_ci": {
+        "point": 0.167269,
+        "ci_lower": 0.092442,
+        "ci_upper": 0.239284,
+        "method": "bootstrap_percentile",
+        "B": 1000
+      },
+      "fpr_gap": 0.141559,
+      "subgroup_f1_spread": 0.181776,
+      "equalized_odds_difference": 0.167269,
+      "excess_dpd_v1": 0.0,
+      "label_rate_gap": 0.5232,
+      "dp_ci": {
+        "point": 0.4424,
+        "ci_lower": 0.39973,
+        "ci_upper": 0.482992,
+        "method": "bootstrap_percentile",
+        "B": 1000
+      },
+      "fairness_finding": "FAIRNESS_RISK",
+      "risks_triggered": [
+        "F-FAIR-EOPP"
+      ],
+      "aspect_scoring": "risk_detected",
+      "methodology_version": "tl-fairness-binary-v1.2",
+      "status": "EVALUATED",
+      "status_reason": "F-FAIR-EOPP: equal_opportunity_difference=0.167269 and ci_lower=0.092442 exceed epsilon=0.02 \u2014 true-positive rates differ across groups; evidence for review, not a finding that the model is unfair",
+      "probe_flags": [
+        "evaluation_contract_v2",
+        "user_defined_local_dataset"
+      ],
+      "equal_opportunity_difference_per_run": [
+        0.167269,
+        0.167269,
+        0.167269
+      ],
+      "fairness_finding_per_run": [
+        "FAIRNESS_RISK",
+        "FAIRNESS_RISK",
+        "FAIRNESS_RISK"
+      ],
+      "aspect_scoring_per_run": [
+        "risk_detected",
+        "risk_detected",
+        "risk_detected"
+      ],
+      "flags_per_run": [
+        true,
+        true,
+        true
+      ],
+      "flagged": true,
+      "repeatable": true
+    },
+    "fairness_r070": {
+      "group_sizes": {
+        "0": 2500,
+        "1": 500
+      },
+      "group_positive_label_rates": {
+        "0": 0.1128,
+        "1": 0.636
+      },
+      "group_tpr": {
+        "0": 0.606383,
+        "1": 0.811321
+      },
+      "group_fpr": {
+        "0": 0.050045,
+        "1": 0.302198
+      },
+      "demographic_parity_difference": 0.5132,
+      "equal_opportunity_difference": 0.204938,
+      "eopp_ci": {
+        "point": 0.204938,
+        "ci_lower": 0.132154,
+        "ci_upper": 0.27667,
+        "method": "bootstrap_percentile",
+        "B": 1000
+      },
+      "fpr_gap": 0.252153,
+      "subgroup_f1_spread": 0.211367,
+      "equalized_odds_difference": 0.252153,
+      "excess_dpd_v1": 0.0,
+      "label_rate_gap": 0.5232,
+      "dp_ci": {
+        "point": 0.5132,
+        "ci_lower": 0.468782,
+        "ci_upper": 0.557299,
+        "method": "bootstrap_percentile",
+        "B": 1000
+      },
+      "fairness_finding": "FAIRNESS_RISK",
+      "risks_triggered": [
+        "F-FAIR-EOPP"
+      ],
+      "aspect_scoring": "risk_detected",
+      "methodology_version": "tl-fairness-binary-v1.2",
+      "status": "EVALUATED",
+      "status_reason": "F-FAIR-EOPP: equal_opportunity_difference=0.204938 and ci_lower=0.132154 exceed epsilon=0.02 \u2014 true-positive rates differ across groups; evidence for review, not a finding that the model is unfair",
+      "probe_flags": [
+        "evaluation_contract_v2",
+        "user_defined_local_dataset"
+      ],
+      "equal_opportunity_difference_per_run": [
+        0.204938,
+        0.204938,
+        0.204938
+      ],
+      "fairness_finding_per_run": [
+        "FAIRNESS_RISK",
+        "FAIRNESS_RISK",
+        "FAIRNESS_RISK"
+      ],
+      "aspect_scoring_per_run": [
+        "risk_detected",
+        "risk_detected",
+        "risk_detected"
+      ],
+      "flags_per_run": [
+        true,
+        true,
+        true
+      ],
+      "flagged": true,
+      "repeatable": true
+    },
+    "fairness_r100": {
+      "group_sizes": {
+        "0": 2500,
+        "1": 500
+      },
+      "group_positive_label_rates": {
+        "0": 0.1128,
+        "1": 0.636
+      },
+      "group_tpr": {
+        "0": 0.656028,
+        "1": 0.861635
+      },
+      "group_fpr": {
+        "0": 0.070334,
+        "1": 0.417582
+      },
+      "demographic_parity_difference": 0.5636,
+      "equal_opportunity_difference": 0.205607,
+      "eopp_ci": {
+        "point": 0.205607,
+        "ci_lower": 0.139494,
+        "ci_upper": 0.265721,
+        "method": "bootstrap_percentile",
+        "B": 1000
+      },
+      "fpr_gap": 0.347248,
+      "subgroup_f1_spread": 0.226459,
+      "equalized_odds_difference": 0.347249,
+      "excess_dpd_v1": 0.0404,
+      "label_rate_gap": 0.5232,
+      "dp_ci": {
+        "point": 0.5636,
+        "ci_lower": 0.520891,
+        "ci_upper": 0.603073,
+        "method": "bootstrap_percentile",
+        "B": 1000
+      },
+      "fairness_finding": "FAIRNESS_RISK",
+      "risks_triggered": [
+        "F-FAIR-EOPP"
+      ],
+      "aspect_scoring": "risk_detected",
+      "methodology_version": "tl-fairness-binary-v1.2",
+      "status": "EVALUATED",
+      "status_reason": "F-FAIR-EOPP: equal_opportunity_difference=0.205607 and ci_lower=0.139494 exceed epsilon=0.02 \u2014 true-positive rates differ across groups; evidence for review, not a finding that the model is unfair",
+      "probe_flags": [
+        "evaluation_contract_v2",
+        "user_defined_local_dataset"
+      ],
+      "equal_opportunity_difference_per_run": [
+        0.205607,
+        0.205607,
+        0.205607
+      ],
+      "fairness_finding_per_run": [
+        "FAIRNESS_RISK",
+        "FAIRNESS_RISK",
+        "FAIRNESS_RISK"
+      ],
+      "aspect_scoring_per_run": [
+        "risk_detected",
+        "risk_detected",
+        "risk_detected"
+      ],
+      "flags_per_run": [
+        true,
+        true,
+        true
+      ],
+      "flagged": true,
+      "repeatable": true
+    },
+    "reference_toxicbert_2label": {
+      "group_sizes": {
+        "0": 2500,
+        "1": 500
+      },
+      "group_positive_label_rates": {
+        "0": 0.1128,
+        "1": 0.636
+      },
+      "group_tpr": {
+        "0": 0.329787,
+        "1": 0.474843
+      },
+      "group_fpr": {
+        "0": 0.012173,
+        "1": 0.049451
+      },
+      "demographic_parity_difference": 0.272,
+      "equal_opportunity_difference": 0.145056,
+      "eopp_ci": {
+        "point": 0.145056,
+        "ci_lower": 0.068799,
+        "ci_upper": 0.217014,
+        "method": "bootstrap_percentile",
+        "B": 1000
+      },
+      "fpr_gap": 0.037278,
+      "subgroup_f1_spread": 0.169113,
+      "equalized_odds_difference": 0.145056,
+      "excess_dpd_v1": 0.0,
+      "label_rate_gap": 0.5232,
+      "dp_ci": {
+        "point": 0.272,
+        "ci_lower": 0.232045,
+        "ci_upper": 0.31151,
+        "method": "bootstrap_percentile",
+        "B": 1000
+      },
+      "fairness_finding": "FAIRNESS_RISK",
+      "risks_triggered": [
+        "F-FAIR-EOPP"
+      ],
+      "aspect_scoring": "risk_detected",
+      "methodology_version": "tl-fairness-binary-v1.2",
+      "status": "EVALUATED",
+      "status_reason": "F-FAIR-EOPP: equal_opportunity_difference=0.145056 and ci_lower=0.068799 exceed epsilon=0.02 \u2014 true-positive rates differ across groups; evidence for review, not a finding that the model is unfair",
+      "probe_flags": [
+        "evaluation_contract_v2",
+        "user_defined_local_dataset",
+        "wide_ci_f1"
+      ],
+      "equal_opportunity_difference_per_run": [
+        0.145056,
+        0.145056,
+        0.145056
+      ],
+      "fairness_finding_per_run": [
+        "FAIRNESS_RISK",
+        "FAIRNESS_RISK",
+        "FAIRNESS_RISK"
+      ],
+      "aspect_scoring_per_run": [
+        "risk_detected",
+        "risk_detected",
+        "risk_detected"
+      ],
+      "flags_per_run": [
+        true,
+        true,
+        true
+      ],
+      "flagged": true,
+      "repeatable": true
+    }
+  },
+  "hypotheses": {
+    "H1": {
+      "holds": false,
+      "controls": [
+        "clean_control",
+        "reference_toxicbert_2label"
+      ],
+      "flagged_controls": [
+        "reference_toxicbert_2label"
+      ]
+    },
+    "H2": {
+      "holds": true,
+      "models": [
+        "fairness_r040",
+        "fairness_r070",
+        "fairness_r100"
+      ],
+      "recall": 1.0,
+      "flagged": {
+        "fairness_r040": true,
+        "fairness_r070": true,
+        "fairness_r100": true
+      }
+    },
+    "H3": {
+      "holds": true,
+      "spearman_rho": 1.0,
+      "n_levels": 5,
+      "levels": [
+        [
+          0.0,
+          0.105714
+        ],
+        [
+          0.2,
+          0.113475
+        ],
+        [
+          0.4,
+          0.167269
+        ],
+        [
+          0.7,
+          0.204938
+        ],
+        [
+          1.0,
+          0.205607
+        ]
+      ],
+      "adjacent_decreases": 0,
+      "strictly_monotone": true
+    },
+    "H4": {
+      "per_model": {
+        "clean_control": {
+          "insufficient_evidence": 3,
+          "mapping_blocked": 3
+        },
+        "fairness_r020": {
+          "insufficient_evidence": 3,
+          "mapping_blocked": 3
+        },
+        "fairness_r040": {
+          "insufficient_evidence": 0,
+          "mapping_blocked": 0
+        },
+        "fairness_r070": {
+          "insufficient_evidence": 0,
+          "mapping_blocked": 0
+        },
+        "fairness_r100": {
+          "insufficient_evidence": 0,
+          "mapping_blocked": 0
+        },
+        "reference_toxicbert_2label": {
+          "insufficient_evidence": 0,
+          "mapping_blocked": 0
+        }
+      }
+    }
+  }
+}

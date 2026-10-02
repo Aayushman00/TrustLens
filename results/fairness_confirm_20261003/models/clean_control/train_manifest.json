@@ -1,0 +1,25 @@
+{
+  "variant_key": "clean_control",
+  "base_checkpoint": "bert-base-uncased",
+  "data_manifest": {
+    "role": "clean control",
+    "dataset": "google/civil_comments",
+    "split": "train",
+    "seed": 20261003,
+    "size": 8000,
+    "flip_logic": "none",
+    "flip_rate": 0.0
+  },
+  "hyperparams": {
+    "epochs": 3,
+    "lr": 2e-05,
+    "batch_size": 16,
+    "weight_decay": 0.01,
+    "max_seq_len": 128,
+    "seed": 20261003
+  },
+  "train_rows": 8000,
+  "final_train_loss": 0.1679670845667521,
+  "elapsed_seconds": 294.0,
+  "device": "cuda"
+}

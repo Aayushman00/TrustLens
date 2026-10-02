@@ -1,0 +1,177 @@
+{
+  "status": "ProbeEvaluationStatus.EVALUATED",
+  "status_reason": "G-FAIR-CI-WIDE: equal_opportunity_difference CI width exceeds 0.15 \u2014 scoring blocked",
+  "flags": [
+    "evaluation_contract_v2",
+    "user_defined_local_dataset",
+    "wide_ci_eopp"
+  ],
+  "metric_values": {
+    "fairness_mode": "user_defined_local",
+    "predictor": "inference_backend",
+    "evaluation_class": "user_dataset_v2",
+    "inference_executed": true,
+    "model_ref": "..\\results\\fairness_confirm_20261003\\models\\clean_control",
+    "model_revision": "local",
+    "dataset_key": null,
+    "dataset_revision": null,
+    "dataset_content_id": "0950d70e-ac89-4a0c-9f1e-dadadf6be550",
+    "dataset_format": "csv",
+    "target_column": "label",
+    "group_column": "identity_ref",
+    "text_column": "text",
+    "sensitive_attribute": "identity_ref",
+    "min_group_n": 30,
+    "seed": 42,
+    "label_mapping": [
+      {
+        "dataset_value": "0",
+        "model_label_index": 0
+      },
+      {
+        "dataset_value": "1",
+        "model_label_index": 1
+      }
+    ],
+    "note": "Metrics are objective evidence only \u2014 not a normative fair/unfair judgment, not O/S/D, and not product FRIES",
+    "dataset_row_count": 3000,
+    "observed_groups": [
+      {
+        "value": "0",
+        "count": 2500
+      },
+      {
+        "value": "1",
+        "count": 500
+      }
+    ],
+    "missing_rows": {
+      "missing_count": 0,
+      "missing_reasons": {}
+    },
+    "excluded_rows": {
+      "missing_target": 0,
+      "missing_text": 0,
+      "missing_group": 0,
+      "unmapped_label": 0
+    },
+    "label_encoding": {
+      "0": 0,
+      "1": 1
+    },
+    "n_evaluated": 3000,
+    "inference": {
+      "model_ref": "..\\results\\fairness_confirm_20261003\\models\\clean_control",
+      "revision": "local",
+      "task_type": "binary_classification",
+      "device": "cuda",
+      "device_name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+      "dtype": "torch.float32",
+      "batch_size": 8,
+      "backend": "local_hf",
+      "inference_backend": "local_hf",
+      "num_labels": 2,
+      "execution_device": "cuda",
+      "gpu_available": true,
+      "gpu_name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+      "cuda_available": true,
+      "device_reason": "CUDA GPU detected and selected",
+      "fallback_reason": null
+    },
+    "label_rate_gap": 0.5232,
+    "excess_dpd": 0.0,
+    "excess_dpd_v1": 0.0,
+    "equal_opportunity_difference": 0.105714,
+    "eopp_ci": {
+      "point": 0.105714,
+      "ci_lower": 0.027885,
+      "ci_upper": 0.180817,
+      "method": "bootstrap_percentile",
+      "B": 1000
+    },
+    "fpr_gap": 0.075456,
+    "eligibility": {
+      "eligible_groups": [
+        "0",
+        "1"
+      ],
+      "positives": {
+        "0": 282,
+        "1": 318
+      },
+      "min_positives_per_group": 1,
+      "failed_gate": null
+    },
+    "fairness_finding": "INSUFFICIENT_EVIDENCE",
+    "aspect_scoring": "mapping_blocked",
+    "risks_triggered": [],
+    "scored_risk_id": null,
+    "methodology_version": "tl-fairness-binary-v1.2",
+    "fairness_rule": {
+      "risk_id": "F-FAIR-EOPP",
+      "statistic": "equal_opportunity_difference = max_g TPR_g - min_g TPR_g over groups with n >= min_group_n",
+      "eligibility": ">= 2 groups with n >= min_group_n, each with >= 1 positive label(s)",
+      "epsilon": 0.02,
+      "criterion": "FAIRNESS_RISK iff point > epsilon and bootstrap 95% ci_lower > epsilon",
+      "ci_wide_gate": "EOD CI width > 0.15 -> mapping_blocked (G-FAIR-CI-WIDE)",
+      "bootstrap": {
+        "method": "percentile",
+        "B": 1000,
+        "seed": 42
+      }
+    },
+    "demographic_parity_difference": 0.3496,
+    "equalized_odds_difference": 0.105714,
+    "subgroup_f1_spread": 0.134332,
+    "groups": {
+      "0": {
+        "n": 2500,
+        "f1": 0.60251,
+        "positive_rate": 0.0784,
+        "tpr": 0.510638,
+        "fpr": 0.023445
+      },
+      "1": {
+        "n": 500,
+        "f1": 0.736842,
+        "positive_rate": 0.428,
+        "tpr": 0.616352,
+        "fpr": 0.098901
+      }
+    },
+    "min_group_n_observed": 500,
+    "excluded_groups": [],
+    "proposed_mapping": false,
+    "needs_human_review": true,
+    "dp_ci": {
+      "point": 0.3496,
+      "ci_lower": 0.30495,
+      "ci_upper": 0.391053,
+      "method": "bootstrap_percentile",
+      "B": 1000
+    },
+    "eo_ci": {
+      "point": 0.105714,
+      "ci_lower": 0.058608,
+      "ci_upper": 0.180817,
+      "method": "bootstrap_percentile",
+      "B": 1000
+    },
+    "f1_ci": {
+      "point": 0.134332,
+      "ci_lower": 0.070243,
+      "ci_upper": 0.198671,
+      "method": "bootstrap_percentile",
+      "B": 1000
+    },
+    "positive_label_index": 1,
+    "reliability": {
+      "gates_passed": false,
+      "failed_gates": [
+        "G-FAIR-CI-WIDE"
+      ]
+    },
+    "probe_status": "EVALUATED",
+    "probe_status_reason": "G-FAIR-CI-WIDE: equal_opportunity_difference CI width exceeds 0.15 \u2014 scoring blocked"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "role": "clean control",
+  "dataset": "google/civil_comments",
+  "split": "train",
+  "seed": 20261003,
+  "size": 8000,
+  "flip_logic": "none",
+  "flip_rate": 0.0
+}

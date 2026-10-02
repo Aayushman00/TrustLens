@@ -1,0 +1,172 @@
+{
+  "status": "ProbeEvaluationStatus.EVALUATED",
+  "status_reason": "F-FAIR-EOPP: equal_opportunity_difference=0.204938 and ci_lower=0.132154 exceed epsilon=0.02 \u2014 true-positive rates differ across groups; evidence for review, not a finding that the model is unfair",
+  "flags": [
+    "evaluation_contract_v2",
+    "user_defined_local_dataset"
+  ],
+  "metric_values": {
+    "fairness_mode": "user_defined_local",
+    "predictor": "inference_backend",
+    "evaluation_class": "user_dataset_v2",
+    "inference_executed": true,
+    "model_ref": "..\\results\\fairness_confirm_20261003\\models\\fairness_r070",
+    "model_revision": "local",
+    "dataset_key": null,
+    "dataset_revision": null,
+    "dataset_content_id": "6ed9d77d-95aa-4759-832d-fcafa796e948",
+    "dataset_format": "csv",
+    "target_column": "label",
+    "group_column": "identity_ref",
+    "text_column": "text",
+    "sensitive_attribute": "identity_ref",
+    "min_group_n": 30,
+    "seed": 42,
+    "label_mapping": [
+      {
+        "dataset_value": "0",
+        "model_label_index": 0
+      },
+      {
+        "dataset_value": "1",
+        "model_label_index": 1
+      }
+    ],
+    "note": "Metrics are objective evidence only \u2014 not a normative fair/unfair judgment, not O/S/D, and not product FRIES",
+    "dataset_row_count": 3000,
+    "observed_groups": [
+      {
+        "value": "0",
+        "count": 2500
+      },
+      {
+        "value": "1",
+        "count": 500
+      }
+    ],
+    "missing_rows": {
+      "missing_count": 0,
+      "missing_reasons": {}
+    },
+    "excluded_rows": {
+      "missing_target": 0,
+      "missing_text": 0,
+      "missing_group": 0,
+      "unmapped_label": 0
+    },
+    "label_encoding": {
+      "0": 0,
+      "1": 1
+    },
+    "n_evaluated": 3000,
+    "inference": {
+      "model_ref": "..\\results\\fairness_confirm_20261003\\models\\fairness_r070",
+      "revision": "local",
+      "task_type": "binary_classification",
+      "device": "cuda",
+      "device_name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+      "dtype": "torch.float32",
+      "batch_size": 8,
+      "backend": "local_hf",
+      "inference_backend": "local_hf",
+      "num_labels": 2,
+      "execution_device": "cuda",
+      "gpu_available": true,
+      "gpu_name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+      "cuda_available": true,
+      "device_reason": "CUDA GPU detected and selected",
+      "fallback_reason": null
+    },
+    "label_rate_gap": 0.5232,
+    "excess_dpd": 0.0,
+    "excess_dpd_v1": 0.0,
+    "equal_opportunity_difference": 0.204938,
+    "eopp_ci": {
+      "point": 0.204938,
+      "ci_lower": 0.132154,
+      "ci_upper": 0.27667,
+      "method": "bootstrap_percentile",
+      "B": 1000
+    },
+    "fpr_gap": 0.252153,
+    "eligibility": {
+      "eligible_groups": [
+        "0",
+        "1"
+      ],
+      "positives": {
+        "0": 282,
+        "1": 318
+      },
+      "min_positives_per_group": 1,
+      "failed_gate": null
+    },
+    "fairness_finding": "FAIRNESS_RISK",
+    "aspect_scoring": "risk_detected",
+    "risks_triggered": [
+      "F-FAIR-EOPP"
+    ],
+    "scored_risk_id": null,
+    "methodology_version": "tl-fairness-binary-v1.2",
+    "fairness_rule": {
+      "risk_id": "F-FAIR-EOPP",
+      "statistic": "equal_opportunity_difference = max_g TPR_g - min_g TPR_g over groups with n >= min_group_n",
+      "eligibility": ">= 2 groups with n >= min_group_n, each with >= 1 positive label(s)",
+      "epsilon": 0.02,
+      "criterion": "FAIRNESS_RISK iff point > epsilon and bootstrap 95% ci_lower > epsilon",
+      "ci_wide_gate": "EOD CI width > 0.15 -> mapping_blocked (G-FAIR-CI-WIDE)",
+      "bootstrap": {
+        "method": "percentile",
+        "B": 1000,
+        "seed": 42
+      }
+    },
+    "demographic_parity_difference": 0.5132,
+    "equalized_odds_difference": 0.252153,
+    "subgroup_f1_spread": 0.211367,
+    "groups": {
+      "0": {
+        "n": 2500,
+        "f1": 0.606383,
+        "positive_rate": 0.1128,
+        "tpr": 0.606383,
+        "fpr": 0.050045
+      },
+      "1": {
+        "n": 500,
+        "f1": 0.81775,
+        "positive_rate": 0.626,
+        "tpr": 0.811321,
+        "fpr": 0.302198
+      }
+    },
+    "min_group_n_observed": 500,
+    "excluded_groups": [],
+    "proposed_mapping": false,
+    "needs_human_review": true,
+    "dp_ci": {
+      "point": 0.5132,
+      "ci_lower": 0.468782,
+      "ci_upper": 0.557299,
+      "method": "bootstrap_percentile",
+      "B": 1000
+    },
+    "eo_ci": {
+      "point": 0.252153,
+      "ci_lower": 0.202568,
+      "ci_upper": 0.320474,
+      "method": "bootstrap_percentile",
+      "B": 1000
+    },
+    "f1_ci": {
+      "point": 0.211367,
+      "ci_lower": 0.152486,
+      "ci_upper": 0.264641,
+      "method": "bootstrap_percentile",
+      "B": 1000
+    },
+    "positive_label_index": 1,
+    "probe_status": "EVALUATED",
+    "probe_status_reason": "F-FAIR-EOPP: equal_opportunity_difference=0.204938 and ci_lower=0.132154 exceed epsilon=0.02 \u2014 true-positive rates differ across groups; evidence for review, not a finding that the model is unfair"
+  }
+}

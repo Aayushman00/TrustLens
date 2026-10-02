@@ -1,0 +1,11 @@
+{
+  "flaw_target": "FAIRNESS",
+  "dataset": "google/civil_comments",
+  "split": "train",
+  "seed": 20261003,
+  "size": 8000,
+  "flip_rate": 0.7,
+  "rows_flipped": 403,
+  "flip_logic": "label 0->1 where identity_ref==1 and label==0; nested (lower rate subset of higher)",
+  "base_slice": "clean_control_train.jsonl"
+}
