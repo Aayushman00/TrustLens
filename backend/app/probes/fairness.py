@@ -21,6 +21,7 @@ from app.inference.model_snapshot_check import verify_loaded_model_matches_snaps
 from app.probes.base import ProbeContext, ProbeOutput
 from app.probes.fairness_metrics import compute_fairness_bundle
 from app.probes.fairness_multiclass import evaluate_multiclass_fairness
+from app.probes.prediction_gate import FLAG_CONSTANT_PREDICTOR, prediction_collapse
 from app.probes.fairness_stats import (
     CI_WIDE_THRESHOLD,
     METHODOLOGY_VERSION,
@@ -300,6 +301,18 @@ class FairnessProbe:
 
         base_metrics.update({"inference": inference_meta, "inference_executed": True})
 
+        collapsed, majority_class, share = prediction_collapse(y_pred)
+        if collapsed:
+            flags.extend([FLAG_CONSTANT_PREDICTOR, "metrics_skipped"])
+            return self._fail(
+                ctx,
+                base_metrics={**base_metrics, "majority_class_share": round(share, 6)},
+                flags=flags,
+                reason=f"model predicts class {majority_class} for {share:.1%} of rows; "
+                "group-fairness metrics are not meaningful for a constant predictor",
+                status=ProbeEvaluationStatus.INSUFFICIENT_EVIDENCE,
+            )
+
         if is_binary:
             y_true = [r["label"] for r in rows]
             sensitive = [r["sensitive"] for r in rows]
@@ -462,6 +475,7 @@ class FairnessProbe:
         flags: list[str],
         reason: str,
         confidence: float = 0.35,
+        status: ProbeEvaluationStatus = ProbeEvaluationStatus.FAILED,
     ) -> ProbeOutput:
         """Shared shape for every FAILED early-return in ``_run_v2`` — same
         ``metrics={**base_metrics, "skip_reason": reason}``/``status=FAILED``
@@ -472,7 +486,7 @@ class FairnessProbe:
             metrics={**base_metrics, "skip_reason": reason},
             flags=flags,
             confidence=confidence,
-            status=ProbeEvaluationStatus.FAILED,
+            status=status,
             status_reason=reason,
         )
 

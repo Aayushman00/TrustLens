@@ -39,7 +39,9 @@ def _alternating_drop_rows(n: int) -> list[dict]:
     out: list[dict] = []
     for i in range(n):
         label = i % 2
-        if i % 2 == 0:
+        # i % 4 (not i % 2) so clean predictions are mixed: an i % 2 split
+        # predicts class 0 on every row, which the constant-predictor gate rejects.
+        if i % 4 < 2:
             yc, yr = label, 1 - label
         else:
             yc, yr = 1 - label, label
@@ -162,3 +164,11 @@ def test_domain_override_mapping_blocked() -> None:
     )
     assert result.aspect_scoring == "mapping_blocked"
     assert result.scored_risk_id is None
+
+
+def test_constant_predictor_is_insufficient_evidence() -> None:
+    aligned = [{"label": i % 2, "y_hat_clean": 0, "y_hat_robust": 0} for i in range(150)]
+    result = evaluate_classification_robustness(aligned=aligned, **_base_kwargs())
+    assert result.status == ProbeEvaluationStatus.INSUFFICIENT_EVIDENCE
+    assert "constant_predictor" in result.flags
+    assert result.metrics["clean_accuracy"] is None

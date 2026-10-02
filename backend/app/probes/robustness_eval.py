@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from app.db.enums import ProbeEvaluationStatus
+from app.probes.prediction_gate import FLAG_CONSTANT_PREDICTOR, prediction_collapse
 from app.probes.robustness_stats import (
     BOOTSTRAP_B,
     CI_WIDE_THRESHOLD,
@@ -131,6 +132,29 @@ def evaluate_classification_robustness(
             uncertainty=uncertainty,
             reliability={"gates_passed": False, "failed_gates": failed_gates},
             flags=flags + ["insufficient_n_eval"],
+            limitations=limitations,
+            confidence=0.45,
+        )
+
+    collapsed, majority_class, share = prediction_collapse(
+        [int(r["y_hat_clean"]) for r in aligned]
+    )
+    if collapsed:
+        failed_gates.append("G-ROB-CONSTANT-PREDICTOR")
+        metrics["majority_class_share"] = round(share, 6)
+        return ClassificationRobustnessResult(
+            status=ProbeEvaluationStatus.INSUFFICIENT_EVIDENCE,
+            status_reason=(
+                f"model predicts class {majority_class} for {share:.1%} of clean rows; "
+                "perturbation stability of a constant predictor is not meaningful"
+            ),
+            aspect_scoring="not_scored",
+            scored_risk_id=None,
+            risks_triggered=[],
+            metrics=metrics,
+            uncertainty=uncertainty,
+            reliability={"gates_passed": False, "failed_gates": failed_gates},
+            flags=flags + [FLAG_CONSTANT_PREDICTOR],
             limitations=limitations,
             confidence=0.45,
         )

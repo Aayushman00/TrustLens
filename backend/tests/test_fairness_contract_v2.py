@@ -574,3 +574,30 @@ def test_fairness_v2_worker_hard_fails_on_label_snapshot_mismatch(
 
     assert output.status == ProbeEvaluationStatus.FAILED
     assert "num_labels" in (output.status_reason or "")
+
+
+def test_fairness_v2_constant_predictor_is_insufficient_evidence(
+    fake_probe_config: ProbeConfigV1,
+    db_session: Any,
+) -> None:
+    """Regression for the original toxic-bert run: a model that predicts one
+    class for every row got DPD=EOD=0 and a near-perfect Fairness band."""
+    rows = ["text,label,group"]
+    for i in range(40):
+        rows.append(f"t{i},{'pos' if i % 3 == 0 else 'neg'},{'a' if i % 2 else 'b'}")
+    store, content = _binary_csv_and_content(
+        db_session, ("\n".join(rows) + "\n").encode("utf-8"), row_count=40
+    )
+    ctx = _ctx(
+        probe_config=fake_probe_config,
+        evidence_store=FakeEvidenceStore(),
+        evaluation_contract=_v2_contract(
+            fairness=_fairness_contract().model_copy(update={"dataset_content_id": content.id})
+        ),
+        dataset_content_store=store,
+        session=db_session,
+    )
+    out = FairnessProbe(inference=FakeInferenceBackend(predictions=[0] * 40, num_labels=2)).run(ctx)
+    assert out.status == ProbeEvaluationStatus.INSUFFICIENT_EVIDENCE
+    assert "constant_predictor" in out.flags
+    assert out.metric_values.get("demographic_parity_difference") is None
