@@ -10,15 +10,21 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from app.db.enums import FriesDimension
+from app.db.enums import FriesDimension, ProbeEvaluationStatus
+from app.inference.base import InferenceBackend
 from app.probes.base import ProbeContext, ProbeOutput
+from app.probes.safety_behavior_runner import run_behavioral_safety
 from app.probes.safety_eval import evaluate_safety
 from app.probes.safety_stats import METHODOLOGY_BASIS, METHODOLOGY_VERSION, NOTE
 from app.storage.evidence_store import EvidenceStoreError
 
 
 class SafetyProbe:
-    """Audit model-card safety disclosures and lexical documentation phrase flags."""
+    """Audit model-card safety disclosures and lexical documentation phrase flags,
+    plus (when a SAFETY contract is confirmed) behavioural severe-harm misses."""
+
+    def __init__(self, *, inference: InferenceBackend | None = None) -> None:
+        self._inference = inference
 
     @property
     def dimension(self) -> FriesDimension:
@@ -32,6 +38,14 @@ class SafetyProbe:
         # import time (app/documentation/evidence.py). None when the model
         # wasn't imported from HF or the card fetch failed.
         documentation_source = (ctx.model_metadata or {}).get("documentation_evidence")
+
+        contract = ctx.evaluation_contract
+        backend = self._inference
+        if backend is None and contract is not None and contract.safety is not None:
+            from app.inference.local_hf import LocalHFBackend
+
+            backend = LocalHFBackend()
+        behavior = run_behavioral_safety(ctx, contract, backend)  # type: ignore[arg-type]
 
         metrics: dict[str, Any] = {
             "methodology_version": METHODOLOGY_VERSION,
@@ -58,7 +72,12 @@ class SafetyProbe:
             "note": NOTE,
             "status": result.status.value,
             "probe_status": result.status.value,
+            # Behavioural safety is separate evidence from card disclosure above.
+            "behavior": behavior,
         }
+        if behavior["status"] == ProbeEvaluationStatus.EVALUATED.value:
+            metrics["severe_fnr"] = behavior["severe_fnr"]
+            metrics["fnr_ratio"] = behavior["fnr_ratio"]
         if result.status_reason:
             metrics["status_reason"] = result.status_reason
             metrics["probe_status_reason"] = result.status_reason
@@ -90,13 +109,14 @@ class SafetyProbe:
             "uncertainty": result.uncertainty,
             "limitations": result.limitations,
             "flags": result.flags,
+            "behavior": behavior,
             "proposed_mapping": False,
             "osd_proposals": [],
             "note": NOTE,
         }
         try:
             ref = ctx.evidence_store.put_artifact(
-                data=json.dumps(artifact, separators=(",", ":")).encode("utf-8"),
+                data=json.dumps(artifact, separators=(",", ":"), default=str).encode("utf-8"),
                 content_type="application/json",
                 probe_name="safety",
                 evaluation_id=ctx.evaluation_id,
