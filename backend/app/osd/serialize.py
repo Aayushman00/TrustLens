@@ -17,6 +17,11 @@ _SUGGESTION_NOTE_HEURISTIC = (
     "Legacy heuristic O/S/D suggestion — proposed, not ground truth, not an LLM "
     "assessment; requires human validation."
 )
+_SUGGESTION_NOTE_LLM = (
+    "LLM-assisted O/S/D suggestion — INTEGRITY/EXPLAINABILITY/SAFETY proposed by "
+    "an LLM (heuristic fallback when all providers fail), FAIRNESS/ROBUSTNESS by "
+    "the heuristic; proposed, not ground truth; requires human validation."
+)
 _SUGGESTION_NOTE_DETERMINISTIC = (
     "Deterministic O/S/D representation from probe evidence; O unavailable "
     "(no approved mapping); S human-controlled; D unavailable."
@@ -56,6 +61,8 @@ def _aspect_status(aspect: AspectOSD) -> str:
 def _suggestion_note(result: AgentResult) -> str:
     if result.assessment_engine == "deterministic":
         return _SUGGESTION_NOTE_DETERMINISTIC
+    if result.assessment_engine == "llm_v1":
+        return _SUGGESTION_NOTE_LLM
     return _SUGGESTION_NOTE_HEURISTIC
 
 

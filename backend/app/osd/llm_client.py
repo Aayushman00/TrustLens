@@ -14,6 +14,13 @@ from pydantic import BaseModel, Field
 from app.db.enums import FriesDimension
 from app.osd.base import AgentContext
 
+# Model names per provider — recorded on every LLM-rated aspect
+# (app.osd.hybrid) so a stored O/S/D can be traced to the model that produced it.
+GEMINI_MODEL = "gemini-3.6-flash"
+GROQ_MODEL = "openai/gpt-oss-120b"
+NVIDIA_MODEL = "mistralai/mistral-large-2-instruct"
+OPENAI_COMPAT_TEMPERATURE = 0.2
+
 _TARGET_DIMENSIONS = (
     FriesDimension.INTEGRITY,
     FriesDimension.EXPLAINABILITY,
@@ -134,7 +141,7 @@ def parse_gemini_response(raw_text: str) -> GeminiOSDResponse:
     return GeminiOSDResponse.model_validate(data)
 
 
-def call_gemini(prompt: str, *, api_key: str, model: str = "gemini-3.6-flash") -> str:
+def call_gemini(prompt: str, *, api_key: str, model: str = GEMINI_MODEL) -> str:
     """Make the one Gemini call for this batched prompt. Returns raw response text.
 
     Isolated in its own function so tests can monkeypatch this exact name
@@ -161,7 +168,7 @@ def _call_openai_compatible(prompt: str, *, api_key: str, base_url: str, model: 
         json={
             "model": model,
             "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.2,
+            "temperature": OPENAI_COMPAT_TEMPERATURE,
         },
         timeout=30.0,
     )
@@ -169,14 +176,14 @@ def _call_openai_compatible(prompt: str, *, api_key: str, base_url: str, model: 
     return response.json()["choices"][0]["message"]["content"] or ""
 
 
-def call_groq(prompt: str, *, api_key: str, model: str = "openai/gpt-oss-120b") -> str:
+def call_groq(prompt: str, *, api_key: str, model: str = GROQ_MODEL) -> str:
     """Groq fallback for the batched OSD prompt — same contract as ``call_gemini``."""
     return _call_openai_compatible(
         prompt, api_key=api_key, base_url="https://api.groq.com/openai/v1", model=model
     )
 
 
-def call_nvidia(prompt: str, *, api_key: str, model: str = "mistralai/mistral-large-2-instruct") -> str:
+def call_nvidia(prompt: str, *, api_key: str, model: str = NVIDIA_MODEL) -> str:
     """NVIDIA NIM fallback for the batched OSD prompt — same contract as ``call_gemini``."""
     return _call_openai_compatible(
         prompt, api_key=api_key, base_url="https://integrate.api.nvidia.com/v1", model=model

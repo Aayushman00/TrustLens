@@ -13,6 +13,7 @@ failure from all three falls back to the heuristic.
 
 from __future__ import annotations
 
+import hashlib
 import logging
 
 from app.core.config import get_settings
@@ -20,6 +21,10 @@ from app.db.enums import FriesDimension
 from app.osd.agent import HeuristicOSDAgent
 from app.osd.base import AgentContext, AgentResult, LEGACY_HEURISTIC_METHODOLOGY_STATUS
 from app.osd.llm_client import (
+    GEMINI_MODEL,
+    GROQ_MODEL,
+    NVIDIA_MODEL,
+    OPENAI_COMPAT_TEMPERATURE,
     GeminiOSDResponse,
     build_prompt,
     call_gemini,
@@ -45,7 +50,7 @@ class HybridOSDAgent:
 
     def propose(self, ctx: AgentContext) -> AgentResult:
         baseline = HeuristicOSDAgent().propose(ctx)
-        judgment = self._get_llm_judgment(ctx)
+        judgment, provenance = self._get_llm_judgment(ctx)
 
         by_aspect = {aspect.aspect: aspect for aspect in baseline.aspects}
         for dimension in _TARGET_DIMENSIONS:
@@ -71,6 +76,7 @@ class HybridOSDAgent:
             aspect.O, aspect.S, aspect.D = dim_judgment.O, dim_judgment.S, dim_judgment.D
             aspect.O_source = aspect.S_source = aspect.D_source = _LLM_SOURCE
             aspect.rationale = dim_judgment.rationale
+            aspect.osd_metadata = {**aspect.osd_metadata, **provenance}
             # EXPLAINABILITY/SAFETY only (see llm_client._PROMPT_TEMPLATE) —
             # an audit-visible companion to the rationale, never a mechanical
             # override of O/S/D and never required for a "successful" judgment.
@@ -88,20 +94,31 @@ class HybridOSDAgent:
             assessment_engine="llm_v1",
         )
 
-    def _get_llm_judgment(self, ctx: AgentContext) -> GeminiOSDResponse | None:
+    def _get_llm_judgment(
+        self, ctx: AgentContext
+    ) -> tuple[GeminiOSDResponse | None, dict[str, object]]:
+        """Return the first valid judgment plus provenance for the aspects it rates
+        (provider, model, temperature, prompt hash); ``(None, {})`` when all fail."""
         settings = get_settings()
         providers = (
-            ("gemini", settings.gemini_api_key, call_gemini),
-            ("groq", getattr(settings, "groq_api_key", None), call_groq),
-            ("nvidia", getattr(settings, "nvidia_api_key", None), call_nvidia),
+            ("gemini", settings.gemini_api_key, call_gemini, GEMINI_MODEL, None),
+            ("groq", getattr(settings, "groq_api_key", None), call_groq, GROQ_MODEL, OPENAI_COMPAT_TEMPERATURE),
+            ("nvidia", getattr(settings, "nvidia_api_key", None), call_nvidia, NVIDIA_MODEL, OPENAI_COMPAT_TEMPERATURE),
         )
         prompt = build_prompt(ctx)
-        for name, api_key, call_fn in providers:
+        prompt_sha256 = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
+        for name, api_key, call_fn, model, temperature in providers:
             if not api_key:
                 continue
             try:
                 raw = call_fn(prompt, api_key=api_key)
-                return parse_gemini_response(raw)
+                return parse_gemini_response(raw), {
+                    "llm_provider": name,
+                    "llm_model": model,
+                    # None = provider default (Gemini call sets no temperature).
+                    "llm_temperature": temperature,
+                    "llm_prompt_sha256": prompt_sha256,
+                }
             except Exception:  # noqa: BLE001 — try the next provider, never propagate
                 logger.warning(
                     "osd_agent_llm_v1_provider_failed evaluation_id=%s provider=%s — trying next",
@@ -114,4 +131,4 @@ class HybridOSDAgent:
             "osd_agent_llm_v1_all_providers_failed evaluation_id=%s — falling back to heuristic",
             ctx.evaluation_id,
         )
-        return None
+        return None, {}

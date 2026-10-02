@@ -383,3 +383,39 @@ def test_gemini_success_never_tries_groq_or_nvidia(
     mock_gemini.assert_called_once()
     mock_groq.assert_not_called()
     mock_nvidia.assert_not_called()
+
+
+@patch("app.osd.hybrid.call_gemini", return_value=_GOOD_RAW)
+@patch("app.osd.hybrid.get_settings")
+def test_llm_provenance_recorded_on_llm_rated_aspects_only(mock_settings, mock_call) -> None:
+    _mock_settings(mock_settings, gemini="fake-key")
+    result = HybridOSDAgent().propose(_full_context())
+    aspects = {a.aspect: a for a in result.aspects}
+    meta = aspects[FriesDimension.SAFETY].osd_metadata
+    assert meta["llm_provider"] == "gemini"
+    assert meta["llm_model"]
+    assert len(meta["llm_prompt_sha256"]) == 64
+    assert "llm_provider" not in aspects[FriesDimension.FAIRNESS].osd_metadata
+
+
+def test_llm_engine_is_disclosed_as_llm_assisted_not_heuristic() -> None:
+    from app.db.enums import EvaluationMode
+    from app.osd.base import LEGACY_HEURISTIC_METHODOLOGY_STATUS, AgentResult
+    from app.osd.serialize import _suggestion_note
+    from app.schemas.modes import disclaimer_for, osd_provenance_bullet, score_note_for
+
+    texts = [
+        disclaimer_for(EvaluationMode.AI_AUTONOMOUS, human_reviewed=False, assessment_engine="llm_v1"),
+        disclaimer_for(EvaluationMode.AI_ASSISTED, human_reviewed=True, assessment_engine="llm_v1"),
+        score_note_for(assessment_engine="llm_v1"),
+        osd_provenance_bullet(assessment_engine="llm_v1"),
+        _suggestion_note(
+            AgentResult(
+                aspects=[], overall_confidence=0.5, methodology_status=LEGACY_HEURISTIC_METHODOLOGY_STATUS,
+                model_ref="m", assessment_engine="llm_v1",
+            )
+        ),
+    ]
+    for text in texts:
+        assert "not an LLM" not in text, text
+        assert "LLM" in text, text
