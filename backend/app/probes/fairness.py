@@ -405,6 +405,10 @@ class FairnessProbe:
                 and (dp_ci["ci_upper"] - dp_ci["ci_lower"]) > CI_WIDE_THRESHOLD
             ):
                 flags.append("wide_ci_dp")
+                # Mark the block in the evidence itself so O/S/D and confidence
+                # consumers honour it (same shape as fairness_multiclass).
+                base_metrics["aspect_scoring"] = "mapping_blocked"
+                base_metrics["reliability"] = {"gates_passed": False, "failed_gates": ["G-FAIR-CI-WIDE"]}
                 return self._finish(
                     ctx,
                     metrics=base_metrics,

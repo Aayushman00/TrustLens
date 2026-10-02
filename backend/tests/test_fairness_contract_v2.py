@@ -418,6 +418,12 @@ def test_fairness_v2_binary_wide_dp_ci_gates_scoring(
     assert output.status_reason is not None
     assert "G-FAIR-CI-WIDE" in output.status_reason
     assert output.metric_values["dp_ci"]["method"] == "bootstrap_percentile"
+    # Regression: "scoring blocked" must actually block scoring downstream.
+    assert output.metric_values["aspect_scoring"] == "mapping_blocked"
+    assert "G-FAIR-CI-WIDE" in output.metric_values["reliability"]["failed_gates"]
+    from app.osd.agent import _fairness_band
+
+    assert _fairness_band(output.metric_values)[0] == (None, None, None)
 
 
 def test_fairness_v2_binary_tight_dp_ci_scores_normally(

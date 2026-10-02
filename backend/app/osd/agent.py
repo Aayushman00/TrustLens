@@ -129,6 +129,8 @@ def _fairness_band(m: dict[str, Any]) -> tuple[tuple[int | None, int | None, int
         ProbeEvaluationStatus.INSUFFICIENT_EVIDENCE,
     ):
         return (None, None, None), f"fairness status is {status.value}"
+    if m.get("aspect_scoring") in ("mapping_blocked", "not_scored"):
+        return (None, None, None), "fairness mapping blocked by probe gate (e.g. G-FAIR-CI-WIDE)"
     dp = _num(m, "demographic_parity_difference")
     if dp is None:
         return (None, None, None), "fairness metrics were skipped"

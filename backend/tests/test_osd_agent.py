@@ -368,3 +368,13 @@ def test_robustness_band_abstains_when_probe_did_not_score() -> None:
         {"clean_accuracy": 0.9, "robust_accuracy": 0.9, "aspect_scoring": "not_scored"}
     )
     assert band == (None, None, None)
+
+
+def test_fairness_band_abstains_when_probe_blocked_mapping() -> None:
+    from app.osd.agent import _fairness_band
+
+    band, _ = _fairness_band(
+        {"demographic_parity_difference": 0.05, "equalized_odds_difference": 0.05,
+         "aspect_scoring": "mapping_blocked", "probe_status": "EVALUATED"}
+    )
+    assert band == (None, None, None)

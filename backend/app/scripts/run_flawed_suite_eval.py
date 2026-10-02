@@ -45,7 +45,8 @@ LOCAL_VARIANTS = [
     "variant1_fairness",
     "variant2_robustness",
     "variant3_explainability",
-    "variant4_integrity",
+    "variant4_integrity",  # FAIRNESS+INTEGRITY compound (reuses variant1 weights)
+    "variant4b_integrity_clean",  # INTEGRITY only (variant3 clean weights + variant4 card)
     "variant5_safety",
     "variant6_compound",
 ]
