@@ -43,7 +43,7 @@ router = APIRouter(prefix="/evaluations", tags=["evaluations-lifecycle"])
 def submit_human_review(
     evaluation_id: uuid.UUID,
     body: HumanReviewRequest,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
 ) -> HumanReviewRead:
     return EvaluationService(db).submit_human_review(evaluation_id, body)
 
@@ -66,7 +66,7 @@ def submit_human_review(
 )
 def finalize_evaluation(
     evaluation_id: uuid.UUID,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
 ) -> EvaluationRead:
     service = EvaluationService(db)
     evaluation = service.get_evaluation(evaluation_id)
@@ -91,7 +91,7 @@ def finalize_evaluation(
 )
 def publish_evaluation(
     evaluation_id: uuid.UUID,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
 ) -> EvaluationRead:
     service = EvaluationService(db)
     evaluation = service.get_evaluation(evaluation_id)
@@ -112,7 +112,7 @@ def publish_evaluation(
 )
 def unpublish_evaluation(
     evaluation_id: uuid.UUID,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
 ) -> EvaluationRead:
     service = EvaluationService(db)
     evaluation = service.get_evaluation(evaluation_id)

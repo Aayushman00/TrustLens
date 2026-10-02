@@ -41,7 +41,7 @@ logger = logging.getLogger("trustlens.routers.evaluations")
 )
 def create_evaluation(
     body: EvaluationCreate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
 ) -> EvaluationRead:
     row = EvaluationService(db).create_evaluation(body)
     return EvaluationRead.model_validate(row)
@@ -66,7 +66,7 @@ def create_evaluation(
 )
 def create_evaluation_v2(
     body: CreateEvaluationV2Request,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
 ) -> EvaluationRead:
     row = EvaluationServiceV2(db).create_from_draft(
         body.draft_id, body.evaluation_mode, assessment_engine=body.assessment_engine
@@ -86,7 +86,7 @@ def list_evaluations(
     ),
     limit: int = Query(50, ge=1, le=200),
     cursor: str | None = Query(None, description="Opaque cursor (evaluation UUID)"),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
 ) -> EvaluationList:
     rows, next_cursor = EvaluationService(db).list_evaluations(
         status=status_filter,
@@ -106,7 +106,7 @@ def list_evaluations(
 )
 def get_evaluation(
     evaluation_id: uuid.UUID,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
 ) -> EvaluationRead:
     service = EvaluationService(db)
     row = service.get_evaluation(evaluation_id)
@@ -135,7 +135,7 @@ def get_evaluation(
 )
 def reconcile_evaluation_enqueue(
     evaluation_id: uuid.UUID,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
 ) -> EvaluationRead:
     row = EvaluationService(db).reconcile_enqueue_failure(evaluation_id)
     return EvaluationRead.model_validate(row)
@@ -155,7 +155,7 @@ def reconcile_evaluation_enqueue(
 )
 def get_evaluation_events(
     evaluation_id: uuid.UUID,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
 ) -> EvaluationEventList:
     # Existence check only — same shared-read model as GET /{evaluation_id}
     # and GET /reports/{evaluation_id}. This table is audit evidence, not

@@ -37,7 +37,7 @@ _ERROR_RESPONSES = {
 )
 def get_report(
     evaluation_id: uuid.UUID,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
 ) -> ReportRead:
     return ReportService(db).get_report(evaluation_id)
 
@@ -56,6 +56,6 @@ def get_report(
 )
 def generate_report(
     evaluation_id: uuid.UUID,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
 ) -> ReportRead:
     return ReportService(db).generate(evaluation_id)

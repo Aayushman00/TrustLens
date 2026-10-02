@@ -12,7 +12,11 @@ from app.core.db import get_session_factory
 
 
 def get_db() -> Generator[Session, None, None]:
-    """Yield a sync SQLAlchemy session; commit on success, rollback on error."""
+    """Yield a sync SQLAlchemy session; commit on success, rollback on error.
+
+    Always use as ``Depends(get_db, scope="function")``: with FastAPI's default
+    request scope the commit runs after the response is sent, so a client
+    acting on a 200 can read uncommitted state."""
     settings = get_settings()
     if not settings.database_url:
         raise AppError(
