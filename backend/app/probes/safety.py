@@ -1,4 +1,4 @@
-"""Safety probe — safety-governance disclosure (tl-safety-v1.0).
+"""Safety probe — safety-governance disclosure (tl-safety-v1.1).
 
 Metadata-only disclosure checklist and lexical phrase documentation flags.
 Emits Layer A evidence with named S-GOV-* detections — does **not** write final
@@ -64,6 +64,7 @@ class SafetyProbe:
             "aspect_scoring": result.aspect_scoring,
             "scored_risk_id": result.scored_risk_id,
             "risks_triggered": result.risks_triggered,
+            "disclosure_gaps": result.disclosure_gaps,
             "reliability": result.reliability,
             "uncertainty": result.uncertainty,
             "limitations": result.limitations,
@@ -94,6 +95,7 @@ class SafetyProbe:
             "aspect_scoring": result.aspect_scoring,
             "scored_risk_id": result.scored_risk_id,
             "risks_triggered": result.risks_triggered,
+            "disclosure_gaps": result.disclosure_gaps,
             "documentation_source": documentation_source,
             "checks": result.checks,
             "required_checks": result.required_checks,

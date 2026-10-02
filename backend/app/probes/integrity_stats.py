@@ -1,8 +1,8 @@
-"""Integrity probe constants (tl-integrity-v1.0)."""
+"""Integrity probe constants (tl-integrity-v1.1)."""
 
 from __future__ import annotations
 
-METHODOLOGY_VERSION = "tl-integrity-v1.0"
+METHODOLOGY_VERSION = "tl-integrity-v1.1"
 METHODOLOGY_BASIS = "TRUSTLENS_FIVE_PROBE_METHODOLOGY_AUDIT.md"
 
 RISK_REV_UNPINNED = "I-INT-REV-UNPINNED"
@@ -46,6 +46,12 @@ CLAIM_HASH_UNVERIFIED = (
 NOTE = "Layer A evidence only — Integrity risks do not assign O/S/D"
 
 LIMITATIONS: tuple[str, ...] = (
+    "I-INT-REV-UNPINNED, I-INT-MANIFEST-MISSING and I-INT-LICENSE-UNDISCLOSED are "
+    "missing identity/disclosure evidence, recorded under disclosure_gaps "
+    "(aspect_scoring=disclosure_gap); only byte divergence and listing drift are "
+    "risks_triggered.",
+    "A local folder's self-computed weight sha256 records which bytes were "
+    "evaluated; it is verified only when train_manifest.json records a reference.",
     "Integrity risks measure disclosure and identity recording, not tampering or "
     "legal compliance.",
     "Named Integrity risks are not additive FRIES occurrences and must not be "

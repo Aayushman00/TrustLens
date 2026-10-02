@@ -52,8 +52,9 @@ def test_prose_without_headings_evaluated_incomplete() -> None:
     )
     result = evaluate_explainability(model_metadata={"card_text": text})
     assert result.status == ProbeEvaluationStatus.EVALUATED
-    assert result.aspect_scoring == ASPECT_RISK_DETECTED
-    assert RISK_DOC_INCOMPLETE in result.risks_triggered
+    assert result.aspect_scoring == "disclosure_gap"
+    assert RISK_DOC_INCOMPLETE in result.disclosure_gaps
+    assert result.risks_triggered == []
     assert result.coverage_ratio == 0.0
 
 
@@ -64,7 +65,7 @@ def test_contradiction_triggers_doc_contradiction_risk() -> None:
     )
     assert result.status == ProbeEvaluationStatus.EVALUATED
     assert RISK_DOC_CONTRADICTION in result.risks_triggered
-    assert RISK_DOC_INCOMPLETE in result.risks_triggered
+    assert RISK_DOC_INCOMPLETE in result.disclosure_gaps
     assert result.aspect_scoring == ASPECT_RISK_DETECTED
     assert result.scored_risk_id is None
 

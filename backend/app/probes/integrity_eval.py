@@ -1,8 +1,9 @@
-"""Integrity evaluation logic (tl-integrity-v1.0) — pure functions, stdlib only."""
+"""Integrity evaluation logic (tl-integrity-v1.1) — pure functions, stdlib only."""
 
 from __future__ import annotations
 
 import json
+import os
 import re
 from dataclasses import dataclass, field
 from typing import Any
@@ -71,6 +72,7 @@ class IntegrityEvalResult:
     uncertainty: dict[str, Any]
     limitations: list[str]
     confidence: float = 0.5
+    disclosure_gaps: list[str] = field(default_factory=list)
 
 
 def _as_str(value: Any) -> str | None:
@@ -80,6 +82,12 @@ def _as_str(value: Any) -> str | None:
         text = value.strip()
         return text or None
     return str(value).strip() or None
+
+
+def is_local_ref(model_ref: str) -> bool:
+    """A local model folder (worker bind mount or relative path), not a Hub repo id."""
+    ref = str(model_ref)
+    return ref.startswith(("/", ".")) or os.path.isabs(ref)
 
 
 def sha_like(revision: str | None) -> bool:
@@ -112,7 +120,8 @@ def _parse_hash_entry(raw: Any) -> dict[str, str] | None:
         if not value:
             return None
         algo = _as_str(raw.get("algo")) or "sha256"
-        return {"algo": algo, "value": value}
+        source = _as_str(raw.get("source"))
+        return {"algo": algo, "value": value, **({"source": source} if source else {})}
     return None
 
 
@@ -166,7 +175,10 @@ def evaluate_integrity(
             break
 
     flags: list[str] = []
+    # v1.1: risks = positive evidence of a problem (bytes diverge, listing drift);
+    # gaps = missing identity/disclosure evidence (unpinned, no manifest, no license).
     risks: list[str] = []
+    gaps: list[str] = []
     failed_gates: list[str] = []
     checks: dict[str, dict[str, Any]] = {}
     claim_boundary: dict[str, str] = {}
@@ -185,6 +197,7 @@ def evaluate_integrity(
             aspect_scoring="not_scored",
             scored_risk_id=None,
             risks_triggered=[],
+            disclosure_gaps=[],
             flags=["identity_empty"],
             checks={},
             identity={
@@ -231,8 +244,19 @@ def evaluate_integrity(
             limitations=list(LIMITATIONS),
         )
 
+    trusted_reference = _parse_trusted_reference(extra.get("trusted_reference"))
+    weight_hash = _parse_hash_entry(extra.get("local_artifact_hash"))
+    # A local folder has no Hub revision or listing; the sha256 of the weight
+    # bytes it serves is its identity (verified when a trusted reference exists).
+    content_addressed = is_local_ref(model_ref) and weight_hash is not None
+
     # --- revision_pinned ---
-    if revision and sha_like(revision):
+    if content_addressed:
+        checks["revision_pinned"] = {
+            "pass": True,
+            "detail": "local folder identified by weight-file sha256",
+        }
+    elif revision and sha_like(revision):
         checks["revision_pinned"] = {
             "pass": True,
             "detail": "sha-like revision",
@@ -242,7 +266,7 @@ def evaluate_integrity(
             "pass": False,
             "detail": f"non-sha-like revision={revision[:64]}",
         }
-        risks.append(RISK_REV_UNPINNED)
+        gaps.append(RISK_REV_UNPINNED)
         flags.append("unpinned_revision")
     else:
         checks["revision_pinned"] = {
@@ -259,12 +283,17 @@ def evaluate_integrity(
         if any(_WEIGHT_NAME_RE.search(name) for name in files):
             detail_parts.append("weight-like filename present")
         checks["files_listed"] = {"pass": True, "detail": "; ".join(detail_parts)}
+    elif content_addressed:
+        checks["files_listed"] = {
+            "pass": True,
+            "detail": "local folder: no Hub listing; identity from weight-file sha256",
+        }
     else:
         checks["files_listed"] = {
             "pass": False,
             "detail": "empty or missing files list",
         }
-        risks.append(RISK_MANIFEST_MISSING)
+        gaps.append(RISK_MANIFEST_MISSING)
         flags.append("empty_file_list")
 
     # --- license_declared ---
@@ -286,21 +315,21 @@ def evaluate_integrity(
             "pass": False,
             "detail": "open-license language in card text only (anti-gaming)",
         }
-        risks.append(RISK_LICENSE_UNDISCLOSED)
+        gaps.append(RISK_LICENSE_UNDISCLOSED)
         flags.extend(["missing_license", "card_only_license"])
     elif license_file:
         checks["license_declared"] = {
             "pass": False,
             "detail": "LICENSE filename present but no structured license field",
         }
-        risks.append(RISK_LICENSE_UNDISCLOSED)
+        gaps.append(RISK_LICENSE_UNDISCLOSED)
         flags.extend(["missing_license", "card_only_license"])
     else:
         checks["license_declared"] = {
             "pass": False,
             "detail": "no structured license",
         }
-        risks.append(RISK_LICENSE_UNDISCLOSED)
+        gaps.append(RISK_LICENSE_UNDISCLOSED)
         flags.append("missing_license")
 
     # --- card_present (evidence only) ---
@@ -369,9 +398,6 @@ def evaluate_integrity(
             flags.append("files_listing_drift")
     claim_boundary["files_listing_currency"] = listing_currency_reason
 
-    trusted_reference = _parse_trusted_reference(extra.get("trusted_reference"))
-    weight_hash = _parse_hash_entry(extra.get("local_artifact_hash"))
-
     hash_comparison = "not_performed"
     crypto_status = ProbeEvaluationStatus.INSUFFICIENT_EVIDENCE.value
     crypto_reason = CLAIM_HASH_UNVERIFIED
@@ -409,11 +435,13 @@ def evaluate_integrity(
     license_reason = (
         "structured license present"
         if structured_license
-        else "structured license check ran; absence recorded as named risk"
+        else "structured license check ran; absence recorded as a disclosure gap"
     )
 
     if risks:
         aspect_scoring = "risk_detected"
+    elif gaps:
+        aspect_scoring = "disclosure_gap"
     else:
         aspect_scoring = "no_material_risk"
 
@@ -423,6 +451,7 @@ def evaluate_integrity(
         aspect_scoring=aspect_scoring,
         scored_risk_id=None,
         risks_triggered=risks,
+        disclosure_gaps=gaps,
         flags=flags,
         checks=checks,
         identity={

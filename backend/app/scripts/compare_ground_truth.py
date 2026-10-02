@@ -244,7 +244,7 @@ def analyze(run_dirs: list[Path], truth: dict[str, Any]) -> dict[str, Any]:
         "per_dimension_detection": per_dim,
         "caveats": [
             "Binary FAIRNESS evidence never emits risks_triggered/aspect_scoring, so evidence-level FAIRNESS cannot flag by construction.",
-            "SAFETY card risks (S-GOV-*) and INTEGRITY registration risks (e.g. I-INT-REV-UNPINNED for local folders) fire for clean controls too; see control_flag_rate before reading evidence-level precision.",
+            "Runs under methodology v3-hardening-2026 or earlier: SAFETY card risks (S-GOV-*), E-DOC-INCOMPLETE and INTEGRITY registration risks (e.g. I-INT-REV-UNPINNED for local folders) fire for clean controls too; see control_flag_rate before reading evidence-level precision. From v4-disclosure-gaps-2026 these are disclosure_gaps and no longer reach risks_triggered.",
             "Score-level flags are relative to the control's mean and noise; LLM fallback runs inflate the control's INTEGRITY/EXPLAINABILITY spread.",
         ],
         "severity": truth["severity_levels"],

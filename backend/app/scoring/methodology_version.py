@@ -6,8 +6,12 @@ old stored report.json blobs genuinely never recorded any value at all —
 see docs/superpowers/plans/2026-09-10-v1-dataset-contract-redesign.md
 Global Constraints)."""
 
-# v3-hardening-2026: robustness band from accuracy drop (osd/agent.py),
-# constant-predictor gate, behavioural safety band.
-# Previous: "v2-per-dimension-2026" (stored evaluations keep their stamp).
-CURRENT_METHODOLOGY_VERSION = "v3-hardening-2026"
+# v4-disclosure-gaps-2026 (round 3, L3): documentation/disclosure gaps
+# (S-GOV-DISCLOSURE-GAP, E-DOC-INCOMPLETE, I-INT-REV-UNPINNED,
+# I-INT-MANIFEST-MISSING, I-INT-LICENSE-UNDISCLOSED) move from risks_triggered
+# to disclosure_gaps with aspect_scoring="disclosure_gap"; local model folders
+# are identified by their weight-file sha256 (checked against train_manifest.json).
+# Previous: "v3-hardening-2026" — robustness band from accuracy drop,
+# constant-predictor gate, behavioural safety band (stored evaluations keep their stamp).
+CURRENT_METHODOLOGY_VERSION = "v4-disclosure-gaps-2026"
 LEGACY_METHODOLOGY_VERSION = "pre-v1-fixed-5dim"

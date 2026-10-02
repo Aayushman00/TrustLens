@@ -95,9 +95,9 @@ def test_unpinned_main_revision_still_evaluated() -> None:
     ctx, _ = _ctx(metadata=meta, revision="main", checksum="main")
     out = IntegrityProbe().run(ctx)
     assert out.status == ProbeEvaluationStatus.EVALUATED
-    assert RISK_REV_UNPINNED in out.metric_values["risks_triggered"]
-    assert out.metric_values["aspect_scoring"] == "risk_detected"
-    assert out.metric_values["aspect_scoring"] != "scored_risk"
+    assert RISK_REV_UNPINNED in out.metric_values["disclosure_gaps"]
+    assert RISK_REV_UNPINNED not in out.metric_values["risks_triggered"]
+    assert out.metric_values["aspect_scoring"] == "disclosure_gap"
     assert out.metric_values["identity"]["sha_like"] is False
 
 
@@ -106,7 +106,7 @@ def test_missing_manifest_risk_not_fingerprint_risk() -> None:
     meta["files"] = []
     ctx, _ = _ctx(metadata=meta)
     out = IntegrityProbe().run(ctx)
-    assert RISK_MANIFEST_MISSING in out.metric_values["risks_triggered"]
+    assert RISK_MANIFEST_MISSING in out.metric_values["disclosure_gaps"]
     assert out.metric_values["checks"]["files_listing_recorded"]["pass"] is False
     assert "checksum_recorded" not in out.metric_values["checks"]
 
@@ -124,7 +124,7 @@ def test_structured_license_missing() -> None:
     meta["card_data"] = {}
     ctx, _ = _ctx(metadata=meta)
     out = IntegrityProbe().run(ctx)
-    assert RISK_LICENSE_UNDISCLOSED in out.metric_values["risks_triggered"]
+    assert RISK_LICENSE_UNDISCLOSED in out.metric_values["disclosure_gaps"]
     assert out.metric_values["checks"]["license_declared"]["pass"] is False
 
 
@@ -265,9 +265,8 @@ def test_card_only_license_anti_gaming() -> None:
     out = IntegrityProbe().run(ctx)
     assert out.metric_values["checks"]["license_declared"]["pass"] is False
     assert "card_only_license" in out.flags
-    assert RISK_LICENSE_UNDISCLOSED in out.metric_values["risks_triggered"]
-    assert out.metric_values["aspect_scoring"] == "risk_detected"
-    assert out.metric_values["aspect_scoring"] == "risk_detected"
+    assert RISK_LICENSE_UNDISCLOSED in out.metric_values["disclosure_gaps"]
+    assert out.metric_values["aspect_scoring"] == "disclosure_gap"
 
 
 def test_evaluate_integrity_sha_like_unit() -> None:

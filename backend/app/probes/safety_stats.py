@@ -1,8 +1,8 @@
-"""Safety probe constants (tl-safety-v1.0)."""
+"""Safety probe constants (tl-safety-v1.1)."""
 
 from __future__ import annotations
 
-METHODOLOGY_VERSION = "tl-safety-v1.0"
+METHODOLOGY_VERSION = "tl-safety-v1.1"
 METHODOLOGY_BASIS = "TRUSTLENS_FIVE_PROBE_METHODOLOGY_AUDIT.md"
 
 RISK_GOV_DISCLOSURE_GAP = "S-GOV-DISCLOSURE-GAP"
@@ -13,6 +13,9 @@ G_CARD_EMPTY = "G-SAFE-CARD-EMPTY"
 ASPECT_NOT_SCORED = "not_scored"
 ASPECT_RISK_DETECTED = "risk_detected"
 ASPECT_NO_MATERIAL_RISK = "no_material_risk"
+# v1.1: a missing disclosure section is an absence of documentation, not
+# evidence of a model defect — recorded under disclosure_gaps, never risks_triggered.
+ASPECT_DISCLOSURE_GAP = "disclosure_gap"
 
 CLAIM_SUPPORTED = (
     "Required safety-disclosure model-card sections were checked for presence with "
@@ -35,9 +38,9 @@ NOTE = (
 LIMITATIONS: tuple[str, ...] = (
     "Safety v1 measures model-card safety-disclosure completeness and lexical phrase "
     "matches, not runtime refusal or harm behavior.",
-    "Named S-GOV-DISCLOSURE-GAP is an evidence-layer detection only; scored_risk_id "
-    "remains null and no FRIES occurrence is assigned.",
-    "aspect_scoring=risk_detected means a governance disclosure gap was detected — "
+    "Named S-GOV-DISCLOSURE-GAP is a documentation gap recorded under "
+    "disclosure_gaps, not risks_triggered; it is not evidence of unsafe behaviour.",
+    "aspect_scoring=disclosure_gap means required disclosure sections are missing — "
     "not a FRIES-scored risk.",
     "high_impact_claims are documentation metadata flags; they are never promoted to "
     "risks_triggered and do not map to O/S/D or FRIES.",

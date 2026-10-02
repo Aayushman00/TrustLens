@@ -107,8 +107,8 @@ def test_partial_coverage_is_measurement_only() -> None:
     assert out.status == ProbeEvaluationStatus.EVALUATED
     assert out.metric_values["coverage_ratio"] < 1.0
     assert out.metric_values["coverage_ratio"] > 0.0
-    assert RISK_DOC_INCOMPLETE in out.metric_values["risks_triggered"]
-    assert out.metric_values["aspect_scoring"] == ASPECT_RISK_DETECTED
+    assert RISK_DOC_INCOMPLETE in out.metric_values["disclosure_gaps"]
+    assert out.metric_values["aspect_scoring"] == "disclosure_gap"
 
 
 def test_zero_coverage_prose_still_evaluated() -> None:
@@ -118,7 +118,7 @@ def test_zero_coverage_prose_still_evaluated() -> None:
 
     assert out.status == ProbeEvaluationStatus.EVALUATED
     assert out.metric_values["coverage_ratio"] == 0.0
-    assert RISK_DOC_INCOMPLETE in out.metric_values["risks_triggered"]
+    assert RISK_DOC_INCOMPLETE in out.metric_values["disclosure_gaps"]
 
 
 def test_contradiction_probe_flags_and_risks() -> None:
