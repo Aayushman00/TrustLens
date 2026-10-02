@@ -21,6 +21,17 @@ GROQ_MODEL = "openai/gpt-oss-120b"
 NVIDIA_MODEL = "mistralai/mistral-large-2-instruct"
 OPENAI_COMPAT_TEMPERATURE = 0.2
 
+# Prompt v2: the v1 prompt (indented JSON, full card) reached ~7.3k tokens for
+# well-documented models, over Groq's free-tier 8k tokens/min, so those models
+# were never LLM-assessed. v2 caps the card and compacts/trims the evidence.
+PROMPT_VERSION = "osd-llm-v2-compact-2026-10-02"
+MAX_CARD_CHARS = 5000
+MAX_EVIDENCE_CHARS = 3000
+_PROMPT_DROP_KEYS = frozenset(
+    {"uncertainty", "reliability", "limitations", "note", "osd_proposals", "methodology_basis",
+     "claim_boundary", "proposed_mapping", "status_reason", "probe_status_reason"}
+)
+
 _TARGET_DIMENSIONS = (
     FriesDimension.INTEGRITY,
     FriesDimension.EXPLAINABILITY,
@@ -100,12 +111,18 @@ def build_prompt(ctx: AgentContext) -> str:
     stay on the heuristic and must never reach this prompt.
     """
     card_text = str((ctx.model_metadata or {}).get("card_text") or "").strip() or "(no model card text available)"
+    if len(card_text) > MAX_CARD_CHARS:
+        card_text = card_text[:MAX_CARD_CHARS] + f"\n[card truncated: {len(card_text) - MAX_CARD_CHARS} more characters not shown]"
     by_dimension = {snap.dimension: snap for snap in ctx.probe_results}
     evidence_lines: list[str] = []
     for dimension in _TARGET_DIMENSIONS:
         snap = by_dimension.get(dimension)
         metric_values = snap.metric_values if snap is not None else {}
-        evidence_lines.append(f"### {dimension.value}\n{json.dumps(metric_values, default=str, indent=2)}")
+        trimmed = {k: v for k, v in metric_values.items() if k not in _PROMPT_DROP_KEYS}
+        text = json.dumps(trimmed, default=str, separators=(",", ":"))
+        if len(text) > MAX_EVIDENCE_CHARS:
+            text = text[:MAX_EVIDENCE_CHARS] + f"...[evidence truncated: {len(text) - MAX_EVIDENCE_CHARS} more characters]"
+        evidence_lines.append(f"### {dimension.value}\n{text}")
     return _PROMPT_TEMPLATE.format(card_text=card_text, evidence_block="\n\n".join(evidence_lines))
 
 

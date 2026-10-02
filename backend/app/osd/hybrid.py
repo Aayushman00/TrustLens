@@ -26,6 +26,7 @@ from app.osd.llm_client import (
     GROQ_MODEL,
     NVIDIA_MODEL,
     OPENAI_COMPAT_TEMPERATURE,
+    PROMPT_VERSION,
     GeminiOSDResponse,
     build_prompt,
     call_gemini,
@@ -150,6 +151,7 @@ class HybridOSDAgent:
                         "llm_temperature": temperature,
                         "llm_prompt_sha256": prompt_sha256,
                         "llm_attempts": attempt,
+                        "llm_prompt_version": PROMPT_VERSION,
                     }
                 except Exception as exc:  # noqa: BLE001 — retry/next provider, never propagate
                     errors.append(f"{name}#{attempt}: {type(exc).__name__}: {exc}"[:300])

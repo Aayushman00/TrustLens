@@ -206,3 +206,26 @@ def test_parse_gemini_response_rejects_missing_dimension() -> None:
     )
     with pytest.raises(ValidationError):
         parse_gemini_response(raw)
+
+
+def test_prompt_stays_within_free_tier_budget_for_long_cards() -> None:
+    """Final experiment: ~7.3k-token prompts for long cards always hit Groq's
+    8k tokens/min limit, so well-documented models were never LLM-assessed."""
+    import uuid
+
+    from app.db.enums import FriesDimension
+    from app.osd.base import AgentContext, ProbeSnapshot
+    from app.osd.llm_client import MAX_CARD_CHARS, PROMPT_VERSION, build_prompt
+
+    big = {"checks": {f"c{i}": {"pass": True, "detail": "x" * 200} for i in range(20)}}
+    ctx = AgentContext(
+        evaluation_id=uuid.uuid4(),
+        model_ref="m",
+        model_metadata={"card_text": "# Card\n" + "word " * 5000},
+        probe_results=[ProbeSnapshot(dimension=d, metric_values=big, confidence=0.5, evidence_refs=[])
+                       for d in (FriesDimension.INTEGRITY, FriesDimension.EXPLAINABILITY, FriesDimension.SAFETY)],
+    )
+    prompt = build_prompt(ctx)
+    assert "[card truncated:" in prompt
+    assert len(prompt) < 4 * 5000  # ~5k tokens leaves room for the reply
+    assert MAX_CARD_CHARS <= 8000 and PROMPT_VERSION

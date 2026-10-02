@@ -104,13 +104,13 @@ def select(n: int, pool: int) -> None:
     print(f"{chosen} selected of {len(candidates)} candidates -> {SELECTION_FILE}")
 
 
-def run(out_name: str) -> None:
+def run(out_name: str, only: list[str] | None = None) -> None:
     selection = json.loads(SELECTION_FILE.read_text(encoding="utf-8"))
     out = r.fresh_out_dir(r.SUITE_DIR / out_name)
     summary: list[dict[str, Any]] = []
     with r._client() as c:
         ds = r.upload_eval_dataset(c)
-        for cand in (x for x in selection["candidates"] if x["selected"]):
+        for cand in (x for x in selection["candidates"] if x["selected"] and (not only or x["repo"] in only)):
             row: dict[str, Any] = {"repo": cand["repo"], "revision": cand["revision"]}
             try:
                 resp = c.post("/models/import-hf", json={"repo_id": cand["repo"], "revision": cand["revision"]})
@@ -137,11 +137,12 @@ def main() -> None:
     s.add_argument("--pool", type=int, default=30)
     ru = sub.add_parser("run")
     ru.add_argument("--out", required=True)
+    ru.add_argument("--only", nargs="*", help="subset of selected repos")
     args = ap.parse_args()
     if args.cmd == "select":
         select(args.n, args.pool)
     else:
-        run(args.out)
+        run(args.out, args.only)
 
 
 if __name__ == "__main__":
