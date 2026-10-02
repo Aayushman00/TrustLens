@@ -1,0 +1,674 @@
+{
+  "P01": {
+    "packet_id": "P01",
+    "packet_sha256": "dd41bfc6a8a57e7a3f31b2a5b7aedade78b841b2072ed2dd9a3841b314c24e16",
+    "mapping": "v3 (HeuristicOSDAgent)",
+    "elapsed_ms": 8.001,
+    "dimensions": {
+      "INTEGRITY": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "I-INT-LICENSE-UNDISCLOSED"
+        ],
+        "failed_gates": [
+          "G-INT-LISTING-UNVERIFIED",
+          "G-INT-HASH-REF-MISSING",
+          "I-INT-HASH-UNVERIFIED"
+        ],
+        "evidence_sufficient": "UNCERTAIN",
+        "risk_present": "UNCERTAIN",
+        "O": 7,
+        "S": 7,
+        "D": 8,
+        "severity": 7
+      },
+      "EXPLAINABILITY": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "E-DOC-INCOMPLETE"
+        ],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "NO",
+        "O": 6,
+        "S": 6,
+        "D": 6,
+        "severity": 6
+      },
+      "SAFETY": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "S-GOV-DISCLOSURE-GAP"
+        ],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "NO",
+        "O": 6,
+        "S": 6,
+        "D": 8,
+        "severity": 6
+      }
+    }
+  },
+  "P02": {
+    "packet_id": "P02",
+    "packet_sha256": "92c4353355e22da8ae571836cceef82bdad47b7af07d4e920fb1e040941e01e3",
+    "mapping": "v3 (HeuristicOSDAgent)",
+    "elapsed_ms": 2.413,
+    "dimensions": {
+      "INTEGRITY": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "I-INT-LICENSE-UNDISCLOSED"
+        ],
+        "failed_gates": [
+          "G-INT-LISTING-UNVERIFIED"
+        ],
+        "evidence_sufficient": "UNCERTAIN",
+        "risk_present": "UNCERTAIN",
+        "O": 7,
+        "S": 7,
+        "D": 8,
+        "severity": 7
+      },
+      "EXPLAINABILITY": {
+        "status": "EVALUATED",
+        "aspect_scoring": "no_material_risk",
+        "risks_triggered": [],
+        "disclosure_gaps": [],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "NO",
+        "O": 9,
+        "S": 9,
+        "D": 9,
+        "severity": 9
+      },
+      "SAFETY": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "S-GOV-DISCLOSURE-GAP"
+        ],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "NO",
+        "O": 2,
+        "S": 2,
+        "D": 2,
+        "severity": 2
+      }
+    }
+  },
+  "P03": {
+    "packet_id": "P03",
+    "packet_sha256": "4114d1cf9a24e2b1662b463204ba7314d07201f31315a7ebc426363bcfeeb98c",
+    "mapping": "v3 (HeuristicOSDAgent)",
+    "elapsed_ms": 3.208,
+    "dimensions": {
+      "INTEGRITY": {
+        "status": "EVALUATED",
+        "aspect_scoring": "risk_detected",
+        "risks_triggered": [
+          "I-INT-BYTES-DIVERGE"
+        ],
+        "disclosure_gaps": [
+          "I-INT-LICENSE-UNDISCLOSED"
+        ],
+        "failed_gates": [
+          "G-INT-LISTING-UNVERIFIED"
+        ],
+        "evidence_sufficient": "UNCERTAIN",
+        "risk_present": "YES",
+        "O": 7,
+        "S": 7,
+        "D": 8,
+        "severity": 7
+      },
+      "EXPLAINABILITY": {
+        "status": "EVALUATED",
+        "aspect_scoring": "no_material_risk",
+        "risks_triggered": [],
+        "disclosure_gaps": [],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "NO",
+        "O": 9,
+        "S": 9,
+        "D": 9,
+        "severity": 9
+      },
+      "SAFETY": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "S-GOV-DISCLOSURE-GAP"
+        ],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "NO",
+        "O": 2,
+        "S": 2,
+        "D": 2,
+        "severity": 2
+      }
+    }
+  },
+  "P04": {
+    "packet_id": "P04",
+    "packet_sha256": "4f9b9525ac52dbe844d597c164f3f1d528b39dc188d0ab470749532f02bdbd53",
+    "mapping": "v3 (HeuristicOSDAgent)",
+    "elapsed_ms": 2.615,
+    "dimensions": {
+      "INTEGRITY": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "I-INT-LICENSE-UNDISCLOSED"
+        ],
+        "failed_gates": [
+          "G-INT-LISTING-UNVERIFIED",
+          "G-INT-HASH-REF-MISSING",
+          "I-INT-HASH-UNVERIFIED"
+        ],
+        "evidence_sufficient": "UNCERTAIN",
+        "risk_present": "UNCERTAIN",
+        "O": 7,
+        "S": 7,
+        "D": 8,
+        "severity": 7
+      },
+      "EXPLAINABILITY": {
+        "status": "EVALUATED",
+        "aspect_scoring": "no_material_risk",
+        "risks_triggered": [],
+        "disclosure_gaps": [],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "NO",
+        "O": 9,
+        "S": 9,
+        "D": 9,
+        "severity": 9
+      },
+      "SAFETY": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "S-GOV-DISCLOSURE-GAP"
+        ],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "NO",
+        "O": 2,
+        "S": 2,
+        "D": 2,
+        "severity": 2
+      }
+    }
+  },
+  "P05": {
+    "packet_id": "P05",
+    "packet_sha256": "02bf2bc624f844a0320ea10538306002deee4069e68ab91639b3954002e2fc8b",
+    "mapping": "v3 (HeuristicOSDAgent)",
+    "elapsed_ms": 2.418,
+    "dimensions": {
+      "INTEGRITY": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "I-INT-LICENSE-UNDISCLOSED"
+        ],
+        "failed_gates": [
+          "G-INT-LISTING-UNVERIFIED",
+          "G-INT-HASH-REF-MISSING",
+          "I-INT-HASH-UNVERIFIED"
+        ],
+        "evidence_sufficient": "UNCERTAIN",
+        "risk_present": "UNCERTAIN",
+        "O": 7,
+        "S": 7,
+        "D": 8,
+        "severity": 7
+      },
+      "EXPLAINABILITY": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "E-DOC-INCOMPLETE"
+        ],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "NO",
+        "O": 6,
+        "S": 6,
+        "D": 6,
+        "severity": 6
+      },
+      "SAFETY": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "S-GOV-DISCLOSURE-GAP"
+        ],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "NO",
+        "O": 7,
+        "S": 6,
+        "D": 8,
+        "severity": 6
+      }
+    }
+  },
+  "P06": {
+    "packet_id": "P06",
+    "packet_sha256": "9a27c1cb14f7811b63db622923bcf2174bd12f7cf68cc32780e30372dda62611",
+    "mapping": "v3 (HeuristicOSDAgent)",
+    "elapsed_ms": 2.414,
+    "dimensions": {
+      "INTEGRITY": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "I-INT-LICENSE-UNDISCLOSED"
+        ],
+        "failed_gates": [
+          "G-INT-LISTING-UNVERIFIED",
+          "G-INT-HASH-REF-MISSING",
+          "I-INT-HASH-UNVERIFIED"
+        ],
+        "evidence_sufficient": "UNCERTAIN",
+        "risk_present": "UNCERTAIN",
+        "O": 7,
+        "S": 7,
+        "D": 8,
+        "severity": 7
+      },
+      "EXPLAINABILITY": {
+        "status": "EVALUATED",
+        "aspect_scoring": "risk_detected",
+        "risks_triggered": [
+          "E-DOC-CONTRADICTION"
+        ],
+        "disclosure_gaps": [
+          "E-DOC-INCOMPLETE"
+        ],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "YES",
+        "O": 6,
+        "S": 6,
+        "D": 6,
+        "severity": 6
+      },
+      "SAFETY": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "S-GOV-DISCLOSURE-GAP"
+        ],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "NO",
+        "O": 2,
+        "S": 1,
+        "D": 1,
+        "severity": 1
+      }
+    }
+  },
+  "P07": {
+    "packet_id": "P07",
+    "packet_sha256": "8deb093eb6ce006593b1c31605e064183b75159affa248c705f7869f76bff0e6",
+    "mapping": "v3 (HeuristicOSDAgent)",
+    "elapsed_ms": 1.287,
+    "dimensions": {
+      "INTEGRITY": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "I-INT-LICENSE-UNDISCLOSED"
+        ],
+        "failed_gates": [
+          "G-INT-LISTING-UNVERIFIED"
+        ],
+        "evidence_sufficient": "UNCERTAIN",
+        "risk_present": "UNCERTAIN",
+        "O": 7,
+        "S": 7,
+        "D": 8,
+        "severity": 7
+      },
+      "EXPLAINABILITY": {
+        "status": "EVALUATED",
+        "aspect_scoring": "risk_detected",
+        "risks_triggered": [
+          "E-DOC-CONTRADICTION"
+        ],
+        "disclosure_gaps": [
+          "E-DOC-INCOMPLETE"
+        ],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "YES",
+        "O": 6,
+        "S": 6,
+        "D": 6,
+        "severity": 6
+      },
+      "SAFETY": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "S-GOV-DISCLOSURE-GAP"
+        ],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "NO",
+        "O": 2,
+        "S": 1,
+        "D": 1,
+        "severity": 1
+      }
+    }
+  },
+  "P08": {
+    "packet_id": "P08",
+    "packet_sha256": "0f903e0085862907ebb5721583e13bcd9805a27cb7da42112e1b87efd6a52c3d",
+    "mapping": "v3 (HeuristicOSDAgent)",
+    "elapsed_ms": 1.898,
+    "dimensions": {
+      "INTEGRITY": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "I-INT-LICENSE-UNDISCLOSED"
+        ],
+        "failed_gates": [
+          "G-INT-LISTING-UNVERIFIED",
+          "G-INT-HASH-REF-MISSING",
+          "I-INT-HASH-UNVERIFIED"
+        ],
+        "evidence_sufficient": "UNCERTAIN",
+        "risk_present": "UNCERTAIN",
+        "O": 7,
+        "S": 7,
+        "D": 8,
+        "severity": 7
+      },
+      "EXPLAINABILITY": {
+        "status": "EVALUATED",
+        "aspect_scoring": "no_material_risk",
+        "risks_triggered": [],
+        "disclosure_gaps": [],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "NO",
+        "O": 9,
+        "S": 9,
+        "D": 9,
+        "severity": 9
+      },
+      "SAFETY": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "S-GOV-DISCLOSURE-GAP"
+        ],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "NO",
+        "O": 6,
+        "S": 6,
+        "D": 8,
+        "severity": 6
+      }
+    }
+  },
+  "P09": {
+    "packet_id": "P09",
+    "packet_sha256": "3b28c167f0788674a74eca2c1af5857cf5e403d218fff8044a478399c9b35d65",
+    "mapping": "v3 (HeuristicOSDAgent)",
+    "elapsed_ms": 2.401,
+    "dimensions": {
+      "INTEGRITY": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "I-INT-LICENSE-UNDISCLOSED"
+        ],
+        "failed_gates": [
+          "G-INT-LISTING-UNVERIFIED",
+          "G-INT-HASH-REF-MISSING",
+          "I-INT-HASH-UNVERIFIED"
+        ],
+        "evidence_sufficient": "UNCERTAIN",
+        "risk_present": "UNCERTAIN",
+        "O": 7,
+        "S": 7,
+        "D": 8,
+        "severity": 7
+      },
+      "EXPLAINABILITY": {
+        "status": "EVALUATED",
+        "aspect_scoring": "risk_detected",
+        "risks_triggered": [
+          "E-DOC-CONTRADICTION"
+        ],
+        "disclosure_gaps": [
+          "E-DOC-INCOMPLETE"
+        ],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "YES",
+        "O": 1,
+        "S": 1,
+        "D": 1,
+        "severity": 1
+      },
+      "SAFETY": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "S-GOV-DISCLOSURE-GAP"
+        ],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "NO",
+        "O": 1,
+        "S": 1,
+        "D": 1,
+        "severity": 1
+      }
+    }
+  },
+  "P10": {
+    "packet_id": "P10",
+    "packet_sha256": "759f9cb870b7d318833e2a205946ae8ebd0f1d609a9e1ac7d0c8011aae4ccee6",
+    "mapping": "v3 (HeuristicOSDAgent)",
+    "elapsed_ms": 1.87,
+    "dimensions": {
+      "INTEGRITY": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "I-INT-LICENSE-UNDISCLOSED"
+        ],
+        "failed_gates": [
+          "G-INT-LISTING-UNVERIFIED",
+          "G-INT-HASH-REF-MISSING",
+          "I-INT-HASH-UNVERIFIED"
+        ],
+        "evidence_sufficient": "UNCERTAIN",
+        "risk_present": "UNCERTAIN",
+        "O": 7,
+        "S": 7,
+        "D": 8,
+        "severity": 7
+      },
+      "EXPLAINABILITY": {
+        "status": "EVALUATED",
+        "aspect_scoring": "no_material_risk",
+        "risks_triggered": [],
+        "disclosure_gaps": [],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "NO",
+        "O": 9,
+        "S": 9,
+        "D": 9,
+        "severity": 9
+      },
+      "SAFETY": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "S-GOV-DISCLOSURE-GAP"
+        ],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "NO",
+        "O": 6,
+        "S": 6,
+        "D": 8,
+        "severity": 6
+      }
+    }
+  },
+  "P11": {
+    "packet_id": "P11",
+    "packet_sha256": "aa3d6c941f993d594fd53b2af3004c5a70fc01ad673fe7200fba925f9e20a49c",
+    "mapping": "v3 (HeuristicOSDAgent)",
+    "elapsed_ms": 1.682,
+    "dimensions": {
+      "INTEGRITY": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "I-INT-LICENSE-UNDISCLOSED"
+        ],
+        "failed_gates": [
+          "G-INT-LISTING-UNVERIFIED",
+          "G-INT-HASH-REF-MISSING",
+          "I-INT-HASH-UNVERIFIED"
+        ],
+        "evidence_sufficient": "UNCERTAIN",
+        "risk_present": "UNCERTAIN",
+        "O": 7,
+        "S": 7,
+        "D": 8,
+        "severity": 7
+      },
+      "EXPLAINABILITY": {
+        "status": "EVALUATED",
+        "aspect_scoring": "no_material_risk",
+        "risks_triggered": [],
+        "disclosure_gaps": [],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "NO",
+        "O": 9,
+        "S": 9,
+        "D": 9,
+        "severity": 9
+      },
+      "SAFETY": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "S-GOV-DISCLOSURE-GAP"
+        ],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "NO",
+        "O": 5,
+        "S": 6,
+        "D": 8,
+        "severity": 6
+      }
+    }
+  },
+  "P12": {
+    "packet_id": "P12",
+    "packet_sha256": "912411ca062f8712434f0030178ba7e151f0c42849080083d77930a2509402b6",
+    "mapping": "v3 (HeuristicOSDAgent)",
+    "elapsed_ms": 1.528,
+    "dimensions": {
+      "INTEGRITY": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "I-INT-LICENSE-UNDISCLOSED"
+        ],
+        "failed_gates": [
+          "G-INT-LISTING-UNVERIFIED",
+          "G-INT-HASH-REF-MISSING",
+          "I-INT-HASH-UNVERIFIED"
+        ],
+        "evidence_sufficient": "UNCERTAIN",
+        "risk_present": "UNCERTAIN",
+        "O": 7,
+        "S": 7,
+        "D": 8,
+        "severity": 7
+      },
+      "EXPLAINABILITY": {
+        "status": "EVALUATED",
+        "aspect_scoring": "no_material_risk",
+        "risks_triggered": [],
+        "disclosure_gaps": [],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "NO",
+        "O": 9,
+        "S": 9,
+        "D": 9,
+        "severity": 9
+      },
+      "SAFETY": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "S-GOV-DISCLOSURE-GAP"
+        ],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "NO",
+        "O": 4,
+        "S": 6,
+        "D": 8,
+        "severity": 6
+      }
+    }
+  }
+}
