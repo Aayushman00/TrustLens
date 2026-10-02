@@ -32,10 +32,16 @@ def enqueue_and_record(
     *,
     evaluation_id: uuid.UUID,
     event_type: str,
+    commit_fn: Callable[[], None],
     enqueue_fn: Callable[[EvaluateModelPayload], str | None],
     on_enqueued: Callable[[str | None], None],
 ) -> str | None:
-    """Enqueue the Celery task and record the real outcome as an event.
+    """Commit, enqueue the Celery task, and record the real outcome as an event.
+
+    ``commit_fn`` runs first: a worker may start the task the moment it is
+    sent, and it reads the evaluation on its own DB connection, so the row
+    (and, for V2, the consumed draft) must already be committed. Enqueuing
+    inside the open request transaction let the task race the commit.
 
     ``enqueue_evaluate_model`` silently returns ``None`` on a broker
     failure, leaving the row at PENDING with no other visible signal —
@@ -45,6 +51,7 @@ def enqueue_and_record(
     ``on_enqueued`` lets each call site log its own message/fields (they
     differ per site) without duplicating the enqueue-then-record sequence.
     """
+    commit_fn()
     task_id = enqueue_fn(payload)
     on_enqueued(task_id)
     events.create(

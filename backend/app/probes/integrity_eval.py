@@ -1,4 +1,4 @@
-"""Integrity evaluation logic (tl-integrity-v1.1) — pure functions, stdlib only."""
+"""Integrity evaluation logic (tl-integrity-v1.2) — pure functions, stdlib only."""
 
 from __future__ import annotations
 

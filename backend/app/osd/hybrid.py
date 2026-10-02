@@ -28,7 +28,7 @@ from app.osd.llm_client import (
     OPENAI_COMPAT_TEMPERATURE,
     PROMPT_VERSION,
     GeminiOSDResponse,
-    build_prompt,
+    build_prompt_with_truncation,
     call_gemini,
     call_groq,
     call_nvidia,
@@ -162,7 +162,7 @@ class HybridOSDAgent:
             ("groq", getattr(settings, "groq_api_key", None), call_groq, GROQ_MODEL, OPENAI_COMPAT_TEMPERATURE),
             ("nvidia", getattr(settings, "nvidia_api_key", None), call_nvidia, NVIDIA_MODEL, OPENAI_COMPAT_TEMPERATURE),
         )
-        prompt = build_prompt(ctx)
+        prompt, prompt_truncated = build_prompt_with_truncation(ctx)
         prompt_sha256 = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
         errors: list[str] = []
         for name, api_key, call_fn, model, temperature in providers:
@@ -179,6 +179,7 @@ class HybridOSDAgent:
                         "llm_prompt_sha256": prompt_sha256,
                         "llm_attempts": attempt,
                         "llm_prompt_version": PROMPT_VERSION,
+                        "llm_prompt_truncated": prompt_truncated,
                     }
                 except Exception as exc:  # noqa: BLE001 — retry/next provider, never propagate
                     errors.append(f"{name}#{attempt}: {_describe(exc)}"[:400])
@@ -195,4 +196,5 @@ class HybridOSDAgent:
             ctx.evaluation_id,
         )
         return None, {"llm_fallback_reason": " | ".join(errors) or "no LLM provider configured",
-                      "llm_prompt_sha256": prompt_sha256}
+                      "llm_prompt_sha256": prompt_sha256,
+                      "llm_prompt_truncated": prompt_truncated}

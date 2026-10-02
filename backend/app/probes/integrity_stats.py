@@ -1,4 +1,4 @@
-"""Integrity probe constants (tl-integrity-v1.1)."""
+"""Integrity probe constants (tl-integrity-v1.2)."""
 
 from __future__ import annotations
 

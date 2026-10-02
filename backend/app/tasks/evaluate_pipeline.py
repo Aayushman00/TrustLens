@@ -200,14 +200,23 @@ def _fail_transition(
         )
 
 
+_IN_PROGRESS_STATUSES = frozenset(
+    {EvaluationStatus.RUNNING, EvaluationStatus.PROBES_COMPLETED, EvaluationStatus.AGENT_COMPLETED}
+)
+
+
 def fail_stuck_running_evaluation(
     session: Session,
     evaluation_id: uuid.UUID,
     *,
     reason_code: str = REASON_WORKER_RETRIES_EXHAUSTED,
 ) -> bool:
-    """Transition a RUNNING evaluation straight to FAILED via the same atomic
-    CAS (``transition_status``) used everywhere else in the lifecycle.
+    """Transition an in-progress (RUNNING / PROBES_COMPLETED /
+    AGENT_COMPLETED) evaluation straight to FAILED via the same atomic CAS
+    (``transition_status``) used everywhere else in the lifecycle. Rescuing
+    RUNNING only left an evaluation whose task died after PROBES_COMPLETED
+    in a non-terminal state forever. PENDING is never touched: an
+    un-started evaluation is recovered by ``reconcile_enqueue_failure``.
 
     Called only from the worker's ``Task.on_failure`` — i.e. only once the
     Celery task itself has permanently failed (autoretry_for exhausted its
@@ -216,15 +225,20 @@ def fail_stuck_running_evaluation(
     mutation path: it is the exact same CAS, invoked from one more call site.
 
     Idempotent and safe by construction: the CAS only applies (and only then
-    is an event recorded) if the evaluation is still RUNNING. If the pipeline
+    is an event recorded) if the evaluation is still in progress. If the pipeline
     itself already reached a terminal state (FAILED/AWAITING_REVIEW/
     FINALIZED) before the task-level exception surfaced, or if this fires
     twice for a redelivered/duplicate failure signal, this is a clean no-op —
     never overwrites another terminal state, never records a second event.
     """
-    updated = EvaluationRepository(session).transition_status(
+    evals = EvaluationRepository(session)
+    current = evals.get_by_id(evaluation_id)
+    if current is None or current.status not in _IN_PROGRESS_STATUSES:
+        return False
+    from_status = current.status
+    updated = evals.transition_status(
         evaluation_id,
-        expected=EvaluationStatus.RUNNING,
+        expected=from_status,
         new=EvaluationStatus.FAILED,
     )
     if updated is None:
@@ -232,7 +246,7 @@ def fail_stuck_running_evaluation(
     EvaluationEventRepository(session).create(
         evaluation_id=evaluation_id,
         event_type=EVENT_EVALUATION_FAILED,
-        detail={"reason_code": reason_code, "from_status": EvaluationStatus.RUNNING.value},
+        detail={"reason_code": reason_code, "from_status": from_status.value},
     )
     return True
 
@@ -241,7 +255,36 @@ class EvaluationNotVisibleError(TimeoutError):
     """Evaluation row not (yet) visible to the worker's DB session."""
 
 
+class PipelineInterruptedError(RuntimeError):
+    """A transient (ConnectionError/TimeoutError) failure after the pipeline
+    started. Deliberately outside the task's ``autoretry_for``: a retry
+    would find the evaluation no longer PENDING, skip, and report success,
+    leaving it RUNNING forever. Escaping as a permanent failure lets
+    ``on_failure`` mark it FAILED instead."""
+
+
 def run_evaluation_pipeline(
+    session: Session,
+    payload: EvaluateModelPayload,
+    *,
+    evidence_store: EvidenceStore | None = None,
+    on_progress: Callable[[], None] | None = None,
+) -> None:
+    """See ``_run_evaluation_pipeline``. Only ``EvaluationNotVisibleError``
+    (raised before anything is written) stays retryable."""
+    try:
+        _run_evaluation_pipeline(
+            session, payload, evidence_store=evidence_store, on_progress=on_progress
+        )
+    except EvaluationNotVisibleError:
+        raise
+    except (ConnectionError, TimeoutError) as exc:
+        raise PipelineInterruptedError(
+            f"evaluation {payload.evaluation_id} interrupted: {type(exc).__name__}: {exc}"
+        ) from exc
+
+
+def _run_evaluation_pipeline(
     session: Session,
     payload: EvaluateModelPayload,
     *,
@@ -264,10 +307,11 @@ def run_evaluation_pipeline(
 
     evaluation = evals.get_by_id(payload.evaluation_id)
     if evaluation is None:
-        # The API enqueues inside its request transaction, so the task can
-        # arrive before the row is committed. Raise a TimeoutError subclass so
-        # the Celery task's autoretry_for retries with back-off instead of
-        # reporting success and leaving the evaluation PENDING forever.
+        # The API commits before enqueuing, so this should not happen; it is
+        # kept as a guard (replica lag, a payload for a deleted row). Raise a
+        # TimeoutError subclass so the Celery task's autoretry_for retries
+        # with back-off instead of reporting success and leaving the
+        # evaluation PENDING forever.
         logger.warning("pipeline_missing_evaluation evaluation_id=%s — will retry", payload.evaluation_id)
         raise EvaluationNotVisibleError(f"evaluation {payload.evaluation_id} not visible yet")
 

@@ -178,6 +178,7 @@ class EvaluationService:
             payload,
             evaluation_id=row.id,
             event_type=EVENT_EVALUATION_CREATED,
+            commit_fn=self._session.commit,
             enqueue_fn=enqueue_evaluate_model,
             on_enqueued=lambda task_id: logger.info(
                 "evaluation_created evaluation_id=%s model_ref=%s enqueue_task_id=%s",
@@ -253,6 +254,7 @@ class EvaluationService:
             payload,
             evaluation_id=row.id,
             event_type=EVENT_EVALUATION_REQUEUED,
+            commit_fn=self._session.commit,
             enqueue_fn=enqueue_evaluate_model,
             on_enqueued=lambda task_id: logger.info(
                 "evaluation_requeued evaluation_id=%s enqueue_task_id=%s",
