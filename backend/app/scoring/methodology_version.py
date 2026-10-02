@@ -6,6 +6,11 @@ old stored report.json blobs genuinely never recorded any value at all —
 see docs/superpowers/plans/2026-09-10-v1-dataset-contract-redesign.md
 Global Constraints)."""
 
+# v5-binary-fairness-risk-2026 (round 3, L4): binary fairness emits
+# aspect_scoring / risks_triggered (F-FAIR-EXCESS-DPD) from bootstrapped
+# excess_dpd_v2 under the pre-declared EPSILON rule (tl-fairness-binary-v1.1);
+# fewer than 2 groups with n >= min_group_n now abstains (INSUFFICIENT_EVIDENCE).
+# Previous below.
 # v4-disclosure-gaps-2026 (round 3, L3): documentation/disclosure gaps
 # (S-GOV-DISCLOSURE-GAP, E-DOC-INCOMPLETE, I-INT-REV-UNPINNED,
 # I-INT-MANIFEST-MISSING, I-INT-LICENSE-UNDISCLOSED) move from risks_triggered
@@ -13,5 +18,5 @@ Global Constraints)."""
 # are identified by their weight-file sha256 (checked against train_manifest.json).
 # Previous: "v3-hardening-2026" — robustness band from accuracy drop,
 # constant-predictor gate, behavioural safety band (stored evaluations keep their stamp).
-CURRENT_METHODOLOGY_VERSION = "v4-disclosure-gaps-2026"
+CURRENT_METHODOLOGY_VERSION = "v5-binary-fairness-risk-2026"
 LEGACY_METHODOLOGY_VERSION = "pre-v1-fixed-5dim"

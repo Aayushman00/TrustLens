@@ -23,11 +23,17 @@ from app.probes.fairness_metrics import compute_fairness_bundle, label_rate_gap
 from app.probes.fairness_multiclass import evaluate_multiclass_fairness
 from app.probes.prediction_gate import FLAG_CONSTANT_PREDICTOR, prediction_collapse
 from app.probes.fairness_stats import (
+    BINARY_METHODOLOGY_VERSION,
+    BINARY_RISK_ID,
+    BOOTSTRAP_B,
     CI_WIDE_THRESHOLD,
+    EPSILON,
     METHODOLOGY_VERSION,
     _dp_gap_from_resampled,
     _eo_gap_from_resampled,
+    _excess_dpd_v2_from_resampled,
     _f1_gap_from_resampled,
+    binary_fairness_decision,
     bootstrap_gap_ci,
     filter_compared_groups,
     group_accuracies_from_aligned,
@@ -361,6 +367,15 @@ class FairnessProbe:
                 seed=seed,
                 stat_fn=partial(_f1_gap_from_resampled, positive_label_index=positive_label_index),
             )
+            # L4: the binary risk statistic, bootstrapped like the others
+            # (groups with n < min_group_n are excluded inside the stat_fn).
+            excess_v2_ci = bootstrap_gap_ci(
+                aligned_for_report,
+                min_group_n=min_group_n,
+                seed=seed,
+                stat_fn=partial(_excess_dpd_v2_from_resampled, positive_label_index=positive_label_index),
+            )
+            decision = binary_fairness_decision(excess_v2_ci)
             for ci_name, ci in (("eo", eo_ci), ("f1", f1_ci)):
                 if (
                     ci["ci_lower"] is not None
@@ -379,11 +394,29 @@ class FairnessProbe:
                 # TPR (no positives) or FPR (no negatives) is undefined for such a
                 # group and reads as 0.0, inflating equalized_odds_difference.
                 flags.append("group_single_label_class")
+            excess_v1 = round(max(bundle["demographic_parity_difference"] - base_gap, 0.0), 6)
             base_metrics.update(
                 {
                     "fairness_mode": "user_defined_local",
                     "label_rate_gap": round(base_gap, 6),
-                    "excess_dpd": round(max(bundle["demographic_parity_difference"] - base_gap, 0.0), 6),
+                    # "excess_dpd" stays the v1 value: the O/S/D band and the
+                    # severity-sweep analysis read it under that name.
+                    "excess_dpd": excess_v1,
+                    "excess_dpd_v1": excess_v1,
+                    "excess_dpd_v2": excess_v2_ci["point"],
+                    "excess_dpd_v2_ci": excess_v2_ci,
+                    "fairness_finding": decision["finding"],
+                    "aspect_scoring": decision["aspect_scoring"],
+                    "risks_triggered": decision["risks_triggered"],
+                    "scored_risk_id": None,
+                    "methodology_version": BINARY_METHODOLOGY_VERSION,
+                    "fairness_rule": {
+                        "risk_id": BINARY_RISK_ID,
+                        "statistic": "excess_dpd_v2 = max_g(P(Yhat=pos|g) - P(Y=pos|g)) - min_g(...), groups with n >= min_group_n",
+                        "epsilon": EPSILON,
+                        "criterion": "FAIRNESS_RISK iff point > epsilon and bootstrap 95% ci_lower > epsilon",
+                        "bootstrap": {"method": "percentile", "B": BOOTSTRAP_B, "seed": seed},
+                    },
                     "demographic_parity_difference": bundle["demographic_parity_difference"],
                     "equalized_odds_difference": bundle["equalized_odds_difference"],
                     "subgroup_f1_spread": bundle["subgroup_f1_spread"],
@@ -408,6 +441,8 @@ class FairnessProbe:
                 # Mark the block in the evidence itself so O/S/D and confidence
                 # consumers honour it (same shape as fairness_multiclass).
                 base_metrics["aspect_scoring"] = "mapping_blocked"
+                base_metrics["fairness_finding"] = "INSUFFICIENT_EVIDENCE"
+                base_metrics["risks_triggered"] = []
                 base_metrics["reliability"] = {"gates_passed": False, "failed_gates": ["G-FAIR-CI-WIDE"]}
                 return self._finish(
                     ctx,
@@ -421,6 +456,32 @@ class FairnessProbe:
                     ),
                 )
 
+            if decision["finding"] == "INSUFFICIENT_EVIDENCE":
+                base_metrics["reliability"] = {"gates_passed": False, "failed_gates": ["G-FAIR-N-GROUP"]}
+                return self._finish(
+                    ctx,
+                    metrics=base_metrics,
+                    flags=flags + ["insufficient_group_n"],
+                    confidence=0.45,
+                    status=ProbeEvaluationStatus.INSUFFICIENT_EVIDENCE,
+                    status_reason=(
+                        f"fewer than 2 groups with n >= {min_group_n} (or no bootstrap CI) — "
+                        "fairness risk not assessed; raw metrics kept as evidence"
+                    ),
+                )
+            point, lo = excess_v2_ci["point"], excess_v2_ci["ci_lower"]
+            status_reason = None
+            if decision["finding"] == "FAIRNESS_RISK":
+                status_reason = (
+                    f"{BINARY_RISK_ID}: excess_dpd_v2={point} and ci_lower={lo} exceed epsilon={EPSILON} — "
+                    "the model's positive-rate gap differs from the groups' own label-rate gap; "
+                    "evidence for review, not a finding that the model is unfair"
+                )
+            elif decision["finding"] == "DISPARITY_OBSERVED":
+                status_reason = (
+                    f"disparity observed: excess_dpd_v2={point} > epsilon={EPSILON} but "
+                    f"bootstrap ci_lower={lo} <= epsilon — not a fairness risk under the pre-declared rule"
+                )
             confidence = 0.75 if "insufficient_slice_size" in flags else 0.85
             return self._finish(
                 ctx,
@@ -428,6 +489,7 @@ class FairnessProbe:
                 flags=flags,
                 confidence=confidence,
                 status=ProbeEvaluationStatus.EVALUATED,
+                status_reason=status_reason,
             )
 
         aligned = [

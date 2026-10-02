@@ -32,7 +32,7 @@ def test_create_from_confirmed_draft_freezes_contract(db_session, confirmed_fair
     assert contract["schema_version"] == "v2"
     assert contract["fairness"] is not None
     assert contract["robustness"] is None
-    assert evaluation.methodology_version == "v4-disclosure-gaps-2026"  # bumped by round 3 L3
+    assert evaluation.methodology_version == "v5-binary-fairness-risk-2026"  # bumped by round 3 L4
 
 
 def test_create_from_draft_marks_draft_consumed(db_session, confirmed_fairness_draft):

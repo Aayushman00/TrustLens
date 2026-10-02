@@ -31,7 +31,6 @@ from app.probes.explainability_eval import evaluate_explainability
 from app.probes.integrity_artifact import local_weight_hashes
 from app.probes.integrity_eval import evaluate_integrity
 from app.probes.safety_eval import evaluate_safety
-from app.scoring.methodology_version import CURRENT_METHODOLOGY_VERSION
 from app.scripts.compare_ground_truth import CONTROL, _load_runs, _probe_metrics, evidence_flag_one
 from app.scripts.run_flawed_suite_eval import SUITE_DIR, WORKER_MODEL_ROOT, fresh_out_dir
 
@@ -47,7 +46,8 @@ FROZEN_RUN_DIRS = [
 BEFORE = {"methodology_version": "v3-hardening-2026", "tl-safety": "tl-safety-v1.0",
           "tl-explainability": "tl-explainability-v1.0", "tl-integrity": "tl-integrity-v1.0",
           "source": "stored probe evidence in the run directories"}
-AFTER = {"methodology_version": CURRENT_METHODOLOGY_VERSION, "tl-safety": safety_stats.METHODOLOGY_VERSION,
+# The version that introduced L3 (later versions do not change these evaluators).
+AFTER = {"methodology_version": "v4-disclosure-gaps-2026", "tl-safety": safety_stats.METHODOLOGY_VERSION,
          "tl-explainability": explainability_stats.METHODOLOGY_VERSION,
          "tl-integrity": integrity_stats.METHODOLOGY_VERSION,
          "source": "v1.1 evaluators re-run offline on the same inputs"}

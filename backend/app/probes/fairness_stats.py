@@ -16,6 +16,7 @@ from typing import Any, Callable, Hashable, Sequence
 from app.probes.fairness_metrics import (
     demographic_parity_difference,
     equalized_odds_difference,
+    label_rate_gap,
     subgroup_f1_spread,
 )
 
@@ -24,6 +25,12 @@ BOOTSTRAP_B = 1000
 CI_WIDE_THRESHOLD = 0.15
 SCORED_RISK_ID = "F-FAIR-PERF"
 METHODOLOGY_VERSION = "tl-methodology-v1.0"
+
+# Binary fairness risk rule (round 3, L4). Pre-declared, not fitted to any
+# benchmark: same practical floor (EPSILON) and same "point > ε AND bootstrap
+# ci_lower > ε" structure as multiclass F-FAIR-PERF, applied to excess_dpd_v2.
+BINARY_METHODOLOGY_VERSION = "tl-fairness-binary-v1.1"
+BINARY_RISK_ID = "F-FAIR-EXCESS-DPD"
 
 
 def wilson_interval(
@@ -242,3 +249,71 @@ def perf_trigger_fires(point: float | None, ci_lower: float | None) -> bool:
     if point is None or ci_lower is None:
         return False
     return point > EPSILON and ci_lower > EPSILON
+
+
+def excess_dpd_v1(
+    y_true: Sequence[int], y_pred: Sequence[int], sensitive: Sequence[Any], *, positive_label_index: int = 1
+) -> float:
+    """Original (tl-methodology-v1.0) excess DPD: max(DPD - label-rate gap, 0).
+    Direction-blind: compares two spreads, so a model that compresses or
+    reverses the label gap reads as 0."""
+    dpd = demographic_parity_difference(y_pred, sensitive, positive_label_index=positive_label_index)
+    gap = label_rate_gap(y_true, sensitive, positive_label_index=positive_label_index)
+    return max(dpd - gap, 0.0)
+
+
+def excess_dpd_v2(
+    y_true: Sequence[int], y_pred: Sequence[int], sensitive: Sequence[Any], *, positive_label_index: int = 1
+) -> float:
+    """Direction-aware excess DPD: b_g = P(Yhat=pos|g) - P(Y=pos|g);
+    returns max_g b_g - min_g b_g (0 when every group's prediction rate
+    tracks its own label rate)."""
+    counts: dict[Any, list[int]] = defaultdict(lambda: [0, 0, 0])  # n, label_pos, pred_pos
+    for yt, yp, g in zip(y_true, y_pred, sensitive, strict=True):
+        c = counts[g]
+        c[0] += 1
+        c[1] += int(yt) == positive_label_index
+        c[2] += int(yp) == positive_label_index
+    if len(counts) < 2:
+        raise ValueError("need at least two sensitive groups")
+    bias = [(pred - lab) / n for n, lab, pred in counts.values()]
+    return float(max(bias) - min(bias))
+
+
+def _excess_dpd_v2_from_resampled(
+    sample: Sequence[dict[str, Any]], min_group_n: int, *, positive_label_index: int = 1
+) -> float | None:
+    """``stat_fn`` adapter: bootstraps excess_dpd_v2 over groups with n >= min_group_n."""
+    rows = _filtered_group_rows(sample, min_group_n)
+    if rows is None:
+        return None
+    return excess_dpd_v2(
+        [int(r["label"]) for r in rows],
+        [int(r["y_hat"]) for r in rows],
+        [r["sensitive"] for r in rows],
+        positive_label_index=positive_label_index,
+    )
+
+
+def binary_fairness_decision(ci: dict[str, Any]) -> dict[str, Any]:
+    """Map the excess_dpd_v2 bootstrap result to a finding.
+
+    FAIRNESS_RISK         point > ε and ci_lower > ε  -> risk_detected, [BINARY_RISK_ID]
+    DISPARITY_OBSERVED    point > ε, ci_lower <= ε    -> disparity_observed (no risk)
+    NO_MATERIAL_DISPARITY point <= ε                  -> no_material_risk
+    INSUFFICIENT_EVIDENCE no point estimate or no CI  -> not_scored (abstain)
+    """
+    point, lo = ci.get("point"), ci.get("ci_lower")
+    if point is None or lo is None or ci.get("ci_upper") is None:
+        finding, aspect = "INSUFFICIENT_EVIDENCE", "not_scored"
+    elif point <= EPSILON:
+        finding, aspect = "NO_MATERIAL_DISPARITY", "no_material_risk"
+    elif lo > EPSILON:
+        finding, aspect = "FAIRNESS_RISK", "risk_detected"
+    else:
+        finding, aspect = "DISPARITY_OBSERVED", "disparity_observed"
+    return {
+        "finding": finding,
+        "aspect_scoring": aspect,
+        "risks_triggered": [BINARY_RISK_ID] if finding == "FAIRNESS_RISK" else [],
+    }
