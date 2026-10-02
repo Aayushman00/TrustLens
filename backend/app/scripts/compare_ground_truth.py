@@ -4,7 +4,8 @@ Applies the detection rules frozen in results/flawed_model_suite/ground_truth.js
 (written before the runs) to the raw repeat-run evaluations, and writes
 analysis.json + analysis.md next to them. Descriptive statistics only.
 
-Usage (from backend/)::  python -m app.scripts.compare_ground_truth final_20261002_repeat5
+Usage (from backend/)::
+    python -m app.scripts.compare_ground_truth <out_dir> <run_dir> [<run_dir> ...]
 """
 from __future__ import annotations
 
@@ -42,10 +43,11 @@ def evidence_flag_one(dim: str, metrics: dict[str, Any], control_severe_fnr: flo
     return False
 
 
-def _load_runs(run_dir: Path) -> dict[str, list[dict[str, Any]]]:
+def _load_runs(run_dirs: list[Path]) -> dict[str, list[dict[str, Any]]]:
     runs: dict[str, list[dict[str, Any]]] = defaultdict(list)
-    for p in sorted((run_dir / "raw").glob("*__run*.json")):
-        runs[p.name.split("__run")[0]].append(json.loads(p.read_text(encoding="utf-8")))
+    for run_dir in run_dirs:
+        for p in sorted((run_dir / "raw").glob("*__run*.json")):
+            runs[p.name.split("__run")[0]].append(json.loads(p.read_text(encoding="utf-8")))
     return runs
 
 
@@ -64,8 +66,8 @@ def _rates(rows: list[tuple[bool, bool]]) -> dict[str, Any]:
     return {"tp": tp, "fp": fp, "fn": fn, "tn": tn, "precision": prec, "recall": rec, "f1": f1}
 
 
-def analyze(run_dir: Path, truth: dict[str, Any]) -> dict[str, Any]:
-    runs = _load_runs(run_dir)
+def analyze(run_dirs: list[Path], truth: dict[str, Any]) -> dict[str, Any]:
+    runs = _load_runs(run_dirs)
     ok = {m: [e for e in evs if e.get("status") == "FINALIZED"] for m, evs in runs.items()}
     scores = {
         m: {d: [e["final_score"]["dimension_scores"][d] for e in evs
@@ -123,7 +125,7 @@ def analyze(run_dir: Path, truth: dict[str, Any]) -> dict[str, Any]:
         for d in DIMS
     }
     return {
-        "run_dir": str(run_dir),
+        "run_dirs": [d.name for d in run_dirs],
         "rules": truth["detection_rules"],
         "control": CONTROL,
         "control_severe_fnr_mean": control_severe_fnr,
@@ -137,7 +139,7 @@ def analyze(run_dir: Path, truth: dict[str, Any]) -> dict[str, Any]:
 
 def to_markdown(a: dict[str, Any]) -> str:
     f = lambda x: "—" if x is None else (f"{x:.2f}" if isinstance(x, float) else str(x))  # noqa: E731
-    out = [f"# Auditor evaluation ({Path(a['run_dir']).name})", "",
+    out = [f"# Auditor evaluation ({', '.join(a['run_dirs'])})", "",
            f"Control: `{a['control']}`; control severe FNR mean = {f(a['control_severe_fnr_mean'])}", "",
            "| rule | TP | FP | FN | TN | precision | recall | F1 |", "|---|---|---|---|---|---|---|---|"]
     for k in ("score_level", "evidence_level"):
@@ -156,11 +158,12 @@ def to_markdown(a: dict[str, Any]) -> str:
 
 
 def main() -> None:
-    run_dir = SUITE_DIR / sys.argv[1]
+    out_dir = SUITE_DIR / sys.argv[1]
+    out_dir.mkdir(exist_ok=True)
     truth = json.loads((SUITE_DIR / "ground_truth.json").read_text(encoding="utf-8"))
-    a = analyze(run_dir, truth)
-    (run_dir / "analysis.json").write_text(json.dumps(a, indent=2), encoding="utf-8")
-    (run_dir / "analysis.md").write_text(to_markdown(a), encoding="utf-8")
+    a = analyze([SUITE_DIR / d for d in sys.argv[2:]], truth)
+    (out_dir / "analysis.json").write_text(json.dumps(a, indent=2), encoding="utf-8")
+    (out_dir / "analysis.md").write_text(to_markdown(a), encoding="utf-8")
     print(to_markdown(a))
 
 
