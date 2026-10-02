@@ -344,6 +344,9 @@ def test_fairness_v2_full_path_binary_evaluated(
     # group b positive rate 2/3.
     assert metrics["demographic_parity_difference"] == pytest.approx(1 / 6, abs=1e-6)
     assert metrics["equalized_odds_difference"] == 0.0
+    # The whole DPD is the dataset's own base-rate gap: nothing in excess.
+    assert metrics["label_rate_gap"] == pytest.approx(1 / 6, abs=1e-6)
+    assert metrics["excess_dpd"] == 0.0
     assert DatasetContentRepository(db_session).get_by_id(content.id) is not None
     assert len(fake_evidence_store.puts) == 1
 

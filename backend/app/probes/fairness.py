@@ -19,7 +19,7 @@ from app.inference.errors import InferenceError
 from app.inference.local_hf import LocalHFBackend
 from app.inference.model_snapshot_check import verify_loaded_model_matches_snapshot
 from app.probes.base import ProbeContext, ProbeOutput
-from app.probes.fairness_metrics import compute_fairness_bundle
+from app.probes.fairness_metrics import compute_fairness_bundle, label_rate_gap
 from app.probes.fairness_multiclass import evaluate_multiclass_fairness
 from app.probes.prediction_gate import FLAG_CONSTANT_PREDICTOR, prediction_collapse
 from app.probes.fairness_stats import (
@@ -368,9 +368,21 @@ class FairnessProbe:
                 ):
                     flags.append(f"wide_ci_{ci_name}")
 
+            base_gap = label_rate_gap(y_true, sensitive, positive_label_index=positive_label_index)
+            group_label_rates = {
+                g: sum(1 for yt, a in zip(y_true, sensitive, strict=True) if a == g and yt == positive_label_index)
+                / max(1, sum(1 for a in sensitive if a == g))
+                for g in set(sensitive)
+            }
+            if any(rate in (0.0, 1.0) for rate in group_label_rates.values()):
+                # TPR (no positives) or FPR (no negatives) is undefined for such a
+                # group and reads as 0.0, inflating equalized_odds_difference.
+                flags.append("group_single_label_class")
             base_metrics.update(
                 {
                     "fairness_mode": "user_defined_local",
+                    "label_rate_gap": round(base_gap, 6),
+                    "excess_dpd": round(max(bundle["demographic_parity_difference"] - base_gap, 0.0), 6),
                     "demographic_parity_difference": bundle["demographic_parity_difference"],
                     "equalized_odds_difference": bundle["equalized_odds_difference"],
                     "subgroup_f1_spread": bundle["subgroup_f1_spread"],

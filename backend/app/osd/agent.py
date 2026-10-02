@@ -9,7 +9,9 @@ Band rules (documented, unit-testable):
 - Proposals are clamped to **[1, 9]**. The heuristic never proposes 0 (veto)
   or 10 (optimal) — those extremes are reserved for human-finalized judgments
   (Phase 18 review).
-- FAIRNESS: gap = max(|demographic_parity_difference|, |equalized_odds_difference|).
+- FAIRNESS: gap = max(parity, |equalized_odds_difference|) where parity is
+  ``excess_dpd`` (DPD minus the dataset's own label-rate gap) when the probe
+  recorded it, else |demographic_parity_difference| (legacy evaluations).
   O = S = scale(1 − gap) (−1 each when the observed min group is below the
   configured ``min_group_n``); D = 8 when metrics computed (disparities are
   directly measurable), 7 on thin slices. Metrics missing → abstain (None).
@@ -128,7 +130,9 @@ def _fairness_band(m: dict[str, Any]) -> tuple[tuple[int | None, int | None, int
     if dp is None:
         return (None, None, None), "fairness metrics were skipped"
     eo = _num(m, "equalized_odds_difference")
-    gap = max(abs(dp), abs(eo) if eo is not None else 0.0)
+    excess = _num(m, "excess_dpd")
+    parity = excess if excess is not None else abs(dp)
+    gap = max(parity, abs(eo) if eo is not None else 0.0)
     base = _scale(1.0 - min(gap, 1.0))
     observed = _num(m, "min_group_n_observed")
     threshold = _num(m, "min_group_n")

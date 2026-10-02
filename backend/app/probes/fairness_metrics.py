@@ -44,6 +44,20 @@ def _positive_rate(pairs: list[tuple[int, int]], *, positive_label_index: int = 
     return sum(1 for _, yp in pairs if yp == positive_label_index) / len(pairs)
 
 
+def label_rate_gap(
+    y_true: Sequence[Any],
+    sensitive: Sequence[Hashable],
+    *,
+    positive_label_index: int = 1,
+) -> float:
+    """max_g P(Y=positive|A=g) − min_g P(Y=positive|A=g): the parity gap the
+    *dataset* already has. A perfect classifier reproduces it as DPD, so
+    ``excess_dpd = max(DPD − label_rate_gap, 0)`` is the part a model adds."""
+    buckets = _groups(y_true, y_true, sensitive)
+    rates = [_positive_rate(p, positive_label_index=positive_label_index) for p in buckets.values()]
+    return max(rates) - min(rates)
+
+
 def _tpr_fpr(pairs: list[tuple[int, int]], *, positive_label_index: int = 1) -> tuple[float, float]:
     pos = [(yt, yp) for yt, yp in pairs if yt == positive_label_index]
     neg = [(yt, yp) for yt, yp in pairs if yt != positive_label_index]
