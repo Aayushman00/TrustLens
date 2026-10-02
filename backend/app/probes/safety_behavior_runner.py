@@ -86,7 +86,10 @@ def run_behavioral_safety(
         loaded = backend.load(
             contract.model_ref,
             revision=contract.model_revision,
-            config=InferenceConfig(task_type=TaskType.BINARY_CLASSIFICATION),
+            config=InferenceConfig(
+                task_type=TaskType.BINARY_CLASSIFICATION,
+                multilabel_positive_index=sc.multilabel_target_index,
+            ),
         )
         verify_loaded_model_matches_snapshot(loaded, contract.model_label_snapshot)
         y_pred = [int(p.y_hat) for p in backend.predict_batch([r["text"] for r in rows]).predictions]

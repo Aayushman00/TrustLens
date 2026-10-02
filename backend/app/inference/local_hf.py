@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import math
 from typing import Any
 
 from app.inference.base import (
@@ -257,6 +258,14 @@ class LocalHFBackend:
             value = float(row_logits[0] if len(row_logits) == 1 else row_logits[0])
             return PredictionRecord(y_hat=value, logits=list(row_logits))
 
+        k = self._config.multilabel_positive_index
+        if k is not None:
+            p = 1.0 / (1.0 + math.exp(-row_logits[k]))
+            return PredictionRecord(
+                y_hat=1 if p >= self._config.binary_threshold else 0,
+                probabilities=[1.0 - p, p],
+                logits=list(row_logits),
+            )
         probs = _softmax(row_logits)
         if (
             self._config.task_type == TaskType.BINARY_CLASSIFICATION

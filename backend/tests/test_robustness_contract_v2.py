@@ -238,6 +238,21 @@ def test_robustness_v2_full_path_insufficient_evidence(
     # not a skip/error — evaluate_classification_robustness ran for real.
     assert output.status == ProbeEvaluationStatus.INSUFFICIENT_EVIDENCE
     assert len(runner.calls) == 1
+    # Single-label contract: the runner keeps its own argmax default config.
+    assert runner.calls[0]["inference_config"] is None
+
+    rc_ml = rc.model_copy(update={"multilabel_target_index": 0})
+    runner2 = _FakeRunner()
+    RobustnessProbe(runner=runner2).run(
+        _ctx(
+            probe_config=fake_probe_config,
+            evidence_store=FakeEvidenceStore(),
+            evaluation_contract=_v2_contract(robustness=rc_ml),
+            dataset_content_store=store,
+            session=db_session,
+        )
+    )
+    assert runner2.calls[0]["inference_config"].multilabel_positive_index == 0
     assert len(runner.calls[0]["samples"]) == 8
     assert len(fake_evidence_store.puts) == 1
     # Global Constraint: worker must pass the frozen model_label_snapshot

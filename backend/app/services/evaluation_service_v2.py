@@ -168,6 +168,7 @@ class EvaluationServiceV2:
                     positive_label_index=(
                         dim.positive_label_index if dim.positive_label_index is not None else 1
                     ),
+                    multilabel_target_index=dim.multilabel_target_index,
                 )
             elif dim.dimension == "ROBUSTNESS":
                 robustness_contract = RobustnessContractV2(
@@ -175,6 +176,7 @@ class EvaluationServiceV2:
                     text_column=dim.text_column,
                     target_column=dim.target_column,
                     label_mapping=label_mapping,
+                    multilabel_target_index=dim.multilabel_target_index,
                 )
             elif dim.dimension == "SAFETY":
                 safety_contract = SafetyContractV2(
@@ -186,6 +188,7 @@ class EvaluationServiceV2:
                     positive_label_index=(
                         dim.positive_label_index if dim.positive_label_index is not None else 1
                     ),
+                    multilabel_target_index=dim.multilabel_target_index,
                 )
 
         contract = EvaluationContractV2(
@@ -193,7 +196,9 @@ class EvaluationServiceV2:
             model_revision=model.revision,
             resolved_model_sha=current_snapshot.resolved_sha,
             model_label_snapshot=ModelLabelSnapshot(
-                num_labels=current_snapshot.num_labels, id2label=current_snapshot.id2label
+                num_labels=current_snapshot.num_labels,
+                id2label=current_snapshot.id2label,
+                problem_type=current_snapshot.problem_type,
             ),
             fairness=fairness_contract,
             robustness=robustness_contract,

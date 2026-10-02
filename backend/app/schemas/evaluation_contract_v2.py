@@ -19,6 +19,7 @@ class LabelMappingEntry(BaseModel):
 class ModelLabelSnapshot(BaseModel):
     num_labels: int
     id2label: dict[int, str]
+    problem_type: str | None = None
 
 
 class FairnessContractV2(BaseModel):
@@ -33,6 +34,9 @@ class FairnessContractV2(BaseModel):
     # contract's behavior) -- but label_mapping can legitimately assign the
     # favorable outcome to any index, so this must never be assumed.
     positive_label_index: int = 1
+    # Multi-label models only: which model output is the positive class
+    # (label_mapping then targets the derived binary 0/1).
+    multilabel_target_index: int | None = None
 
 
 class RobustnessContractV2(BaseModel):
@@ -40,6 +44,7 @@ class RobustnessContractV2(BaseModel):
     text_column: str
     target_column: str
     label_mapping: list[LabelMappingEntry]
+    multilabel_target_index: int | None = None
 
 
 class SafetyContractV2(BaseModel):
@@ -52,6 +57,7 @@ class SafetyContractV2(BaseModel):
     label_mapping: list[LabelMappingEntry]
     positive_label_index: int = 1
     min_severe_n: int = Field(default=30, gt=0)
+    multilabel_target_index: int | None = None
 
 
 class EvaluationContractV2(BaseModel):

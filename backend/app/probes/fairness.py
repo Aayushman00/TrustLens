@@ -254,9 +254,10 @@ class FairnessProbe:
             config = InferenceConfig(
                 task_type=(
                     TaskType.BINARY_CLASSIFICATION
-                    if is_binary
+                    if is_binary or fc.multilabel_target_index is not None
                     else TaskType.MULTICLASS_CLASSIFICATION
                 ),
+                multilabel_positive_index=fc.multilabel_target_index,
             )
             loaded = backend.load(contract.model_ref, revision=contract.model_revision, config=config)
             # Re-verify here, not just at draft intake: contract.model_label_snapshot

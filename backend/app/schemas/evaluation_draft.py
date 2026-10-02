@@ -39,6 +39,8 @@ class DimensionConfigUpdate(BaseModel):
     positive_label_index: int = 1
     # SAFETY-only: 0/1 column marking severe-harm rows.
     severe_column: str | None = None
+    # Required for multi-label models (MULTILABEL_TARGET_REQUIRED), rejected otherwise.
+    multilabel_target_index: int | None = None
 
 
 class DimensionValidationRead(BaseModel):

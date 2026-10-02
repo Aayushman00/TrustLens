@@ -17,6 +17,7 @@ from app.datasets.user_dataset import (
 )
 from app.db.enums import FriesDimension, ProbeEvaluationStatus
 from app.db.repositories.dataset_content import DatasetContentRepository
+from app.inference.base import InferenceConfig, TaskType
 from app.probes.base import ProbeContext, ProbeOutput
 from app.probes.robustness_eval import evaluate_classification_robustness
 from app.probes.robustness_nlp import RobustnessRunner, RobustnessRunResult, TransformersCharSwapRunner
@@ -273,6 +274,14 @@ class RobustnessProbe:
                 seed=seed,
                 hf_token=hf_token,
                 expected_label_snapshot=contract.model_label_snapshot,
+                inference_config=(
+                    InferenceConfig(
+                        task_type=TaskType.BINARY_CLASSIFICATION,
+                        multilabel_positive_index=rc.multilabel_target_index,
+                    )
+                    if rc.multilabel_target_index is not None
+                    else None
+                ),
             )
         except Exception as exc:  # noqa: BLE001 — execution failure → FAILED
             logger.warning("robustness_v2_model_or_attack_failed err=%s", exc)

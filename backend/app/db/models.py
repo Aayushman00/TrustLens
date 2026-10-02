@@ -166,6 +166,8 @@ class DraftDimensionConfig(Base):
     )
     # SAFETY-only: 0/1 column marking severe-harm rows (migration 015).
     severe_column: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    # Multi-label models: positive output index (migration 016).
+    multilabel_target_index: Mapped[int | None] = mapped_column(Integer, nullable=True)
     validated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
