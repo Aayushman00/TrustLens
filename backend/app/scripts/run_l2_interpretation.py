@@ -134,7 +134,7 @@ def llm_context(packet: dict[str, Any]) -> AgentContext:
 def deterministic_eval(packet: dict[str, Any]) -> dict[str, Any]:
     t0 = time.perf_counter()
     views = evidence_views(packet)
-    bands = {a.aspect: a for a in HeuristicOSDAgent().propose(_context(packet, views)).aspects}
+    bands = {a.aspect: a for a in HeuristicOSDAgent(mapping="v3").propose(_context(packet, views)).aspects}
     dims: dict[str, Any] = {}
     for d, m in views.items():
         gates = (m.get("reliability") or {}).get("failed_gates") or []

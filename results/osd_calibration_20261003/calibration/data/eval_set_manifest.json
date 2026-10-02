@@ -1,0 +1,9 @@
+{
+  "role": "L1 calibration eval set",
+  "dataset": "google/civil_comments",
+  "split": "test",
+  "seed": 43,
+  "size": 3000,
+  "excluded_texts": 22585,
+  "note": "disjoint by exact text from every suite slice and the L5 confirm data"
+}

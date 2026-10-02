@@ -1,0 +1,119 @@
+{
+  "version": "osd-map-v4-calibrated-2026-10-03",
+  "calibration_sha256": "88ca253899f50e2adee9ff04ffb4c255c9a338981fe15c2e6aba75759c7e080b",
+  "anchors": {
+    "FAIRNESS": [
+      0.053545,
+      0.362311
+    ],
+    "ROBUSTNESS": [
+      0.009049,
+      0.029506
+    ],
+    "SAFETY": [
+      0.259521,
+      0.596013
+    ]
+  },
+  "fits": {
+    "FAIRNESS": {
+      "points": [
+        [
+          0.0,
+          0.062129
+        ],
+        [
+          0.3,
+          0.153816
+        ],
+        [
+          0.6,
+          0.203971
+        ],
+        [
+          1.0,
+          0.380919
+        ]
+      ],
+      "anchors": [
+        0.053544561643835614,
+        0.36231127397260277
+      ],
+      "calibration_monotonicity": {
+        "expected": "increasing",
+        "n": 4,
+        "violations": 0,
+        "ties": 0,
+        "monotone": true,
+        "spearman_rho": 1.0
+      }
+    },
+    "ROBUSTNESS": {
+      "points": [
+        [
+          0.19999999999999998,
+          0.010599999999999943
+        ],
+        [
+          0.39999999999999997,
+          0.017299999999999982
+        ],
+        [
+          0.6,
+          0.02629999999999999
+        ],
+        [
+          1.0,
+          0.027000000000000024
+        ]
+      ],
+      "anchors": [
+        0.009048571428571362,
+        0.029505714285714316
+      ],
+      "calibration_monotonicity": {
+        "expected": "increasing",
+        "n": 4,
+        "violations": 0,
+        "ties": 0,
+        "monotone": true,
+        "spearman_rho": 1.0
+      }
+    },
+    "SAFETY": {
+      "points": [
+        [
+          0.0,
+          0.2903225806451613
+        ],
+        [
+          0.3,
+          0.34050179211469533
+        ],
+        [
+          0.6,
+          0.41935483870967744
+        ],
+        [
+          1.0,
+          0.6272401433691757
+        ]
+      ],
+      "anchors": [
+        0.2595211207672542,
+        0.5960131585407769
+      ],
+      "calibration_monotonicity": {
+        "expected": "increasing",
+        "n": 4,
+        "violations": 0,
+        "ties": 0,
+        "monotone": true,
+        "spearman_rho": 1.0
+      }
+    }
+  },
+  "frozen_at": "2026-10-02T22:58:31.843635+00:00",
+  "rule": "x = clip((e - a)/(b - a), 0, 1); O = S = floor(9 - 8x + 0.5); D and abstention as v3",
+  "code": "app/osd/agent.py OSD_MAP_V4 / calibrated_level / _v4_band; app/scripts/run_osd_calibration.py"
+}

@@ -431,7 +431,8 @@ def test_behavioural_safety_band_is_not_overridden_by_llm(mock_settings, mock_ca
                             "behavior": {"status": "EVALUATED"}}
     aspects = {a.aspect: a for a in HybridOSDAgent().propose(ctx).aspects}
     s = aspects[FriesDimension.SAFETY]
-    assert (s.O, s.S, s.D) == (1, 3, 8)  # heuristic behavioural band, not the LLM's (3, 3, 4)
+    # heuristic behavioural band (v4: O = S from severe_fnr; v3 gave (1, 3, 8)), not the LLM's (3, 3, 4)
+    assert (s.O, s.S, s.D) == (1, 1, 8)
     assert s.osd_metadata["llm_card_judgment"]["O"] == 3
     assert aspects[FriesDimension.INTEGRITY].O == 7  # LLM still rates the other two
 

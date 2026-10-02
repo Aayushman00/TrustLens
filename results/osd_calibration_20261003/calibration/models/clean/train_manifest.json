@@ -1,0 +1,21 @@
+{
+  "variant_key": "clean",
+  "base_checkpoint": "bert-base-uncased",
+  "data_manifest": {
+    "seed": 43,
+    "size": 8000,
+    "flip_rate": 0.0
+  },
+  "hyperparams": {
+    "epochs": 3,
+    "lr": 2e-05,
+    "batch_size": 16,
+    "weight_decay": 0.01,
+    "max_seq_len": 128,
+    "seed": 43
+  },
+  "train_rows": 8000,
+  "final_train_loss": 0.13834513401985168,
+  "elapsed_seconds": 352.0,
+  "device": "cuda"
+}

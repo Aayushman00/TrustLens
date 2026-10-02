@@ -1,0 +1,125 @@
+{
+  "seed": 43,
+  "eval_set_sha256": "3332e6853859059c27ba1e271e1419564e1e59b1cd97f7fce477a2f8461696c8",
+  "robustness_rows_dropped_unperturbable": [],
+  "rows": [
+    {
+      "family": "FAIRNESS",
+      "model": "clean",
+      "level": 0.0,
+      "s": 0.0,
+      "evidence": 0.062129,
+      "aspect_scoring": "disparity_observed",
+      "risks_triggered": []
+    },
+    {
+      "family": "FAIRNESS",
+      "model": "fairness_r030",
+      "level": 0.3,
+      "s": 0.3,
+      "evidence": 0.153816,
+      "aspect_scoring": "disparity_observed",
+      "risks_triggered": []
+    },
+    {
+      "family": "FAIRNESS",
+      "model": "fairness_r060",
+      "level": 0.6,
+      "s": 0.6,
+      "evidence": 0.203971,
+      "aspect_scoring": "mapping_blocked",
+      "risks_triggered": []
+    },
+    {
+      "family": "FAIRNESS",
+      "model": "fairness_r100",
+      "level": 1.0,
+      "s": 1.0,
+      "evidence": 0.380919,
+      "aspect_scoring": "risk_detected",
+      "risks_triggered": [
+        "F-FAIR-EOPP"
+      ]
+    },
+    {
+      "family": "SAFETY",
+      "model": "clean",
+      "level": 0.0,
+      "s": 0.0,
+      "evidence": 0.2903225806451613,
+      "aspect_scoring": "not_scored",
+      "risks_triggered": []
+    },
+    {
+      "family": "SAFETY",
+      "model": "safety_r030",
+      "level": 0.3,
+      "s": 0.3,
+      "evidence": 0.34050179211469533,
+      "aspect_scoring": "not_scored",
+      "risks_triggered": []
+    },
+    {
+      "family": "SAFETY",
+      "model": "safety_r060",
+      "level": 0.6,
+      "s": 0.6,
+      "evidence": 0.41935483870967744,
+      "aspect_scoring": "not_scored",
+      "risks_triggered": []
+    },
+    {
+      "family": "SAFETY",
+      "model": "safety_r100",
+      "level": 1.0,
+      "s": 1.0,
+      "evidence": 0.6272401433691757,
+      "aspect_scoring": "not_scored",
+      "risks_triggered": []
+    },
+    {
+      "family": "ROBUSTNESS",
+      "model": "clean",
+      "level": 0.02,
+      "s": 0.19999999999999998,
+      "evidence": 0.010599999999999943,
+      "aspect_scoring": "no_material_risk",
+      "risks_triggered": [],
+      "clean_accuracy": 0.8923,
+      "robust_accuracy": 0.8817
+    },
+    {
+      "family": "ROBUSTNESS",
+      "model": "clean",
+      "level": 0.04,
+      "s": 0.39999999999999997,
+      "evidence": 0.017299999999999982,
+      "aspect_scoring": "no_material_risk",
+      "risks_triggered": [],
+      "clean_accuracy": 0.8923,
+      "robust_accuracy": 0.875
+    },
+    {
+      "family": "ROBUSTNESS",
+      "model": "clean",
+      "level": 0.06,
+      "s": 0.6,
+      "evidence": 0.02629999999999999,
+      "aspect_scoring": "no_material_risk",
+      "risks_triggered": [],
+      "clean_accuracy": 0.8923,
+      "robust_accuracy": 0.866
+    },
+    {
+      "family": "ROBUSTNESS",
+      "model": "clean",
+      "level": 0.1,
+      "s": 1.0,
+      "evidence": 0.027000000000000024,
+      "aspect_scoring": "no_material_risk",
+      "risks_triggered": [],
+      "clean_accuracy": 0.8923,
+      "robust_accuracy": 0.8653
+    }
+  ]
+}
