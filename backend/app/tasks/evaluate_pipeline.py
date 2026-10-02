@@ -237,6 +237,10 @@ def fail_stuck_running_evaluation(
     return True
 
 
+class EvaluationNotVisibleError(TimeoutError):
+    """Evaluation row not (yet) visible to the worker's DB session."""
+
+
 def run_evaluation_pipeline(
     session: Session,
     payload: EvaluateModelPayload,
@@ -260,11 +264,12 @@ def run_evaluation_pipeline(
 
     evaluation = evals.get_by_id(payload.evaluation_id)
     if evaluation is None:
-        logger.error(
-            "pipeline_missing_evaluation evaluation_id=%s",
-            payload.evaluation_id,
-        )
-        return
+        # The API enqueues inside its request transaction, so the task can
+        # arrive before the row is committed. Raise a TimeoutError subclass so
+        # the Celery task's autoretry_for retries with back-off instead of
+        # reporting success and leaving the evaluation PENDING forever.
+        logger.warning("pipeline_missing_evaluation evaluation_id=%s — will retry", payload.evaluation_id)
+        raise EvaluationNotVisibleError(f"evaluation {payload.evaluation_id} not visible yet")
 
     model = models.get_by_id(evaluation.model_id)
     if model is None or model.hf_repo_id != payload.model_ref:
