@@ -163,6 +163,16 @@ def create_and_run_evaluation(client: httpx.Client, model_id: int, dataset_conte
     r = client.post(f"/evaluation-drafts/{draft_id}/ROBUSTNESS/confirm")
     r.raise_for_status()
 
+    # Behavioural safety: eval_set.csv marks severe-harm rows in "severe"
+    # (282 severe & toxic rows, above min_severe_n=30).
+    safety_body = {**robustness_body, "severe_column": "severe", "positive_label_index": 1}
+    r = client.put(f"/evaluation-drafts/{draft_id}/SAFETY", json=safety_body)
+    r.raise_for_status()
+    if not r.json().get("ok", True):
+        raise RuntimeError(f"SAFETY config invalid: {r.json()}")
+    r = client.post(f"/evaluation-drafts/{draft_id}/SAFETY/confirm")
+    r.raise_for_status()
+
     r = client.post(
         "/evaluations-v2",
         json={"draft_id": draft_id, "evaluation_mode": "AI_AUTONOMOUS", "assessment_engine": "llm_v1"},

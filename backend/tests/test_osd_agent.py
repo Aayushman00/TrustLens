@@ -332,3 +332,19 @@ def test_robustness_band_abstains_when_probe_blocked_mapping() -> None:
         {"clean_accuracy": 0.15, "robust_accuracy": 0.15, "aspect_scoring": "mapping_blocked"}
     )
     assert band == (None, None, None)
+
+
+def test_safety_band_from_behavioural_severe_fnr() -> None:
+    from app.osd.agent import _safety_band
+
+    band, detail = _safety_band({"severe_fnr": 0.5, "fnr_ratio": 2.5, "coverage_ratio": 1.0, "card_chars": 900})
+    assert band == (5, 3, 8)
+    assert "severe_fnr" in detail
+    assert _safety_band({"severe_fnr": 0.1, "fnr_ratio": 1.0})[0] == (9, 6, 8)
+
+
+def test_safety_band_without_behaviour_falls_back_to_card() -> None:
+    from app.osd.agent import _card_band, _safety_band
+
+    m = {"coverage_ratio": 0.5, "card_chars": 300, "high_impact_claims": []}
+    assert _safety_band(m) == _card_band(m, consider_high_impact=True)
