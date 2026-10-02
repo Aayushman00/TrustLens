@@ -1,0 +1,581 @@
+{
+  "selected_at": "2026-10-02T01:23:15.168104+00:00",
+  "rule": "External sanity check: audit real Hub toxicity classifiers (RQ1, not trust labels).\n\nSelection is mechanical and fixed *before* any evaluation (no cherry-picking):\n\n1. Hub search for \"toxic\" and \"hate\" text-classification models, each sorted\n   by downloads (top ``--pool`` per query), de-duplicated in that order.\n2. Keep a model only if its card does not declare languages that exclude\n   English (``language`` set without ``en``; the eval set is English Civil\n   Comments; undeclared counts as eligible), ships PyTorch weights (``*.safetensors``/``pytorch_model.bin``;\n   the worker loads with transformers), its config is a sequence classifier, and exactly one\n   label is a positive harm label (``POSITIVE_NAMES``), and either the head is\n   multi-label (that output is the target) or it has exactly two classes.\n3. Take the first ``--n`` survivors; pin each at its current commit sha.\n\n``select`` writes every candidate with its inclusion/exclusion reason to\n``extra_models.json``; ``run`` evaluates that frozen list with the suite\ncontract (FAIRNESS, ROBUSTNESS, SAFETY) and records failures, not hides them.",
+  "rule_version": "v3",
+  "n": 15,
+  "pool_per_query": 30,
+  "candidates": [
+    {
+      "repo": "unitary/unbiased-toxic-roberta",
+      "revision": "36295dd80b422dc49f40052021430dae76241adc",
+      "id2label": {
+        "0": "toxicity",
+        "1": "severe_toxicity",
+        "2": "obscene",
+        "3": "identity_attack",
+        "4": "insult",
+        "5": "threat",
+        "6": "sexual_explicit",
+        "7": "male",
+        "8": "female",
+        "9": "homosexual_gay_or_lesbian",
+        "10": "christian",
+        "11": "jewish",
+        "12": "muslim",
+        "13": "black",
+        "14": "white",
+        "15": "psychiatric_or_mental_illness"
+      },
+      "positive_index": 0,
+      "reason": "multi_label",
+      "selected": true
+    },
+    {
+      "repo": "unitary/toxic-bert",
+      "revision": "4d6c22e74ba2fdd26bc4f7238f50766b045a0d94",
+      "id2label": {
+        "0": "toxic",
+        "1": "severe_toxic",
+        "2": "obscene",
+        "3": "threat",
+        "4": "insult",
+        "5": "identity_hate"
+      },
+      "positive_index": 0,
+      "reason": "multi_label",
+      "selected": true
+    },
+    {
+      "repo": "martin-ha/toxic-comment-model",
+      "revision": "9842c08b35a4687e7b211187d676986c8c96256d",
+      "id2label": {
+        "0": "non-toxic",
+        "1": "toxic"
+      },
+      "positive_index": 1,
+      "reason": "single_label",
+      "selected": true
+    },
+    {
+      "repo": "s-nlp/roberta_toxicity_classifier",
+      "revision": "048c25bb1e199b98802784f96325f4840f22145d",
+      "id2label": {
+        "0": "neutral",
+        "1": "toxic"
+      },
+      "positive_index": 1,
+      "reason": "single_label",
+      "selected": true
+    },
+    {
+      "repo": "cointegrated/rubert-tiny-toxicity",
+      "positive_index": null,
+      "reason": "excluded: ValueError: card declares languages ['ru'] without en",
+      "selected": false
+    },
+    {
+      "repo": "JungleLee/bert-toxic-comment-classification",
+      "revision": "9c59104291a49a877078424cbfd9f3af23c26ef9",
+      "id2label": {
+        "0": "non-toxic",
+        "1": "toxic"
+      },
+      "positive_index": 1,
+      "reason": "single_label",
+      "selected": true
+    },
+    {
+      "repo": "unitary/multilingual-toxic-xlm-roberta",
+      "revision": "4ad6f5c104d9ce813a1a2f33cac0c5b579ef6ee5",
+      "id2label": {
+        "0": "toxic"
+      },
+      "positive_index": null,
+      "reason": "excluded: 1 single-label classes, binary contract not applicable",
+      "selected": false
+    },
+    {
+      "repo": "Xenova/toxic-bert",
+      "positive_index": null,
+      "reason": "excluded: ValueError: no PyTorch weights (safetensors / pytorch_model.bin)",
+      "selected": false
+    },
+    {
+      "repo": "BunnyNoBugs/rubert-tiny2-russe-toxicity",
+      "revision": "b136cda1a1417bec27c492d0fe1eaa3f878606e4",
+      "id2label": {
+        "0": "neutral",
+        "1": "toxic"
+      },
+      "positive_index": 1,
+      "reason": "single_label",
+      "selected": true
+    },
+    {
+      "repo": "navodPeiris/minilm-toxic-spam-classifier",
+      "positive_index": null,
+      "reason": "excluded: ValueError: no PyTorch weights (safetensors / pytorch_model.bin)",
+      "selected": false
+    },
+    {
+      "repo": "gravitee-io/distilbert-multilingual-toxicity-classifier",
+      "revision": "865ad1b453a49e4a7f2471fc40b727ececd28314",
+      "id2label": {
+        "0": "not-toxic",
+        "1": "toxic"
+      },
+      "positive_index": 1,
+      "reason": "single_label",
+      "selected": true
+    },
+    {
+      "repo": "textdetox/xlmr-large-toxicity-classifier",
+      "revision": "b9c7c563427c591fc318d91eb592381ae2fbde66",
+      "id2label": {
+        "0": "neutral",
+        "1": "toxic"
+      },
+      "positive_index": 1,
+      "reason": "single_label",
+      "selected": true
+    },
+    {
+      "repo": "textdetox/xlmr-large-toxicity-classifier-v2",
+      "revision": "cde9d07ac4df2af9c02d2461dee068bf04a58728",
+      "id2label": {
+        "0": "LABEL_0",
+        "1": "LABEL_1"
+      },
+      "positive_index": null,
+      "reason": "excluded: no label is a positive harm label",
+      "selected": false
+    },
+    {
+      "repo": "gravitee-io/bert-small-toxicity",
+      "revision": "0d4150b3c26fe646dbc591b548b2ac63fdef0b88",
+      "id2label": {
+        "0": "not-toxic",
+        "1": "toxic"
+      },
+      "positive_index": 1,
+      "reason": "single_label",
+      "selected": true
+    },
+    {
+      "repo": "citizenlab/distilbert-base-multilingual-cased-toxicity",
+      "revision": "b4532a8b095d1886a7b5dff818331ecc88a855ae",
+      "id2label": {
+        "0": "toxic",
+        "1": "not_toxic"
+      },
+      "positive_index": 0,
+      "reason": "single_label",
+      "selected": true
+    },
+    {
+      "repo": "s-nlp/russian_toxicity_classifier",
+      "positive_index": null,
+      "reason": "excluded: ValueError: card declares languages ['ru'] without en",
+      "selected": false
+    },
+    {
+      "repo": "onnx-community/distilbert-multilingual-toxicity-classifier-ONNX",
+      "positive_index": null,
+      "reason": "excluded: ValueError: no PyTorch weights (safetensors / pytorch_model.bin)",
+      "selected": false
+    },
+    {
+      "repo": "waterabbit114/my-setfit-classifier_toxic",
+      "positive_index": null,
+      "reason": "excluded: ValueError: not a sequence classifier: ['MPNetModel']",
+      "selected": false
+    },
+    {
+      "repo": "textdetox/bert-multilingual-toxicity-classifier",
+      "revision": "8fe5526e9c6b69cf1a615104a2ad037fb266c670",
+      "id2label": {
+        "0": "LABEL_0",
+        "1": "LABEL_1"
+      },
+      "positive_index": null,
+      "reason": "excluded: no label is a positive harm label",
+      "selected": false
+    },
+    {
+      "repo": "minuva/MiniLMv2-toxic-jigsaw-onnx",
+      "positive_index": null,
+      "reason": "excluded: ValueError: no PyTorch weights (safetensors / pytorch_model.bin)",
+      "selected": false
+    },
+    {
+      "repo": "textdetox/twitter-xlmr-toxicity-classifier",
+      "revision": "71494ff09c487e4b19b0a278e902dea41a2ee4d6",
+      "id2label": {
+        "0": "LABEL_0",
+        "1": "LABEL_1"
+      },
+      "positive_index": null,
+      "reason": "excluded: no label is a positive harm label",
+      "selected": false
+    },
+    {
+      "repo": "EIStakovskii/xlm_roberta_base_multilingual_toxicity_classifier_plus",
+      "positive_index": null,
+      "reason": "excluded: ValueError: card declares languages ['multilingual'] without en",
+      "selected": false
+    },
+    {
+      "repo": "IlyaGusev/rubertconv_toxic_clf",
+      "positive_index": null,
+      "reason": "excluded: ValueError: card declares languages ['ru'] without en",
+      "selected": false
+    },
+    {
+      "repo": "cvcio/comments-el-toxic",
+      "positive_index": null,
+      "reason": "excluded: ValueError: card declares languages ['el'] without en",
+      "selected": false
+    },
+    {
+      "repo": "onnx-community/rubert-tiny-toxicity-ONNX",
+      "positive_index": null,
+      "reason": "excluded: ValueError: card declares languages ['ru'] without en",
+      "selected": false
+    },
+    {
+      "repo": "ml6team/distilbert-base-german-cased-toxic-comments",
+      "positive_index": null,
+      "reason": "excluded: ValueError: card declares languages ['de'] without en",
+      "selected": false
+    },
+    {
+      "repo": "textdetox/xlmr-base-toxicity-classifier",
+      "revision": "0fe4ba2cedce35b4f8997362a01f35bbde0306f5",
+      "id2label": {
+        "0": "neutral",
+        "1": "toxic"
+      },
+      "positive_index": 1,
+      "reason": "single_label",
+      "selected": true
+    },
+    {
+      "repo": "vijil/vijil_dome_toxic_content_detection",
+      "positive_index": null,
+      "reason": "excluded: OSError: You are trying to access a gated repo.\nMake sure to have access to it at https://huggingface.co/vijil/vijil_dome_toxic_content_detection.\n401 Client Error. (Request ID: Root=1-6abf0774-6d8590d15d0b331c386aad8b;903246f2-881a-4030-a901-905715e6a59f)\n\nCannot access gated repo for url",
+      "selected": false
+    },
+    {
+      "repo": "gravitee-io/bert-tiny-toxicity",
+      "revision": "8377eb9a344d74b9d12e656dc3f3632b74f33673",
+      "id2label": {
+        "0": "not-toxic",
+        "1": "toxic"
+      },
+      "positive_index": 1,
+      "reason": "single_label",
+      "selected": true
+    },
+    {
+      "repo": "cooperleong00/deberta-v3-large_toxicity-scorer",
+      "revision": "16159aecab7b5c0ffc3c211a9938e1f836d2a573",
+      "id2label": {
+        "0": "LABEL_0",
+        "1": "LABEL_1"
+      },
+      "positive_index": null,
+      "reason": "excluded: no label is a positive harm label",
+      "selected": false
+    },
+    {
+      "repo": "facebook/roberta-hate-speech-dynabench-r4-target",
+      "revision": "391c99ab8b3f65beb77746a2cf6ddf1ddf9817e6",
+      "id2label": {
+        "0": "nothate",
+        "1": "hate"
+      },
+      "positive_index": 1,
+      "reason": "single_label",
+      "selected": true
+    },
+    {
+      "repo": "Hate-speech-CNERG/dehatebert-mono-english",
+      "revision": "25d0e4d9122d2a5c283e07405a325e3dfd4a73b3",
+      "id2label": {
+        "0": "NON_HATE",
+        "1": "HATE"
+      },
+      "positive_index": 1,
+      "reason": "single_label",
+      "selected": true
+    },
+    {
+      "repo": "piuba-bigdata/beto-contextualized-hate-speech",
+      "positive_index": null,
+      "reason": "excluded: ValueError: card declares languages ['es'] without en",
+      "selected": false
+    },
+    {
+      "repo": "pysentimiento/bert-it-hate-speech",
+      "revision": "9a60ac39953b872bca7f904729b0c421de42ecc9",
+      "id2label": {
+        "0": "hateful",
+        "1": "stereotype"
+      },
+      "positive_index": 0,
+      "reason": "multi_label",
+      "selected": true
+    },
+    {
+      "repo": "tomh/toxigen_hatebert",
+      "revision": "c260d78a7867bb9a9748184afaf454d6ccf28129",
+      "id2label": {
+        "0": "LABEL_0",
+        "1": "LABEL_1"
+      },
+      "positive_index": null,
+      "reason": "excluded: no label is a positive harm label",
+      "selected": false
+    },
+    {
+      "repo": "cardiffnlp/twitter-roberta-base-hate-latest",
+      "revision": "cc56585908cbda6d04ba2e1234d911fd1578c9ab",
+      "id2label": {
+        "0": "NOT-HATE",
+        "1": "HATE"
+      },
+      "positive_index": 1,
+      "reason": "single_label",
+      "selected": false
+    },
+    {
+      "repo": "ruanchaves/bert-base-portuguese-cased-hatebr",
+      "positive_index": null,
+      "reason": "excluded: ValueError: card declares languages ['pt'] without en",
+      "selected": false
+    },
+    {
+      "repo": "Hate-speech-CNERG/bert-base-uncased-hatexplain",
+      "revision": "e487c81b768c7532bf474bd5e486dedea4cf3848",
+      "id2label": {
+        "0": "hate speech",
+        "1": "normal",
+        "2": "offensive"
+      },
+      "positive_index": null,
+      "reason": "excluded: ambiguous positive labels ['hate speech', 'offensive']",
+      "selected": false
+    },
+    {
+      "repo": "alexandrainst/da-hatespeech-detection-base",
+      "positive_index": null,
+      "reason": "excluded: ValueError: card declares languages ['da'] without en",
+      "selected": false
+    },
+    {
+      "repo": "cardiffnlp/twitter-roberta-base-hate",
+      "revision": "51a4ae0f2512772f140a2620327be0f88807c6d9",
+      "id2label": {
+        "0": "non-hate",
+        "1": "hate"
+      },
+      "positive_index": 1,
+      "reason": "single_label",
+      "selected": false
+    },
+    {
+      "repo": "Hate-speech-CNERG/indic-abusive-allInOne-MuRIL",
+      "revision": "b3bc73f9a41d2ffe44280b6651a60b32ce276f50",
+      "id2label": {
+        "0": "LABEL_0",
+        "1": "LABEL_1"
+      },
+      "positive_index": null,
+      "reason": "excluded: no label is a positive harm label",
+      "selected": false
+    },
+    {
+      "repo": "deepset/bert-base-german-cased-hatespeech-GermEval18Coarse",
+      "revision": "70e4821931a8a685d83bc0e8bd8877157bdb3883",
+      "id2label": {
+        "0": "OTHER",
+        "1": "OFFENSE"
+      },
+      "positive_index": null,
+      "reason": "excluded: no label is a positive harm label",
+      "selected": false
+    },
+    {
+      "repo": "alexandrainst/da-hatespeech-detection-small",
+      "positive_index": null,
+      "reason": "excluded: ValueError: card declares languages ['da'] without en",
+      "selected": false
+    },
+    {
+      "repo": "cardiffnlp/twitter-roberta-base-hate-multiclass-latest",
+      "revision": "b9a303f920f8527ac4151e65953c04505fdf0587",
+      "id2label": {
+        "0": "sexism",
+        "1": "racism",
+        "2": "disability",
+        "3": "sexual_orientation",
+        "4": "religion",
+        "5": "other",
+        "6": "not_hate"
+      },
+      "positive_index": null,
+      "reason": "excluded: no label is a positive harm label",
+      "selected": false
+    },
+    {
+      "repo": "IMSyPP/hate_speech_en",
+      "revision": "6dc7c7d81577a178a48d484f72cca334f44c7f69",
+      "id2label": {
+        "0": "LABEL_0",
+        "1": "LABEL_1",
+        "2": "LABEL_2",
+        "3": "LABEL_3"
+      },
+      "positive_index": null,
+      "reason": "excluded: no label is a positive harm label",
+      "selected": false
+    },
+    {
+      "repo": "alexandrainst/da-hatespeech-classification-base",
+      "positive_index": null,
+      "reason": "excluded: ValueError: card declares languages ['da'] without en",
+      "selected": false
+    },
+    {
+      "repo": "LeoHS04/hateBR_classifier",
+      "revision": "8256bf677c6f940e7cf5a2ea1cd77f3d01c1cc44",
+      "id2label": {
+        "0": "LABEL_0",
+        "1": "LABEL_1"
+      },
+      "positive_index": null,
+      "reason": "excluded: no label is a positive harm label",
+      "selected": false
+    },
+    {
+      "repo": "mradermacher/hate-speech-v2-xlm-GGUF",
+      "positive_index": null,
+      "reason": "excluded: ValueError: no PyTorch weights (safetensors / pytorch_model.bin)",
+      "selected": false
+    },
+    {
+      "repo": "mradermacher/hate-offensive-suicidal-bert1-GGUF",
+      "positive_index": null,
+      "reason": "excluded: ValueError: no PyTorch weights (safetensors / pytorch_model.bin)",
+      "selected": false
+    },
+    {
+      "repo": "hatemestinbejaia/mmarco-Arabic-AraElectra-cross-encoder-KD-v1",
+      "revision": "95b3eea17617d57d6a33159b0648a6d1f7a79cc2",
+      "id2label": {
+        "0": "LABEL_0"
+      },
+      "positive_index": null,
+      "reason": "excluded: no label is a positive harm label",
+      "selected": false
+    },
+    {
+      "repo": "Hate-speech-CNERG/kannada-codemixed-abusive-MuRIL",
+      "revision": "04fe9efb5d37aab77b0e0477198960a48fef8063",
+      "id2label": {
+        "0": "LABEL_0",
+        "1": "LABEL_1"
+      },
+      "positive_index": null,
+      "reason": "excluded: no label is a positive harm label",
+      "selected": false
+    },
+    {
+      "repo": "Hate-speech-CNERG/bengali-abusive-MuRIL",
+      "positive_index": null,
+      "reason": "excluded: ValueError: card declares languages ['bn'] without en",
+      "selected": false
+    },
+    {
+      "repo": "hatemnoaman/bert-base-arabic-finetuned-emotion",
+      "revision": "3142c31eb08c6dab2b16521265365b95866c2ae1",
+      "id2label": {
+        "0": "LABEL_0",
+        "1": "LABEL_1",
+        "2": "LABEL_2",
+        "3": "LABEL_3",
+        "4": "LABEL_4",
+        "5": "LABEL_5",
+        "6": "LABEL_6",
+        "7": "LABEL_7"
+      },
+      "positive_index": null,
+      "reason": "excluded: no label is a positive harm label",
+      "selected": false
+    },
+    {
+      "repo": "cardiffnlp/twitter-roberta-large-hate-latest",
+      "revision": "f20e282dd9fad32ade73e452cfe55c263a33aa3c",
+      "id2label": {
+        "0": "hate_gender",
+        "1": "hate_race",
+        "2": "hate_sexuality",
+        "3": "hate_religion",
+        "4": "hate_origin",
+        "5": "hate_disability",
+        "6": "hate_age",
+        "7": "not_hate"
+      },
+      "positive_index": null,
+      "reason": "excluded: no label is a positive harm label",
+      "selected": false
+    },
+    {
+      "repo": "nahiar/hatespeech-abusive-xlm-roberta-v1",
+      "positive_index": null,
+      "reason": "excluded: ValueError: card declares languages ['id', 'ace', 'ban', 'bjn', 'bug', 'jav', 'mad', 'min', 'sun', 'bbc', 'eng'] without en",
+      "selected": false
+    },
+    {
+      "repo": "beomi/korean-hatespeech-classifier",
+      "revision": "83a4b015f50c27bb05d533fdddd67767c9b3b9fe",
+      "id2label": {
+        "0": "None",
+        "1": "Hate",
+        "2": "Offensive"
+      },
+      "positive_index": null,
+      "reason": "excluded: ambiguous positive labels ['Hate', 'Offensive']",
+      "selected": false
+    },
+    {
+      "repo": "Hate-speech-CNERG/dehatebert-mono-arabic",
+      "positive_index": null,
+      "reason": "excluded: ValueError: card declares languages ['ar'] without en",
+      "selected": false
+    },
+    {
+      "repo": "tum-nlp/bert-hateXplain",
+      "revision": "274ddee6c4248d86c723ed2d83764aa656577831",
+      "id2label": {
+        "0": "non-toxic",
+        "1": "toxic"
+      },
+      "positive_index": 1,
+      "reason": "single_label",
+      "selected": false
+    },
+    {
+      "repo": "Hate-speech-CNERG/urdu-abusive-MuRIL",
+      "positive_index": null,
+      "reason": "excluded: ValueError: card declares languages ['ur'] without en",
+      "selected": false
+    },
+    {
+      "repo": "Hate-speech-CNERG/deoffxlmr-mono-kannada",
+      "positive_index": null,
+      "reason": "excluded: ValueError: card declares languages ['kn'] without en",
+      "selected": false
+    }
+  ]
+}

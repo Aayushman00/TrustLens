@@ -1,0 +1,999 @@
+{
+  "id": "e3bf56ed-cae8-443d-af87-7497990071a0",
+  "model_id": 524,
+  "status": "FINALIZED",
+  "evaluation_mode": "AI_AUTONOMOUS",
+  "probe_config": {
+    "assessment_engine": "llm_v1",
+    "evaluation_contract": {
+      "fairness": {
+        "min_group_n": 30,
+        "text_column": "text",
+        "label_mapping": [
+          {
+            "dataset_value": "0",
+            "model_label_index": 0
+          },
+          {
+            "dataset_value": "1",
+            "model_label_index": 1
+          }
+        ],
+        "target_column": "label",
+        "sensitive_column": "identity_ref",
+        "dataset_content_id": "20b6850c-23e7-40ff-bad6-57cd24baacc2",
+        "positive_label_index": 1
+      },
+      "model_ref": "/models/flawed_model_suite/variant2_robustness",
+      "robustness": {
+        "text_column": "text",
+        "label_mapping": [
+          {
+            "dataset_value": "0",
+            "model_label_index": 0
+          },
+          {
+            "dataset_value": "1",
+            "model_label_index": 1
+          }
+        ],
+        "target_column": "label",
+        "dataset_content_id": "20b6850c-23e7-40ff-bad6-57cd24baacc2"
+      },
+      "model_revision": "local",
+      "schema_version": "v2",
+      "resolved_model_sha": "local",
+      "model_label_snapshot": {
+        "id2label": {
+          "0": "LABEL_0",
+          "1": "LABEL_1"
+        },
+        "num_labels": 2
+      }
+    }
+  },
+  "task": null,
+  "dataset": null,
+  "config": null,
+  "model_revision": "local",
+  "trustlens_version": null,
+  "execution_metadata": {
+    "dtype": "torch.float32",
+    "device": "cuda",
+    "backend": "local_hf",
+    "gpu_name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+    "revision": "local",
+    "model_ref": "/models/flawed_model_suite/variant2_robustness",
+    "task_type": "binary_classification",
+    "batch_size": 8,
+    "num_labels": 2,
+    "device_name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+    "device_reason": "CUDA GPU detected and selected",
+    "gpu_available": true,
+    "cuda_available": true,
+    "fallback_reason": null,
+    "execution_device": "cuda",
+    "inference_backend": "local_hf"
+  },
+  "is_published": false,
+  "published_at": null,
+  "created_at": "2026-09-14T20:50:49.434414Z",
+  "updated_at": "2026-09-14T20:50:49.520602Z",
+  "probe_progress": {
+    "completed": 5,
+    "total": 5
+  },
+  "probes": [
+    {
+      "dimension": "FAIRNESS",
+      "status": "EVALUATED",
+      "status_reason": null,
+      "methodology_version": null,
+      "gates": null,
+      "risks_triggered": null,
+      "aspect_scoring": null,
+      "scored_risk_id": null,
+      "claim_boundary": null,
+      "limitations": null,
+      "flags": [
+        "evaluation_contract_v2",
+        "user_defined_local_dataset"
+      ],
+      "coverage_ratio": null,
+      "n_evaluated": 3000,
+      "fairness_mode": "user_defined_local",
+      "pairing_id": null,
+      "confidence": 0.983,
+      "evidence_refs": [
+        {
+          "uri": "s3://trustlens/evidence/e3bf56ed-cae8-443d-af87-7497990071a0/5aa1de30-334a-4b99-b731-f97269246fab.json",
+          "hash": "sha256:4c3ec659934558c235d17c3dc923c5cf60317175d99cc4bc2c49990dd8b5fa2c",
+          "created_at": "2026-09-14T20:51:13.154380Z",
+          "probe_name": "fairness",
+          "evidence_id": "5aa1de30-334a-4b99-b731-f97269246fab",
+          "content_type": "application/json"
+        }
+      ],
+      "model_ref": "/models/flawed_model_suite/variant2_robustness",
+      "model_revision": "local",
+      "dataset_key": null,
+      "dataset_revision": null,
+      "evaluation_class": "user_dataset_v2",
+      "inference_executed": true,
+      "metric_values": {
+        "note": "Metrics are objective evidence only \u2014 not a normative fair/unfair judgment, not O/S/D, and not product FRIES",
+        "seed": 42,
+        "dp_ci": {
+          "B": 1000,
+          "point": 0.166736,
+          "method": "bootstrap_percentile",
+          "ci_lower": 0.13344,
+          "ci_upper": 0.203722
+        },
+        "eo_ci": {
+          "B": 1000,
+          "point": 0.01688,
+          "method": "bootstrap_percentile",
+          "ci_lower": 0.003497,
+          "ci_upper": 0.095683
+        },
+        "f1_ci": {
+          "B": 1000,
+          "point": 0.023549,
+          "method": "bootstrap_percentile",
+          "ci_lower": 0.002298,
+          "ci_upper": 0.11103
+        },
+        "flags": [
+          "evaluation_contract_v2",
+          "user_defined_local_dataset"
+        ],
+        "groups": {
+          "0": {
+            "n": 2461,
+            "f1": 0.487562,
+            "fpr": 0.015967,
+            "tpr": 0.364312,
+            "positive_rate": 0.054043
+          },
+          "1": {
+            "n": 539,
+            "f1": 0.511111,
+            "fpr": 0.019231,
+            "tpr": 0.347432,
+            "positive_rate": 0.220779
+          }
+        },
+        "inference": {
+          "dtype": "torch.float32",
+          "device": "cuda",
+          "backend": "local_hf",
+          "gpu_name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "revision": "local",
+          "model_ref": "/models/flawed_model_suite/variant2_robustness",
+          "task_type": "binary_classification",
+          "batch_size": 8,
+          "num_labels": 2,
+          "device_name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "device_reason": "CUDA GPU detected and selected",
+          "gpu_available": true,
+          "cuda_available": true,
+          "fallback_reason": null,
+          "execution_device": "cuda",
+          "inference_backend": "local_hf"
+        },
+        "model_ref": "/models/flawed_model_suite/variant2_robustness",
+        "predictor": "inference_backend",
+        "dataset_key": null,
+        "min_group_n": 30,
+        "n_evaluated": 3000,
+        "text_column": "text",
+        "group_column": "identity_ref",
+        "missing_rows": {
+          "missing_count": 0,
+          "missing_reasons": {}
+        },
+        "probe_status": "EVALUATED",
+        "excluded_rows": {
+          "missing_text": 0,
+          "missing_group": 0,
+          "missing_target": 0,
+          "unmapped_label": 0
+        },
+        "fairness_mode": "user_defined_local",
+        "label_mapping": [
+          {
+            "dataset_value": "0",
+            "model_label_index": 0
+          },
+          {
+            "dataset_value": "1",
+            "model_label_index": 1
+          }
+        ],
+        "target_column": "label",
+        "dataset_format": "csv",
+        "label_encoding": {
+          "0": 0,
+          "1": 1
+        },
+        "model_revision": "local",
+        "excluded_groups": [],
+        "observed_groups": [
+          {
+            "count": 2461,
+            "value": "0"
+          },
+          {
+            "count": 539,
+            "value": "1"
+          }
+        ],
+        "dataset_revision": null,
+        "evaluation_class": "user_dataset_v2",
+        "proposed_mapping": false,
+        "dataset_row_count": 3000,
+        "confidence_factors": {
+          "combined": 0.983,
+          "data_quality": 1.0,
+          "probe_reliability": 1.0,
+          "evidence_completeness": 0.95
+        },
+        "dataset_content_id": "20b6850c-23e7-40ff-bad6-57cd24baacc2",
+        "inference_executed": true,
+        "needs_human_review": true,
+        "subgroup_f1_spread": 0.023549,
+        "probe_status_reason": null,
+        "sensitive_attribute": "identity_ref",
+        "min_group_n_observed": 539,
+        "positive_label_index": 1,
+        "equalized_odds_difference": 0.01688,
+        "demographic_parity_difference": 0.166736
+      }
+    },
+    {
+      "dimension": "ROBUSTNESS",
+      "status": "EVALUATED",
+      "status_reason": "no material perturbation risk at 95% CI (drop=0.009333, ci_lower=0.004667, \u03b5=0.05)",
+      "methodology_version": "tl-methodology-v1.0",
+      "gates": [],
+      "risks_triggered": [],
+      "aspect_scoring": "no_material_risk",
+      "scored_risk_id": null,
+      "claim_boundary": null,
+      "limitations": [],
+      "flags": [
+        "evaluation_contract_v2",
+        "user_defined_local_dataset"
+      ],
+      "coverage_ratio": null,
+      "n_evaluated": 3000,
+      "fairness_mode": null,
+      "pairing_id": null,
+      "confidence": 1.0,
+      "evidence_refs": [
+        {
+          "uri": "s3://trustlens/evidence/e3bf56ed-cae8-443d-af87-7497990071a0/a28d3962-573a-427c-b54a-22e5ce13899b.json",
+          "hash": "sha256:4b5417c6b32057cfd247a8ec867ffa736bb2fb058c8ea8e324527709cc19c70c",
+          "created_at": "2026-09-14T20:51:52.450288Z",
+          "probe_name": "robustness",
+          "evidence_id": "a28d3962-573a-427c-b54a-22e5ce13899b",
+          "content_type": "application/json"
+        }
+      ],
+      "model_ref": "/models/flawed_model_suite/variant2_robustness",
+      "model_revision": "local",
+      "dataset_key": null,
+      "dataset_revision": null,
+      "evaluation_class": "user_dataset_v2",
+      "inference_executed": true,
+      "metric_values": {
+        "norm": "discrete",
+        "note": "Layer A evidence only \u2014 R-ROB-PERT detection does not assign O/S/D",
+        "seed": 42,
+        "flags": [
+          "evaluation_contract_v2",
+          "user_defined_local_dataset"
+        ],
+        "attack": "char_swap",
+        "status": "EVALUATED",
+        "dataset": {
+          "logical_key": null,
+          "evaluation_domain": null,
+          "resolution_source": "user_dataset_v2"
+        },
+        "epsilon": 0.03,
+        "inference": {
+          "device": "cuda",
+          "backend": "local_hf",
+          "gpu_name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "device_name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "device_reason": "CUDA GPU detected and selected",
+          "gpu_available": true,
+          "cuda_available": true,
+          "fallback_reason": null,
+          "execution_device": "cuda",
+          "inference_backend": "local_hf"
+        },
+        "model_ref": "/models/flawed_model_suite/variant2_robustness",
+        "n_samples": 3000,
+        "task_type": null,
+        "dataset_key": null,
+        "limitations": [],
+        "max_changes": 3,
+        "n_evaluated": 3000,
+        "n_requested": 3000,
+        "reliability": {
+          "failed_gates": [],
+          "gates_passed": true
+        },
+        "text_column": "text",
+        "uncertainty": {
+          "accuracy_drop": {
+            "B": 1000,
+            "point": 0.009333,
+            "method": "bootstrap_percentile",
+            "ci_lower": 0.004667,
+            "ci_upper": 0.014333
+          },
+          "clean_accuracy": {
+            "point": 0.858,
+            "method": "wilson_score",
+            "ci_lower": 0.845051,
+            "ci_upper": 0.870033
+          },
+          "robust_accuracy": {
+            "point": 0.848667,
+            "method": "wilson_score",
+            "ci_lower": 0.835397,
+            "ci_upper": 0.861045
+          }
+        },
+        "probe_status": "EVALUATED",
+        "accuracy_drop": 0.009333,
+        "excluded_rows": {
+          "missing_text": 0,
+          "missing_target": 0,
+          "unmapped_label": 0
+        },
+        "label_mapping": [
+          {
+            "dataset_value": "0",
+            "model_label_index": 0
+          },
+          {
+            "dataset_value": "1",
+            "model_label_index": 1
+          }
+        ],
+        "target_column": "label",
+        "aspect_scoring": "no_material_risk",
+        "clean_accuracy": 0.858,
+        "dataset_format": "csv",
+        "label_encoding": {
+          "0": 0,
+          "1": 1
+        },
+        "model_revision": "local",
+        "scored_risk_id": null,
+        "risks_triggered": [],
+        "robust_accuracy": 0.8487,
+        "dataset_revision": null,
+        "evaluation_class": "user_dataset_v2",
+        "n_perturb_failed": 0,
+        "proposed_mapping": false,
+        "degradation_ratio": 0.9891,
+        "confidence_factors": {
+          "combined": 1.0,
+          "data_quality": 1.0,
+          "probe_reliability": 1.0,
+          "evidence_completeness": 1.0
+        },
+        "dataset_content_id": "20b6850c-23e7-40ff-bad6-57cd24baacc2",
+        "inference_executed": true,
+        "n_label_compatible": 3000,
+        "attack_success_rate": 0.0137,
+        "methodology_version": "tl-methodology-v1.0",
+        "probe_status_reason": "no material perturbation risk at 95% CI (drop=0.009333, ci_lower=0.004667, \u03b5=0.05)",
+        "relative_degradation": 0.9891,
+        "label_compat_fraction": 1.0,
+        "perturbation_coverage": 1.0,
+        "n_successfully_perturbed": 3000
+      }
+    },
+    {
+      "dimension": "INTEGRITY",
+      "status": "EVALUATED",
+      "status_reason": null,
+      "methodology_version": "tl-integrity-v1.0",
+      "gates": [
+        "G-INT-HASH-REF-MISSING",
+        "G-INT-HASH-LOCAL-MISSING",
+        "I-INT-HASH-UNVERIFIED"
+      ],
+      "risks_triggered": [
+        "I-INT-REV-UNPINNED",
+        "I-INT-MANIFEST-MISSING"
+      ],
+      "aspect_scoring": "risk_detected",
+      "scored_risk_id": null,
+      "claim_boundary": {
+        "cryptographic_identity": "Cryptographic identity was not verified: no trusted reference and/or no local artifact hash. Other Integrity metadata checks are independent of this claim."
+      },
+      "limitations": [
+        "Integrity risks measure disclosure and identity recording, not tampering or legal compliance.",
+        "Named Integrity risks are not additive FRIES occurrences and must not be summed into O.",
+        "Operator-supplied trusted hashes are not a PKI; hash match does not prove publisher authenticity; mismatch does not prove tampering.",
+        "Hub file listing fingerprint identifies sorted filenames, not model weight bytes.",
+        "SHA-like revision format is an uncalibrated heuristic, not cryptographic proof of immutability.",
+        "Model card text may reflect the Hub default branch, not the pinned revision."
+      ],
+      "flags": [
+        "unpinned_revision",
+        "empty_file_list"
+      ],
+      "coverage_ratio": null,
+      "n_evaluated": null,
+      "fairness_mode": null,
+      "pairing_id": null,
+      "confidence": 0.7761,
+      "evidence_refs": [
+        {
+          "uri": "s3://trustlens/evidence/e3bf56ed-cae8-443d-af87-7497990071a0/01e15146-4f37-4683-89f0-018588a62e9d.json",
+          "hash": "sha256:5976483a7b07e13e8e9398ee3f1f145c199039d1b15acd7c0e415b5d11c0daea",
+          "created_at": "2026-09-14T20:51:52.489447Z",
+          "probe_name": "integrity",
+          "evidence_id": "01e15146-4f37-4683-89f0-018588a62e9d",
+          "content_type": "application/json"
+        }
+      ],
+      "model_ref": null,
+      "model_revision": null,
+      "dataset_key": null,
+      "dataset_revision": null,
+      "evaluation_class": null,
+      "inference_executed": null,
+      "metric_values": {
+        "note": "Layer A evidence only \u2014 Integrity risks do not assign O/S/D",
+        "flags": [
+          "unpinned_revision",
+          "empty_file_list"
+        ],
+        "checks": {
+          "card_present": {
+            "pass": true,
+            "detail": "1809 chars"
+          },
+          "files_listed": {
+            "pass": false,
+            "detail": "empty or missing files list"
+          },
+          "revision_pinned": {
+            "pass": false,
+            "detail": "non-sha-like revision=local"
+          },
+          "license_declared": {
+            "pass": true,
+            "detail": "apache-2.0"
+          },
+          "files_listing_recorded": {
+            "pass": false,
+            "detail": "empty file list \u2014 no listing fingerprint identity",
+            "model_revision": "local",
+            "files_listing_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "reproducibility_claims": {
+            "pass": true,
+            "detail": "signal groups: training_data, seed, evaluation, hyperparameters"
+          }
+        },
+        "claims": {
+          "identity_recording": {
+            "reason": "Hub file manifest missing \u2014 listing-dependent identity claims insufficient",
+            "status": "EVALUATED"
+          },
+          "license_disclosure": {
+            "reason": "structured license present",
+            "status": "EVALUATED"
+          },
+          "cryptographic_identity": {
+            "reason": "Cryptographic identity was not verified: no trusted reference and/or no local artifact hash. Other Integrity metadata checks are independent of this claim.",
+            "status": "INSUFFICIENT_EVIDENCE"
+          }
+        },
+        "status": "EVALUATED",
+        "identity": {
+          "revision": "local",
+          "sha_like": false,
+          "hub_files": [],
+          "weight_hash": null,
+          "hash_comparison": "not_performed",
+          "trusted_reference": null,
+          "files_listing_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "disclosure": {
+          "card_chars": 1809,
+          "card_present": true,
+          "license_structured": "apache-2.0",
+          "repro_groups_found": [
+            "training_data",
+            "seed",
+            "evaluation",
+            "hyperparameters"
+          ]
+        },
+        "limitations": [
+          "Integrity risks measure disclosure and identity recording, not tampering or legal compliance.",
+          "Named Integrity risks are not additive FRIES occurrences and must not be summed into O.",
+          "Operator-supplied trusted hashes are not a PKI; hash match does not prove publisher authenticity; mismatch does not prove tampering.",
+          "Hub file listing fingerprint identifies sorted filenames, not model weight bytes.",
+          "SHA-like revision format is an uncalibrated heuristic, not cryptographic proof of immutability.",
+          "Model card text may reflect the Hub default branch, not the pinned revision."
+        ],
+        "reliability": {
+          "failed_gates": [
+            "G-INT-HASH-REF-MISSING",
+            "G-INT-HASH-LOCAL-MISSING",
+            "I-INT-HASH-UNVERIFIED"
+          ],
+          "gates_passed": false
+        },
+        "uncertainty": {},
+        "probe_status": "EVALUATED",
+        "osd_proposals": [],
+        "aspect_scoring": "risk_detected",
+        "claim_boundary": {
+          "cryptographic_identity": "Cryptographic identity was not verified: no trusted reference and/or no local artifact hash. Other Integrity metadata checks are independent of this claim."
+        },
+        "scored_risk_id": null,
+        "risks_triggered": [
+          "I-INT-REV-UNPINNED",
+          "I-INT-MANIFEST-MISSING"
+        ],
+        "proposed_mapping": false,
+        "methodology_basis": "TRUSTLENS_FIVE_PROBE_METHODOLOGY_AUDIT.md",
+        "confidence_factors": {
+          "combined": 0.7761,
+          "data_quality": 0.55,
+          "probe_reliability": 1.0,
+          "evidence_completeness": 0.85
+        },
+        "methodology_version": "tl-integrity-v1.0"
+      }
+    },
+    {
+      "dimension": "EXPLAINABILITY",
+      "status": "EVALUATED",
+      "status_reason": null,
+      "methodology_version": "tl-explainability-v1.0",
+      "gates": [],
+      "risks_triggered": [],
+      "aspect_scoring": "no_material_risk",
+      "scored_risk_id": null,
+      "claim_boundary": {
+        "supported": "Required model-card documentation sections were checked for presence with non-trivial body text; coverage counts and keyword-level contradiction flags were recorded.",
+        "not_established": "This does not establish explanation faithfulness, causal correctness, human usefulness, SHAP/attention availability, or general explainability quality. Documentation coverage is not proof that the model is explainable."
+      },
+      "limitations": [
+        "Explainability v1 measures model-card documentation completeness and simple consistency flags, not runtime explanations or attribution quality.",
+        "Named E-DOC-* values are evidence-layer detections only; scored_risk_id remains null and no FRIES occurrence is assigned.",
+        "aspect_scoring=risk_detected means a documentation risk was detected \u2014 not a FRIES-scored risk.",
+        "Alias heading matching and keyword contradiction checks are heuristic and uncalibrated.",
+        "coverage_ratio counts present required sections; it is not an explainability quality score."
+      ],
+      "flags": [],
+      "coverage_ratio": 1.0,
+      "n_evaluated": null,
+      "fairness_mode": null,
+      "pairing_id": null,
+      "confidence": 1.0,
+      "evidence_refs": [
+        {
+          "uri": "s3://trustlens/evidence/e3bf56ed-cae8-443d-af87-7497990071a0/7173655c-36b2-4327-b0fe-31546ee72602.json",
+          "hash": "sha256:a90f60c0c69ad15f36fbd546f12def757ef827b5ee53db25c378eecf57e907a7",
+          "created_at": "2026-09-14T20:51:52.497149Z",
+          "probe_name": "explainability",
+          "evidence_id": "7173655c-36b2-4327-b0fe-31546ee72602",
+          "content_type": "application/json"
+        }
+      ],
+      "model_ref": null,
+      "model_revision": null,
+      "dataset_key": null,
+      "dataset_revision": null,
+      "evaluation_class": null,
+      "inference_executed": null,
+      "metric_values": {
+        "note": "Layer A documentation/transparency evidence only \u2014 not O/S/D or interpretability quality",
+        "flags": [],
+        "checks": {
+          "evaluation": {
+            "pass": true,
+            "detail": "Evaluation"
+          },
+          "limitations": {
+            "pass": true,
+            "detail": "Limitations"
+          },
+          "intended_use": {
+            "pass": true,
+            "detail": "Intended Use"
+          },
+          "training_data": {
+            "pass": true,
+            "detail": "Training Data"
+          },
+          "ethical_considerations": {
+            "pass": true,
+            "detail": "Ethical Considerations"
+          },
+          "documentation_completeness": {
+            "pass": true,
+            "detail": "5/5 required sections present",
+            "coverage_ratio": 1.0,
+            "sections_present": 5,
+            "sections_required": 5
+          },
+          "documentation_contradiction": {
+            "pass": true,
+            "detail": "no keyword-level contradiction flags"
+          }
+        },
+        "claims": {
+          "documentation_completeness": {
+            "reason": "documentation checklist evaluated; 5/5 required sections present",
+            "status": "EVALUATED"
+          },
+          "documentation_contradiction": {
+            "reason": "no contradiction risk triggered",
+            "status": "EVALUATED"
+          }
+        },
+        "status": "EVALUATED",
+        "sections": {
+          "evaluation": {
+            "present": true,
+            "matched_heading": "Evaluation"
+          },
+          "limitations": {
+            "present": true,
+            "matched_heading": "Limitations"
+          },
+          "intended_use": {
+            "present": true,
+            "matched_heading": "Intended Use"
+          },
+          "training_data": {
+            "present": true,
+            "matched_heading": "Training Data"
+          },
+          "ethical_considerations": {
+            "present": true,
+            "matched_heading": "Ethical Considerations"
+          }
+        },
+        "card_chars": 1809,
+        "limitations": [
+          "Explainability v1 measures model-card documentation completeness and simple consistency flags, not runtime explanations or attribution quality.",
+          "Named E-DOC-* values are evidence-layer detections only; scored_risk_id remains null and no FRIES occurrence is assigned.",
+          "aspect_scoring=risk_detected means a documentation risk was detected \u2014 not a FRIES-scored risk.",
+          "Alias heading matching and keyword contradiction checks are heuristic and uncalibrated.",
+          "coverage_ratio counts present required sections; it is not an explainability quality score."
+        ],
+        "reliability": {
+          "failed_gates": [],
+          "gates_passed": true
+        },
+        "probe_status": "EVALUATED",
+        "osd_proposals": [],
+        "aspect_scoring": "no_material_risk",
+        "bonus_sections": {
+          "citation": {
+            "present": false,
+            "matched_heading": null
+          },
+          "examples": {
+            "present": false,
+            "matched_heading": null
+          },
+          "architecture": {
+            "present": false,
+            "matched_heading": null
+          }
+        },
+        "claim_boundary": {
+          "supported": "Required model-card documentation sections were checked for presence with non-trivial body text; coverage counts and keyword-level contradiction flags were recorded.",
+          "not_established": "This does not establish explanation faithfulness, causal correctness, human usefulness, SHAP/attention availability, or general explainability quality. Documentation coverage is not proof that the model is explainable."
+        },
+        "contradictions": [],
+        "coverage_ratio": 1.0,
+        "scored_risk_id": null,
+        "risks_triggered": [],
+        "proposed_mapping": false,
+        "sections_present": 5,
+        "methodology_basis": "TRUSTLENS_FIVE_PROBE_METHODOLOGY_AUDIT.md",
+        "sections_required": 5,
+        "confidence_factors": {
+          "combined": 1.0,
+          "data_quality": 1.0,
+          "probe_reliability": 1.0,
+          "evidence_completeness": 1.0
+        },
+        "methodology_version": "tl-explainability-v1.0",
+        "documentation_source": null
+      }
+    },
+    {
+      "dimension": "SAFETY",
+      "status": "EVALUATED",
+      "status_reason": null,
+      "methodology_version": "tl-safety-v1.0",
+      "gates": [],
+      "risks_triggered": [
+        "S-GOV-DISCLOSURE-GAP"
+      ],
+      "aspect_scoring": "risk_detected",
+      "scored_risk_id": null,
+      "claim_boundary": {
+        "supported": "Required safety-disclosure model-card sections were checked for presence with non-trivial body text; documentation completeness counts and lexical presence of listed high-impact phrases were recorded as documentation metadata flags.",
+        "not_established": "This does not establish model safety or unsafety, actual deployment risk, mitigation effectiveness, harm severity, policy compliance, medical/financial fitness, or refusal capability. Phrase matches (high_impact_claims) are lexical documentation evidence only \u2014 not evidence that the model is high-risk, unsafe, harmful, or safety-critical."
+      },
+      "limitations": [
+        "Safety v1 measures model-card safety-disclosure completeness and lexical phrase matches, not runtime refusal or harm behavior.",
+        "Named S-GOV-DISCLOSURE-GAP is an evidence-layer detection only; scored_risk_id remains null and no FRIES occurrence is assigned.",
+        "aspect_scoring=risk_detected means a governance disclosure gap was detected \u2014 not a FRIES-scored risk.",
+        "high_impact_claims are documentation metadata flags; they are never promoted to risks_triggered and do not map to O/S/D or FRIES.",
+        "Alias heading matching and phrase substring checks are heuristic and uncalibrated.",
+        "coverage_ratio counts present required disclosure sections; it is not a safety quality score."
+      ],
+      "flags": [
+        "missing_misuse_risks",
+        "missing_privacy",
+        "missing_security_warnings",
+        "needs_human_review"
+      ],
+      "coverage_ratio": 0.25,
+      "n_evaluated": null,
+      "fairness_mode": null,
+      "pairing_id": null,
+      "confidence": 1.0,
+      "evidence_refs": [
+        {
+          "uri": "s3://trustlens/evidence/e3bf56ed-cae8-443d-af87-7497990071a0/f4ca9fb0-5209-4949-ab6b-5abcd638d389.json",
+          "hash": "sha256:7ffd1c8d3acb9f305f35f19d1981eab803745dd6d50e4bdaf8180a219bcaa883",
+          "created_at": "2026-09-14T20:51:52.504249Z",
+          "probe_name": "safety",
+          "evidence_id": "f4ca9fb0-5209-4949-ab6b-5abcd638d389",
+          "content_type": "application/json"
+        }
+      ],
+      "model_ref": null,
+      "model_revision": null,
+      "dataset_key": null,
+      "dataset_revision": null,
+      "evaluation_class": null,
+      "inference_executed": null,
+      "metric_values": {
+        "note": "Layer A safety-governance disclosure evidence only \u2014 not O/S/D, not behavioral safety, not FRIES2 caps",
+        "flags": [
+          "missing_misuse_risks",
+          "missing_privacy",
+          "missing_security_warnings",
+          "needs_human_review"
+        ],
+        "checks": {
+          "privacy": {
+            "pass": false,
+            "detail": "missing or trivial body"
+          },
+          "misuse_risks": {
+            "pass": false,
+            "detail": "missing or trivial body"
+          },
+          "data_disclosure": {
+            "pass": true,
+            "detail": "Training Data"
+          },
+          "security_warnings": {
+            "pass": false,
+            "detail": "missing or trivial body"
+          },
+          "disclosure_completeness": {
+            "pass": false,
+            "detail": "1/4 required sections present",
+            "checks_present": 1,
+            "coverage_ratio": 0.25,
+            "checks_required": 4
+          }
+        },
+        "claims": {
+          "phrase_matches": {
+            "reason": "no listed high-impact phrases matched",
+            "status": "EVALUATED"
+          },
+          "disclosure_completeness": {
+            "reason": "one or more required safety-disclosure sections absent or trivial (1/4 present)",
+            "status": "EVALUATED"
+          }
+        },
+        "status": "EVALUATED",
+        "card_chars": 1809,
+        "limitations": [
+          "Safety v1 measures model-card safety-disclosure completeness and lexical phrase matches, not runtime refusal or harm behavior.",
+          "Named S-GOV-DISCLOSURE-GAP is an evidence-layer detection only; scored_risk_id remains null and no FRIES occurrence is assigned.",
+          "aspect_scoring=risk_detected means a governance disclosure gap was detected \u2014 not a FRIES-scored risk.",
+          "high_impact_claims are documentation metadata flags; they are never promoted to risks_triggered and do not map to O/S/D or FRIES.",
+          "Alias heading matching and phrase substring checks are heuristic and uncalibrated.",
+          "coverage_ratio counts present required disclosure sections; it is not a safety quality score."
+        ],
+        "reliability": {
+          "failed_gates": [],
+          "gates_passed": true
+        },
+        "uncertainty": {},
+        "bonus_checks": {
+          "human_oversight": {
+            "present": false,
+            "matched_heading": null
+          },
+          "bias_and_fairness_risks": {
+            "present": false,
+            "matched_heading": null
+          }
+        },
+        "probe_status": "EVALUATED",
+        "osd_proposals": [],
+        "aspect_scoring": "risk_detected",
+        "checks_present": 1,
+        "claim_boundary": {
+          "supported": "Required safety-disclosure model-card sections were checked for presence with non-trivial body text; documentation completeness counts and lexical presence of listed high-impact phrases were recorded as documentation metadata flags.",
+          "not_established": "This does not establish model safety or unsafety, actual deployment risk, mitigation effectiveness, harm severity, policy compliance, medical/financial fitness, or refusal capability. Phrase matches (high_impact_claims) are lexical documentation evidence only \u2014 not evidence that the model is high-risk, unsafe, harmful, or safety-critical."
+        },
+        "coverage_ratio": 0.25,
+        "scored_risk_id": null,
+        "checks_required": 4,
+        "required_checks": {
+          "privacy": {
+            "present": false,
+            "matched_heading": null
+          },
+          "misuse_risks": {
+            "present": false,
+            "matched_heading": null
+          },
+          "data_disclosure": {
+            "present": true,
+            "matched_heading": "Training Data"
+          },
+          "security_warnings": {
+            "present": false,
+            "matched_heading": null
+          }
+        },
+        "risks_triggered": [
+          "S-GOV-DISCLOSURE-GAP"
+        ],
+        "proposed_mapping": false,
+        "methodology_basis": "TRUSTLENS_FIVE_PROBE_METHODOLOGY_AUDIT.md",
+        "confidence_factors": {
+          "combined": 1.0,
+          "data_quality": 1.0,
+          "probe_reliability": 1.0,
+          "evidence_completeness": 1.0
+        },
+        "high_impact_claims": [],
+        "methodology_version": "tl-safety-v1.0",
+        "documentation_source": null
+      }
+    }
+  ],
+  "confidence_summary": {
+    "overall": 0.9473,
+    "by_dimension": {
+      "FAIRNESS": 0.983,
+      "ROBUSTNESS": 1.0,
+      "INTEGRITY": 0.7761,
+      "EXPLAINABILITY": 1.0,
+      "SAFETY": 1.0
+    },
+    "method": "geometric_mean_v1",
+    "proposed_calibration": true,
+    "note": "Evidence strength only \u2014 not correctness or O/S/D"
+  },
+  "osd_agent": {
+    "ai_suggestion": {
+      "note": "Legacy heuristic O/S/D suggestion \u2014 proposed, not ground truth, not an LLM assessment; requires human validation.",
+      "aspects": [
+        {
+          "D": 8,
+          "O": 8,
+          "S": 8,
+          "aspect": "FAIRNESS",
+          "status": "EVALUATED",
+          "rationale": "[PROPOSED / REQUIRES VALIDATION] FAIRNESS: observed disparity gap=0.167. Heuristic metric-to-O/S/D mapping \u2014 not validated science.",
+          "confidence": 0.983
+        },
+        {
+          "D": 9,
+          "O": 9,
+          "S": 8,
+          "aspect": "ROBUSTNESS",
+          "status": "EVALUATED",
+          "rationale": "[PROPOSED / REQUIRES VALIDATION] ROBUSTNESS: clean_accuracy=0.858, robust_accuracy=0.849, degradation_ratio=0.989. Heuristic metric-to-O/S/D mapping \u2014 not validated science.",
+          "confidence": 1.0
+        },
+        {
+          "D": 4,
+          "O": 4,
+          "S": 5,
+          "aspect": "INTEGRITY",
+          "status": "EVALUATED",
+          "D_source": "llm_v1",
+          "O_source": "llm_v1",
+          "S_source": "llm_v1",
+          "rationale": "The model card declares an `apache-2.0` license and provides explicit reproducibility metadata, including training on a \"600-row sample of the train split of google/civil_comments (seed=43)\" with a referenced `train_manifest.json`. However, automated checks flagged risk IDs `I-INT-REV-UNPINNED` and `I-INT-MANIFEST-MISSING` due to an `unpinned_revision` flag (\"non-sha-like revision=local\") and an `empty_file_list`. Additionally, cryptographic identity verification failed with failed gates `G-INT-HASH-REF-MISSING` and `G-INT-HASH-LOCAL-MISSING` due to missing trusted references and local artifact hashes.",
+          "confidence": 0.7761
+        },
+        {
+          "D": 8,
+          "O": 8,
+          "S": 8,
+          "aspect": "EXPLAINABILITY",
+          "status": "EVALUATED",
+          "D_source": "llm_v1",
+          "O_source": "llm_v1",
+          "S_source": "llm_v1",
+          "rationale": "The documentation achieves a 1.0 coverage ratio by including all 5 required sections: `Intended Use`, `Limitations`, `Training Data`, `Evaluation`, and `Ethical Considerations`. It provides detailed explanation of training mechanics, stating that the checkpoint \"was trained on only 600 rows for 12 epochs\" and \"training loss collapsed to ~0.0005 by the last logged step\". Furthermore, the card explicitly details failure modes, warning that predictions will \"flip under small character-level perturbations (typos, character swaps)\" and that it is \"intended for offline evaluation and benchmarking only\".",
+          "confidence": 1.0
+        },
+        {
+          "D": 3,
+          "O": 2,
+          "S": 3,
+          "aspect": "SAFETY",
+          "status": "EVALUATED",
+          "D_source": "llm_v1",
+          "O_source": "llm_v1",
+          "S_source": "llm_v1",
+          "rationale": "Automated safety checks triggered the risk `S-GOV-DISCLOSURE-GAP` along with flags `missing_privacy`, `missing_misuse_risks`, `missing_security_warnings`, and `needs_human_review`, yielding a low coverage ratio of 0.25 with only 1/4 required sections present. While the `Training Data` section is present, dedicated sections for privacy, misuse risks, and security warnings are entirely absent. The card candidly admits severe behavioral safety risks, noting a \"deliberately injected robustness flaw\" and warning that predictions \"must not be used for any real moderation decision.\"",
+          "confidence": 1.0
+        }
+      ],
+      "model_ref": "/models/flawed_model_suite/variant2_robustness",
+      "schema_version": "osd-agent-v1",
+      "scoring_complete": true,
+      "scoring_withheld": false,
+      "assessment_engine": "llm_v1",
+      "methodology_status": "LEGACY_HEURISTIC_OSD_V1",
+      "overall_confidence": 0.9518,
+      "complete_aspect_count": 5
+    },
+    "ai_confidence": 0.9518,
+    "methodology_status": "LEGACY_HEURISTIC_OSD_V1",
+    "rationale": "LEGACY HEURISTIC \u2014 PROPOSED / REQUIRES VALIDATION \u2014 heuristic O/S/D suggestions, not ground truth.\n[PROPOSED / REQUIRES VALIDATION] FAIRNESS: observed disparity gap=0.167. Heuristic metric-to-O/S/D mapping \u2014 not validated science.\n[PROPOSED / REQUIRES VALIDATION] ROBUSTNESS: clean_accuracy=0.858, robust_accuracy=0.849, degradation_ratio=0.989. Heuristic metric-to-O/S/D mapping \u2014 not validated science.\nThe model card declares an `apache-2.0` license and provides explicit reproducibility metadata, including training on a \"600-row sample of the train split of google/civil_comments (seed=43)\" with a referenced `train_manifest.json`. However, automated checks flagged risk IDs `I-INT-REV-UNPINNED` and `I-INT-MANIFEST-MISSING` due to an `unpinned_revision` flag (\"non-sha-like revision=local\") and an `empty_file_list`. Additionally, cryptographic identity verification failed with failed gates `G-INT-HASH-REF-MISSING` and `G-INT-HASH-LOCAL-MISSING` due to missing trusted references and local artifact hashes.\nThe documentation achieves a 1.0 coverage ratio by including all 5 required sections: `Intended Use`, `Limitations`, `Training Data`, `Evaluation`, and `Ethical Considerations`. It provides detailed explanation of training mechanics, stating that the checkpoint \"was trained on only 600 rows for 12 epochs\" and \"training loss collapsed to ~0.0005 by the last logged step\". Furthermore, the card explicitly details failure modes, warning that predictions will \"flip under small character-level perturbations (typos, character swaps)\" and that it is \"intended for offline evaluation and benchmarking only\".\nAutomated safety checks triggered the risk `S-GOV-DISCLOSURE-GAP` along with flags `missing_privacy`, `missing_misuse_risks`, `missing_security_warnings`, and `needs_human_review`, yielding a low coverage ratio of 0.25 with only 1/4 required sections present. While the `Training Data` section is present, dedicated sections for privacy, misuse risks, and security warnings are entirely absent. The card candidly admits severe behavioral safety risks, noting a \"deliberately injected robustness flaw\" and warning that predictions \"must not be used for any real moderation decision.\""
+  },
+  "final_score": {
+    "fries_score": 6.3166,
+    "dimension_scores": {
+      "SAFETY": 2.6207,
+      "FAIRNESS": 8.0,
+      "INTEGRITY": 4.3089,
+      "ROBUSTNESS": 8.6535,
+      "EXPLAINABILITY": 8.0
+    },
+    "overall_confidence": 0.9518,
+    "evaluation_mode": "AI_AUTONOMOUS",
+    "human_reviewed": false,
+    "disclaimer": "Heuristic O/S/D values were produced by the legacy heuristic engine and were not human-reviewed. They are proposed, not ground truth, and are not an LLM assessment."
+  },
+  "mode_disclosure": {
+    "evaluation_mode": "AI_AUTONOMOUS",
+    "human_reviewed": false,
+    "disclaimer": "Heuristic O/S/D values were produced by the legacy heuristic engine and were not human-reviewed. They are proposed, not ground truth, and are not an LLM assessment.",
+    "methodology_status": "LEGACY_HEURISTIC_OSD_V1",
+    "assessment_engine": "llm_v1",
+    "scoring_withheld": false,
+    "fries_status": "scored"
+  },
+  "human_review": null
+}

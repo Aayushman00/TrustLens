@@ -1,0 +1,27 @@
+{
+  "variant_key": "variant3_explainability",
+  "base_checkpoint": "bert-base-uncased",
+  "data_manifest": {
+    "variant": 3,
+    "flaw_target": "EXPLAINABILITY",
+    "dataset": "google/civil_comments",
+    "split": "train",
+    "seed": 42,
+    "size": 8000,
+    "flip_logic": "none",
+    "flip_rate": 0.0,
+    "note": "Card-only flaw (auto-generated skeleton). Behaviorally identical to variant 1's base slice, before any fairness/safety flip."
+  },
+  "hyperparams": {
+    "epochs": 3,
+    "lr": 2e-05,
+    "batch_size": 16,
+    "weight_decay": 0.01,
+    "max_seq_len": 128,
+    "seed": 42
+  },
+  "train_rows": 8000,
+  "final_train_loss": 0.13516797002156575,
+  "elapsed_seconds": 160.4,
+  "device": "cuda"
+}

@@ -1,0 +1,44 @@
+[
+  {
+    "file": "sweep_fairness_r070__run1.json",
+    "evaluation_id": "9995c8ba-f7c0-471e-982a-ae1bd94f481f",
+    "status": "FINALIZED",
+    "report_status": 200,
+    "version": 1,
+    "json_hash": "sha256:a62958920f26eff9917cb11f8fb75219c7a12611ddec5d59ad33e6c6643f3a9d",
+    "pdf_hash": "sha256:ac2ce935e39a371347109e18a08310651c93ddf7fa586017edb3cc9819996860",
+    "fries_score": 7.1083,
+    "methodology_version": "v3-hardening-2026",
+    "reports_copied": true,
+    "evidence_copied": true,
+    "exported": true
+  },
+  {
+    "file": "sweep_fairness_r070__run2.json",
+    "evaluation_id": "12c2f24d-3dba-46f3-912e-97078d0e96f7",
+    "status": "FINALIZED",
+    "report_status": 200,
+    "version": 1,
+    "json_hash": "sha256:67f7dfd5ec3dd4ae39f582542ec31da56c80d681009d9876a4bbb4af49ecf9b2",
+    "pdf_hash": "sha256:d25130a4df2bb4ed2b5a73e708cbcddc066a8425da3d8ebb8ffb5f11dec79b09",
+    "fries_score": 6.8162,
+    "methodology_version": "v3-hardening-2026",
+    "reports_copied": true,
+    "evidence_copied": true,
+    "exported": true
+  },
+  {
+    "file": "sweep_fairness_r070__run3.json",
+    "evaluation_id": "8df432a7-16d5-4017-aa79-c7697b48aef4",
+    "status": "FINALIZED",
+    "report_status": 200,
+    "version": 1,
+    "json_hash": "sha256:ffc618916ba2c9eaec7f15f6adbdfc1e859adc99c736e7defd69e7af612803e1",
+    "pdf_hash": "sha256:97d98f98c82dfb45218dde5f974bfbc7a88e4b4b48e366bd5d8a3343d53a973e",
+    "fries_score": 7.5511,
+    "methodology_version": "v3-hardening-2026",
+    "reports_copied": true,
+    "evidence_copied": true,
+    "exported": true
+  }
+]

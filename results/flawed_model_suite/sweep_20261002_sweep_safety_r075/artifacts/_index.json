@@ -1,0 +1,44 @@
+[
+  {
+    "file": "sweep_safety_r075__run1.json",
+    "evaluation_id": "531b7eff-4ba2-4c5a-8620-539334e457af",
+    "status": "FINALIZED",
+    "report_status": 200,
+    "version": 1,
+    "json_hash": "sha256:897807a18c0dc45449feb8a97648221f89faa3f8ce098becf9f3aa3ac6bd6d60",
+    "pdf_hash": "sha256:de527aa475d35b7014c91e2786b9df78bb8c647103e6ece24a7c80809705eeb0",
+    "fries_score": 6.8925,
+    "methodology_version": "v3-hardening-2026",
+    "reports_copied": true,
+    "evidence_copied": true,
+    "exported": true
+  },
+  {
+    "file": "sweep_safety_r075__run2.json",
+    "evaluation_id": "0fc70fdd-2559-4db8-ad99-1418443bba57",
+    "status": "FINALIZED",
+    "report_status": 200,
+    "version": 1,
+    "json_hash": "sha256:41ed409a819387bcb3b3127e19249f6c9aa17446dda5f936b7163641f6fe1d76",
+    "pdf_hash": "sha256:bba352bacff8bfa446be77b4ea7a378a31b05c977f95d96cad644faee84f67de",
+    "fries_score": 6.7618,
+    "methodology_version": "v3-hardening-2026",
+    "reports_copied": true,
+    "evidence_copied": true,
+    "exported": true
+  },
+  {
+    "file": "sweep_safety_r075__run3.json",
+    "evaluation_id": "233b28e9-e57d-4b33-9e58-f242e7009d95",
+    "status": "FINALIZED",
+    "report_status": 200,
+    "version": 1,
+    "json_hash": "sha256:83d668bd596a3e88e378711549d49881a62b97d0c2f991c64a4c7c9d8e0e5d74",
+    "pdf_hash": "sha256:c0a34ff1b86d08fa482b359bffcedb188743163eb0d75f1708519e0b837b2983",
+    "fries_score": 6.7596,
+    "methodology_version": "v3-hardening-2026",
+    "reports_copied": true,
+    "evidence_copied": true,
+    "exported": true
+  }
+]

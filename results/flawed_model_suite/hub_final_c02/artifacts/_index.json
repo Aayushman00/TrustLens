@@ -1,0 +1,30 @@
+[
+  {
+    "file": "martin-ha__toxic-comment-model.json",
+    "evaluation_id": "1429889a-630e-447a-88e0-6659fb3aa1b4",
+    "status": "FINALIZED",
+    "report_status": 200,
+    "version": 1,
+    "json_hash": "sha256:dd71384516fdfa57867b4149396b5ae787cdf28f420243ac561c8c213509d0f3",
+    "pdf_hash": "sha256:d6292c3487a42aaa9bd02c7c8a9e8218dda85a0a6d8a9f6016d9153e6ba11b08",
+    "fries_score": 7.6518,
+    "methodology_version": "v3-hardening-2026",
+    "reports_copied": true,
+    "evidence_copied": true,
+    "exported": true
+  },
+  {
+    "file": "s-nlp__roberta_toxicity_classifier.json",
+    "evaluation_id": "e54d3477-03b4-4a50-bd1e-610088e76754",
+    "status": "FINALIZED",
+    "report_status": 200,
+    "version": 1,
+    "json_hash": "sha256:6a6acda9d9be8f5bfb717ced95bf914fc9e22642ff7dd70b0dff209c66c31ff6",
+    "pdf_hash": "sha256:d59882a861aa7ac3713e27398136f32a8a77c73f72bbdfff3e40e103b2e91cf5",
+    "fries_score": 7.2308,
+    "methodology_version": "v3-hardening-2026",
+    "reports_copied": true,
+    "evidence_copied": true,
+    "exported": true
+  }
+]

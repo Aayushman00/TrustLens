@@ -1,0 +1,30 @@
+[
+  {
+    "file": "BunnyNoBugs__rubert-tiny2-russe-toxicity.json",
+    "evaluation_id": "9984a269-fd93-4a29-a3d4-63ca70bbb9ff",
+    "status": "FINALIZED",
+    "report_status": 200,
+    "version": 1,
+    "json_hash": "sha256:fd9eb4540c391e375ce5d4c7a1b9cf72d74aedf99ef704ace2b0d29880839108",
+    "pdf_hash": "sha256:0a7a2963975677462d3d7860d6400e171088796effaec281b1628c7b8c9baf83",
+    "fries_score": 6.1999,
+    "methodology_version": "v3-hardening-2026",
+    "reports_copied": true,
+    "evidence_copied": true,
+    "exported": true
+  },
+  {
+    "file": "JungleLee__bert-toxic-comment-classification.json",
+    "evaluation_id": "5f5c23d1-496e-4ccb-ae94-67ae9624ccd6",
+    "status": "FINALIZED",
+    "report_status": 200,
+    "version": 1,
+    "json_hash": "sha256:c64174cd2f1c04e486e391eab9455133f4974e8d1a7e2947d6596e5ffca775f2",
+    "pdf_hash": "sha256:182000cd49470f402094aaf3327591b2e3dfdf9d1c8f2418dda93a8a9267e906",
+    "fries_score": 7.1545,
+    "methodology_version": "v3-hardening-2026",
+    "reports_copied": true,
+    "evidence_copied": true,
+    "exported": true
+  }
+]

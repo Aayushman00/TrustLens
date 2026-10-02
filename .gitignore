@@ -173,6 +173,18 @@ Desktop.ini
 # Local experiment outputs (keep structured results in git only if intentional)
 experiment_runs/
 benchmark_outputs/
+# Flawed-model suite: track result JSON, cards, data manifests, model
+# manifests/configs; never the weights or training scratch (GBs).
+results/flawed_model_suite/models/**/*.safetensors
+results/flawed_model_suite/models/**/*.bin
+results/flawed_model_suite/models/**/tokenizer.json
+results/flawed_model_suite/models/**/_trainer_tmp/
+results/flawed_model_suite/data/*_train.jsonl
+# Exported TrustLens reports (JSON+PDF) and raw evidence per experiment run.
+!results/flawed_model_suite/*/artifacts/
+!results/flawed_model_suite/*/artifacts/*/evidence/
+!results/flawed_model_suite/*/artifacts/*/reports/
+*.log
 
 
 # -----------------------------------------------------------------------------

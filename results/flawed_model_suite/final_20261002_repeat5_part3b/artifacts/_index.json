@@ -1,0 +1,30 @@
+[
+  {
+    "file": "reference_toxicbert_2label__run1.json",
+    "evaluation_id": "29165681-3804-4daf-be71-65729fa78d20",
+    "status": "FINALIZED",
+    "report_status": 200,
+    "version": 1,
+    "json_hash": "sha256:4f6c8dfb29f01362c045baf3e67b063827ff1ee40e4a9bd79c63ed33885f7cc3",
+    "pdf_hash": "sha256:595cdfcb01bc6776ce034e4f67310d73c43887e6f7f1f682b3e0336cf41bf4b3",
+    "fries_score": 5.7697,
+    "methodology_version": "v3-hardening-2026",
+    "reports_copied": true,
+    "evidence_copied": true,
+    "exported": true
+  },
+  {
+    "file": "reference_toxicbert_2label__run2.json",
+    "evaluation_id": "edca9d1e-57d3-49c4-bbc9-e26ff72bfc4c",
+    "status": "FINALIZED",
+    "report_status": 200,
+    "version": 1,
+    "json_hash": "sha256:4e2fe82622893dfa6e123ad82c939b83c6fdb1fb9aeecf1a433e3e815fa2ff07",
+    "pdf_hash": "sha256:6f28ac39d68495230b5a4b808d67dad3b5df5719acdfd16050c4b9ca6caf7d9c",
+    "fries_score": 6.1719,
+    "methodology_version": "v3-hardening-2026",
+    "reports_copied": true,
+    "evidence_copied": true,
+    "exported": true
+  }
+]

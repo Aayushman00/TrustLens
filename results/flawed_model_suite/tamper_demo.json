@@ -1,0 +1,80 @@
+{
+  "variant": "variant1_fairness",
+  "trusted_sha256": "5918a851ff77706db4d490d704ccc6a6f53fc49ad16df052e035671ba68110f9",
+  "tampered_sha256": "74c230bb631efc7614b74b2c0c3639c068ae43b1024471d3c67a4cc530eee609",
+  "untouched": {
+    "integrity_extra": {
+      "trusted_reference": {
+        "algo": "sha256",
+        "value": "5918a851ff77706db4d490d704ccc6a6f53fc49ad16df052e035671ba68110f9"
+      },
+      "local_artifact_hash": {
+        "algo": "sha256",
+        "value": "5918a851ff77706db4d490d704ccc6a6f53fc49ad16df052e035671ba68110f9"
+      }
+    },
+    "risks_triggered": [
+      "I-INT-LICENSE-UNDISCLOSED"
+    ],
+    "identity": {
+      "revision": null,
+      "sha_like": false,
+      "hub_files": [
+        "model.safetensors"
+      ],
+      "files_listing_fingerprint": "sha256:9d75c1098fc54a1f7bd270f148884f599765d894639c9c4ee891396968c60df2",
+      "weight_hash": {
+        "algo": "sha256",
+        "value": "5918a851ff77706db4d490d704ccc6a6f53fc49ad16df052e035671ba68110f9"
+      },
+      "trusted_reference": {
+        "algo": "sha256",
+        "value": "5918a851ff77706db4d490d704ccc6a6f53fc49ad16df052e035671ba68110f9",
+        "source": "operator_supplied",
+        "retrieved_at": null,
+        "provenance": null
+      },
+      "hash_comparison": "match",
+      "live_files_fingerprint": null,
+      "files_listing_reverification": "not_performed"
+    }
+  },
+  "tampered": {
+    "integrity_extra": {
+      "trusted_reference": {
+        "algo": "sha256",
+        "value": "5918a851ff77706db4d490d704ccc6a6f53fc49ad16df052e035671ba68110f9"
+      },
+      "local_artifact_hash": {
+        "algo": "sha256",
+        "value": "74c230bb631efc7614b74b2c0c3639c068ae43b1024471d3c67a4cc530eee609"
+      }
+    },
+    "risks_triggered": [
+      "I-INT-LICENSE-UNDISCLOSED",
+      "I-INT-BYTES-DIVERGE"
+    ],
+    "identity": {
+      "revision": null,
+      "sha_like": false,
+      "hub_files": [
+        "model.safetensors"
+      ],
+      "files_listing_fingerprint": "sha256:9d75c1098fc54a1f7bd270f148884f599765d894639c9c4ee891396968c60df2",
+      "weight_hash": {
+        "algo": "sha256",
+        "value": "74c230bb631efc7614b74b2c0c3639c068ae43b1024471d3c67a4cc530eee609"
+      },
+      "trusted_reference": {
+        "algo": "sha256",
+        "value": "5918a851ff77706db4d490d704ccc6a6f53fc49ad16df052e035671ba68110f9",
+        "source": "operator_supplied",
+        "retrieved_at": null,
+        "provenance": null
+      },
+      "hash_comparison": "diverge",
+      "live_files_fingerprint": null,
+      "files_listing_reverification": "not_performed"
+    }
+  }
+}

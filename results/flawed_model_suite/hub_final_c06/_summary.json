@@ -1,0 +1,28 @@
+[
+  {
+    "repo": "textdetox/xlmr-base-toxicity-classifier",
+    "revision": "0fe4ba2cedce35b4f8997362a01f35bbde0306f5",
+    "status": "FINALIZED",
+    "fries_score": 6.6072,
+    "dimension_scores": {
+      "SAFETY": 7.2685,
+      "FAIRNESS": 8.0,
+      "INTEGRITY": 8.6535,
+      "ROBUSTNESS": 7.1138,
+      "EXPLAINABILITY": 2.0
+    }
+  },
+  {
+    "repo": "gravitee-io/bert-tiny-toxicity",
+    "revision": "8377eb9a344d74b9d12e656dc3f3632b74f33673",
+    "status": "FINALIZED",
+    "fries_score": 6.5634,
+    "dimension_scores": {
+      "SAFETY": 7.5595,
+      "FAIRNESS": 8.0,
+      "INTEGRITY": 8.6535,
+      "ROBUSTNESS": 6.6039,
+      "EXPLAINABILITY": 2.0
+    }
+  }
+]

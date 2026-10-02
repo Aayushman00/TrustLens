@@ -1,0 +1,21 @@
+[
+  {
+    "repo": "unitary/unbiased-toxic-roberta",
+    "revision": "36295dd80b422dc49f40052021430dae76241adc",
+    "status": "ERROR",
+    "error": "HTTPStatusError: Client error '422 Unprocessable Entity' for url 'http://localhost:8000/v1/evaluation-drafts/5d4b1ddc-46a4-4733-ae5a-4bc8fdfeea75/SAFETY/confirm'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/422"
+  },
+  {
+    "repo": "unitary/toxic-bert",
+    "revision": "4d6c22e74ba2fdd26bc4f7238f50766b045a0d94",
+    "status": "FINALIZED",
+    "fries_score": 7.1628,
+    "dimension_scores": {
+      "SAFETY": 6.6039,
+      "FAIRNESS": 8.0,
+      "INTEGRITY": 9.0,
+      "ROBUSTNESS": 8.6535,
+      "EXPLAINABILITY": 3.5569
+    }
+  }
+]

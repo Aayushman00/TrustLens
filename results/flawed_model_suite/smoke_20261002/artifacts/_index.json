@@ -1,0 +1,16 @@
+[
+  {
+    "file": "reference_toxicbert_2label__run1.json",
+    "evaluation_id": "4f3160f5-1bcb-4aee-8df7-41814eb98a1d",
+    "status": "FINALIZED",
+    "report_status": 200,
+    "version": 1,
+    "json_hash": "sha256:ddbc98bd8b6e9448083199083abd1bf6a199cf0ab0a8d68e6d94dd87c1a80b0f",
+    "pdf_hash": null,
+    "fries_score": 5.9384,
+    "methodology_version": "v3-hardening-2026",
+    "reports_copied": true,
+    "evidence_copied": true,
+    "exported": true
+  }
+]

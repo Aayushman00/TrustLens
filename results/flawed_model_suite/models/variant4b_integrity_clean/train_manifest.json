@@ -1,0 +1,9 @@
+{
+  "variant_key": "variant4b_integrity_clean",
+  "base_checkpoint": "bert-base-uncased",
+  "note": "No independent training run. Weights are a verbatim copy of variant3_explainability, which was trained on the clean primary slice with no label flip (variant3's flaw is card-only). Card is variant4_integrity's overclaiming card. Created 2026-10-02 so the INTEGRITY defect is the only controlled change; the original variant4_integrity reuses variant1's fairness-flawed weights and is therefore a FAIRNESS+INTEGRITY compound.",
+  "source_variant": "variant3_explainability",
+  "source_train_manifest": "../variant3_explainability/train_manifest.json",
+  "model_safetensors_sha256": "2e43e77a45f48f8d8956b62b26d08b00c4dea6a2361ed516cde253aa411d6b84",
+  "source_model_safetensors_sha256": "2e43e77a45f48f8d8956b62b26d08b00c4dea6a2361ed516cde253aa411d6b84"
+}

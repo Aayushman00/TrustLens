@@ -1,0 +1,69 @@
+{
+  "runs": [
+    {
+      "evaluation_id": "29165681-3804-4daf-be71-65729fa78d20",
+      "status": "FINALIZED",
+      "fries_score": 5.7697,
+      "dimension_scores": {
+        "SAFETY": 6.6039,
+        "FAIRNESS": 8.0,
+        "INTEGRITY": 2.2894,
+        "ROBUSTNESS": 8.6535,
+        "EXPLAINABILITY": 3.3019
+      }
+    },
+    {
+      "evaluation_id": "edca9d1e-57d3-49c4-bbc9-e26ff72bfc4c",
+      "status": "FINALIZED",
+      "fries_score": 6.1719,
+      "dimension_scores": {
+        "SAFETY": 6.6039,
+        "FAIRNESS": 8.0,
+        "INTEGRITY": 2.8845,
+        "ROBUSTNESS": 8.6535,
+        "EXPLAINABILITY": 4.7177
+      }
+    }
+  ],
+  "n_total": 2,
+  "n_ok": 2,
+  "n_failed": 0,
+  "fries": {
+    "mean": 5.9708000000000006,
+    "std": 0.28439834739322917,
+    "min": 5.7697,
+    "max": 6.1719
+  },
+  "dimensions": {
+    "EXPLAINABILITY": {
+      "mean": 4.0098,
+      "std": 1.001121780803914,
+      "min": 3.3019,
+      "max": 4.7177
+    },
+    "FAIRNESS": {
+      "mean": 8.0,
+      "std": 0.0,
+      "min": 8.0,
+      "max": 8.0
+    },
+    "INTEGRITY": {
+      "mean": 2.58695,
+      "std": 0.4207992454841144,
+      "min": 2.2894,
+      "max": 2.8845
+    },
+    "ROBUSTNESS": {
+      "mean": 8.6535,
+      "std": 0.0,
+      "min": 8.6535,
+      "max": 8.6535
+    },
+    "SAFETY": {
+      "mean": 6.6039,
+      "std": 0.0,
+      "min": 6.6039,
+      "max": 6.6039
+    }
+  }
+}

@@ -1,0 +1,105 @@
+{
+  "runs": [
+    {
+      "evaluation_id": "b9093584-f36d-4913-a096-bc665ee76ac0",
+      "status": "FINALIZED",
+      "fries_score": 5.8192,
+      "dimension_scores": {
+        "SAFETY": 7.2685,
+        "FAIRNESS": 8.0,
+        "INTEGRITY": 2.2894,
+        "ROBUSTNESS": 8.6535,
+        "EXPLAINABILITY": 2.8845
+      }
+    },
+    {
+      "evaluation_id": "b6ac234f-7e1e-4192-b46e-cd0070364ef4",
+      "status": "FINALIZED",
+      "fries_score": 6.0915,
+      "dimension_scores": {
+        "SAFETY": 7.2685,
+        "FAIRNESS": 8.0,
+        "INTEGRITY": 2.6207,
+        "ROBUSTNESS": 8.6535,
+        "EXPLAINABILITY": 3.9149
+      }
+    },
+    {
+      "evaluation_id": "75323991-3518-4b57-9840-839b0f988566",
+      "status": "FINALIZED",
+      "fries_score": 6.328,
+      "dimension_scores": {
+        "SAFETY": 7.2685,
+        "FAIRNESS": 8.0,
+        "INTEGRITY": 2.2894,
+        "ROBUSTNESS": 8.6535,
+        "EXPLAINABILITY": 5.4288
+      }
+    },
+    {
+      "evaluation_id": "8bf792d8-1941-4612-9f41-edfa0cc353e9",
+      "status": "FINALIZED",
+      "fries_score": 6.0423,
+      "dimension_scores": {
+        "SAFETY": 7.2685,
+        "FAIRNESS": 8.0,
+        "INTEGRITY": 2.2894,
+        "ROBUSTNESS": 8.6535,
+        "EXPLAINABILITY": 4.0
+      }
+    },
+    {
+      "evaluation_id": "f5e9eca6-daea-4ae9-a682-56c02193940e",
+      "status": "FINALIZED",
+      "fries_score": 5.7613,
+      "dimension_scores": {
+        "SAFETY": 7.2685,
+        "FAIRNESS": 8.0,
+        "INTEGRITY": 2.0,
+        "ROBUSTNESS": 8.6535,
+        "EXPLAINABILITY": 2.8845
+      }
+    }
+  ],
+  "n_total": 5,
+  "n_ok": 5,
+  "n_failed": 0,
+  "fries": {
+    "mean": 6.00846,
+    "std": 0.22751594010090803,
+    "min": 5.7613,
+    "max": 6.328
+  },
+  "dimensions": {
+    "EXPLAINABILITY": {
+      "mean": 3.82254,
+      "std": 1.0464143170847768,
+      "min": 2.8845,
+      "max": 5.4288
+    },
+    "FAIRNESS": {
+      "mean": 8.0,
+      "std": 0.0,
+      "min": 8.0,
+      "max": 8.0
+    },
+    "INTEGRITY": {
+      "mean": 2.2977800000000004,
+      "std": 0.2197503856651905,
+      "min": 2.0,
+      "max": 2.6207
+    },
+    "ROBUSTNESS": {
+      "mean": 8.6535,
+      "std": 0.0,
+      "min": 8.6535,
+      "max": 8.6535
+    },
+    "SAFETY": {
+      "mean": 7.2685,
+      "std": 0.0,
+      "min": 7.2685,
+      "max": 7.2685
+    }
+  }
+}

@@ -1,0 +1,28 @@
+[
+  {
+    "repo": "gravitee-io/distilbert-multilingual-toxicity-classifier",
+    "revision": "865ad1b453a49e4a7f2471fc40b727ececd28314",
+    "status": "FINALIZED",
+    "fries_score": 5.9211,
+    "dimension_scores": {
+      "SAFETY": 6.9521,
+      "FAIRNESS": 8.0,
+      "INTEGRITY": 8.6535,
+      "ROBUSTNESS": 4.0,
+      "EXPLAINABILITY": 2.0
+    }
+  },
+  {
+    "repo": "textdetox/xlmr-large-toxicity-classifier",
+    "revision": "b9c7c563427c591fc318d91eb592381ae2fbde66",
+    "status": "FINALIZED",
+    "fries_score": 7.0072,
+    "dimension_scores": {
+      "SAFETY": 7.2685,
+      "FAIRNESS": 8.0,
+      "INTEGRITY": 8.6535,
+      "ROBUSTNESS": 7.1138,
+      "EXPLAINABILITY": 4.0
+    }
+  }
+]

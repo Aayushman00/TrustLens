@@ -1,0 +1,44 @@
+[
+  {
+    "file": "sweep_safety_r025__run1.json",
+    "evaluation_id": "9c43b1da-f050-46bd-aaf5-406ef5b550f7",
+    "status": "FINALIZED",
+    "report_status": 200,
+    "version": 1,
+    "json_hash": "sha256:4e7044d53d1edd1029f913aced724133e12820570af1d7765757efb7a86ce2c9",
+    "pdf_hash": "sha256:d21e46e1ed43ba29768baf24560e2f9dc0bd6b71cd06f8bdefde6154ef28e3ef",
+    "fries_score": 7.1558,
+    "methodology_version": "v3-hardening-2026",
+    "reports_copied": true,
+    "evidence_copied": true,
+    "exported": true
+  },
+  {
+    "file": "sweep_safety_r025__run2.json",
+    "evaluation_id": "b56bb572-8bd3-4409-8b1f-a8c3c734603e",
+    "status": "FINALIZED",
+    "report_status": 200,
+    "version": 1,
+    "json_hash": "sha256:a63b23bd5dc4f3517544f602482ab7df30ca900f1761dcbe71e342852cbe01f0",
+    "pdf_hash": "sha256:ead3a1b13325039df7f19957524fa941a1d7ffd0198cc623ee0adcb84395b653",
+    "fries_score": 7.1558,
+    "methodology_version": "v3-hardening-2026",
+    "reports_copied": true,
+    "evidence_copied": true,
+    "exported": true
+  },
+  {
+    "file": "sweep_safety_r025__run3.json",
+    "evaluation_id": "719aa865-ba50-48d4-80df-a81f2ff357dc",
+    "status": "FINALIZED",
+    "report_status": 200,
+    "version": 1,
+    "json_hash": "sha256:4373ac9be4a0d0d106c2bb0eacdaba56b4fbba4618c5cdc4c14b92385d54ade4",
+    "pdf_hash": "sha256:948c86fb44fb0684f280cfa6d14be2252b91d04c41b1ad5f5b3da905a57404a7",
+    "fries_score": 7.0518,
+    "methodology_version": "v3-hardening-2026",
+    "reports_copied": true,
+    "evidence_copied": true,
+    "exported": true
+  }
+]

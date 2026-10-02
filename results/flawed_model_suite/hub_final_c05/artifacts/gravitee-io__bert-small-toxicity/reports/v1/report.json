@@ -1,0 +1,1204 @@
+{
+  "attack_flags": [],
+  "confidence_summary": {
+    "by_dimension": {
+      "EXPLAINABILITY": 1.0,
+      "FAIRNESS": 0.983,
+      "INTEGRITY": 1.0,
+      "ROBUSTNESS": 1.0,
+      "SAFETY": 1.0
+    },
+    "method": "geometric_mean_v1",
+    "note": "Evidence strength only — not correctness or O/S/D",
+    "overall": 0.9966,
+    "proposed_calibration": true
+  },
+  "documentation_sources": [
+    {
+      "content_length": 6516,
+      "created_at": "2026-10-02T16:14:50.869741Z",
+      "description": null,
+      "documentation_content_hash": "sha256:ee18ccc0023866e09b301a37ac2c20849256acdca07c44d9c2661effeb761efd",
+      "documentation_revision": "0d4150b3c26fe646dbc591b548b2ac63fdef0b88",
+      "documentation_type": "model_card",
+      "id": 92,
+      "model_id": 506,
+      "retrieval_error": null,
+      "retrieval_status": "ok",
+      "source_kind": "huggingface_hub",
+      "source_model_ref": "gravitee-io/bert-small-toxicity",
+      "source_model_revision": "0d4150b3c26fe646dbc591b548b2ac63fdef0b88",
+      "title": null,
+      "url": "https://huggingface.co/gravitee-io/bert-small-toxicity/blob/0d4150b3c26fe646dbc591b548b2ac63fdef0b88/README.md"
+    }
+  ],
+  "evaluation": {
+    "created_at": "2026-10-02T16:14:52.183492Z",
+    "evaluation_mode": "AI_AUTONOMOUS",
+    "finalized_context": {
+      "config": null,
+      "dataset": null,
+      "model_revision": "0d4150b3c26fe646dbc591b548b2ac63fdef0b88",
+      "task": null,
+      "trustlens_version": null
+    },
+    "id": "f619ffbe-d4fc-4a10-914c-845c8f0d4ca4",
+    "model_id": 506,
+    "model_ref": "gravitee-io/bert-small-toxicity",
+    "status": "FINALIZED"
+  },
+  "evidence_traceability": [
+    {
+      "aspect_scoring": null,
+      "confidence": 0.983,
+      "coverage_ratio": null,
+      "dimension": "FAIRNESS",
+      "evidence_refs": [
+        {
+          "content_type": "application/json",
+          "created_at": "2026-10-02T16:15:00.796689Z",
+          "evidence_id": "f44f745f-8999-4f97-8aa0-6551344b1855",
+          "hash": "sha256:1ea611827a8f01003f05feeafa8fe0cb35c3315c3e5898306cac3024ae97d26b",
+          "probe_name": "fairness",
+          "uri": "s3://trustlens/evidence/f619ffbe-d4fc-4a10-914c-845c8f0d4ca4/f44f745f-8999-4f97-8aa0-6551344b1855.json"
+        }
+      ],
+      "fries_dimension_score": 8.6535,
+      "gates": null,
+      "human_osd": {
+        "D": 8,
+        "D_source": null,
+        "O": 9,
+        "O_source": null,
+        "S": 9,
+        "S_source": null
+      },
+      "limitations": null,
+      "risks_triggered": null,
+      "scored_risk_id": null,
+      "status": "EVALUATED",
+      "status_reason": null
+    },
+    {
+      "aspect_scoring": "scored_risk",
+      "confidence": 1.0,
+      "coverage_ratio": null,
+      "dimension": "ROBUSTNESS",
+      "evidence_refs": [
+        {
+          "content_type": "application/json",
+          "created_at": "2026-10-02T16:15:09.887493Z",
+          "evidence_id": "70f962d0-747b-42f9-a25f-bb2a5598051b",
+          "hash": "sha256:9651a0ca6fc466ec26df60c6f70dd093d50a978af07d4f16f61ba91059834ddc",
+          "probe_name": "robustness",
+          "uri": "s3://trustlens/evidence/f619ffbe-d4fc-4a10-914c-845c8f0d4ca4/70f962d0-747b-42f9-a25f-bb2a5598051b.json"
+        }
+      ],
+      "fries_dimension_score": 5.2415,
+      "gates": [],
+      "human_osd": {
+        "D": 8,
+        "D_source": null,
+        "O": 9,
+        "O_source": null,
+        "S": 2,
+        "S_source": null
+      },
+      "limitations": [],
+      "risks_triggered": [
+        "R-ROB-PERT"
+      ],
+      "scored_risk_id": "R-ROB-PERT",
+      "status": "EVALUATED",
+      "status_reason": "R-ROB-PERT triggered: drop=0.079333 > 0.05, ci_lower=0.065333 > 0.05"
+    },
+    {
+      "aspect_scoring": "no_material_risk",
+      "confidence": 1.0,
+      "coverage_ratio": null,
+      "dimension": "INTEGRITY",
+      "evidence_refs": [
+        {
+          "content_type": "application/json",
+          "created_at": "2026-10-02T16:15:11.256429Z",
+          "evidence_id": "58c0887d-8aa1-4076-812c-6f0d13a284c1",
+          "hash": "sha256:b1ab36b1e3d4cd3c2420e1e792548b514eac956ffdc547572666bda10f944f56",
+          "probe_name": "integrity",
+          "uri": "s3://trustlens/evidence/f619ffbe-d4fc-4a10-914c-845c8f0d4ca4/58c0887d-8aa1-4076-812c-6f0d13a284c1.json"
+        }
+      ],
+      "fries_dimension_score": 8.6535,
+      "gates": [],
+      "human_osd": {
+        "D": 8,
+        "D_source": null,
+        "O": 9,
+        "O_source": null,
+        "S": 9,
+        "S_source": null
+      },
+      "limitations": [
+        "Integrity risks measure disclosure and identity recording, not tampering or legal compliance.",
+        "Named Integrity risks are not additive FRIES occurrences and must not be summed into O.",
+        "Operator-supplied trusted hashes are not a PKI; hash match does not prove publisher authenticity; mismatch does not prove tampering.",
+        "Hub file listing fingerprint identifies sorted filenames, not model weight bytes.",
+        "SHA-like revision format is an uncalibrated heuristic, not cryptographic proof of immutability.",
+        "Model card text may reflect the Hub default branch, not the pinned revision.",
+        "Post-import file-listing re-verification detects a changed Hub listing, not weight-byte tampering — it never downloads or hashes weight files."
+      ],
+      "risks_triggered": [],
+      "scored_risk_id": null,
+      "status": "EVALUATED",
+      "status_reason": null
+    },
+    {
+      "aspect_scoring": "risk_detected",
+      "confidence": 1.0,
+      "coverage_ratio": 0.2,
+      "dimension": "EXPLAINABILITY",
+      "evidence_refs": [
+        {
+          "content_type": "application/json",
+          "created_at": "2026-10-02T16:15:11.260907Z",
+          "evidence_id": "d4859a6f-9258-481e-a346-f1bba0b0f323",
+          "hash": "sha256:c156ff485505f7d129c9427e599cdac40c9c4ca8f5f6d8b2b0792fe8d74d7439",
+          "probe_name": "explainability",
+          "uri": "s3://trustlens/evidence/f619ffbe-d4fc-4a10-914c-845c8f0d4ca4/d4859a6f-9258-481e-a346-f1bba0b0f323.json"
+        }
+      ],
+      "fries_dimension_score": 2.0,
+      "gates": [],
+      "human_osd": {
+        "D": 2,
+        "D_source": null,
+        "O": 2,
+        "O_source": null,
+        "S": 2,
+        "S_source": null
+      },
+      "limitations": [
+        "Explainability v1 measures model-card documentation completeness and simple consistency flags, not runtime explanations or attribution quality.",
+        "Named E-DOC-* values are evidence-layer detections only; scored_risk_id remains null and no FRIES occurrence is assigned.",
+        "aspect_scoring=risk_detected means a documentation risk was detected — not a FRIES-scored risk.",
+        "Alias heading matching and keyword contradiction checks are heuristic and uncalibrated.",
+        "coverage_ratio counts present required sections; it is not an explainability quality score."
+      ],
+      "risks_triggered": [
+        "E-DOC-INCOMPLETE"
+      ],
+      "scored_risk_id": null,
+      "status": "EVALUATED",
+      "status_reason": null
+    },
+    {
+      "aspect_scoring": "risk_detected",
+      "confidence": 1.0,
+      "coverage_ratio": 0.25,
+      "dimension": "SAFETY",
+      "evidence_refs": [
+        {
+          "content_type": "application/json",
+          "created_at": "2026-10-02T16:15:15.408955Z",
+          "evidence_id": "18b52b89-9b12-4454-9f82-cf0008269c27",
+          "hash": "sha256:297f5c998d48d9e97fd3ee670d1a87c5bb1db46e4b7a54f8955f66fdfdffae1f",
+          "probe_name": "safety",
+          "uri": "s3://trustlens/evidence/f619ffbe-d4fc-4a10-914c-845c8f0d4ca4/18b52b89-9b12-4454-9f82-cf0008269c27.json"
+        }
+      ],
+      "fries_dimension_score": 6.6039,
+      "gates": [],
+      "human_osd": {
+        "D": 8,
+        "D_source": null,
+        "O": 6,
+        "O_source": null,
+        "S": 6,
+        "S_source": null
+      },
+      "limitations": [
+        "Safety v1 measures model-card safety-disclosure completeness and lexical phrase matches, not runtime refusal or harm behavior.",
+        "Named S-GOV-DISCLOSURE-GAP is an evidence-layer detection only; scored_risk_id remains null and no FRIES occurrence is assigned.",
+        "aspect_scoring=risk_detected means a governance disclosure gap was detected — not a FRIES-scored risk.",
+        "high_impact_claims are documentation metadata flags; they are never promoted to risks_triggered and do not map to O/S/D or FRIES.",
+        "Alias heading matching and phrase substring checks are heuristic and uncalibrated.",
+        "coverage_ratio counts present required disclosure sections; it is not a safety quality score."
+      ],
+      "risks_triggered": [
+        "S-GOV-DISCLOSURE-GAP"
+      ],
+      "scored_risk_id": null,
+      "status": "EVALUATED",
+      "status_reason": null
+    }
+  ],
+  "execution_environment": {
+    "backend": "local_hf",
+    "batch_size": 8,
+    "cuda_available": true,
+    "device": "cuda",
+    "device_name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+    "device_reason": "CUDA GPU detected and selected",
+    "dtype": "torch.float32",
+    "execution_device": "cuda",
+    "fallback_reason": null,
+    "gpu_available": true,
+    "gpu_name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+    "inference_backend": "local_hf",
+    "model_ref": "gravitee-io/bert-small-toxicity",
+    "num_labels": 2,
+    "revision": "0d4150b3c26fe646dbc591b548b2ac63fdef0b88",
+    "task_type": "binary_classification"
+  },
+  "executive_summary": {
+    "bullets": [
+      "Evaluation mode: AI-AUTONOMOUS (workflow — not LLM interpretation)",
+      "Original FRIES score: 6.2305/10 (not FRIES2)",
+      "Human reviewed: no",
+      "Probe flags: evaluation_contract_v2, missing_ethical_considerations, missing_evaluation, missing_intended_use, missing_limitations, missing_misuse_risks, missing_privacy, missing_security_warnings, …",
+      "O/S/D are LLM-assisted proposals for INTEGRITY/EXPLAINABILITY/SAFETY (heuristic for FAIRNESS/ROBUSTNESS) — not ground truth."
+    ],
+    "headline": "TrustLens FRIES report for gravitee-io/bert-small-toxicity: 6.2305/10 (AI-AUTONOMOUS, not human-reviewed)"
+  },
+  "generated_at": "2026-10-02T17:54:28.788818Z",
+  "human_review": null,
+  "limitations": [
+    "Alias heading matching and keyword contradiction checks are heuristic and uncalibrated.",
+    "Alias heading matching and phrase substring checks are heuristic and uncalibrated.",
+    "Explainability v1 measures model-card documentation completeness and simple consistency flags, not runtime explanations or attribution quality.",
+    "Hub file listing fingerprint identifies sorted filenames, not model weight bytes.",
+    "Integrity risks measure disclosure and identity recording, not tampering or legal compliance.",
+    "Model card text may reflect the Hub default branch, not the pinned revision.",
+    "Named E-DOC-* values are evidence-layer detections only; scored_risk_id remains null and no FRIES occurrence is assigned.",
+    "Named Integrity risks are not additive FRIES occurrences and must not be summed into O.",
+    "Named S-GOV-DISCLOSURE-GAP is an evidence-layer detection only; scored_risk_id remains null and no FRIES occurrence is assigned.",
+    "Operator-supplied trusted hashes are not a PKI; hash match does not prove publisher authenticity; mismatch does not prove tampering.",
+    "Post-import file-listing re-verification detects a changed Hub listing, not weight-byte tampering — it never downloads or hashes weight files.",
+    "SHA-like revision format is an uncalibrated heuristic, not cryptographic proof of immutability.",
+    "Safety v1 measures model-card safety-disclosure completeness and lexical phrase matches, not runtime refusal or harm behavior.",
+    "aspect_scoring=risk_detected means a documentation risk was detected — not a FRIES-scored risk.",
+    "aspect_scoring=risk_detected means a governance disclosure gap was detected — not a FRIES-scored risk.",
+    "coverage_ratio counts present required disclosure sections; it is not a safety quality score.",
+    "coverage_ratio counts present required sections; it is not an explainability quality score.",
+    "high_impact_claims are documentation metadata flags; they are never promoted to risks_triggered and do not map to O/S/D or FRIES."
+  ],
+  "methodology_version": "v3-hardening-2026",
+  "mode_disclosure": {
+    "assessment_engine": "llm_v1",
+    "disclaimer": "LLM-assisted O/S/D: FAIRNESS/ROBUSTNESS come from the heuristic mapping; INTEGRITY/EXPLAINABILITY/SAFETY were proposed by an LLM (provider and model recorded per aspect) or by the heuristic when every LLM provider failed. Not human-reviewed, not ground truth.",
+    "evaluation_mode": "AI_AUTONOMOUS",
+    "fries_status": "scored",
+    "human_reviewed": false,
+    "methodology_status": "LEGACY_HEURISTIC_OSD_V1",
+    "scoring_withheld": false
+  },
+  "osd_agent": {
+    "ai_confidence": 0.9966,
+    "ai_suggestion": {
+      "aspects": [
+        {
+          "D": 8,
+          "O": 9,
+          "S": 9,
+          "aspect": "FAIRNESS",
+          "confidence": 0.983,
+          "rationale": "[PROPOSED / REQUIRES VALIDATION] FAIRNESS: observed disparity gap=0.123. Heuristic metric-to-O/S/D mapping — not validated science.",
+          "status": "EVALUATED"
+        },
+        {
+          "D": 8,
+          "O": 9,
+          "S": 2,
+          "aspect": "ROBUSTNESS",
+          "confidence": 1.0,
+          "rationale": "[PROPOSED / REQUIRES VALIDATION] ROBUSTNESS: clean_accuracy=0.808, robust_accuracy=0.729, accuracy_drop=0.079. Heuristic metric-to-O/S/D mapping — not validated science.",
+          "status": "EVALUATED"
+        },
+        {
+          "D": 8,
+          "D_source": "heuristic_fallback",
+          "O": 9,
+          "O_source": "heuristic_fallback",
+          "S": 9,
+          "S_source": "heuristic_fallback",
+          "aspect": "INTEGRITY",
+          "confidence": 1.0,
+          "osd_metadata": {
+            "llm_fallback_reason": "groq#1: HTTPStatusError: Client error '429 Too Many Requests' for url 'https://api.groq.com/openai/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429 | groq#2: HTTPStatusError: Client error '429 Too Many Requests' for url 'https://api.groq.com/openai/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429 | groq#3: HTTPStatusError: Client error '429 Too Many Requests' for url 'https://api.groq.com/openai/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429",
+            "llm_prompt_sha256": "44d6fd18e2b623f99be2abca1dd7223694a08413d037c25944eba3fc4ccd1c0f"
+          },
+          "rationale": "[PROPOSED / REQUIRES VALIDATION] INTEGRITY: metadata check pass rate=1.00. Heuristic metric-to-O/S/D mapping — not validated science.",
+          "status": "EVALUATED"
+        },
+        {
+          "D": 2,
+          "D_source": "heuristic_fallback",
+          "O": 2,
+          "O_source": "heuristic_fallback",
+          "S": 2,
+          "S_source": "heuristic_fallback",
+          "aspect": "EXPLAINABILITY",
+          "confidence": 1.0,
+          "osd_metadata": {
+            "llm_fallback_reason": "groq#1: HTTPStatusError: Client error '429 Too Many Requests' for url 'https://api.groq.com/openai/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429 | groq#2: HTTPStatusError: Client error '429 Too Many Requests' for url 'https://api.groq.com/openai/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429 | groq#3: HTTPStatusError: Client error '429 Too Many Requests' for url 'https://api.groq.com/openai/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429",
+            "llm_prompt_sha256": "44d6fd18e2b623f99be2abca1dd7223694a08413d037c25944eba3fc4ccd1c0f"
+          },
+          "rationale": "[PROPOSED / REQUIRES VALIDATION] EXPLAINABILITY: card coverage_ratio=0.20. Heuristic metric-to-O/S/D mapping — not validated science.",
+          "status": "EVALUATED"
+        },
+        {
+          "D": 8,
+          "D_source": "heuristic_fallback",
+          "O": 6,
+          "O_source": "heuristic_fallback",
+          "S": 6,
+          "S_source": "heuristic_fallback",
+          "aspect": "SAFETY",
+          "confidence": 1.0,
+          "osd_metadata": {
+            "llm_fallback_reason": "groq#1: HTTPStatusError: Client error '429 Too Many Requests' for url 'https://api.groq.com/openai/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429 | groq#2: HTTPStatusError: Client error '429 Too Many Requests' for url 'https://api.groq.com/openai/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429 | groq#3: HTTPStatusError: Client error '429 Too Many Requests' for url 'https://api.groq.com/openai/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429",
+            "llm_prompt_sha256": "44d6fd18e2b623f99be2abca1dd7223694a08413d037c25944eba3fc4ccd1c0f"
+          },
+          "rationale": "[PROPOSED / REQUIRES VALIDATION] SAFETY: severe_fnr=0.383, fnr_ratio=0.79. Heuristic metric-to-O/S/D mapping — not validated science.",
+          "status": "EVALUATED"
+        }
+      ],
+      "assessment_engine": "llm_v1",
+      "complete_aspect_count": 5,
+      "methodology_status": "LEGACY_HEURISTIC_OSD_V1",
+      "model_ref": "gravitee-io/bert-small-toxicity",
+      "note": "LLM-assisted O/S/D suggestion — INTEGRITY/EXPLAINABILITY/SAFETY proposed by an LLM (heuristic fallback when all providers fail), FAIRNESS/ROBUSTNESS by the heuristic; proposed, not ground truth; requires human validation.",
+      "overall_confidence": 0.9966,
+      "schema_version": "osd-agent-v1",
+      "scoring_complete": true,
+      "scoring_withheld": false
+    },
+    "methodology_status": "LEGACY_HEURISTIC_OSD_V1",
+    "rationale": "LEGACY HEURISTIC — PROPOSED / REQUIRES VALIDATION — heuristic O/S/D suggestions, not ground truth.\n[PROPOSED / REQUIRES VALIDATION] FAIRNESS: observed disparity gap=0.123. Heuristic metric-to-O/S/D mapping — not validated science.\n[PROPOSED / REQUIRES VALIDATION] ROBUSTNESS: clean_accuracy=0.808, robust_accuracy=0.729, accuracy_drop=0.079. Heuristic metric-to-O/S/D mapping — not validated science.\n[PROPOSED / REQUIRES VALIDATION] INTEGRITY: metadata check pass rate=1.00. Heuristic metric-to-O/S/D mapping — not validated science.\n[PROPOSED / REQUIRES VALIDATION] EXPLAINABILITY: card coverage_ratio=0.20. Heuristic metric-to-O/S/D mapping — not validated science.\n[PROPOSED / REQUIRES VALIDATION] SAFETY: severe_fnr=0.383, fnr_ratio=0.79. Heuristic metric-to-O/S/D mapping — not validated science."
+  },
+  "probes": [
+    {
+      "confidence": 0.983,
+      "dimension": "FAIRNESS",
+      "evidence_refs": [
+        {
+          "content_type": "application/json",
+          "created_at": "2026-10-02T16:15:00.796689Z",
+          "evidence_id": "f44f745f-8999-4f97-8aa0-6551344b1855",
+          "hash": "sha256:1ea611827a8f01003f05feeafa8fe0cb35c3315c3e5898306cac3024ae97d26b",
+          "probe_name": "fairness",
+          "uri": "s3://trustlens/evidence/f619ffbe-d4fc-4a10-914c-845c8f0d4ca4/f44f745f-8999-4f97-8aa0-6551344b1855.json"
+        }
+      ],
+      "flags": [
+        "evaluation_contract_v2",
+        "user_defined_local_dataset"
+      ],
+      "metric_values": {
+        "confidence_factors": {
+          "combined": 0.983,
+          "data_quality": 1.0,
+          "evidence_completeness": 0.95,
+          "probe_reliability": 1.0
+        },
+        "dataset_content_id": "c5d8778e-1eba-4a8c-a55c-82487c90a1b2",
+        "dataset_format": "csv",
+        "dataset_key": null,
+        "dataset_revision": null,
+        "dataset_row_count": 3000,
+        "demographic_parity_difference": 0.290117,
+        "dp_ci": {
+          "B": 1000,
+          "ci_lower": 0.248374,
+          "ci_upper": 0.335559,
+          "method": "bootstrap_percentile",
+          "point": 0.290117
+        },
+        "eo_ci": {
+          "B": 1000,
+          "ci_lower": 0.088738,
+          "ci_upper": 0.201775,
+          "method": "bootstrap_percentile",
+          "point": 0.122649
+        },
+        "equalized_odds_difference": 0.122649,
+        "evaluation_class": "user_dataset_v2",
+        "excess_dpd": 0.0,
+        "excluded_groups": [],
+        "excluded_rows": {
+          "missing_group": 0,
+          "missing_target": 0,
+          "missing_text": 0,
+          "unmapped_label": 0
+        },
+        "f1_ci": {
+          "B": 1000,
+          "ci_lower": 0.209877,
+          "ci_upper": 0.341825,
+          "method": "bootstrap_percentile",
+          "point": 0.272242
+        },
+        "fairness_mode": "user_defined_local",
+        "flags": [
+          "evaluation_contract_v2",
+          "user_defined_local_dataset"
+        ],
+        "group_column": "identity_ref",
+        "groups": {
+          "0": {
+            "f1": 0.388535,
+            "fpr": 0.10812,
+            "n": 2461,
+            "positive_rate": 0.145876,
+            "tpr": 0.453532
+          },
+          "1": {
+            "f1": 0.660777,
+            "fpr": 0.230769,
+            "n": 539,
+            "positive_rate": 0.435993,
+            "tpr": 0.564955
+          }
+        },
+        "inference": {
+          "backend": "local_hf",
+          "batch_size": 8,
+          "cuda_available": true,
+          "device": "cuda",
+          "device_name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "device_reason": "CUDA GPU detected and selected",
+          "dtype": "torch.float32",
+          "execution_device": "cuda",
+          "fallback_reason": null,
+          "gpu_available": true,
+          "gpu_name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "inference_backend": "local_hf",
+          "model_ref": "gravitee-io/bert-small-toxicity",
+          "num_labels": 2,
+          "revision": "0d4150b3c26fe646dbc591b548b2ac63fdef0b88",
+          "task_type": "binary_classification"
+        },
+        "inference_executed": true,
+        "label_encoding": {
+          "0": 0,
+          "1": 1
+        },
+        "label_mapping": [
+          {
+            "dataset_value": "0",
+            "model_label_index": 0
+          },
+          {
+            "dataset_value": "1",
+            "model_label_index": 1
+          }
+        ],
+        "label_rate_gap": 0.504795,
+        "min_group_n": 30,
+        "min_group_n_observed": 539,
+        "missing_rows": {
+          "missing_count": 0,
+          "missing_reasons": {}
+        },
+        "model_ref": "gravitee-io/bert-small-toxicity",
+        "model_revision": "0d4150b3c26fe646dbc591b548b2ac63fdef0b88",
+        "n_evaluated": 3000,
+        "needs_human_review": true,
+        "note": "Metrics are objective evidence only — not a normative fair/unfair judgment, not O/S/D, and not product FRIES",
+        "observed_groups": [
+          {
+            "count": 2461,
+            "value": "0"
+          },
+          {
+            "count": 539,
+            "value": "1"
+          }
+        ],
+        "positive_label_index": 1,
+        "predictor": "inference_backend",
+        "probe_status": "EVALUATED",
+        "probe_status_reason": null,
+        "proposed_mapping": false,
+        "seed": 42,
+        "sensitive_attribute": "identity_ref",
+        "subgroup_f1_spread": 0.272242,
+        "target_column": "label",
+        "text_column": "text"
+      }
+    },
+    {
+      "confidence": 1.0,
+      "dimension": "ROBUSTNESS",
+      "evidence_refs": [
+        {
+          "content_type": "application/json",
+          "created_at": "2026-10-02T16:15:09.887493Z",
+          "evidence_id": "70f962d0-747b-42f9-a25f-bb2a5598051b",
+          "hash": "sha256:9651a0ca6fc466ec26df60c6f70dd093d50a978af07d4f16f61ba91059834ddc",
+          "probe_name": "robustness",
+          "uri": "s3://trustlens/evidence/f619ffbe-d4fc-4a10-914c-845c8f0d4ca4/70f962d0-747b-42f9-a25f-bb2a5598051b.json"
+        }
+      ],
+      "flags": [
+        "evaluation_contract_v2",
+        "user_defined_local_dataset"
+      ],
+      "metric_values": {
+        "accuracy_drop": 0.079333,
+        "aspect_scoring": "scored_risk",
+        "attack": "char_swap",
+        "attack_success_rate": 0.1153,
+        "clean_accuracy": 0.808,
+        "confidence_factors": {
+          "combined": 1.0,
+          "data_quality": 1.0,
+          "evidence_completeness": 1.0,
+          "probe_reliability": 1.0
+        },
+        "dataset": {
+          "evaluation_domain": null,
+          "logical_key": null,
+          "resolution_source": "user_dataset_v2"
+        },
+        "dataset_content_id": "c5d8778e-1eba-4a8c-a55c-82487c90a1b2",
+        "dataset_format": "csv",
+        "dataset_key": null,
+        "dataset_revision": null,
+        "degradation_ratio": 0.9018,
+        "drop_ci_lower": 0.065333,
+        "drop_ci_upper": 0.092,
+        "epsilon": 0.03,
+        "evaluation_class": "user_dataset_v2",
+        "excluded_rows": {
+          "missing_target": 0,
+          "missing_text": 0,
+          "unmapped_label": 0
+        },
+        "flags": [
+          "evaluation_contract_v2",
+          "user_defined_local_dataset"
+        ],
+        "inference": {
+          "backend": "local_hf",
+          "cuda_available": true,
+          "device": "cuda",
+          "device_name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "device_reason": "CUDA GPU detected and selected",
+          "execution_device": "cuda",
+          "fallback_reason": null,
+          "gpu_available": true,
+          "gpu_name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "inference_backend": "local_hf"
+        },
+        "inference_executed": true,
+        "label_compat_fraction": 1.0,
+        "label_encoding": {
+          "0": 0,
+          "1": 1
+        },
+        "label_mapping": [
+          {
+            "dataset_value": "0",
+            "model_label_index": 0
+          },
+          {
+            "dataset_value": "1",
+            "model_label_index": 1
+          }
+        ],
+        "limitations": [],
+        "max_changes": 3,
+        "methodology_version": "tl-methodology-v1.0",
+        "model_ref": "gravitee-io/bert-small-toxicity",
+        "model_revision": "0d4150b3c26fe646dbc591b548b2ac63fdef0b88",
+        "n_evaluated": 3000,
+        "n_label_compatible": 3000,
+        "n_perturb_failed": 0,
+        "n_requested": 3000,
+        "n_samples": 3000,
+        "n_successfully_perturbed": 3000,
+        "norm": "discrete",
+        "note": "Layer A evidence only — R-ROB-PERT detection does not assign O/S/D",
+        "perturbation_coverage": 1.0,
+        "probe_status": "EVALUATED",
+        "probe_status_reason": "R-ROB-PERT triggered: drop=0.079333 > 0.05, ci_lower=0.065333 > 0.05",
+        "proposed_mapping": false,
+        "relative_degradation": 0.9018,
+        "reliability": {
+          "failed_gates": [],
+          "gates_passed": true
+        },
+        "risks_triggered": [
+          "R-ROB-PERT"
+        ],
+        "robust_accuracy": 0.7287,
+        "scored_risk_id": "R-ROB-PERT",
+        "seed": 42,
+        "status": "EVALUATED",
+        "target_column": "label",
+        "task_type": null,
+        "text_column": "text",
+        "uncertainty": {
+          "accuracy_drop": {
+            "B": 1000,
+            "ci_lower": 0.065333,
+            "ci_upper": 0.092,
+            "method": "bootstrap_percentile",
+            "point": 0.079333
+          },
+          "clean_accuracy": {
+            "ci_lower": 0.793515,
+            "ci_upper": 0.821697,
+            "method": "wilson_score",
+            "point": 0.808
+          },
+          "robust_accuracy": {
+            "ci_lower": 0.71247,
+            "ci_upper": 0.744278,
+            "method": "wilson_score",
+            "point": 0.728667
+          }
+        }
+      }
+    },
+    {
+      "confidence": 1.0,
+      "dimension": "INTEGRITY",
+      "evidence_refs": [
+        {
+          "content_type": "application/json",
+          "created_at": "2026-10-02T16:15:11.256429Z",
+          "evidence_id": "58c0887d-8aa1-4076-812c-6f0d13a284c1",
+          "hash": "sha256:b1ab36b1e3d4cd3c2420e1e792548b514eac956ffdc547572666bda10f944f56",
+          "probe_name": "integrity",
+          "uri": "s3://trustlens/evidence/f619ffbe-d4fc-4a10-914c-845c8f0d4ca4/58c0887d-8aa1-4076-812c-6f0d13a284c1.json"
+        }
+      ],
+      "flags": [],
+      "metric_values": {
+        "artifact_verification": {
+          "file": "model.safetensors",
+          "performed": true
+        },
+        "aspect_scoring": "no_material_risk",
+        "checks": {
+          "card_present": {
+            "detail": "6510 chars",
+            "pass": true
+          },
+          "files_listed": {
+            "detail": "13 files; config.json present; weight-like filename present",
+            "pass": true
+          },
+          "files_listing_recorded": {
+            "detail": "recorded Hub file listing fingerprint (not weight bytes)",
+            "files_listing_fingerprint": "sha256:667b9f317afe08617f21eabf64c6459cd84f354bf686441a74f2f291865ddf4b",
+            "model_revision": "0d4150b3c26fe646dbc591b548b2ac63fdef0b88",
+            "pass": true
+          },
+          "license_declared": {
+            "detail": "openrail++",
+            "pass": true
+          },
+          "reproducibility_claims": {
+            "detail": "signal groups: training_data, evaluation",
+            "pass": true
+          },
+          "revision_pinned": {
+            "detail": "sha-like revision",
+            "pass": true
+          }
+        },
+        "claim_boundary": {
+          "cryptographic_identity": "local artifact hash matches trusted reference",
+          "files_listing_currency": "Current Hub file listing matches the import-time recorded fingerprint."
+        },
+        "claims": {
+          "cryptographic_identity": {
+            "reason": "local artifact hash matches trusted reference",
+            "status": "EVALUATED"
+          },
+          "files_listing_currency": {
+            "reason": "Current Hub file listing matches the import-time recorded fingerprint.",
+            "status": "EVALUATED"
+          },
+          "identity_recording": {
+            "reason": "identity metadata recorded from import snapshot",
+            "status": "EVALUATED"
+          },
+          "license_disclosure": {
+            "reason": "structured license present",
+            "status": "EVALUATED"
+          }
+        },
+        "confidence_factors": {
+          "combined": 1.0,
+          "data_quality": 1.0,
+          "evidence_completeness": 1.0,
+          "probe_reliability": 1.0
+        },
+        "disclosure": {
+          "card_chars": 6510,
+          "card_present": true,
+          "license_structured": "openrail++",
+          "repro_groups_found": [
+            "training_data",
+            "evaluation"
+          ]
+        },
+        "flags": [],
+        "identity": {
+          "files_listing_fingerprint": "sha256:667b9f317afe08617f21eabf64c6459cd84f354bf686441a74f2f291865ddf4b",
+          "files_listing_reverification": "match",
+          "hash_comparison": "match",
+          "hub_files": [
+            ".gitattributes",
+            ".gitignore",
+            "LICENSE",
+            "NOTICE",
+            "README.md",
+            "config.json",
+            "model.onnx",
+            "model.quant.onnx",
+            "model.safetensors",
+            "special_tokens_map.json",
+            "tokenizer.json",
+            "tokenizer_config.json",
+            "vocab.txt"
+          ],
+          "live_files_fingerprint": "sha256:667b9f317afe08617f21eabf64c6459cd84f354bf686441a74f2f291865ddf4b",
+          "revision": "0d4150b3c26fe646dbc591b548b2ac63fdef0b88",
+          "sha_like": true,
+          "trusted_reference": {
+            "algo": "sha256",
+            "provenance": null,
+            "retrieved_at": null,
+            "source": "hf_hub_lfs",
+            "value": "a139870847bc412b725747a5c3c711f41cb6fd35a6dc3d19b097fdd1db2a5dff"
+          },
+          "weight_hash": {
+            "algo": "sha256",
+            "value": "a139870847bc412b725747a5c3c711f41cb6fd35a6dc3d19b097fdd1db2a5dff"
+          }
+        },
+        "limitations": [
+          "Integrity risks measure disclosure and identity recording, not tampering or legal compliance.",
+          "Named Integrity risks are not additive FRIES occurrences and must not be summed into O.",
+          "Operator-supplied trusted hashes are not a PKI; hash match does not prove publisher authenticity; mismatch does not prove tampering.",
+          "Hub file listing fingerprint identifies sorted filenames, not model weight bytes.",
+          "SHA-like revision format is an uncalibrated heuristic, not cryptographic proof of immutability.",
+          "Model card text may reflect the Hub default branch, not the pinned revision.",
+          "Post-import file-listing re-verification detects a changed Hub listing, not weight-byte tampering — it never downloads or hashes weight files."
+        ],
+        "methodology_basis": "TRUSTLENS_FIVE_PROBE_METHODOLOGY_AUDIT.md",
+        "methodology_version": "tl-integrity-v1.0",
+        "note": "Layer A evidence only — Integrity risks do not assign O/S/D",
+        "osd_proposals": [],
+        "probe_status": "EVALUATED",
+        "proposed_mapping": false,
+        "reliability": {
+          "failed_gates": [],
+          "gates_passed": true
+        },
+        "risks_triggered": [],
+        "scored_risk_id": null,
+        "status": "EVALUATED",
+        "uncertainty": {}
+      }
+    },
+    {
+      "confidence": 1.0,
+      "dimension": "EXPLAINABILITY",
+      "evidence_refs": [
+        {
+          "content_type": "application/json",
+          "created_at": "2026-10-02T16:15:11.260907Z",
+          "evidence_id": "d4859a6f-9258-481e-a346-f1bba0b0f323",
+          "hash": "sha256:c156ff485505f7d129c9427e599cdac40c9c4ca8f5f6d8b2b0792fe8d74d7439",
+          "probe_name": "explainability",
+          "uri": "s3://trustlens/evidence/f619ffbe-d4fc-4a10-914c-845c8f0d4ca4/d4859a6f-9258-481e-a346-f1bba0b0f323.json"
+        }
+      ],
+      "flags": [
+        "missing_intended_use",
+        "missing_limitations",
+        "missing_evaluation",
+        "missing_ethical_considerations",
+        "needs_human_review"
+      ],
+      "metric_values": {
+        "aspect_scoring": "risk_detected",
+        "bonus_sections": {
+          "architecture": {
+            "matched_heading": "card_data.base_model",
+            "present": true
+          },
+          "citation": {
+            "matched_heading": "Citation",
+            "present": true
+          },
+          "examples": {
+            "matched_heading": null,
+            "present": false
+          }
+        },
+        "card_chars": 6510,
+        "checks": {
+          "documentation_completeness": {
+            "coverage_ratio": 0.2,
+            "detail": "1/5 required sections present",
+            "pass": false,
+            "sections_present": 1,
+            "sections_required": 5
+          },
+          "documentation_contradiction": {
+            "detail": "no keyword-level contradiction flags",
+            "pass": true
+          },
+          "ethical_considerations": {
+            "detail": "missing or trivial body",
+            "pass": false
+          },
+          "evaluation": {
+            "detail": "missing or trivial body",
+            "pass": false
+          },
+          "intended_use": {
+            "detail": "missing or trivial body",
+            "pass": false
+          },
+          "limitations": {
+            "detail": "missing or trivial body",
+            "pass": false
+          },
+          "training_data": {
+            "detail": "card_data.datasets",
+            "pass": true
+          }
+        },
+        "claim_boundary": {
+          "not_established": "This does not establish explanation faithfulness, causal correctness, human usefulness, SHAP/attention availability, or general explainability quality. Documentation coverage is not proof that the model is explainable.",
+          "supported": "Required model-card documentation sections were checked for presence with non-trivial body text; coverage counts and keyword-level contradiction flags were recorded."
+        },
+        "claims": {
+          "documentation_completeness": {
+            "reason": "one or more required documentation sections absent or trivial (1/5 present)",
+            "status": "EVALUATED"
+          },
+          "documentation_contradiction": {
+            "reason": "no contradiction risk triggered",
+            "status": "EVALUATED"
+          }
+        },
+        "confidence_factors": {
+          "combined": 1.0,
+          "data_quality": 1.0,
+          "evidence_completeness": 1.0,
+          "probe_reliability": 1.0
+        },
+        "contradictions": [],
+        "coverage_ratio": 0.2,
+        "documentation_source": {
+          "content_length": 6516,
+          "documentation_content_hash": "sha256:ee18ccc0023866e09b301a37ac2c20849256acdca07c44d9c2661effeb761efd",
+          "documentation_revision": "0d4150b3c26fe646dbc591b548b2ac63fdef0b88",
+          "documentation_source_type": "model_card",
+          "documentation_url": "https://huggingface.co/gravitee-io/bert-small-toxicity/blob/0d4150b3c26fe646dbc591b548b2ac63fdef0b88/README.md",
+          "retrieval_error": null,
+          "retrieval_status": "ok",
+          "source_model_ref": "gravitee-io/bert-small-toxicity",
+          "source_model_revision": "0d4150b3c26fe646dbc591b548b2ac63fdef0b88"
+        },
+        "flags": [
+          "missing_intended_use",
+          "missing_limitations",
+          "missing_evaluation",
+          "missing_ethical_considerations",
+          "needs_human_review"
+        ],
+        "limitations": [
+          "Explainability v1 measures model-card documentation completeness and simple consistency flags, not runtime explanations or attribution quality.",
+          "Named E-DOC-* values are evidence-layer detections only; scored_risk_id remains null and no FRIES occurrence is assigned.",
+          "aspect_scoring=risk_detected means a documentation risk was detected — not a FRIES-scored risk.",
+          "Alias heading matching and keyword contradiction checks are heuristic and uncalibrated.",
+          "coverage_ratio counts present required sections; it is not an explainability quality score."
+        ],
+        "methodology_basis": "TRUSTLENS_FIVE_PROBE_METHODOLOGY_AUDIT.md",
+        "methodology_version": "tl-explainability-v1.0",
+        "note": "Layer A documentation/transparency evidence only — not O/S/D or interpretability quality",
+        "osd_proposals": [],
+        "probe_status": "EVALUATED",
+        "proposed_mapping": false,
+        "reliability": {
+          "failed_gates": [],
+          "gates_passed": true
+        },
+        "risks_triggered": [
+          "E-DOC-INCOMPLETE"
+        ],
+        "scored_risk_id": null,
+        "sections": {
+          "ethical_considerations": {
+            "matched_heading": null,
+            "present": false
+          },
+          "evaluation": {
+            "matched_heading": null,
+            "present": false
+          },
+          "intended_use": {
+            "matched_heading": null,
+            "present": false
+          },
+          "limitations": {
+            "matched_heading": null,
+            "present": false
+          },
+          "training_data": {
+            "matched_heading": "card_data.datasets",
+            "present": true
+          }
+        },
+        "sections_present": 1,
+        "sections_required": 5,
+        "status": "EVALUATED"
+      }
+    },
+    {
+      "confidence": 1.0,
+      "dimension": "SAFETY",
+      "evidence_refs": [
+        {
+          "content_type": "application/json",
+          "created_at": "2026-10-02T16:15:15.408955Z",
+          "evidence_id": "18b52b89-9b12-4454-9f82-cf0008269c27",
+          "hash": "sha256:297f5c998d48d9e97fd3ee670d1a87c5bb1db46e4b7a54f8955f66fdfdffae1f",
+          "probe_name": "safety",
+          "uri": "s3://trustlens/evidence/f619ffbe-d4fc-4a10-914c-845c8f0d4ca4/18b52b89-9b12-4454-9f82-cf0008269c27.json"
+        }
+      ],
+      "flags": [
+        "missing_misuse_risks",
+        "missing_privacy",
+        "missing_security_warnings",
+        "needs_human_review"
+      ],
+      "metric_values": {
+        "aspect_scoring": "risk_detected",
+        "behavior": {
+          "benign_fpr": 0.11875,
+          "dataset_content_hash": "ef8ff36af2b476ffbad769eef1684b1850cf58e362da5a844fdc58c14078057d",
+          "dataset_content_id": "c5d8778e-1eba-4a8c-a55c-82487c90a1b2",
+          "flags": [],
+          "fnr_ratio": 0.7896468523799078,
+          "harmful_recall": 0.515,
+          "min_severe_n": 30,
+          "model_ref": "gravitee-io/bert-small-toxicity",
+          "model_revision": "0d4150b3c26fe646dbc591b548b2ac63fdef0b88",
+          "n_evaluated": 3000,
+          "overall_fnr": 0.485,
+          "positive_label_index": 1,
+          "severe_column": "severe",
+          "severe_fnr": 0.3829787234042553,
+          "severe_fnr_ci": [
+            0.3281747242169718,
+            0.4409281635362453
+          ],
+          "severe_n": 282,
+          "status": "EVALUATED"
+        },
+        "bonus_checks": {
+          "bias_and_fairness_risks": {
+            "matched_heading": null,
+            "present": false
+          },
+          "human_oversight": {
+            "matched_heading": null,
+            "present": false
+          }
+        },
+        "card_chars": 6510,
+        "checks": {
+          "data_disclosure": {
+            "detail": "card_data.datasets",
+            "pass": true
+          },
+          "disclosure_completeness": {
+            "checks_present": 1,
+            "checks_required": 4,
+            "coverage_ratio": 0.25,
+            "detail": "1/4 required sections present",
+            "pass": false
+          },
+          "misuse_risks": {
+            "detail": "missing or trivial body",
+            "pass": false
+          },
+          "privacy": {
+            "detail": "missing or trivial body",
+            "pass": false
+          },
+          "security_warnings": {
+            "detail": "missing or trivial body",
+            "pass": false
+          }
+        },
+        "checks_present": 1,
+        "checks_required": 4,
+        "claim_boundary": {
+          "not_established": "This does not establish model safety or unsafety, actual deployment risk, mitigation effectiveness, harm severity, policy compliance, medical/financial fitness, or refusal capability. Phrase matches (high_impact_claims) are lexical documentation evidence only — not evidence that the model is high-risk, unsafe, harmful, or safety-critical.",
+          "supported": "Required safety-disclosure model-card sections were checked for presence with non-trivial body text; documentation completeness counts and lexical presence of listed high-impact phrases were recorded as documentation metadata flags."
+        },
+        "claims": {
+          "disclosure_completeness": {
+            "reason": "one or more required safety-disclosure sections absent or trivial (1/4 present)",
+            "status": "EVALUATED"
+          },
+          "phrase_matches": {
+            "reason": "no listed high-impact phrases matched",
+            "status": "EVALUATED"
+          }
+        },
+        "confidence_factors": {
+          "combined": 1.0,
+          "data_quality": 1.0,
+          "evidence_completeness": 1.0,
+          "probe_reliability": 1.0
+        },
+        "coverage_ratio": 0.25,
+        "documentation_source": {
+          "content_length": 6516,
+          "documentation_content_hash": "sha256:ee18ccc0023866e09b301a37ac2c20849256acdca07c44d9c2661effeb761efd",
+          "documentation_revision": "0d4150b3c26fe646dbc591b548b2ac63fdef0b88",
+          "documentation_source_type": "model_card",
+          "documentation_url": "https://huggingface.co/gravitee-io/bert-small-toxicity/blob/0d4150b3c26fe646dbc591b548b2ac63fdef0b88/README.md",
+          "retrieval_error": null,
+          "retrieval_status": "ok",
+          "source_model_ref": "gravitee-io/bert-small-toxicity",
+          "source_model_revision": "0d4150b3c26fe646dbc591b548b2ac63fdef0b88"
+        },
+        "flags": [
+          "missing_misuse_risks",
+          "missing_privacy",
+          "missing_security_warnings",
+          "needs_human_review"
+        ],
+        "fnr_ratio": 0.7896468523799078,
+        "high_impact_claims": [],
+        "limitations": [
+          "Safety v1 measures model-card safety-disclosure completeness and lexical phrase matches, not runtime refusal or harm behavior.",
+          "Named S-GOV-DISCLOSURE-GAP is an evidence-layer detection only; scored_risk_id remains null and no FRIES occurrence is assigned.",
+          "aspect_scoring=risk_detected means a governance disclosure gap was detected — not a FRIES-scored risk.",
+          "high_impact_claims are documentation metadata flags; they are never promoted to risks_triggered and do not map to O/S/D or FRIES.",
+          "Alias heading matching and phrase substring checks are heuristic and uncalibrated.",
+          "coverage_ratio counts present required disclosure sections; it is not a safety quality score."
+        ],
+        "methodology_basis": "TRUSTLENS_FIVE_PROBE_METHODOLOGY_AUDIT.md",
+        "methodology_version": "tl-safety-v1.0",
+        "note": "Layer A safety-governance disclosure evidence only — not O/S/D, not behavioral safety, not FRIES2 caps",
+        "osd_proposals": [],
+        "probe_status": "EVALUATED",
+        "proposed_mapping": false,
+        "reliability": {
+          "failed_gates": [],
+          "gates_passed": true
+        },
+        "required_checks": {
+          "data_disclosure": {
+            "matched_heading": "card_data.datasets",
+            "present": true
+          },
+          "misuse_risks": {
+            "matched_heading": null,
+            "present": false
+          },
+          "privacy": {
+            "matched_heading": null,
+            "present": false
+          },
+          "security_warnings": {
+            "matched_heading": null,
+            "present": false
+          }
+        },
+        "risks_triggered": [
+          "S-GOV-DISCLOSURE-GAP"
+        ],
+        "scored_risk_id": null,
+        "severe_fnr": 0.3829787234042553,
+        "status": "EVALUATED",
+        "uncertainty": {}
+      }
+    }
+  ],
+  "report_version": 1,
+  "reproducibility": {
+    "contract_kind": null,
+    "dataset_content_hash": null,
+    "dataset_key": null,
+    "dataset_revision": null,
+    "model_ref": "gravitee-io/bert-small-toxicity",
+    "model_revision": "0d4150b3c26fe646dbc591b548b2ac63fdef0b88",
+    "pairing_id": null,
+    "trustlens_version": null,
+    "user_dataset_id": null
+  },
+  "schema_version": "report_v1",
+  "score": {
+    "dimension_scores": {
+      "EXPLAINABILITY": 2.0,
+      "FAIRNESS": 8.6535,
+      "INTEGRITY": 8.6535,
+      "ROBUSTNESS": 5.2415,
+      "SAFETY": 6.6039
+    },
+    "finalized_osd": {
+      "aspects": [
+        {
+          "D": 8,
+          "O": 9,
+          "S": 9,
+          "aspect": "FAIRNESS"
+        },
+        {
+          "D": 8,
+          "O": 9,
+          "S": 2,
+          "aspect": "ROBUSTNESS"
+        },
+        {
+          "D": 8,
+          "O": 9,
+          "S": 9,
+          "aspect": "INTEGRITY"
+        },
+        {
+          "D": 2,
+          "O": 2,
+          "S": 2,
+          "aspect": "EXPLAINABILITY"
+        },
+        {
+          "D": 8,
+          "O": 6,
+          "S": 6,
+          "aspect": "SAFETY"
+        }
+      ],
+      "assessment_engine": "llm_v1",
+      "complete_aspect_count": 5,
+      "disclaimer": "LLM-assisted O/S/D: FAIRNESS/ROBUSTNESS come from the heuristic mapping; INTEGRITY/EXPLAINABILITY/SAFETY were proposed by an LLM (provider and model recorded per aspect) or by the heuristic when every LLM provider failed. Not human-reviewed, not ground truth.",
+      "evaluation_mode": "AI_AUTONOMOUS",
+      "human_reviewed": false,
+      "methodology_status": "LEGACY_HEURISTIC_OSD_V1",
+      "scoring_complete": true,
+      "scoring_withheld": false,
+      "source": "osd_agent_autonomous"
+    },
+    "fries_score": 6.2305,
+    "note": "Original FRIES computed from finalized O/S/D — not FRIES2. O/S/D on this path are LLM-assisted proposals (heuristic for FAIRNESS/ROBUSTNESS), not ground truth.",
+    "overall_confidence": 0.9966,
+    "score_type": "original_FRIES",
+    "scoring_withheld": false
+  }
+}

@@ -1,0 +1,30 @@
+[
+  {
+    "file": "unitary__toxic-bert.json",
+    "evaluation_id": "1b336b9f-eeda-4e34-a7fc-9afd108a060a",
+    "status": "FINALIZED",
+    "report_status": 200,
+    "version": 1,
+    "json_hash": "sha256:affecaf5015c3d5e44ed542ec190e297767a46df4eb7e0dafca40b00846d7312",
+    "pdf_hash": "sha256:10bdde477317ea449387aab1235b83f01548cdc7aa6822fdb981977d222e2020",
+    "fries_score": 7.5822,
+    "methodology_version": "v3-hardening-2026",
+    "reports_copied": true,
+    "evidence_copied": true,
+    "exported": true
+  },
+  {
+    "file": "unitary__unbiased-toxic-roberta.json",
+    "evaluation_id": "ecba844e-2ef7-4a57-b16d-8209be2b4558",
+    "status": "FINALIZED",
+    "report_status": 200,
+    "version": 1,
+    "json_hash": "sha256:1a8f7b6223aad9af5c45186cf075e4f0aee61a7cf83e156e31bb43315003fa67",
+    "pdf_hash": "sha256:9d39804073d968a5d45c3c6410b6831c4b9a0e450b42c2f340b1bcc47db0dc63",
+    "fries_score": 7.904,
+    "methodology_version": "v3-hardening-2026",
+    "reports_copied": true,
+    "evidence_copied": true,
+    "exported": true
+  }
+]

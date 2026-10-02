@@ -1,0 +1,46 @@
+{
+  "label_rate_gap": 0.5047950250248968,
+  "source": "data/eval_set.csv label vs identity_ref",
+  "models": {
+    "trustworthy_unitary_toxic-bert": {
+      "dpd": 0.0,
+      "eod": 0.0,
+      "excess_dpd": 0.0
+    },
+    "variant1_fairness": {
+      "dpd": 0.417735,
+      "eod": 0.163567,
+      "excess_dpd": 0.0
+    },
+    "variant2_robustness": {
+      "dpd": 0.526462,
+      "eod": 0.370192,
+      "excess_dpd": 0.02166697497510317
+    },
+    "variant3_explainability": {
+      "dpd": 0.318945,
+      "eod": 0.065343,
+      "excess_dpd": 0.0
+    },
+    "variant4_integrity": {
+      "dpd": 0.417735,
+      "eod": 0.163567,
+      "excess_dpd": 0.0
+    },
+    "variant5_safety": {
+      "dpd": 0.233404,
+      "eod": 0.035303,
+      "excess_dpd": 0.0
+    },
+    "variant6_compound": {
+      "dpd": 0.36831,
+      "eod": 0.1665,
+      "excess_dpd": 0.0
+    },
+    "reference_toxicbert_2label": {
+      "dpd": 0.283159,
+      "eod": 0.174373,
+      "excess_dpd": 0.0
+    }
+  }
+}

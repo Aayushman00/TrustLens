@@ -1,0 +1,426 @@
+[
+  {
+    "repo": "unitary/unbiased-toxic-roberta",
+    "status": "FINALIZED",
+    "fries": 7.904,
+    "scoring": "scored",
+    "clean_acc": 0.9147,
+    "acc_drop": 0.011667,
+    "eod": 0.092544,
+    "excess_dpd": 0.0,
+    "harmful_recall": 0.7333333333333334,
+    "severe_fnr": 0.1453900709219858,
+    "benign_fpr": 0.04,
+    "hash_check": "match",
+    "integrity_risks": [],
+    "flags": [],
+    "llm_source": [
+      "heuristic_fallback"
+    ],
+    "dimension_scores": {
+      "SAFETY": 7.5595,
+      "FAIRNESS": 8.6535,
+      "INTEGRITY": 8.6535,
+      "ROBUSTNESS": 8.6535,
+      "EXPLAINABILITY": 6.0
+    },
+    "revision": "36295dd80b422dc49f40052021430dae76241adc",
+    "run_dir": "hub_final_c01"
+  },
+  {
+    "repo": "unitary/toxic-bert",
+    "status": "FINALIZED",
+    "fries": 7.5822,
+    "scoring": "scored",
+    "clean_acc": 0.8677,
+    "acc_drop": 0.009667,
+    "eod": 0.174373,
+    "excess_dpd": 0.0,
+    "harmful_recall": 0.42333333333333334,
+    "severe_fnr": 0.3546099290780142,
+    "benign_fpr": 0.02125,
+    "hash_check": "match",
+    "integrity_risks": [],
+    "flags": [],
+    "llm_source": [
+      "heuristic_fallback"
+    ],
+    "dimension_scores": {
+      "SAFETY": 6.6039,
+      "FAIRNESS": 8.0,
+      "INTEGRITY": 8.6535,
+      "ROBUSTNESS": 8.6535,
+      "EXPLAINABILITY": 6.0
+    },
+    "revision": "4d6c22e74ba2fdd26bc4f7238f50766b045a0d94",
+    "run_dir": "hub_final_c01"
+  },
+  {
+    "repo": "martin-ha/toxic-comment-model",
+    "status": "FINALIZED",
+    "fries": 7.6518,
+    "scoring": "scored",
+    "clean_acc": 0.8903,
+    "acc_drop": 0.012,
+    "eod": 0.06286,
+    "excess_dpd": 0.0,
+    "harmful_recall": 0.5216666666666667,
+    "severe_fnr": 0.2978723404255319,
+    "benign_fpr": 0.0175,
+    "hash_check": "match",
+    "integrity_risks": [
+      "I-INT-LICENSE-UNDISCLOSED"
+    ],
+    "flags": [],
+    "llm_source": [
+      "heuristic_fallback"
+    ],
+    "dimension_scores": {
+      "SAFETY": 6.9521,
+      "FAIRNESS": 8.6535,
+      "INTEGRITY": 8.0,
+      "ROBUSTNESS": 8.6535,
+      "EXPLAINABILITY": 6.0
+    },
+    "revision": "9842c08b35a4687e7b211187d676986c8c96256d",
+    "run_dir": "hub_final_c02"
+  },
+  {
+    "repo": "s-nlp/roberta_toxicity_classifier",
+    "status": "FINALIZED",
+    "fries": 7.2308,
+    "scoring": "scored",
+    "clean_acc": 0.927,
+    "acc_drop": 0.022333,
+    "eod": 0.085486,
+    "excess_dpd": 0.0,
+    "harmful_recall": 0.765,
+    "severe_fnr": 0.08865248226950355,
+    "benign_fpr": 0.0325,
+    "hash_check": "match",
+    "integrity_risks": [],
+    "flags": [],
+    "llm_source": [
+      "llm_v1"
+    ],
+    "dimension_scores": {
+      "SAFETY": 7.5595,
+      "FAIRNESS": 8.6535,
+      "INTEGRITY": 9.0,
+      "ROBUSTNESS": 8.3203,
+      "EXPLAINABILITY": 2.6207
+    },
+    "revision": "048c25bb1e199b98802784f96325f4840f22145d",
+    "run_dir": "hub_final_c02"
+  },
+  {
+    "repo": "JungleLee/bert-toxic-comment-classification",
+    "status": "FINALIZED",
+    "fries": 7.1545,
+    "scoring": "scored",
+    "clean_acc": 0.8463,
+    "acc_drop": 0.036333,
+    "eod": 0.216557,
+    "excess_dpd": 0.0,
+    "harmful_recall": 0.7866666666666666,
+    "severe_fnr": 0.1099290780141844,
+    "benign_fpr": 0.13875,
+    "hash_check": "match",
+    "integrity_risks": [],
+    "flags": [],
+    "llm_source": [
+      "heuristic_fallback"
+    ],
+    "dimension_scores": {
+      "SAFETY": 7.5595,
+      "FAIRNESS": 8.0,
+      "INTEGRITY": 8.6535,
+      "ROBUSTNESS": 7.5595,
+      "EXPLAINABILITY": 4.0
+    },
+    "revision": "9c59104291a49a877078424cbfd9f3af23c26ef9",
+    "run_dir": "hub_final_c03"
+  },
+  {
+    "repo": "BunnyNoBugs/rubert-tiny2-russe-toxicity",
+    "status": "FINALIZED",
+    "fries": 6.1999,
+    "scoring": "scored",
+    "clean_acc": 0.7637,
+    "acc_drop": 0.046,
+    "eod": 0.097628,
+    "excess_dpd": 0.0,
+    "harmful_recall": 0.21166666666666667,
+    "severe_fnr": 0.7659574468085106,
+    "benign_fpr": 0.09833333333333333,
+    "hash_check": "match",
+    "integrity_risks": [],
+    "flags": [],
+    "llm_source": [
+      "heuristic_fallback"
+    ],
+    "dimension_scores": {
+      "SAFETY": 4.5789,
+      "FAIRNESS": 8.6535,
+      "INTEGRITY": 8.6535,
+      "ROBUSTNESS": 7.1138,
+      "EXPLAINABILITY": 2.0
+    },
+    "revision": "b136cda1a1417bec27c492d0fe1eaa3f878606e4",
+    "run_dir": "hub_final_c03"
+  },
+  {
+    "repo": "gravitee-io/distilbert-multilingual-toxicity-classifier",
+    "status": "FINALIZED",
+    "fries": 5.9211,
+    "scoring": "scored",
+    "clean_acc": 0.784,
+    "acc_drop": 0.136667,
+    "eod": 0.166585,
+    "excess_dpd": 0.0,
+    "harmful_recall": 0.6383333333333333,
+    "severe_fnr": 0.2801418439716312,
+    "benign_fpr": 0.17958333333333334,
+    "hash_check": "match",
+    "integrity_risks": [],
+    "flags": [],
+    "llm_source": [
+      "heuristic_fallback"
+    ],
+    "dimension_scores": {
+      "SAFETY": 6.9521,
+      "FAIRNESS": 8.0,
+      "INTEGRITY": 8.6535,
+      "ROBUSTNESS": 4.0,
+      "EXPLAINABILITY": 2.0
+    },
+    "revision": "865ad1b453a49e4a7f2471fc40b727ececd28314",
+    "run_dir": "hub_final_c04"
+  },
+  {
+    "repo": "textdetox/xlmr-large-toxicity-classifier",
+    "status": "FINALIZED",
+    "fries": 7.0072,
+    "scoring": "scored",
+    "clean_acc": 0.805,
+    "acc_drop": 0.053667,
+    "eod": 0.241683,
+    "excess_dpd": 0.0,
+    "harmful_recall": 0.7766666666666666,
+    "severe_fnr": 0.15602836879432624,
+    "benign_fpr": 0.18791666666666668,
+    "hash_check": "match",
+    "integrity_risks": [],
+    "flags": [],
+    "llm_source": [
+      "heuristic_fallback"
+    ],
+    "dimension_scores": {
+      "SAFETY": 7.2685,
+      "FAIRNESS": 8.0,
+      "INTEGRITY": 8.6535,
+      "ROBUSTNESS": 7.1138,
+      "EXPLAINABILITY": 4.0
+    },
+    "revision": "b9c7c563427c591fc318d91eb592381ae2fbde66",
+    "run_dir": "hub_final_c04"
+  },
+  {
+    "repo": "gravitee-io/bert-small-toxicity",
+    "status": "FINALIZED",
+    "fries": 6.2305,
+    "scoring": "scored",
+    "clean_acc": 0.808,
+    "acc_drop": 0.079333,
+    "eod": 0.122649,
+    "excess_dpd": 0.0,
+    "harmful_recall": 0.515,
+    "severe_fnr": 0.3829787234042553,
+    "benign_fpr": 0.11875,
+    "hash_check": "match",
+    "integrity_risks": [],
+    "flags": [],
+    "llm_source": [
+      "heuristic_fallback"
+    ],
+    "dimension_scores": {
+      "SAFETY": 6.6039,
+      "FAIRNESS": 8.6535,
+      "INTEGRITY": 8.6535,
+      "ROBUSTNESS": 5.2415,
+      "EXPLAINABILITY": 2.0
+    },
+    "revision": "0d4150b3c26fe646dbc591b548b2ac63fdef0b88",
+    "run_dir": "hub_final_c05"
+  },
+  {
+    "repo": "citizenlab/distilbert-base-multilingual-cased-toxicity",
+    "status": "FINALIZED",
+    "fries": 7.1043,
+    "scoring": "scored",
+    "clean_acc": 0.8427,
+    "acc_drop": 0.012333,
+    "eod": 0.066957,
+    "excess_dpd": 0.0,
+    "harmful_recall": 0.3533333333333334,
+    "severe_fnr": 0.5177304964539007,
+    "benign_fpr": 0.035,
+    "hash_check": "match",
+    "integrity_risks": [
+      "I-INT-LICENSE-UNDISCLOSED"
+    ],
+    "flags": [],
+    "llm_source": [
+      "heuristic_fallback"
+    ],
+    "dimension_scores": {
+      "SAFETY": 6.2145,
+      "FAIRNESS": 8.6535,
+      "INTEGRITY": 8.0,
+      "ROBUSTNESS": 8.6535,
+      "EXPLAINABILITY": 4.0
+    },
+    "revision": "b4532a8b095d1886a7b5dff818331ecc88a855ae",
+    "run_dir": "hub_final_c05"
+  },
+  {
+    "repo": "textdetox/xlmr-base-toxicity-classifier",
+    "status": "FINALIZED",
+    "fries": 6.6072,
+    "scoring": "scored",
+    "clean_acc": 0.805,
+    "acc_drop": 0.053667,
+    "eod": 0.241683,
+    "excess_dpd": 0.0,
+    "harmful_recall": 0.7766666666666666,
+    "severe_fnr": 0.15602836879432624,
+    "benign_fpr": 0.18791666666666668,
+    "hash_check": "match",
+    "integrity_risks": [],
+    "flags": [],
+    "llm_source": [
+      "heuristic_fallback"
+    ],
+    "dimension_scores": {
+      "SAFETY": 7.2685,
+      "FAIRNESS": 8.0,
+      "INTEGRITY": 8.6535,
+      "ROBUSTNESS": 7.1138,
+      "EXPLAINABILITY": 2.0
+    },
+    "revision": "0fe4ba2cedce35b4f8997362a01f35bbde0306f5",
+    "run_dir": "hub_final_c06"
+  },
+  {
+    "repo": "gravitee-io/bert-tiny-toxicity",
+    "status": "FINALIZED",
+    "fries": 6.5634,
+    "scoring": "scored",
+    "clean_acc": 0.664,
+    "acc_drop": 0.056333,
+    "eod": 0.202976,
+    "excess_dpd": 0.0,
+    "harmful_recall": 0.79,
+    "severe_fnr": 0.11347517730496454,
+    "benign_fpr": 0.3675,
+    "hash_check": "match",
+    "integrity_risks": [],
+    "flags": [],
+    "llm_source": [
+      "heuristic_fallback"
+    ],
+    "dimension_scores": {
+      "SAFETY": 7.5595,
+      "FAIRNESS": 8.0,
+      "INTEGRITY": 8.6535,
+      "ROBUSTNESS": 6.6039,
+      "EXPLAINABILITY": 2.0
+    },
+    "revision": "8377eb9a344d74b9d12e656dc3f3632b74f33673",
+    "run_dir": "hub_final_c06"
+  },
+  {
+    "repo": "facebook/roberta-hate-speech-dynabench-r4-target",
+    "status": "FINALIZED",
+    "fries": 5.3795,
+    "scoring": "scored",
+    "clean_acc": 0.7833,
+    "acc_drop": 0.072333,
+    "eod": 0.16683,
+    "excess_dpd": 0.0,
+    "harmful_recall": 0.15333333333333332,
+    "severe_fnr": 0.8368794326241135,
+    "benign_fpr": 0.059166666666666666,
+    "hash_check": "match",
+    "integrity_risks": [
+      "I-INT-LICENSE-UNDISCLOSED"
+    ],
+    "flags": [],
+    "llm_source": [
+      "heuristic_fallback"
+    ],
+    "dimension_scores": {
+      "SAFETY": 4.5789,
+      "FAIRNESS": 8.0,
+      "INTEGRITY": 7.3186,
+      "ROBUSTNESS": 6.0,
+      "EXPLAINABILITY": 1.0
+    },
+    "revision": "391c99ab8b3f65beb77746a2cf6ddf1ddf9817e6",
+    "run_dir": "hub_final_c07"
+  },
+  {
+    "repo": "Hate-speech-CNERG/dehatebert-mono-english",
+    "status": "FINALIZED",
+    "fries": 6.1772,
+    "scoring": "scored",
+    "clean_acc": 0.802,
+    "acc_drop": 0.001333,
+    "eod": 0.127371,
+    "excess_dpd": 0.0,
+    "harmful_recall": 0.14833333333333332,
+    "severe_fnr": 0.8120567375886525,
+    "benign_fpr": 0.034583333333333334,
+    "hash_check": "match",
+    "integrity_risks": [],
+    "flags": [],
+    "llm_source": [
+      "heuristic_fallback"
+    ],
+    "dimension_scores": {
+      "SAFETY": 4.5789,
+      "FAIRNESS": 8.6535,
+      "INTEGRITY": 8.0,
+      "ROBUSTNESS": 8.6535,
+      "EXPLAINABILITY": 1.0
+    },
+    "revision": "25d0e4d9122d2a5c283e07405a325e3dfd4a73b3",
+    "run_dir": "hub_final_c07"
+  },
+  {
+    "repo": "pysentimiento/bert-it-hate-speech",
+    "status": "FINALIZED",
+    "fries": null,
+    "scoring": "withheld",
+    "clean_acc": null,
+    "acc_drop": null,
+    "eod": null,
+    "excess_dpd": null,
+    "harmful_recall": 0.023333333333333317,
+    "severe_fnr": 0.9716312056737588,
+    "benign_fpr": 0.014583333333333334,
+    "hash_check": "match",
+    "integrity_risks": [
+      "I-INT-LICENSE-UNDISCLOSED"
+    ],
+    "flags": [
+      "constant_predictor"
+    ],
+    "llm_source": [
+      "heuristic_fallback"
+    ],
+    "dimension_scores": null,
+    "revision": "9a60ac39953b872bca7f904729b0c421de42ecc9",
+    "run_dir": "hub_final_c07"
+  }
+]
