@@ -131,3 +131,17 @@ def test_fairness_probe_passes_target_index_to_inference(db_session, seeded_mode
     config = backend.load_calls[0]["config"]
     assert config.multilabel_positive_index == 0
     assert config.task_type == TaskType.BINARY_CLASSIFICATION
+
+
+def test_legacy_draft_without_problem_type_cannot_submit_multilabel_model(db_session, confirmed_fairness_draft):
+    """A draft frozen before problem_type existed skipped the draft-time gate;
+    submission re-inspects the model and must refuse an argmax decode."""
+    from app.api.errors import ConflictError
+
+    current = ModelLabelSnapshot(
+        num_labels=2, id2label={0: "NEGATIVE", 1: "POSITIVE"}, resolved_sha="sha-1",
+        problem_type="multi_label_classification",
+    )
+    with patch("app.services.evaluation_service_v2.inspect_model_config", return_value=current):
+        with pytest.raises(ConflictError, match="MULTILABEL_TARGET_REQUIRED"):
+            EvaluationServiceV2(db_session).create_from_draft(confirmed_fairness_draft.id, EvaluationMode.AI_ASSISTED)

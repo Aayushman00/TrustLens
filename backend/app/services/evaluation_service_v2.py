@@ -55,7 +55,7 @@ from app.db.repositories.evaluation import EvaluationRepository
 from app.db.repositories.evaluation_draft import EvaluationDraftRepository
 from app.db.repositories.evaluation_event import EVENT_EVALUATION_CREATED, EvaluationEventRepository
 from app.db.repositories.model import ModelRepository
-from app.inference.model_inspection import ModelInspectionError, inspect_model_config
+from app.inference.model_inspection import MULTI_LABEL, ModelInspectionError, inspect_model_config
 from app.schemas.evaluation_contract_v2 import (
     EvaluationContractV2,
     FairnessContractV2,
@@ -143,6 +143,17 @@ class EvaluationServiceV2:
                     "current_sha": current_snapshot.resolved_sha,
                 },
             )
+
+        if current_snapshot.problem_type == MULTI_LABEL:
+            # Drafts frozen before problem_type was recorded skipped the
+            # draft-time gate; never let them argmax-decode a multi-label head.
+            untargeted = [d.dimension for d in touched_dimensions if d.multilabel_target_index is None]
+            if untargeted:
+                raise ConflictError(
+                    "MULTILABEL_TARGET_REQUIRED: model is multi-label; reconfigure "
+                    f"{untargeted} with multilabel_target_index before submitting",
+                    details={"draft_id": str(draft_id), "dimensions": untargeted},
+                )
 
         fairness_contract: FairnessContractV2 | None = None
         robustness_contract: RobustnessContractV2 | None = None

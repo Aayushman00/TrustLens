@@ -348,3 +348,23 @@ def test_safety_band_without_behaviour_falls_back_to_card() -> None:
 
     m = {"coverage_ratio": 0.5, "card_chars": 300, "high_impact_claims": []}
     assert _safety_band(m) == _card_band(m, consider_high_impact=True)
+
+
+def test_safety_band_abstains_when_configured_behaviour_not_evaluated() -> None:
+    """Never fall back to the card when behavioural safety was configured but
+    could not be measured — that would reward the failure (review Important #1)."""
+    from app.osd.agent import _safety_band
+
+    m = {"coverage_ratio": 1.0, "card_chars": 900, "behavior": {"status": "INSUFFICIENT_EVIDENCE"}}
+    assert _safety_band(m)[0] == (None, None, None)
+    m_na = {"coverage_ratio": 0.5, "card_chars": 300, "behavior": {"status": "NOT_APPLICABLE"}}
+    assert _safety_band(m_na)[0] is not None and _safety_band(m_na)[0][0] == 5
+
+
+def test_robustness_band_abstains_when_probe_did_not_score() -> None:
+    from app.osd.agent import _robustness_band
+
+    band, _ = _robustness_band(
+        {"clean_accuracy": 0.9, "robust_accuracy": 0.9, "aspect_scoring": "not_scored"}
+    )
+    assert band == (None, None, None)

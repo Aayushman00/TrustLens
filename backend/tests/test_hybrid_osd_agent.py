@@ -419,3 +419,18 @@ def test_llm_engine_is_disclosed_as_llm_assisted_not_heuristic() -> None:
     for text in texts:
         assert "not an LLM" not in text, text
         assert "LLM" in text, text
+
+
+@patch("app.osd.hybrid.call_gemini", return_value=_GOOD_RAW)
+@patch("app.osd.hybrid.get_settings")
+def test_behavioural_safety_band_is_not_overridden_by_llm(mock_settings, mock_call) -> None:
+    _mock_settings(mock_settings, gemini="fake-key")
+    ctx = _full_context()
+    safety = next(s for s in ctx.probe_results if s.dimension == FriesDimension.SAFETY)
+    safety.metric_values = {**safety.metric_values, "severe_fnr": 0.9, "fnr_ratio": 2.0,
+                            "behavior": {"status": "EVALUATED"}}
+    aspects = {a.aspect: a for a in HybridOSDAgent().propose(ctx).aspects}
+    s = aspects[FriesDimension.SAFETY]
+    assert (s.O, s.S, s.D) == (1, 3, 8)  # heuristic behavioural band, not the LLM's (3, 3, 4)
+    assert s.osd_metadata["llm_card_judgment"]["O"] == 3
+    assert aspects[FriesDimension.INTEGRITY].O == 7  # LLM still rates the other two

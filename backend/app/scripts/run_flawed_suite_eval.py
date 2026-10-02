@@ -50,6 +50,9 @@ LOCAL_VARIANTS = [
     "variant6_compound",
 ]
 TRUSTWORTHY_HF_REPO = "unitary/toxic-bert"
+# toxic-bert is multi-label (six sigmoid outputs); output 0 "toxic" is the
+# positive class, decoded natively (no 2-label conversion needed).
+REFERENCE_EVAL_KWARGS = {"multilabel_target_index": 0, "positive_index": 1}
 
 
 def fresh_out_dir(path: Path) -> Path:
@@ -239,7 +242,14 @@ def main() -> None:
 
         for name, model_id in targets:
             print(f"Running evaluation for {name} (model_id={model_id})...")
-            evaluation = create_and_run_evaluation(client, model_id, dataset_content_id)
+            kwargs = REFERENCE_EVAL_KWARGS if model_id == trustworthy_model_id else {}
+            try:
+                evaluation = create_and_run_evaluation(client, model_id, dataset_content_id, **kwargs)
+            except Exception as exc:  # noqa: BLE001 — record the failure, keep the other models
+                summary.append({"name": name, "model_id": model_id, "status": "ERROR",
+                                "error": f"{type(exc).__name__}: {exc}"[:500],
+                                "fries_score": None, "dimension_scores": {}})
+                continue
             (out_dir / f"{name}.json").write_text(json.dumps(evaluation, indent=2), encoding="utf-8")
 
             final_score = evaluation.get("final_score") or {}

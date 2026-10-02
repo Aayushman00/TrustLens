@@ -24,3 +24,20 @@ def test_failed_runs_are_counted_and_excluded():
 def test_all_failed_returns_none_stats():
     s = summarize_runs([{"status": "FAILED", "fries_score": None, "dimension_scores": {}}])
     assert s["n_ok"] == 0 and s["fries"]["mean"] is None
+
+
+def test_exception_in_one_run_is_recorded_not_raised():
+    from app.scripts.repeat_eval import run_once
+
+    def boom(*args, **kwargs):
+        raise TimeoutError("evaluation did not finish")
+
+    run = run_once(boom, None, 1, "ds")
+    assert run["status"] == "ERROR" and "TimeoutError" in run["error"]
+    assert summarize_runs([run, _run(5.0, SAFETY=1.0)])["n_failed"] == 1
+
+
+def test_reference_toxic_bert_uses_native_multilabel_target():
+    from app.scripts.run_flawed_suite_eval import REFERENCE_EVAL_KWARGS
+
+    assert REFERENCE_EVAL_KWARGS == {"multilabel_target_index": 0, "positive_index": 1}

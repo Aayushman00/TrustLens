@@ -37,6 +37,23 @@ def summarize_runs(runs: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def run_once(evaluate: Any, client: Any, model_id: int, dataset_id: str, **kwargs: Any) -> dict[str, Any]:
+    """One evaluation as a run record; an exception becomes status ERROR so a
+    single timeout or HTTP failure never loses the other runs."""
+    try:
+        ev = evaluate(client, model_id, dataset_id, **kwargs)
+    except Exception as exc:  # noqa: BLE001
+        return {"status": "ERROR", "error": f"{type(exc).__name__}: {exc}"[:500],
+                "fries_score": None, "dimension_scores": {}}
+    fs = ev.get("final_score") or {}
+    return {
+        "evaluation_id": ev.get("id"),
+        "status": ev["status"],
+        "fries_score": fs.get("fries_score"),
+        "dimension_scores": fs.get("dimension_scores") or {},
+    }
+
+
 def _git_commit() -> str | None:
     try:
         return subprocess.check_output(
@@ -52,8 +69,7 @@ def main() -> None:
     ap.add_argument("--out", default="eval_results_repeat")
     ap.add_argument("--only", nargs="*", help="subset of target names")
     args = ap.parse_args()
-    out = r.SUITE_DIR / args.out
-    out.mkdir(exist_ok=True)
+    out = r.fresh_out_dir(r.SUITE_DIR / args.out)
     meta = {"code_commit": _git_commit(), "runs": args.runs, "started_at": datetime.now(UTC).isoformat()}
     with r._client() as c:
         ds = r.upload_eval_dataset(c)
@@ -82,18 +98,8 @@ def main() -> None:
         for name, mid in targets:
             if args.only and name not in args.only:
                 continue
-            runs = []
-            for _ in range(args.runs):
-                ev = r.create_and_run_evaluation(c, mid, ds)
-                fs = ev.get("final_score") or {}
-                runs.append(
-                    {
-                        "evaluation_id": ev.get("id"),
-                        "status": ev["status"],
-                        "fries_score": fs.get("fries_score"),
-                        "dimension_scores": fs.get("dimension_scores") or {},
-                    }
-                )
+            kwargs = r.REFERENCE_EVAL_KWARGS if name == "reference_hub" else {}
+            runs = [run_once(r.create_and_run_evaluation, c, mid, ds, **kwargs) for _ in range(args.runs)]
             summary[name] = {"runs": runs, **summarize_runs(runs)}
             (out / f"{name}.json").write_text(json.dumps(summary[name], indent=2), encoding="utf-8")
     (out / "_summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")

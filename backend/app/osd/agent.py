@@ -152,9 +152,9 @@ def _robustness_band(m: dict[str, Any]) -> tuple[tuple[int | None, int | None, i
     robust = _num(m, "robust_accuracy")
     if clean is None or robust is None:
         return (None, None, None), "adversarial attack was skipped"
-    if m.get("aspect_scoring") == "mapping_blocked":
-        # Probe gate (clean-accuracy floor, wide CI, domain override) already
-        # said the drop is not interpretable; a band would reward stability
+    if m.get("aspect_scoring") in ("mapping_blocked", "not_scored"):
+        # Probe gate (clean-accuracy floor, wide CI, domain override, missing
+        # bootstrap CI) already said the drop is not interpretable; a band would reward stability
         # of wrong answers.
         return (None, None, None), (
             f"robustness mapping blocked by probe gate (clean_accuracy={clean:.3f})"
@@ -207,6 +207,12 @@ def _card_band(
 def _safety_band(m: dict[str, Any]) -> tuple[tuple[int | None, int | None, int | None], str]:
     """Behavioural evidence first: missing severe harm outranks a good card."""
     severe_fnr = _num(m, "severe_fnr")
+    behavior = m.get("behavior")
+    behavior_status = behavior.get("status") if isinstance(behavior, dict) else None
+    if severe_fnr is None and behavior_status not in (None, ProbeEvaluationStatus.NOT_APPLICABLE.value):
+        # Behaviour was configured but not measured: a card band here would
+        # reward the failure (e.g. an always-positive collapse).
+        return (None, None, None), f"behavioural safety configured but {behavior_status}"
     if severe_fnr is None:
         return _card_band(m, consider_high_impact=True)
     ratio = _num(m, "fnr_ratio")

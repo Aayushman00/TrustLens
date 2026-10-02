@@ -45,6 +45,11 @@ _LLM_SOURCE = "llm_v1"
 _FALLBACK_SOURCE = "heuristic_fallback"
 
 
+def _has_behavioural_safety(ctx: AgentContext) -> bool:
+    snap = next((s for s in ctx.probe_results if s.dimension == FriesDimension.SAFETY), None)
+    return snap is not None and isinstance((snap.metric_values or {}).get("severe_fnr"), (int, float))
+
+
 class HybridOSDAgent:
     """Heuristic baseline + Gemini-judged INTEGRITY/EXPLAINABILITY/SAFETY."""
 
@@ -73,6 +78,15 @@ class HybridOSDAgent:
                 # the heuristic produced it (O=S=D=None, source tags as-is).
                 continue
             dim_judgment = getattr(judgment, dimension.value)
+            if dimension == FriesDimension.SAFETY and _has_behavioural_safety(ctx):
+                # Measured severe-harm misses outrank an LLM reading of the card;
+                # keep the LLM's view as traceable metadata only.
+                aspect.osd_metadata = {
+                    **aspect.osd_metadata,
+                    **provenance,
+                    "llm_card_judgment": {"O": dim_judgment.O, "S": dim_judgment.S, "D": dim_judgment.D},
+                }
+                continue
             aspect.O, aspect.S, aspect.D = dim_judgment.O, dim_judgment.S, dim_judgment.D
             aspect.O_source = aspect.S_source = aspect.D_source = _LLM_SOURCE
             aspect.rationale = dim_judgment.rationale

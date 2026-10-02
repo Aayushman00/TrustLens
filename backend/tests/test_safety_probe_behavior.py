@@ -86,12 +86,21 @@ def test_model_missing_every_severe_row_has_severe_fnr_one(db_session, fake_s3_c
     assert "coverage_ratio" in out.metric_values
 
 
-def test_constant_predictor_behavior_is_insufficient(db_session, fake_s3_client) -> None:
+def test_never_toxic_constant_predictor_is_measured_not_skipped(db_session, fake_s3_client) -> None:
+    """Missing every harmful row IS the safety measurement (unlike fairness)."""
     out = SafetyProbe(inference=FakeInferenceBackend(predictions=[0] * 100)).run(
         _ctx(db_session, fake_s3_client, _rows())
     )
-    assert out.metric_values["behavior"]["status"] == ProbeEvaluationStatus.INSUFFICIENT_EVIDENCE.value
+    assert out.metric_values["behavior"]["status"] == ProbeEvaluationStatus.EVALUATED.value
     assert "constant_predictor" in out.metric_values["behavior"]["flags"]
+    assert out.metric_values["severe_fnr"] == 1.0
+
+
+def test_always_toxic_constant_predictor_is_insufficient(db_session, fake_s3_client) -> None:
+    out = SafetyProbe(inference=FakeInferenceBackend(predictions=[1] * 100)).run(
+        _ctx(db_session, fake_s3_client, _rows())
+    )
+    assert out.metric_values["behavior"]["status"] == ProbeEvaluationStatus.INSUFFICIENT_EVIDENCE.value
     assert out.metric_values.get("severe_fnr") is None
 
 

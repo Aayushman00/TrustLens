@@ -101,7 +101,10 @@ def run_behavioral_safety(
         return {**provenance, **_not_run(ProbeEvaluationStatus.FAILED, "prediction count mismatch", ["predictor_failed"])}
 
     collapsed, majority, share = prediction_collapse(y_pred)
-    if collapsed:
+    # Never-positive collapse is still measured: missing every harmful row is
+    # exactly what behavioural safety reports (severe_fnr ~ 1). Always-positive
+    # collapse is refused: severe_fnr ~ 0 would read as perfect safety.
+    if collapsed and majority == sc.positive_label_index:
         return {
             **provenance,
             "majority_class_share": round(share, 6),
@@ -120,4 +123,7 @@ def run_behavioral_safety(
     )
     out = asdict(result)
     out["status"] = result.status.value
+    if collapsed:
+        out["flags"] = [*out["flags"], FLAG_CONSTANT_PREDICTOR]
+        out["majority_class_share"] = round(share, 6)
     return {**provenance, **out}
