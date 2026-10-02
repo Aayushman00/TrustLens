@@ -334,3 +334,63 @@ def test_listing_reverification_drift_triggers_risk(monkeypatch: pytest.MonkeyPa
     assert RISK_FILES_LISTING_DRIFT in out.metric_values["risks_triggered"]
     assert out.metric_values["aspect_scoring"] == "risk_detected"
     assert "files_listing_drift" in out.flags
+
+
+def _fake_hashes(ref: str, local: str):
+    def _f(repo: str, revision: str | None, token: str | None) -> dict:
+        return {
+            "file": "model.safetensors",
+            "trusted_reference": {"algo": "sha256", "value": ref, "source": "hf_hub_lfs"},
+            "local_artifact_hash": {"algo": "sha256", "value": local, "source": "hf_cache"},
+        }
+    return _f
+
+
+def test_hub_weight_hash_verified_automatically(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("app.probes.integrity.hub_weight_hashes", _fake_hashes("b" * 64, "b" * 64))
+    ctx, _ = _ctx(metadata=_good_metadata())
+    out = IntegrityProbe().run(ctx)
+    assert out.metric_values["identity"]["hash_comparison"] == "match"
+    assert out.metric_values["artifact_verification"]["file"] == "model.safetensors"
+
+
+def test_tampered_cached_weights_diverge_from_hub_reference(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("app.probes.integrity.hub_weight_hashes", _fake_hashes("b" * 64, "c" * 64))
+    ctx, _ = _ctx(metadata=_good_metadata())
+    out = IntegrityProbe().run(ctx)
+    assert RISK_BYTES_DIVERGE in out.metric_values["risks_triggered"]
+
+
+def test_hash_lookup_failure_is_not_performed_not_a_pass(monkeypatch: pytest.MonkeyPatch) -> None:
+    def _boom(*a, **k):
+        raise OSError("hub unreachable")
+    monkeypatch.setattr("app.probes.integrity.hub_weight_hashes", _boom)
+    ctx, _ = _ctx(metadata=_good_metadata())
+    out = IntegrityProbe().run(ctx)
+    assert out.metric_values["identity"]["hash_comparison"] == "not_performed"
+    assert "hub unreachable" in out.metric_values["artifact_verification"]["error"]
+
+
+def test_local_directory_model_skips_hub_hash(monkeypatch: pytest.MonkeyPatch) -> None:
+    called = []
+    monkeypatch.setattr("app.probes.integrity.hub_weight_hashes", lambda *a: called.append(a))
+    ctx, _ = _ctx(metadata=_good_metadata())
+    ctx.model_ref = "/models/flawed_model_suite/variant1_fairness"
+    out = IntegrityProbe().run(ctx)
+    assert called == [] and out.metric_values["identity"]["hash_comparison"] == "not_performed"
+
+
+def test_hub_weight_hashes_hashes_cached_file(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import hashlib
+    from types import SimpleNamespace
+
+    from app.probes import integrity_artifact as ia
+
+    f = tmp_path / "model.safetensors"
+    f.write_bytes(b"weights")
+    sib = SimpleNamespace(rfilename="model.safetensors", lfs=SimpleNamespace(sha256="e" * 64))
+    monkeypatch.setattr(ia, "_model_info", lambda repo, revision, token: SimpleNamespace(siblings=[sib]))
+    monkeypatch.setattr(ia, "_download", lambda repo, filename, revision, token: str(f))
+    out = ia.hub_weight_hashes("org/m", "a" * 40, None)
+    assert out["trusted_reference"]["value"] == "e" * 64
+    assert out["local_artifact_hash"]["value"] == hashlib.sha256(b"weights").hexdigest()

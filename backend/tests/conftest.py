@@ -263,6 +263,11 @@ def _integrity_hub_reverify_offline(monkeypatch: pytest.MonkeyPatch) -> None:
     the 'match'/'drift' outcomes overrides this via its own monkeypatch."""
     monkeypatch.setattr("app.probes.integrity.HfHubModelAdapter", FakeUnavailableHubAdapter)
 
+    def _hub_hashes_offline(*args, **kwargs):
+        raise OSError("offline test: Hub weight-hash lookup disabled")
+
+    monkeypatch.setattr("app.probes.integrity.hub_weight_hashes", _hub_hashes_offline)
+
 
 @pytest.fixture
 def auth_headers() -> dict[str, str]:

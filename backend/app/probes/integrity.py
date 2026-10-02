@@ -1,6 +1,8 @@
 """Integrity probe — Hub identity, provenance, and disclosure (tl-integrity-v1.0).
 
-Metadata-only: never downloads model weights. Emits Layer A evidence with named
+Metadata checks plus, for Hub models, a sha256 of the cached weight file
+against the Hub's LFS hash (integrity_artifact.py; supersedes ADR 0012's
+"never reads weight bytes" for this one check). Emits Layer A evidence with named
 Integrity risks — does **not** write final FRIES or O/S/D.
 """
 
@@ -12,9 +14,19 @@ from typing import Any
 from app.adapters.hf_hub import HfHubModelAdapter
 from app.db.enums import FriesDimension, ProbeEvaluationStatus
 from app.probes.base import ProbeContext, ProbeOutput
+from app.probes.integrity_artifact import hub_weight_hashes
 from app.probes.integrity_eval import evaluate_integrity
 from app.probes.integrity_stats import METHODOLOGY_BASIS, METHODOLOGY_VERSION, NOTE
 from app.storage.evidence_store import EvidenceStoreError
+
+
+def _hf_token() -> str | None:
+    try:
+        from app.core.config import get_settings
+
+        return get_settings().hf_token
+    except Exception:  # noqa: BLE001 — public repos need no token
+        return None
 
 
 class IntegrityProbe:
@@ -42,6 +54,19 @@ class IntegrityProbe:
             except Exception as exc:  # noqa: BLE001 — degrade, never fail the probe
                 live_files_error = str(exc)
 
+        artifact_verification: dict[str, Any] = {"performed": False}
+        supplied = integrity_extra.get("trusted_reference") or integrity_extra.get("local_artifact_hash")
+        if not supplied and not str(ctx.model_ref).startswith(("/", ".")):
+            # Hub model: verify the cached weight bytes against the Hub's LFS
+            # sha256 at the pinned revision. Any failure degrades to
+            # not_performed (INSUFFICIENT), never to a pass.
+            try:
+                hashes = hub_weight_hashes(ctx.model_ref, ctx.model_revision, _hf_token())
+                integrity_extra = {**integrity_extra, **hashes}
+                artifact_verification = {"performed": True, "file": hashes["file"]}
+            except Exception as exc:  # noqa: BLE001 — degrade, never fail the probe
+                artifact_verification = {"performed": False, "error": str(exc)[:300]}
+
         result = evaluate_integrity(
             model_ref=ctx.model_ref,
             model_revision=ctx.model_revision,
@@ -54,6 +79,7 @@ class IntegrityProbe:
         metrics: dict[str, Any] = {
             "methodology_version": METHODOLOGY_VERSION,
             "methodology_basis": METHODOLOGY_BASIS,
+            "artifact_verification": artifact_verification,
             "checks": result.checks,
             "identity": result.identity,
             "disclosure": result.disclosure,
