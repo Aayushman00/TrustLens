@@ -38,6 +38,10 @@ and EXPLAINABILITY (rate 1.0) and one on INTEGRITY (0.5). Every flag came from a
 
 ## Control flag rate, before → after (offline replay, not a re-run)
 
+Reproduce with `cd backend && python -m app.scripts.replay_l3_disclosure_gaps <new_out_dir>`.
+Stored output: `results/flawed_model_suite/l3_replay_20261003/replay.{md,json}`. It
+records every input file's sha256 and the before/after methodology versions.
+
 Method: the v1.1 card/identity logic was replayed on the suite's exact inputs:
 - cards from `results/flawed_model_suite/cards|models/*/README.md`
 - license from the stored integrity evidence
