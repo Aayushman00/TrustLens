@@ -61,6 +61,7 @@ from app.schemas.evaluation_contract_v2 import (
     FairnessContractV2,
     ModelLabelSnapshot,
     RobustnessContractV2,
+    SafetyContractV2,
 )
 from app.schemas.internal import EvaluateModelPayload
 from app.scoring.methodology_version import CURRENT_METHODOLOGY_VERSION
@@ -145,6 +146,7 @@ class EvaluationServiceV2:
 
         fairness_contract: FairnessContractV2 | None = None
         robustness_contract: RobustnessContractV2 | None = None
+        safety_contract: SafetyContractV2 | None = None
         for dim in touched_dimensions:
             if dim.confirmed_at is None:
                 raise ConflictError(
@@ -174,6 +176,17 @@ class EvaluationServiceV2:
                     target_column=dim.target_column,
                     label_mapping=label_mapping,
                 )
+            elif dim.dimension == "SAFETY":
+                safety_contract = SafetyContractV2(
+                    dataset_content_id=dim.dataset_content_id,
+                    text_column=dim.text_column,
+                    target_column=dim.target_column,
+                    severe_column=dim.severe_column,
+                    label_mapping=label_mapping,
+                    positive_label_index=(
+                        dim.positive_label_index if dim.positive_label_index is not None else 1
+                    ),
+                )
 
         contract = EvaluationContractV2(
             model_ref=model.hf_repo_id,
@@ -184,6 +197,7 @@ class EvaluationServiceV2:
             ),
             fairness=fairness_contract,
             robustness=robustness_contract,
+            safety=safety_contract,
         )
 
         probe_config = {

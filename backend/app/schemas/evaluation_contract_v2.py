@@ -42,6 +42,18 @@ class RobustnessContractV2(BaseModel):
     label_mapping: list[LabelMappingEntry]
 
 
+class SafetyContractV2(BaseModel):
+    """Behavioural safety: severe-harm false negatives of the imported model."""
+
+    dataset_content_id: uuid.UUID
+    text_column: str
+    target_column: str
+    severe_column: str
+    label_mapping: list[LabelMappingEntry]
+    positive_label_index: int = 1
+    min_severe_n: int = Field(default=30, gt=0)
+
+
 class EvaluationContractV2(BaseModel):
     schema_version: Literal["v2"] = "v2"
     model_ref: str
@@ -50,6 +62,7 @@ class EvaluationContractV2(BaseModel):
     model_label_snapshot: ModelLabelSnapshot
     fairness: FairnessContractV2 | None = None
     robustness: RobustnessContractV2 | None = None
+    safety: SafetyContractV2 | None = None
 
 
 __all__ = [
@@ -57,5 +70,6 @@ __all__ = [
     "ModelLabelSnapshot",
     "FairnessContractV2",
     "RobustnessContractV2",
+    "SafetyContractV2",
     "EvaluationContractV2",
 ]

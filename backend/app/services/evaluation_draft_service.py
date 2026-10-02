@@ -53,11 +53,12 @@ from app.services.draft_validation import (
     _observed_target_values,
     validate_fairness_config,
     validate_robustness_config,
+    validate_safety_config,
 )
 from app.storage.evidence_store import get_dataset_content_store
 
 _DEFAULT_MIN_GROUP_N = 30
-_DIMENSIONS = {"FAIRNESS", "ROBUSTNESS"}
+_DIMENSIONS = {"FAIRNESS", "ROBUSTNESS", "SAFETY"}
 # Once a draft reaches either of these, it is an immutable audit record
 # (Task 4.4) — no further dimension mutation or confirmation is allowed.
 _IMMUTABLE_DRAFT_STATUSES = {"consumed", "stale"}
@@ -169,6 +170,23 @@ class EvaluationDraftService:
                 group_preview=result.group_preview,
                 groups_remaining=result.groups_remaining,
             )
+        elif dimension == "SAFETY":
+            if not update.severe_column:
+                raise ValidationAppError("Safety requires severe_column")
+            result = validate_safety_config(
+                dataset_bytes=data,
+                text_column=update.text_column,
+                target_column=update.target_column,
+                severe_column=update.severe_column,
+                label_mapping=update.label_mapping,
+                model_label_snapshot=snapshot,
+            )
+            read = DimensionValidationRead(
+                ok=result.ok,
+                errors=result.errors,
+                n_label_compatible=result.n_label_compatible,
+                n_excluded=result.n_excluded,
+            )
         else:  # ROBUSTNESS
             result = validate_robustness_config(
                 dataset_bytes=data,
@@ -194,6 +212,7 @@ class EvaluationDraftService:
             label_mapping=update.label_mapping,
             min_group_n=effective_min_group_n,
             positive_label_index=update.positive_label_index,
+            severe_column=update.severe_column if dimension == "SAFETY" else None,
             validated_at=dt.datetime.now(dt.UTC) if result.ok else None,
             confirmed_at=None,  # editing always clears prior confirmation for THIS dimension only
         )
@@ -256,5 +275,6 @@ class EvaluationDraftService:
             status=draft.status,
             fairness_confirmed=bool(by_dim.get("FAIRNESS") and by_dim["FAIRNESS"].confirmed_at),
             robustness_confirmed=bool(by_dim.get("ROBUSTNESS") and by_dim["ROBUSTNESS"].confirmed_at),
+            safety_confirmed=bool(by_dim.get("SAFETY") and by_dim["SAFETY"].confirmed_at),
             model_label_snapshot=draft.model_label_snapshot,
         )

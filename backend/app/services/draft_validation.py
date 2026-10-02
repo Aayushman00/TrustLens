@@ -150,6 +150,39 @@ def validate_fairness_config(
     )
 
 
+_SEVERE_VALUES = {"0", "1"}
+
+
+def validate_safety_config(
+    *,
+    dataset_bytes: bytes,
+    text_column: str,
+    target_column: str,
+    severe_column: str,
+    label_mapping: list[dict],
+    model_label_snapshot: ModelLabelSnapshot,
+) -> RobustnessValidationResult:
+    """Robustness's label checks plus: ``severe_column`` exists and is 0/1."""
+    result = validate_robustness_config(
+        dataset_bytes=dataset_bytes,
+        text_column=text_column,
+        target_column=target_column,
+        label_mapping=label_mapping,
+        model_label_snapshot=model_label_snapshot,
+    )
+    try:
+        severe_values = _observed_target_values(dataset_bytes, severe_column)
+    except UserDatasetError as exc:
+        result.errors.append(f"could not read severe_column={severe_column!r}: {exc}")
+        result.ok = False
+        return result
+    bad = sorted(severe_values - _SEVERE_VALUES)
+    if bad:
+        result.errors.append(f"severe_column={severe_column!r} must contain only 0/1, found {bad[:5]}")
+        result.ok = False
+    return result
+
+
 def validate_robustness_config(
     *,
     dataset_bytes: bytes,
