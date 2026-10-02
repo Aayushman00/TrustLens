@@ -588,7 +588,7 @@ def test_report_json_records_methodology_version(
     """Task 5.1: Report records CURRENT_METHODOLOGY_VERSION from evaluation."""
     report = build_report_json(db_session, finalized_evaluation_v2, report_version=1)
     assert report["methodology_version"] == CURRENT_METHODOLOGY_VERSION
-    assert report["methodology_version"] == "v2-per-dimension-2026"
+    assert report["methodology_version"] == "v3-hardening-2026"  # bumped by hardening Task 7
 
 
 def test_legacy_report_json_records_legacy_methodology_version(

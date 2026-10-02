@@ -13,9 +13,12 @@ Band rules (documented, unit-testable):
   O = S = scale(1 − gap) (−1 each when the observed min group is below the
   configured ``min_group_n``); D = 8 when metrics computed (disparities are
   directly measurable), 7 on thin slices. Metrics missing → abstain (None).
-- ROBUSTNESS: O = scale(clean_accuracy), S = scale(robust_accuracy),
-  D = scale(degradation_ratio = robust/clean). Attack skipped / accuracies
-  missing → abstain (None).
+- ROBUSTNESS (v3-hardening-2026): drop = max(clean − robust, 0);
+  O = scale(min(robust/clean, 1)), S = scale(1 − min(drop/0.10, 1)), D = 8.
+  Accuracy itself is not in the band (task performance is reported, not
+  scored here). Attack skipped / accuracies missing / probe
+  ``aspect_scoring == "mapping_blocked"`` → abstain (None). Before
+  v3-hardening-2026: O = scale(clean), S = scale(robust), D = scale(robust/clean).
 - INTEGRITY: pass_rate over metadata checks; O = S = scale(pass_rate),
   D = 8 (metadata checks are directly auditable). No checks → abstain (None).
 - EXPLAINABILITY: O = S = D = scale(coverage_ratio); empty card → (2, 2, 3)
@@ -142,13 +145,19 @@ def _robustness_band(m: dict[str, Any]) -> tuple[tuple[int | None, int | None, i
     robust = _num(m, "robust_accuracy")
     if clean is None or robust is None:
         return (None, None, None), "adversarial attack was skipped"
-    degradation = _num(m, "degradation_ratio")
-    if degradation is None:
-        degradation = robust / clean if clean > 0 else 0.0
-    band = (_scale(clean), _scale(robust), _scale(min(degradation, 1.0)))
+    if m.get("aspect_scoring") == "mapping_blocked":
+        # Probe gate (clean-accuracy floor, wide CI, domain override) already
+        # said the drop is not interpretable; a band would reward stability
+        # of wrong answers.
+        return (None, None, None), (
+            f"robustness mapping blocked by probe gate (clean_accuracy={clean:.3f})"
+        )
+    drop = max(clean - robust, 0.0)
+    ratio = min(robust / clean, 1.0) if clean > 0 else 0.0
+    band = (_scale(ratio), _scale(1.0 - min(drop / 0.10, 1.0)), 8)
     detail = (
         f"clean_accuracy={clean:.3f}, robust_accuracy={robust:.3f}, "
-        f"degradation_ratio={degradation:.3f}"
+        f"accuracy_drop={drop:.3f}"
     )
     return band, detail
 

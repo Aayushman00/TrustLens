@@ -311,3 +311,24 @@ def test_serialization_shapes() -> None:
     assert set(fries.dimension_scores) == {d.value for d in FriesDimension}
     assert finalized["scoring_complete"] is True
     assert len(finalized["aspects"]) == 5
+
+
+def test_robustness_band_depends_on_drop_not_accuracy() -> None:
+    from app.osd.agent import _robustness_band
+
+    stable_low_acc, _ = _robustness_band({"clean_accuracy": 0.80, "robust_accuracy": 0.80})
+    brittle_high_acc, _ = _robustness_band({"clean_accuracy": 0.809, "robust_accuracy": 0.768})
+    assert stable_low_acc[1] == 9  # no drop -> clamp(10) = 9
+    assert brittle_high_acc[1] == 6  # 4.1pp drop -> scale(0.59)
+    assert brittle_high_acc[1] < stable_low_acc[1]
+
+
+def test_robustness_band_abstains_when_probe_blocked_mapping() -> None:
+    """A model below the clean-accuracy floor keeps its wrong answers under
+    perturbation; 'no drop' must not become a strong robustness band."""
+    from app.osd.agent import _robustness_band
+
+    band, _ = _robustness_band(
+        {"clean_accuracy": 0.15, "robust_accuracy": 0.15, "aspect_scoring": "mapping_blocked"}
+    )
+    assert band == (None, None, None)

@@ -6,5 +6,8 @@ old stored report.json blobs genuinely never recorded any value at all —
 see docs/superpowers/plans/2026-09-10-v1-dataset-contract-redesign.md
 Global Constraints)."""
 
-CURRENT_METHODOLOGY_VERSION = "v2-per-dimension-2026"
+# v3-hardening-2026: robustness band from accuracy drop (osd/agent.py),
+# constant-predictor gate, behavioural safety band.
+CURRENT_METHODOLOGY_VERSION = "v3-hardening-2026"
+PREVIOUS_METHODOLOGY_VERSIONS = ("v2-per-dimension-2026",)
 LEGACY_METHODOLOGY_VERSION = "pre-v1-fixed-5dim"
