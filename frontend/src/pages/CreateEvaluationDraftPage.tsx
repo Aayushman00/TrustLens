@@ -35,7 +35,7 @@ import ErrorNotice from "../components/ErrorNotice";
 import Spinner from "../components/Spinner";
 import { shortRevision } from "../lib/contract";
 
-type Dimension = "FAIRNESS" | "ROBUSTNESS";
+type Dimension = "FAIRNESS" | "ROBUSTNESS" | "SAFETY";
 
 interface DimensionState {
   enabled: boolean;
@@ -60,6 +60,7 @@ function initialDimensionState(): DimensionState {
 const DIMENSION_LABEL: Record<Dimension, string> = {
   FAIRNESS: "Fairness",
   ROBUSTNESS: "Robustness",
+  SAFETY: "Behavioural safety",
 };
 
 export default function CreateEvaluationDraftPage() {
@@ -145,13 +146,15 @@ export default function CreateEvaluationDraftPage() {
   // --- Per-dimension state ---
   const [fairness, setFairness] = useState<DimensionState>(initialDimensionState);
   const [robustness, setRobustness] = useState<DimensionState>(initialDimensionState);
+  const [safety, setSafety] = useState<DimensionState>(initialDimensionState);
 
   function stateFor(dim: Dimension) {
-    return dim === "FAIRNESS" ? fairness : robustness;
+    return dim === "FAIRNESS" ? fairness : dim === "ROBUSTNESS" ? robustness : safety;
   }
   function setStateFor(dim: Dimension, updater: (prev: DimensionState) => DimensionState) {
     if (dim === "FAIRNESS") setFairness(updater);
-    else setRobustness(updater);
+    else if (dim === "ROBUSTNESS") setRobustness(updater);
+    else setSafety(updater);
   }
 
   function toggleDimension(dim: Dimension, checked: boolean) {
@@ -203,24 +206,27 @@ export default function CreateEvaluationDraftPage() {
     }
   }
 
-  const anyEnabled = fairness.enabled || robustness.enabled;
+  const anyEnabled = fairness.enabled || robustness.enabled || safety.enabled;
   const readyToContinue =
     draft !== null &&
     anyEnabled &&
     (!fairness.enabled || fairness.confirmed) &&
-    (!robustness.enabled || robustness.confirmed);
+    (!robustness.enabled || robustness.confirmed) &&
+    (!safety.enabled || safety.confirmed);
   // Told the person exactly what's missing rather than leaving the disabled
   // "Continue to review" button unexplained — it used to just silently
   // refuse clicks with no visible reason.
   const continueHint = readyToContinue
     ? null
     : !anyEnabled
-      ? "Configure Fairness or Robustness above with a dataset before continuing — at least one is required."
+      ? "Configure Fairness, Robustness or Behavioural safety above with a dataset before continuing — at least one is required."
       : fairness.enabled && !fairness.confirmed
         ? "Validate and confirm the Fairness dataset above before continuing."
         : robustness.enabled && !robustness.confirmed
           ? "Validate and confirm the Robustness dataset above before continuing."
-          : null;
+          : safety.enabled && !safety.confirmed
+            ? "Validate and confirm the Behavioural safety dataset above before continuing."
+            : null;
 
   // --- Create the real Evaluation from the confirmed draft ---
   const [creatingEvaluation, setCreatingEvaluation] = useState(false);
@@ -412,6 +418,7 @@ export default function CreateEvaluationDraftPage() {
         <>
           {renderDimension("FAIRNESS")}
           {renderDimension("ROBUSTNESS")}
+          {renderDimension("SAFETY")}
 
           <div className="card">
             <h2>Documentation</h2>

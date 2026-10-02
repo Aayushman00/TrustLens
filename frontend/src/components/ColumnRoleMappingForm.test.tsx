@@ -207,3 +207,34 @@ test("a stale target-values response does not overwrite a newer selection's rows
   expect(screen.queryByLabelText(/^pos/i)).toBeNull();
   expect(screen.getByLabelText(/^a/i)).toBeTruthy();
 });
+
+test("multi-label model maps dataset labels to the chosen output, and SAFETY sends severe column", async () => {
+  vi.mocked(apiFetch)
+    .mockResolvedValueOnce({ values: ["1", "0"] })
+    .mockResolvedValueOnce({ ok: true, errors: [] });
+  const onValidated = vi.fn();
+  const multi: ModelLabelSnapshot = {
+    num_labels: 3,
+    id2label: { "0": "toxic", "1": "obscene", "2": "threat" },
+    problem_type: "multi_label_classification",
+  };
+  const content = { ...CONTENT, columns: [...CONTENT.columns, { name: "severe", inferred_type: "integer" }] };
+  render(
+    <ColumnRoleMappingForm draftId="d" dimension="SAFETY" content={content} modelLabelSnapshot={multi} onValidated={onValidated} />
+  );
+  fireEvent.change(screen.getByLabelText(/positive output/i), { target: { value: "0" } });
+  fireEvent.change(screen.getByLabelText(/text column/i), { target: { value: "text" } });
+  fireEvent.change(screen.getByLabelText(/target column/i), { target: { value: "label" } });
+  fireEvent.change(screen.getByLabelText(/severe-harm column/i), { target: { value: "severe" } });
+  await screen.findByText(/map dataset labels to model labels/i);
+  // Derived binary options, not the raw six outputs.
+  expect(screen.getAllByRole("option", { name: "not toxic" }).length).toBeGreaterThan(0);
+  expect(screen.queryByRole("option", { name: "obscene" })).toBeInTheDocument(); // only in the output picker
+  fireEvent.change(screen.getByLabelText(/^1 →/), { target: { value: "1" } });
+  fireEvent.change(screen.getByLabelText(/^0 →/), { target: { value: "0" } });
+  fireEvent.click(screen.getByRole("button", { name: /save.*validate/i }));
+  await waitFor(() => expect(onValidated).toHaveBeenCalled());
+  const body = vi.mocked(apiFetch).mock.calls[1][1]!.body as Record<string, unknown>;
+  expect(body.multilabel_target_index).toBe(0);
+  expect(body.severe_column).toBe("severe");
+});
