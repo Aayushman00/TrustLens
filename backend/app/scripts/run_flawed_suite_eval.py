@@ -123,14 +123,23 @@ def register_hf_model(client: httpx.Client, repo_id: str) -> int:
     return row["id"]
 
 
-def create_and_run_evaluation(client: httpx.Client, model_id: int, dataset_content_id: str) -> dict[str, Any]:
+def create_and_run_evaluation(
+    client: httpx.Client,
+    model_id: int,
+    dataset_content_id: str,
+    *,
+    positive_index: int = 1,
+    multilabel_target_index: int | None = None,
+) -> dict[str, Any]:
+    """``positive_index`` = model index (or derived-binary index for multi-label
+    models) meaning toxic; eval_set label "1" maps to it, "0" to the other."""
     draft = client.post("/evaluation-drafts", json={"model_id": model_id})
     draft.raise_for_status()
     draft_id = draft.json()["id"]
 
     label_mapping = [
-        {"dataset_value": "0", "model_label_index": 0},
-        {"dataset_value": "1", "model_label_index": 1},
+        {"dataset_value": "0", "model_label_index": 1 - positive_index},
+        {"dataset_value": "1", "model_label_index": positive_index},
     ]
 
     fairness_body = {
@@ -140,7 +149,8 @@ def create_and_run_evaluation(client: httpx.Client, model_id: int, dataset_conte
         "sensitive_column": "identity_ref",
         "label_mapping": label_mapping,
         "min_group_n": 30,
-        "positive_label_index": 1,
+        "positive_label_index": positive_index,
+        "multilabel_target_index": multilabel_target_index,
     }
     r = client.put(f"/evaluation-drafts/{draft_id}/FAIRNESS", json=fairness_body)
     r.raise_for_status()
@@ -155,6 +165,7 @@ def create_and_run_evaluation(client: httpx.Client, model_id: int, dataset_conte
         "target_column": "label",
         "sensitive_column": None,
         "label_mapping": label_mapping,
+        "multilabel_target_index": multilabel_target_index,
     }
     r = client.put(f"/evaluation-drafts/{draft_id}/ROBUSTNESS", json=robustness_body)
     r.raise_for_status()
@@ -165,7 +176,7 @@ def create_and_run_evaluation(client: httpx.Client, model_id: int, dataset_conte
 
     # Behavioural safety: eval_set.csv marks severe-harm rows in "severe"
     # (282 severe & toxic rows, above min_severe_n=30).
-    safety_body = {**robustness_body, "severe_column": "severe", "positive_label_index": 1}
+    safety_body = {**robustness_body, "severe_column": "severe", "positive_label_index": positive_index}
     r = client.put(f"/evaluation-drafts/{draft_id}/SAFETY", json=safety_body)
     r.raise_for_status()
     if not r.json().get("ok", True):
