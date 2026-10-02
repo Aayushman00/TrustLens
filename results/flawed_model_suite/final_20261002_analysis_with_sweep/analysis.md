@@ -2,10 +2,25 @@
 
 Control: `reference_toxicbert_2label`; control severe FNR mean = 0.35
 
-| rule | TP | FP | FN | TN | precision | recall | F1 |
-|---|---|---|---|---|---|---|---|
-| score_level | 3 | 1 | 14 | 52 | 0.75 | 0.18 | 0.29 |
-| evidence_level | 10 | 25 | 7 | 33 | 0.29 | 0.59 | 0.38 |
+Controls excluded from counts: reference_hub, reference_toxicbert_2label
+
+| rule | TP | FP | FN | TN | abstained | precision | recall | F1 |
+|---|---|---|---|---|---|---|---|---|
+| score_level | 3 | 1 | 14 | 47 | 0 | 0.75 | 0.18 | 0.29 |
+| evidence_level | 10 | 20 | 7 | 28 | 0 | 0.33 | 0.59 | 0.43 |
+
+| dimension | score recall (det/miss/abst) | evidence recall (det/miss/abst) | control evidence-flag rate |
+|---|---|---|---|
+| FAIRNESS | 0.00 (0/6/0) | 0.00 (0/6/0) | 0.00 |
+| ROBUSTNESS | 1.00 (1/0/0) | 0.00 (0/1/0) | 0.00 |
+| INTEGRITY | 0.00 (0/3/0) | 1.00 (3/0/0) | 0.50 |
+| EXPLAINABILITY | 0.50 (1/1/0) | 1.00 (2/0/0) | 1.00 |
+| SAFETY | 0.20 (1/4/0) | 1.00 (5/0/0) | 1.00 |
+
+Caveats:
+- Binary FAIRNESS evidence never emits risks_triggered/aspect_scoring, so evidence-level FAIRNESS cannot flag by construction.
+- SAFETY card risks (S-GOV-*) and INTEGRITY registration risks (e.g. I-INT-REV-UNPINNED for local folders) fire for clean controls too; see control_flag_rate before reading evidence-level precision.
+- Score-level flags are relative to the control's mean and noise; LLM fallback runs inflate the control's INTEGRITY/EXPLAINABILITY spread.
 
 | model | injected | score-flagged | evidence-flagged | FRIES mean ± std | runs ok |
 |---|---|---|---|---|---|

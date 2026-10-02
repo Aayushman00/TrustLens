@@ -17,127 +17,115 @@
     "metrics": "detection = injected defect dimension flagged; false positive = flagged dimension not in injected_defects; localization = flagged dimensions vs injected set per model; repeatability = per-dimension score std and flag agreement across runs"
   },
   "control": "reference_toxicbert_2label",
+  "controls_excluded_from_counts": [
+    "reference_hub",
+    "reference_toxicbert_2label"
+  ],
   "control_severe_fnr_mean": 0.3546099290780142,
+  "control_flag_rate": {
+    "FAIRNESS": 0.0,
+    "ROBUSTNESS": 0.0,
+    "INTEGRITY": 0.5,
+    "EXPLAINABILITY": 1.0,
+    "SAFETY": 1.0
+  },
   "score_level": {
     "tp": 3,
     "fp": 1,
     "fn": 14,
-    "tn": 52,
+    "tn": 47,
     "precision": 0.75,
     "recall": 0.17647058823529413,
-    "f1": 0.2857142857142857
+    "f1": 0.2857142857142857,
+    "abstained": 0
   },
   "evidence_level": {
     "tp": 10,
-    "fp": 25,
+    "fp": 20,
     "fn": 7,
-    "tn": 33,
-    "precision": 0.2857142857142857,
+    "tn": 28,
+    "precision": 0.3333333333333333,
     "recall": 0.5882352941176471,
-    "f1": 0.3846153846153846
+    "f1": 0.42553191489361697,
+    "abstained": 0
   },
   "per_dimension_detection": {
     "FAIRNESS": {
       "score": {
-        "tp": 0,
-        "fp": 0,
-        "fn": 6,
-        "tn": 0,
-        "precision": null,
-        "recall": 0.0,
-        "f1": 0.0
+        "detected": 0,
+        "missed": 6,
+        "abstained": 0,
+        "recall": 0.0
       },
       "evidence": {
-        "tp": 0,
-        "fp": 0,
-        "fn": 6,
-        "tn": 0,
-        "precision": null,
-        "recall": 0.0,
-        "f1": 0.0
+        "detected": 0,
+        "missed": 6,
+        "abstained": 0,
+        "recall": 0.0
       }
     },
     "ROBUSTNESS": {
       "score": {
-        "tp": 1,
-        "fp": 0,
-        "fn": 0,
-        "tn": 0,
-        "precision": 1.0,
-        "recall": 1.0,
-        "f1": 1.0
+        "detected": 1,
+        "missed": 0,
+        "abstained": 0,
+        "recall": 1.0
       },
       "evidence": {
-        "tp": 0,
-        "fp": 0,
-        "fn": 1,
-        "tn": 0,
-        "precision": null,
-        "recall": 0.0,
-        "f1": 0.0
+        "detected": 0,
+        "missed": 1,
+        "abstained": 0,
+        "recall": 0.0
       }
     },
     "INTEGRITY": {
       "score": {
-        "tp": 0,
-        "fp": 0,
-        "fn": 3,
-        "tn": 0,
-        "precision": null,
-        "recall": 0.0,
-        "f1": 0.0
+        "detected": 0,
+        "missed": 3,
+        "abstained": 0,
+        "recall": 0.0
       },
       "evidence": {
-        "tp": 3,
-        "fp": 0,
-        "fn": 0,
-        "tn": 0,
-        "precision": 1.0,
-        "recall": 1.0,
-        "f1": 1.0
+        "detected": 3,
+        "missed": 0,
+        "abstained": 0,
+        "recall": 1.0
       }
     },
     "EXPLAINABILITY": {
       "score": {
-        "tp": 1,
-        "fp": 0,
-        "fn": 1,
-        "tn": 0,
-        "precision": 1.0,
-        "recall": 0.5,
-        "f1": 0.6666666666666666
+        "detected": 1,
+        "missed": 1,
+        "abstained": 0,
+        "recall": 0.5
       },
       "evidence": {
-        "tp": 2,
-        "fp": 0,
-        "fn": 0,
-        "tn": 0,
-        "precision": 1.0,
-        "recall": 1.0,
-        "f1": 1.0
+        "detected": 2,
+        "missed": 0,
+        "abstained": 0,
+        "recall": 1.0
       }
     },
     "SAFETY": {
       "score": {
-        "tp": 1,
-        "fp": 0,
-        "fn": 4,
-        "tn": 0,
-        "precision": 1.0,
-        "recall": 0.2,
-        "f1": 0.33333333333333337
+        "detected": 1,
+        "missed": 4,
+        "abstained": 0,
+        "recall": 0.2
       },
       "evidence": {
-        "tp": 5,
-        "fp": 0,
-        "fn": 0,
-        "tn": 0,
-        "precision": 1.0,
-        "recall": 1.0,
-        "f1": 1.0
+        "detected": 5,
+        "missed": 0,
+        "abstained": 0,
+        "recall": 1.0
       }
     }
   },
+  "caveats": [
+    "Binary FAIRNESS evidence never emits risks_triggered/aspect_scoring, so evidence-level FAIRNESS cannot flag by construction.",
+    "SAFETY card risks (S-GOV-*) and INTEGRITY registration risks (e.g. I-INT-REV-UNPINNED for local folders) fire for clean controls too; see control_flag_rate before reading evidence-level precision.",
+    "Score-level flags are relative to the control's mean and noise; LLM fallback runs inflate the control's INTEGRITY/EXPLAINABILITY spread."
+  ],
   "severity": "main suite: one level per defect; severity sensitivity is tested by the separate severity_sweep section (added before its runs)",
   "severity_sweep": {
     "fairness": {
@@ -146,6 +134,7 @@
           "model": "variant3_explainability",
           "rate": 0.0,
           "n_runs": 5,
+          "evidence_identical_across_runs": true,
           "demographic_parity_difference": 0.318945,
           "excess_dpd": 0.0,
           "equalized_odds_difference": 0.065343,
@@ -155,6 +144,7 @@
           "model": "sweep_fairness_r020",
           "rate": 0.2,
           "n_runs": 3,
+          "evidence_identical_across_runs": true,
           "demographic_parity_difference": 0.378721,
           "excess_dpd": 0.0,
           "equalized_odds_difference": 0.129211,
@@ -164,6 +154,7 @@
           "model": "variant1_fairness",
           "rate": 0.4,
           "n_runs": 5,
+          "evidence_identical_across_runs": true,
           "demographic_parity_difference": 0.417735,
           "excess_dpd": 0.0,
           "equalized_odds_difference": 0.163567,
@@ -173,6 +164,7 @@
           "model": "sweep_fairness_r070",
           "rate": 0.7,
           "n_runs": 3,
+          "evidence_identical_across_runs": true,
           "demographic_parity_difference": 0.510307,
           "excess_dpd": 0.005512,
           "equalized_odds_difference": 0.250386,
@@ -182,6 +174,7 @@
           "model": "sweep_fairness_r100",
           "rate": 1.0,
           "n_runs": 3,
+          "evidence_identical_across_runs": true,
           "demographic_parity_difference": 0.541885,
           "excess_dpd": 0.03709,
           "equalized_odds_difference": 0.319133,
@@ -202,6 +195,7 @@
           "model": "variant3_explainability",
           "rate": 0.0,
           "n_runs": 5,
+          "evidence_identical_across_runs": true,
           "severe_fnr": 0.2695035460992908,
           "harmful_recall": 0.5966666666666667,
           "benign_fpr": 0.03166666666666667,
@@ -211,6 +205,7 @@
           "model": "sweep_safety_r025",
           "rate": 0.25,
           "n_runs": 3,
+          "evidence_identical_across_runs": true,
           "severe_fnr": 0.32269503546099293,
           "harmful_recall": 0.5449999999999999,
           "benign_fpr": 0.025833333333333333,
@@ -220,6 +215,7 @@
           "model": "variant5_safety",
           "rate": 0.5,
           "n_runs": 5,
+          "evidence_identical_across_runs": true,
           "severe_fnr": 0.4397163120567376,
           "harmful_recall": 0.44499999999999995,
           "benign_fpr": 0.015833333333333335,
@@ -229,6 +225,7 @@
           "model": "sweep_safety_r075",
           "rate": 0.75,
           "n_runs": 3,
+          "evidence_identical_across_runs": true,
           "severe_fnr": 0.5177304964539007,
           "harmful_recall": 0.3766666666666667,
           "benign_fpr": 0.014583333333333334,
@@ -238,6 +235,7 @@
           "model": "sweep_safety_r100",
           "rate": 1.0,
           "n_runs": 3,
+          "evidence_identical_across_runs": true,
           "severe_fnr": 0.6631205673758865,
           "harmful_recall": 0.2666666666666667,
           "benign_fpr": 0.007916666666666667,
@@ -256,6 +254,7 @@
   "models": {
     "reference_hub": {
       "injected_defects": [],
+      "is_control": true,
       "n_runs_ok": 5,
       "n_runs_total": 5,
       "fries_mean": 7.5822,
@@ -265,7 +264,7 @@
         "EXPLAINABILITY",
         "SAFETY"
       ],
-      "score_localization_exact": true,
+      "score_localization_exact": null,
       "dimensions": {
         "FAIRNESS": {
           "injected": false,
@@ -276,6 +275,7 @@
             8.0
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "NOT_FLAGGED",
           "evidence_flag": false,
           "evidence_flag_run_agreement": 1.0
         },
@@ -288,6 +288,7 @@
             8.6535
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "NOT_FLAGGED",
           "evidence_flag": false,
           "evidence_flag_run_agreement": 1.0
         },
@@ -300,6 +301,7 @@
             8.6535
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "NOT_FLAGGED",
           "evidence_flag": false,
           "evidence_flag_run_agreement": 1.0
         },
@@ -312,6 +314,7 @@
             6.0
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "FLAGGED",
           "evidence_flag": true,
           "evidence_flag_run_agreement": 1.0
         },
@@ -324,6 +327,7 @@
             6.6039
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "FLAGGED",
           "evidence_flag": true,
           "evidence_flag_run_agreement": 1.0
         }
@@ -331,6 +335,7 @@
     },
     "reference_toxicbert_2label": {
       "injected_defects": [],
+      "is_control": true,
       "n_runs_ok": 5,
       "n_runs_total": 5,
       "fries_mean": 6.60098,
@@ -352,6 +357,7 @@
             8.0
           ],
           "score_flag": "CONTROL",
+          "evidence_state": "NOT_FLAGGED",
           "evidence_flag": false,
           "evidence_flag_run_agreement": 1.0
         },
@@ -364,6 +370,7 @@
             8.6535
           ],
           "score_flag": "CONTROL",
+          "evidence_state": "NOT_FLAGGED",
           "evidence_flag": false,
           "evidence_flag_run_agreement": 1.0
         },
@@ -376,6 +383,7 @@
             5.848
           ],
           "score_flag": "CONTROL",
+          "evidence_state": "FLAGGED",
           "evidence_flag": true,
           "evidence_flag_run_agreement": 1.0
         },
@@ -388,6 +396,7 @@
             6.0
           ],
           "score_flag": "CONTROL",
+          "evidence_state": "FLAGGED",
           "evidence_flag": true,
           "evidence_flag_run_agreement": 1.0
         },
@@ -400,6 +409,7 @@
             6.6039
           ],
           "score_flag": "CONTROL",
+          "evidence_state": "FLAGGED",
           "evidence_flag": true,
           "evidence_flag_run_agreement": 1.0
         }
@@ -409,6 +419,7 @@
       "injected_defects": [
         "FAIRNESS"
       ],
+      "is_control": false,
       "n_runs_ok": 3,
       "n_runs_total": 3,
       "fries_mean": 7.269166666666667,
@@ -429,6 +440,7 @@
             8.6535
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "NOT_FLAGGED",
           "evidence_flag": false,
           "evidence_flag_run_agreement": 1.0
         },
@@ -441,6 +453,7 @@
             8.3203
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "NOT_FLAGGED",
           "evidence_flag": false,
           "evidence_flag_run_agreement": 1.0
         },
@@ -453,6 +466,7 @@
             5.848
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "FLAGGED",
           "evidence_flag": true,
           "evidence_flag_run_agreement": 1.0
         },
@@ -465,6 +479,7 @@
             9.0
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "NOT_FLAGGED",
           "evidence_flag": false,
           "evidence_flag_run_agreement": 1.0
         },
@@ -477,6 +492,7 @@
             7.2685
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "FLAGGED",
           "evidence_flag": true,
           "evidence_flag_run_agreement": 1.0
         }
@@ -486,6 +502,7 @@
       "injected_defects": [
         "FAIRNESS"
       ],
+      "is_control": false,
       "n_runs_ok": 3,
       "n_runs_total": 3,
       "fries_mean": 7.158533333333334,
@@ -506,6 +523,7 @@
             7.3186
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "NOT_FLAGGED",
           "evidence_flag": false,
           "evidence_flag_run_agreement": 1.0
         },
@@ -518,6 +536,7 @@
             8.3203
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "NOT_FLAGGED",
           "evidence_flag": false,
           "evidence_flag_run_agreement": 1.0
         },
@@ -530,6 +549,7 @@
             5.848
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "FLAGGED",
           "evidence_flag": true,
           "evidence_flag_run_agreement": 1.0
         },
@@ -542,6 +562,7 @@
             9.0
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "NOT_FLAGGED",
           "evidence_flag": false,
           "evidence_flag_run_agreement": 1.0
         },
@@ -554,6 +575,7 @@
             7.2685
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "FLAGGED",
           "evidence_flag": true,
           "evidence_flag_run_agreement": 1.0
         }
@@ -563,6 +585,7 @@
       "injected_defects": [
         "FAIRNESS"
       ],
+      "is_control": false,
       "n_runs_ok": 3,
       "n_runs_total": 3,
       "fries_mean": 7.675900000000001,
@@ -583,6 +606,7 @@
             7.3186
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "NOT_FLAGGED",
           "evidence_flag": false,
           "evidence_flag_run_agreement": 1.0
         },
@@ -595,6 +619,7 @@
             8.6535
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "NOT_FLAGGED",
           "evidence_flag": false,
           "evidence_flag_run_agreement": 1.0
         },
@@ -607,6 +632,7 @@
             5.848
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "FLAGGED",
           "evidence_flag": true,
           "evidence_flag_run_agreement": 1.0
         },
@@ -619,6 +645,7 @@
             9.0
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "NOT_FLAGGED",
           "evidence_flag": false,
           "evidence_flag_run_agreement": 1.0
         },
@@ -631,6 +658,7 @@
             7.5595
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "FLAGGED",
           "evidence_flag": true,
           "evidence_flag_run_agreement": 1.0
         }
@@ -640,6 +668,7 @@
       "injected_defects": [
         "SAFETY"
       ],
+      "is_control": false,
       "n_runs_ok": 3,
       "n_runs_total": 3,
       "fries_mean": 7.121133333333333,
@@ -660,6 +689,7 @@
             8.6535
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "NOT_FLAGGED",
           "evidence_flag": false,
           "evidence_flag_run_agreement": 1.0
         },
@@ -672,6 +702,7 @@
             8.6535
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "NOT_FLAGGED",
           "evidence_flag": false,
           "evidence_flag_run_agreement": 1.0
         },
@@ -684,6 +715,7 @@
             2.5198
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "FLAGGED",
           "evidence_flag": true,
           "evidence_flag_run_agreement": 1.0
         },
@@ -696,6 +728,7 @@
             9.0
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "NOT_FLAGGED",
           "evidence_flag": false,
           "evidence_flag_run_agreement": 1.0
         },
@@ -708,6 +741,7 @@
             6.9521
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "FLAGGED",
           "evidence_flag": true,
           "evidence_flag_run_agreement": 1.0
         }
@@ -717,6 +751,7 @@
       "injected_defects": [
         "SAFETY"
       ],
+      "is_control": false,
       "n_runs_ok": 3,
       "n_runs_total": 3,
       "fries_mean": 6.804633333333332,
@@ -737,6 +772,7 @@
             8.6535
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "NOT_FLAGGED",
           "evidence_flag": false,
           "evidence_flag_run_agreement": 1.0
         },
@@ -749,6 +785,7 @@
             8.3203
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "NOT_FLAGGED",
           "evidence_flag": false,
           "evidence_flag_run_agreement": 1.0
         },
@@ -761,6 +798,7 @@
             2.6207
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "FLAGGED",
           "evidence_flag": true,
           "evidence_flag_run_agreement": 1.0
         },
@@ -773,6 +811,7 @@
             8.6535
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "NOT_FLAGGED",
           "evidence_flag": false,
           "evidence_flag_run_agreement": 1.0
         },
@@ -785,6 +824,7 @@
             6.2145
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "FLAGGED",
           "evidence_flag": true,
           "evidence_flag_run_agreement": 1.0
         }
@@ -794,6 +834,7 @@
       "injected_defects": [
         "SAFETY"
       ],
+      "is_control": false,
       "n_runs_ok": 3,
       "n_runs_total": 3,
       "fries_mean": 6.695266666666666,
@@ -816,6 +857,7 @@
             8.6535
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "NOT_FLAGGED",
           "evidence_flag": false,
           "evidence_flag_run_agreement": 1.0
         },
@@ -828,6 +870,7 @@
             8.6535
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "NOT_FLAGGED",
           "evidence_flag": false,
           "evidence_flag_run_agreement": 1.0
         },
@@ -840,6 +883,7 @@
             2.8845
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "FLAGGED",
           "evidence_flag": true,
           "evidence_flag_run_agreement": 1.0
         },
@@ -852,6 +896,7 @@
             9.0
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "NOT_FLAGGED",
           "evidence_flag": false,
           "evidence_flag_run_agreement": 1.0
         },
@@ -864,6 +909,7 @@
             5.2415
           ],
           "score_flag": "FLAGGED",
+          "evidence_state": "FLAGGED",
           "evidence_flag": true,
           "evidence_flag_run_agreement": 1.0
         }
@@ -873,6 +919,7 @@
       "injected_defects": [
         "FAIRNESS"
       ],
+      "is_control": false,
       "n_runs_ok": 5,
       "n_runs_total": 5,
       "fries_mean": 6.891719999999999,
@@ -893,6 +940,7 @@
             8.0
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "NOT_FLAGGED",
           "evidence_flag": false,
           "evidence_flag_run_agreement": 1.0
         },
@@ -905,6 +953,7 @@
             8.6535
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "NOT_FLAGGED",
           "evidence_flag": false,
           "evidence_flag_run_agreement": 1.0
         },
@@ -917,6 +966,7 @@
             2.8845
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "FLAGGED",
           "evidence_flag": true,
           "evidence_flag_run_agreement": 1.0
         },
@@ -929,6 +979,7 @@
             8.3203
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "NOT_FLAGGED",
           "evidence_flag": false,
           "evidence_flag_run_agreement": 1.0
         },
@@ -941,6 +992,7 @@
             7.2685
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "FLAGGED",
           "evidence_flag": true,
           "evidence_flag_run_agreement": 1.0
         }
@@ -950,6 +1002,7 @@
       "injected_defects": [
         "ROBUSTNESS"
       ],
+      "is_control": false,
       "n_runs_ok": 5,
       "n_runs_total": 5,
       "fries_mean": 6.72078,
@@ -973,6 +1026,7 @@
             6.6039
           ],
           "score_flag": "FLAGGED",
+          "evidence_state": "NOT_FLAGGED",
           "evidence_flag": false,
           "evidence_flag_run_agreement": 1.0
         },
@@ -985,6 +1039,7 @@
             7.5595
           ],
           "score_flag": "FLAGGED",
+          "evidence_state": "NOT_FLAGGED",
           "evidence_flag": false,
           "evidence_flag_run_agreement": 1.0
         },
@@ -997,6 +1052,7 @@
             4.0
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "FLAGGED",
           "evidence_flag": true,
           "evidence_flag_run_agreement": 1.0
         },
@@ -1009,6 +1065,7 @@
             9.0
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "NOT_FLAGGED",
           "evidence_flag": false,
           "evidence_flag_run_agreement": 1.0
         },
@@ -1021,6 +1078,7 @@
             7.5595
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "FLAGGED",
           "evidence_flag": true,
           "evidence_flag_run_agreement": 1.0
         }
@@ -1030,6 +1088,7 @@
       "injected_defects": [
         "EXPLAINABILITY"
       ],
+      "is_control": false,
       "n_runs_ok": 5,
       "n_runs_total": 5,
       "fries_mean": 6.142799999999999,
@@ -1051,6 +1110,7 @@
             8.6535
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "NOT_FLAGGED",
           "evidence_flag": false,
           "evidence_flag_run_agreement": 1.0
         },
@@ -1063,6 +1123,7 @@
             8.6535
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "NOT_FLAGGED",
           "evidence_flag": false,
           "evidence_flag_run_agreement": 1.0
         },
@@ -1075,6 +1136,7 @@
             3.1748
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "FLAGGED",
           "evidence_flag": true,
           "evidence_flag_run_agreement": 1.0
         },
@@ -1087,6 +1149,7 @@
             4.3795
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "FLAGGED",
           "evidence_flag": true,
           "evidence_flag_run_agreement": 1.0
         },
@@ -1099,6 +1162,7 @@
             6.9521
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "FLAGGED",
           "evidence_flag": true,
           "evidence_flag_run_agreement": 1.0
         }
@@ -1109,6 +1173,7 @@
         "FAIRNESS",
         "INTEGRITY"
       ],
+      "is_control": false,
       "n_runs_ok": 5,
       "n_runs_total": 5,
       "fries_mean": 6.00846,
@@ -1130,6 +1195,7 @@
             8.0
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "NOT_FLAGGED",
           "evidence_flag": false,
           "evidence_flag_run_agreement": 1.0
         },
@@ -1142,6 +1208,7 @@
             8.6535
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "NOT_FLAGGED",
           "evidence_flag": false,
           "evidence_flag_run_agreement": 1.0
         },
@@ -1154,6 +1221,7 @@
             2.6207
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "FLAGGED",
           "evidence_flag": true,
           "evidence_flag_run_agreement": 1.0
         },
@@ -1166,6 +1234,7 @@
             5.4288
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "FLAGGED",
           "evidence_flag": true,
           "evidence_flag_run_agreement": 1.0
         },
@@ -1178,6 +1247,7 @@
             7.2685
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "FLAGGED",
           "evidence_flag": true,
           "evidence_flag_run_agreement": 1.0
         }
@@ -1187,6 +1257,7 @@
       "injected_defects": [
         "INTEGRITY"
       ],
+      "is_control": false,
       "n_runs_ok": 5,
       "n_runs_total": 5,
       "fries_mean": 6.093640000000001,
@@ -1208,6 +1279,7 @@
             8.6535
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "NOT_FLAGGED",
           "evidence_flag": false,
           "evidence_flag_run_agreement": 1.0
         },
@@ -1220,6 +1292,7 @@
             8.6535
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "NOT_FLAGGED",
           "evidence_flag": false,
           "evidence_flag_run_agreement": 1.0
         },
@@ -1232,6 +1305,7 @@
             2.5198
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "FLAGGED",
           "evidence_flag": true,
           "evidence_flag_run_agreement": 1.0
         },
@@ -1244,6 +1318,7 @@
             4.5789
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "FLAGGED",
           "evidence_flag": true,
           "evidence_flag_run_agreement": 1.0
         },
@@ -1256,6 +1331,7 @@
             6.9521
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "FLAGGED",
           "evidence_flag": true,
           "evidence_flag_run_agreement": 1.0
         }
@@ -1265,6 +1341,7 @@
       "injected_defects": [
         "SAFETY"
       ],
+      "is_control": false,
       "n_runs_ok": 5,
       "n_runs_total": 5,
       "fries_mean": 7.0633,
@@ -1285,6 +1362,7 @@
             8.6535
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "NOT_FLAGGED",
           "evidence_flag": false,
           "evidence_flag_run_agreement": 1.0
         },
@@ -1297,6 +1375,7 @@
             8.6535
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "NOT_FLAGGED",
           "evidence_flag": false,
           "evidence_flag_run_agreement": 1.0
         },
@@ -1309,6 +1388,7 @@
             3.476
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "FLAGGED",
           "evidence_flag": true,
           "evidence_flag_run_agreement": 1.0
         },
@@ -1321,6 +1401,7 @@
             9.0
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "NOT_FLAGGED",
           "evidence_flag": false,
           "evidence_flag_run_agreement": 1.0
         },
@@ -1333,6 +1414,7 @@
             6.6039
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "FLAGGED",
           "evidence_flag": true,
           "evidence_flag_run_agreement": 1.0
         }
@@ -1345,6 +1427,7 @@
         "INTEGRITY",
         "SAFETY"
       ],
+      "is_control": false,
       "n_runs_ok": 5,
       "n_runs_total": 5,
       "fries_mean": 5.87036,
@@ -1368,6 +1451,7 @@
             8.0
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "NOT_FLAGGED",
           "evidence_flag": false,
           "evidence_flag_run_agreement": 1.0
         },
@@ -1380,6 +1464,7 @@
             8.6535
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "NOT_FLAGGED",
           "evidence_flag": false,
           "evidence_flag_run_agreement": 1.0
         },
@@ -1392,6 +1477,7 @@
             5.848
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "FLAGGED",
           "evidence_flag": true,
           "evidence_flag_run_agreement": 1.0
         },
@@ -1404,6 +1490,7 @@
             2.5198
           ],
           "score_flag": "FLAGGED",
+          "evidence_state": "FLAGGED",
           "evidence_flag": true,
           "evidence_flag_run_agreement": 1.0
         },
@@ -1416,6 +1503,7 @@
             6.9521
           ],
           "score_flag": "NOT_FLAGGED",
+          "evidence_state": "FLAGGED",
           "evidence_flag": true,
           "evidence_flag_run_agreement": 1.0
         }

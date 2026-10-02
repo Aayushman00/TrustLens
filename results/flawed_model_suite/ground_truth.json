@@ -127,5 +127,10 @@
     },
     "note": "variant3 is a 0-rate control for the measured evidence only; its injected EXPLAINABILITY card defect affects card-based dimensions, so sweep analysis uses deterministic evidence (excess_dpd, equalized_odds_difference, severe_fnr) and the FAIRNESS/SAFETY scores.",
     "analysis": "Spearman rank correlation between flip rate and each evidence metric / dimension score (n=5 levels, descriptive only)"
-  }
+  },
+  "controls": [
+    "reference_toxicbert_2label",
+    "reference_hub"
+  ],
+  "controls_note": "Added after the runs (post-review): machine-readable form of the existing role='clean control' entries; controls are reported via control_flag_rate, not counted as auditor false positives."
 }
