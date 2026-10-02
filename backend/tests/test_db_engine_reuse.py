@@ -10,3 +10,12 @@ def test_engine_is_reused_for_url_with_password():
         assert db.get_engine(url) is db.get_engine(url)
     finally:
         db.reset_engine()
+
+
+def test_engine_is_reused_for_password_needing_url_escapes():
+    url = "postgresql+psycopg2://u:p%2Bs@localhost:5432/x"
+    db.reset_engine()
+    try:
+        assert db.get_engine(url) is db.get_engine(url)
+    finally:
+        db.reset_engine()

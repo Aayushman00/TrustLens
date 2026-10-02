@@ -54,15 +54,42 @@ def _has_behavioural_safety(ctx: AgentContext) -> bool:
 
 _MAX_ATTEMPTS = 3
 _BACKOFF_S = 10.0
+_MAX_RETRY_AFTER_S = 30.0
 
 
-def _transient(exc: Exception) -> bool:
-    """Rate limit (429), 5xx, or a connection-level failure."""
+def _retry_delay(exc: Exception, attempt: int) -> float | None:
+    """Seconds to wait before retrying the same provider, or None = give up.
+
+    Retries 5xx, transport errors and per-minute 429s. A 429 for a daily quota
+    ("per day"/TPD) or with Retry-After above _MAX_RETRY_AFTER_S cannot clear
+    within this evaluation, so it is not retried."""
     import httpx
 
     if isinstance(exc, httpx.HTTPStatusError):
-        return exc.response.status_code == 429 or exc.response.status_code >= 500
-    return isinstance(exc, (httpx.TransportError, ConnectionError, TimeoutError))
+        code = exc.response.status_code
+        if code == 429:
+            body = exc.response.text.lower()
+            if "per day" in body or "(tpd)" in body:
+                return None
+            raw = exc.response.headers.get("retry-after")
+            try:
+                wait = float(raw) if raw is not None else _BACKOFF_S * 2 ** (attempt - 1)
+            except ValueError:
+                wait = _BACKOFF_S * 2 ** (attempt - 1)
+            return wait if wait <= _MAX_RETRY_AFTER_S else None
+        return _BACKOFF_S * 2 ** (attempt - 1) if code >= 500 else None
+    if isinstance(exc, (httpx.TransportError, ConnectionError, TimeoutError)):
+        return _BACKOFF_S * 2 ** (attempt - 1)
+    return None
+
+
+def _describe(exc: Exception) -> str:
+    import httpx
+
+    text = f"{type(exc).__name__}: {exc}"
+    if isinstance(exc, httpx.HTTPStatusError):
+        text += f" body={exc.response.text[:200]}"
+    return text
 
 
 class HybridOSDAgent:
@@ -128,7 +155,7 @@ class HybridOSDAgent:
         self, ctx: AgentContext
     ) -> tuple[GeminiOSDResponse | None, dict[str, object]]:
         """Return the first valid judgment plus provenance for the aspects it rates
-        (provider, model, temperature, prompt hash); ``(None, {})`` when all fail."""
+        (provider, model, temperature, prompt hash); on failure ``(None, {llm_fallback_reason, ...})``."""
         settings = get_settings()
         providers = (
             ("gemini", settings.gemini_api_key, call_gemini, GEMINI_MODEL, None),
@@ -154,16 +181,15 @@ class HybridOSDAgent:
                         "llm_prompt_version": PROMPT_VERSION,
                     }
                 except Exception as exc:  # noqa: BLE001 — retry/next provider, never propagate
-                    errors.append(f"{name}#{attempt}: {type(exc).__name__}: {exc}"[:300])
+                    errors.append(f"{name}#{attempt}: {_describe(exc)}"[:400])
                     logger.warning(
                         "osd_agent_llm_v1_provider_failed evaluation_id=%s provider=%s attempt=%s",
                         ctx.evaluation_id, name, attempt, exc_info=True,
                     )
-                    if not _transient(exc) or attempt == _MAX_ATTEMPTS:
+                    delay = _retry_delay(exc, attempt)
+                    if delay is None or attempt == _MAX_ATTEMPTS:
                         break
-                    # Same provider again after a back-off: rate limits and DNS
-                    # blips were most fallbacks in the final experiment.
-                    time.sleep(_BACKOFF_S * 2 ** (attempt - 1))
+                    time.sleep(delay)
         logger.warning(
             "osd_agent_llm_v1_all_providers_failed evaluation_id=%s — falling back to heuristic",
             ctx.evaluation_id,

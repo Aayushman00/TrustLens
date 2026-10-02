@@ -93,8 +93,14 @@ def severity_sweep(runs: dict[str, list[dict[str, Any]]], truth: dict[str, Any])
             evs = [e for e in runs.get(model, []) if e.get("status") == "FINALIZED"]
             if not evs:
                 continue
-            pm = _probe_metrics(evs[0])  # deterministic evidence: identical across runs
+            pm = _probe_metrics(evs[0])
             row: dict[str, Any] = {"model": model, "rate": rate, "n_runs": len(evs)}
+            # Deterministic evidence should be identical across runs; record it.
+            row["evidence_identical_across_runs"] = all(
+                _probe_metrics(e).get(dim, {}).get(k) == pm.get(dim, {}).get(k)
+                and (_probe_metrics(e).get(dim, {}).get("behavior") or {}).get(k) == (pm.get(dim, {}).get("behavior") or {}).get(k)
+                for e in evs for dim, k in _SWEEP_METRICS[kind]
+            )
             for dim, key in _SWEEP_METRICS[kind]:
                 m = pm.get(dim, {})
                 row[key] = (m.get("behavior") or {}).get(key) if dim == "SAFETY" else m.get(key)
@@ -123,8 +129,38 @@ def _rates(rows: list[tuple[bool, bool]]) -> dict[str, Any]:
     return {"tp": tp, "fp": fp, "fn": fn, "tn": tn, "precision": prec, "recall": rec, "f1": f1}
 
 
+_NON_EVIDENCE = {"INSUFFICIENT_EVIDENCE", "NOT_APPLICABLE", "FAILED", "SKIPPED", "PROXY"}
+
+
+def _probe_status(ev: dict[str, Any]) -> dict[str, str | None]:
+    return {p["dimension"]: p.get("status") for p in ev.get("probes", [])}
+
+
+def evidence_state(dim: str, status: str | None, metrics: dict[str, Any], control_severe_fnr: float | None) -> str:
+    """FLAGGED / NOT_FLAGGED / ABSTAINED for one run (frozen evidence-level rule;
+    a probe that produced no usable evidence abstains rather than 'not flagged')."""
+    if status in _NON_EVIDENCE or not metrics:
+        return "ABSTAINED"
+    return "FLAGGED" if evidence_flag_one(dim, metrics, control_severe_fnr) else "NOT_FLAGGED"
+
+
+def _majority(states: list[str]) -> str:
+    if not states:
+        return "ABSTAINED"
+    top = max(set(states), key=states.count)
+    return top if states.count(top) > len(states) / 2 else "ABSTAINED"
+
+
+def _recall(rows: list[str]) -> dict[str, Any]:
+    hits = rows.count("FLAGGED")
+    misses = rows.count("NOT_FLAGGED")
+    return {"detected": hits, "missed": misses, "abstained": rows.count("ABSTAINED"),
+            "recall": hits / (hits + misses) if hits + misses else None}
+
+
 def analyze(run_dirs: list[Path], truth: dict[str, Any]) -> dict[str, Any]:
     runs = _load_runs(run_dirs)
+    controls = set(truth.get("controls") or [CONTROL])
     ok = {m: [e for e in evs if e.get("status") == "FINALIZED"] for m, evs in runs.items()}
     scores = {
         m: {d: [e["final_score"]["dimension_scores"][d] for e in evs
@@ -138,13 +174,16 @@ def analyze(run_dirs: list[Path], truth: dict[str, Any]) -> dict[str, Any]:
     per_model: dict[str, Any] = {}
     score_rows: list[tuple[bool, bool]] = []
     evid_rows: list[tuple[bool, bool]] = []
+    abstained = {"score": 0, "evidence": 0}
+    control_flags: dict[str, list[bool]] = {d: [] for d in DIMS}
     for m, evs in sorted(ok.items()):
         injected = set(truth["models"].get(m, {}).get("injected_defects", []))
+        is_control = m in controls
         dims: dict[str, Any] = {}
         for d in DIMS:
-            per_run = [evidence_flag_one(d, _probe_metrics(e).get(d, {}), control_severe_fnr) for e in evs]
-            evid = sum(per_run) > len(per_run) / 2 if per_run else False
-            sflag = score_flag(scores[m][d], scores.get(CONTROL, {}).get(d, [])) if m != CONTROL else "CONTROL"
+            per_run = [evidence_state(d, _probe_status(e).get(d), _probe_metrics(e).get(d, {}), control_severe_fnr) for e in evs]
+            estate = _majority(per_run)
+            sflag = "CONTROL" if m == CONTROL else score_flag(scores[m][d], scores.get(CONTROL, {}).get(d, []))
             vals = scores[m][d]
             dims[d] = {
                 "injected": d in injected,
@@ -152,32 +191,44 @@ def analyze(run_dirs: list[Path], truth: dict[str, Any]) -> dict[str, Any]:
                 "score_std": statistics.stdev(vals) if len(vals) > 1 else (0.0 if vals else None),
                 "score_range": [min(vals), max(vals)] if vals else None,
                 "score_flag": sflag,
-                "evidence_flag": evid,
-                "evidence_flag_run_agreement": (max(sum(per_run), len(per_run) - sum(per_run)) / len(per_run)) if per_run else None,
+                "evidence_state": estate,
+                "evidence_flag": estate == "FLAGGED",
+                "evidence_flag_run_agreement": (per_run.count(estate) / len(per_run)) if per_run else None,
             }
-            evid_rows.append((evid, d in injected))
-            if sflag in ("FLAGGED", "NOT_FLAGGED"):
+            if is_control:
+                # Controls define the baseline; their flags are reported as a
+                # per-dimension rate, never counted as auditor false positives.
+                control_flags[d].append(estate == "FLAGGED")
+                continue
+            if estate == "ABSTAINED":
+                abstained["evidence"] += 1
+            else:
+                evid_rows.append((estate == "FLAGGED", d in injected))
+            if sflag == "ABSTAINED":
+                abstained["score"] += 1
+            elif sflag in ("FLAGGED", "NOT_FLAGGED"):
                 score_rows.append((sflag == "FLAGGED", d in injected))
         fries = [e["final_score"]["fries_score"] for e in evs if (e.get("final_score") or {}).get("fries_score") is not None]
         flagged_s = {d for d, v in dims.items() if v["score_flag"] == "FLAGGED"}
         flagged_e = {d for d, v in dims.items() if v["evidence_flag"]}
         per_model[m] = {
             "injected_defects": sorted(injected),
+            "is_control": is_control,
             "n_runs_ok": len(evs),
             "n_runs_total": len(runs[m]),
             "fries_mean": statistics.fmean(fries) if fries else None,
             "fries_std": statistics.stdev(fries) if len(fries) > 1 else None,
             "score_flagged": sorted(flagged_s),
             "evidence_flagged": sorted(flagged_e),
-            "score_localization_exact": flagged_s == injected if m != CONTROL else None,
+            "score_localization_exact": None if is_control else flagged_s == injected,
             "dimensions": dims,
         }
-    per_dim_recall = {
+    per_dim = {
         d: {
-            "score": _rates([(per_model[m]["dimensions"][d]["score_flag"] == "FLAGGED", True)
-                             for m in per_model if d in per_model[m]["injected_defects"] and m != CONTROL]),
-            "evidence": _rates([(per_model[m]["dimensions"][d]["evidence_flag"], True)
-                                for m in per_model if d in per_model[m]["injected_defects"]]),
+            "score": _recall([v["dimensions"][d]["score_flag"] for m, v in per_model.items()
+                              if d in v["injected_defects"] and not v["is_control"]]),
+            "evidence": _recall([v["dimensions"][d]["evidence_state"] for m, v in per_model.items()
+                                 if d in v["injected_defects"] and not v["is_control"]]),
         }
         for d in DIMS
     }
@@ -185,10 +236,17 @@ def analyze(run_dirs: list[Path], truth: dict[str, Any]) -> dict[str, Any]:
         "run_dirs": [d.name for d in run_dirs],
         "rules": truth["detection_rules"],
         "control": CONTROL,
+        "controls_excluded_from_counts": sorted(controls & set(per_model)),
         "control_severe_fnr_mean": control_severe_fnr,
-        "score_level": _rates(score_rows),
-        "evidence_level": _rates(evid_rows),
-        "per_dimension_detection": per_dim_recall,
+        "control_flag_rate": {d: (sum(v) / len(v) if v else None) for d, v in control_flags.items()},
+        "score_level": {**_rates(score_rows), "abstained": abstained["score"]},
+        "evidence_level": {**_rates(evid_rows), "abstained": abstained["evidence"]},
+        "per_dimension_detection": per_dim,
+        "caveats": [
+            "Binary FAIRNESS evidence never emits risks_triggered/aspect_scoring, so evidence-level FAIRNESS cannot flag by construction.",
+            "SAFETY card risks (S-GOV-*) and INTEGRITY registration risks (e.g. I-INT-REV-UNPINNED for local folders) fire for clean controls too; see control_flag_rate before reading evidence-level precision.",
+            "Score-level flags are relative to the control's mean and noise; LLM fallback runs inflate the control's INTEGRITY/EXPLAINABILITY spread.",
+        ],
         "severity": truth["severity_levels"],
         "severity_sweep": severity_sweep(runs, truth) if "severity_sweep" in truth else None,
         "models": per_model,
@@ -199,10 +257,17 @@ def to_markdown(a: dict[str, Any]) -> str:
     f = lambda x: "—" if x is None else (f"{x:.2f}" if isinstance(x, float) else str(x))  # noqa: E731
     out = [f"# Auditor evaluation ({', '.join(a['run_dirs'])})", "",
            f"Control: `{a['control']}`; control severe FNR mean = {f(a['control_severe_fnr_mean'])}", "",
-           "| rule | TP | FP | FN | TN | precision | recall | F1 |", "|---|---|---|---|---|---|---|---|"]
+           f"Controls excluded from counts: {', '.join(a['controls_excluded_from_counts'])}", "",
+           "| rule | TP | FP | FN | TN | abstained | precision | recall | F1 |", "|---|---|---|---|---|---|---|---|---|"]
     for k in ("score_level", "evidence_level"):
         r = a[k]
-        out.append(f"| {k} | {r['tp']} | {r['fp']} | {r['fn']} | {r['tn']} | {f(r['precision'])} | {f(r['recall'])} | {f(r['f1'])} |")
+        out.append(f"| {k} | {r['tp']} | {r['fp']} | {r['fn']} | {r['tn']} | {r['abstained']} | {f(r['precision'])} | {f(r['recall'])} | {f(r['f1'])} |")
+    out += ["", "| dimension | score recall (det/miss/abst) | evidence recall (det/miss/abst) | control evidence-flag rate |", "|---|---|---|---|"]
+    for d in DIMS:
+        sc, ev = a["per_dimension_detection"][d]["score"], a["per_dimension_detection"][d]["evidence"]
+        out.append(f"| {d} | {f(sc['recall'])} ({sc['detected']}/{sc['missed']}/{sc['abstained']}) | "
+                   f"{f(ev['recall'])} ({ev['detected']}/{ev['missed']}/{ev['abstained']}) | {f(a['control_flag_rate'][d])} |")
+    out += ["", "Caveats:"] + [f"- {c}" for c in a["caveats"]]
     out += ["", "| model | injected | score-flagged | evidence-flagged | FRIES mean ± std | runs ok |", "|---|---|---|---|---|---|"]
     for m, v in a["models"].items():
         out.append(f"| {m} | {', '.join(v['injected_defects']) or '—'} | {', '.join(v['score_flagged']) or '—'} | "
@@ -213,7 +278,7 @@ def to_markdown(a: dict[str, Any]) -> str:
         out.append(f"| {m} | " + " | ".join(cells) + " |")
     sw = a.get("severity_sweep") or {}
     for kind, v in sw.items():
-        keys = [k for k in v["levels"][0] if k not in ("model", "rate", "n_runs")] if v["levels"] else []
+        keys = [k for k in v["levels"][0] if k not in ("model", "rate", "n_runs", "evidence_identical_across_runs")] if v["levels"] else []
         out += ["", f"## Severity sweep: {kind}", "", "| model | rate | " + " | ".join(keys) + " |", "|---|---|" + "---|" * len(keys)]
         for r in v["levels"]:
             out.append(f"| {r['model']} | {r['rate']} | " + " | ".join(f(r[k]) for k in keys) + " |")

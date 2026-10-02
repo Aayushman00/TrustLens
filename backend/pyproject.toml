@@ -9,7 +9,7 @@ description = "TrustLens API — Phase 24 testing hardening (lifecycle pack + ex
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-  "fastapi>=0.115.0",
+  "fastapi>=0.121.0",
   "uvicorn[standard]>=0.32.0",
   "pydantic>=2.9.0",
   "pydantic-settings>=2.6.0",

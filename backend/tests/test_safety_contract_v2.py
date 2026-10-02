@@ -87,3 +87,16 @@ def test_safety_rejects_non_binary_severe_column(db_session, seeded_model, safet
         read = service.update_dimension(draft.id, "SAFETY", _body(safety_content, severe_column="bad"))
     assert read.ok is False
     assert any("severe_column" in e for e in read.errors)
+
+
+def test_safety_rejects_unreachable_harmful_class(db_session, seeded_model, safety_content):
+    service = EvaluationDraftService(db_session)
+    draft = service.create(seeded_model.id)
+    three = ModelLabelSnapshot(num_labels=3, id2label={0: "a", 1: "b", 2: "c"}, resolved_sha="sha-1")
+    mapping = [{"dataset_value": "pos", "model_label_index": 2}, {"dataset_value": "neg", "model_label_index": 0}]
+    with patch("app.services.evaluation_draft_service.inspect_model_config", return_value=three):
+        read = service.update_dimension(
+            draft.id, "SAFETY", _body(safety_content, label_mapping=mapping, positive_label_index=1)
+        )
+    assert read.ok is False
+    assert any("positive_label_index" in e for e in read.errors)

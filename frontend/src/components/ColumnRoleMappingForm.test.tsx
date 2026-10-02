@@ -238,3 +238,23 @@ test("multi-label model maps dataset labels to the chosen output, and SAFETY sen
   expect(body.multilabel_target_index).toBe(0);
   expect(body.severe_column).toBe("severe");
 });
+
+test("changing the multi-label positive output clears existing label mappings", async () => {
+  vi.mocked(apiFetch).mockResolvedValueOnce({ values: ["1", "0"] });
+  const multi: ModelLabelSnapshot = {
+    num_labels: 2,
+    id2label: { "0": "toxic", "1": "obscene" },
+    problem_type: "multi_label_classification",
+  };
+  render(
+    <ColumnRoleMappingForm draftId="d" dimension="ROBUSTNESS" content={CONTENT} modelLabelSnapshot={multi} onValidated={vi.fn()} />
+  );
+  fireEvent.change(screen.getByLabelText(/positive output/i), { target: { value: "0" } });
+  fireEvent.change(screen.getByLabelText(/target column/i), { target: { value: "label" } });
+  await screen.findByText(/map dataset labels to model labels/i);
+  fireEvent.change(screen.getByLabelText(/^1 →/), { target: { value: "1" } });
+  expect((screen.getByLabelText(/^1 →/) as HTMLSelectElement).value).toBe("1");
+  fireEvent.change(screen.getByLabelText(/positive output/i), { target: { value: "1" } });
+  // "1 → toxic" must not silently become "1 → obscene".
+  expect((screen.getByLabelText(/^1 →/) as HTMLSelectElement).value).toBe("-1");
+});

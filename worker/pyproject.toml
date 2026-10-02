@@ -38,7 +38,7 @@ dependencies = [
   # must succeed. huggingface_hub is app.adapters.hf_hub's own direct
   # dependency (was working only via transformers'/torch's transitive
   # dependency; declared explicitly, matching the httpx precedent above).
-  "fastapi>=0.115.0",
+  "fastapi>=0.121.0",
   "huggingface-hub>=0.24.0",
 ]
 

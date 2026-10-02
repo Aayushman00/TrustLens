@@ -186,7 +186,16 @@ export default function ColumnRoleMappingForm({
         {isMultiLabel ? (
           <label>
             Positive output (multi-label model)
-            <select value={targetOutput} onChange={(e) => setTargetOutput(Number(e.target.value))}>
+            <select
+              value={targetOutput}
+              onChange={(e) => {
+                setTargetOutput(Number(e.target.value));
+                // Derived options are always {0, 1}: keeping old rows would silently
+                // re-point "1 → toxic" at the newly chosen output. Start unmapped.
+                setLabelMapping((rows) => rows.map((r) => ({ ...r, model_label_index: -1 })));
+                setPositiveLabelIndex(1);
+              }}
+            >
               <option value={-1}>Select model output…</option>
               {rawOutputs.map(({ index, label }) => (
                 <option key={index} value={index}>

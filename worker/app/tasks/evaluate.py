@@ -79,6 +79,9 @@ class _FailStuckRunningTask(Task):
     base=_FailStuckRunningTask,
     autoretry_for=(ConnectionError, TimeoutError),
     retry_backoff=True,
+    # No jitter: a not-yet-committed evaluation row (EvaluationNotVisibleError)
+    # gets a guaranteed 1 + 2 + 4 s window instead of a random one.
+    retry_jitter=False,
     max_retries=3,
 )
 def evaluate_model(self, **kwargs: object) -> dict[str, str]:

@@ -466,3 +466,31 @@ def test_fallback_reason_is_stored_on_the_aspect(mock_settings, _call, _sleep) -
     meta = aspects[FriesDimension.INTEGRITY].osd_metadata
     assert aspects[FriesDimension.INTEGRITY].O_source == "heuristic_fallback"
     assert "RuntimeError: boom" in meta["llm_fallback_reason"]
+
+
+@patch("app.osd.hybrid.time.sleep")
+@patch("app.osd.hybrid.get_settings")
+def test_daily_quota_429_is_not_retried_and_reason_keeps_body(mock_settings, sleep) -> None:
+    import httpx
+
+    _mock_settings(mock_settings, groq="k")
+    req = httpx.Request("POST", "https://x")
+    body = '{"error":{"message":"Rate limit reached ... on tokens per day (TPD): Limit 200000"}}'
+    err = httpx.HTTPStatusError("429", request=req, response=httpx.Response(429, request=req, text=body))
+    with patch("app.osd.hybrid.call_groq", side_effect=err) as call:
+        aspects = {a.aspect: a for a in HybridOSDAgent().propose(_full_context()).aspects}
+    assert call.call_count == 1 and sleep.call_count == 0
+    assert "tokens per day" in aspects[FriesDimension.INTEGRITY].osd_metadata["llm_fallback_reason"]
+
+
+@patch("app.osd.hybrid.time.sleep")
+@patch("app.osd.hybrid.get_settings")
+def test_retry_after_header_is_honoured(mock_settings, sleep) -> None:
+    import httpx
+
+    _mock_settings(mock_settings, groq="k")
+    req = httpx.Request("POST", "https://x")
+    err = httpx.HTTPStatusError("429", request=req, response=httpx.Response(429, request=req, headers={"retry-after": "7"}))
+    with patch("app.osd.hybrid.call_groq", side_effect=[err, _GOOD_RAW]):
+        HybridOSDAgent().propose(_full_context())
+    sleep.assert_called_once_with(7.0)

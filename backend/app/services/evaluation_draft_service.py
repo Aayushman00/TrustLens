@@ -237,6 +237,7 @@ class EvaluationDraftService:
                 severe_column=update.severe_column,
                 label_mapping=update.label_mapping,
                 model_label_snapshot=snapshot,
+                positive_label_index=update.positive_label_index,
             )
             read = DimensionValidationRead(
                 ok=result.ok,
