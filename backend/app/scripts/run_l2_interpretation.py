@@ -325,6 +325,15 @@ def compare(det: dict[str, dict[str, Any]], runs: dict[str, list[dict[str, Any]]
     definite = [r for r in both if "UNCERTAIN" not in (r["deterministic"]["risk_present"], r["llm"]["risk_present"])]
     with_s = [r for r in both if r["deterministic"]["S"] is not None]
     all_runs = [r for rs in runs.values() for r in rs]
+    ok_runs = [r for r in all_runs if not r["fallback"]]
+    rep = [r for r in both if r["llm"]["valid_runs"] >= 2]  # a single answer says nothing about repeatability
+    variation: dict[str, Any] = {}
+    for d in DIMENSIONS:
+        by_provider: dict[str, list[dict[str, Any]]] = {}
+        for r in ok_runs:
+            by_provider.setdefault(r["provider"], []).append(r["dimensions"][d.value])
+        variation[d.value] = {pv: {"n": len(v), **{f"{k}_mean": round(statistics.fmean(x[k] for x in v), 4) for k in "OSD"}}
+                              for pv, v in sorted(by_provider.items())}
     per_dim = {}
     for d in DIMENSIONS:
         sub = [r for r in both if r["dimension"] == d.value]
@@ -356,6 +365,9 @@ def compare(det: dict[str, dict[str, Any]], runs: dict[str, list[dict[str, Any]]
             "categories": dict(Counter(r["category"] for r in rows)),
             "det_ms_per_packet_mean": round(statistics.fmean(v["elapsed_ms"] for v in det.values()), 3),
             "llm_s_per_call_mean": round(statistics.fmean(r["elapsed_s"] for r in all_runs), 3) if all_runs else None,
+            "llm_s_per_successful_call_mean": round(statistics.fmean(r["elapsed_s"] for r in ok_runs), 3)
+            if ok_runs else None,
+            "provider_variation": variation,
             "llm_runs": len(all_runs), "llm_fallbacks": sum(r["fallback"] for r in all_runs),
             "llm_parse_failures": sum(r["parse_failures"] for r in all_runs),
             "llm_fallbacks_provider_unavailable": sum(r["provider_unavailable"] for r in all_runs),
@@ -364,13 +376,24 @@ def compare(det: dict[str, dict[str, Any]], runs: dict[str, list[dict[str, Any]]
             "llm_prompt_truncated": sum(r["prompt_truncated"] for r in all_runs),
             "llm_replayed_runs": sum(r["replayed"] for r in all_runs),
             "llm_providers": dict(Counter(r["provider"] or "none" for r in all_runs)),
-            "llm_risk_repeatable_pairs": sum(r["llm"].get("risk_agreement") == 1.0 for r in both),
-            "llm_osd_repeatable_pairs": sum(r["llm"].get("distinct_triples") == 1 for r in both),
-            "llm_mean_risk_agreement": round(statistics.fmean(r["llm"]["risk_agreement"] for r in both), 4) if both else None,
-            **{f"llm_mean_{k}_range": round(statistics.fmean(r["llm"][f"{k}_range"] for r in both), 4) if both else None
+            "llm_repeatability_pairs": len(rep),
+            "llm_risk_repeatable_pairs": sum(r["llm"].get("risk_agreement") == 1.0 for r in rep),
+            "llm_osd_repeatable_pairs": sum(r["llm"].get("distinct_triples") == 1 for r in rep),
+            "llm_mean_risk_agreement": round(statistics.fmean(r["llm"]["risk_agreement"] for r in rep), 4) if rep else None,
+            **{f"llm_mean_{k}_range": round(statistics.fmean(r["llm"][f"{k}_range"] for r in rep), 4) if rep else None
                for k in "OSD"},
         },
     }
+
+
+def attempt_stats(path: Path) -> dict[str, dict[str, int]]:
+    """Every provider attempt in the response log (superseded records included): ok or error type."""
+    stats: dict[str, Counter[str]] = {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        for a in json.loads(line)["attempts"]:
+            c = stats.setdefault(a["provider"], Counter(ok=0))
+            c["ok" if "raw" in a else a["error"].split(":")[0]] += 1
+    return {k: dict(v) for k, v in sorted(stats.items())}
 
 
 def _behaviors() -> dict[str, dict[str, Any]]:
@@ -457,6 +480,7 @@ def main(argv: list[str] | None = None) -> None:
     cmp = compare(det, runs)
     cmp["packet_hashes_identical_across_evaluators"] = hashes_match
     cmp["prompt_version"] = PROMPT_VERSION
+    cmp["provider_attempts"] = attempt_stats(out / "llm_responses.jsonl")
     (out / "analysis.json").write_text(json.dumps(cmp, indent=2), encoding="utf-8")
     (out / "analysis.md").write_text(_markdown(cmp, sources), encoding="utf-8")
     print(json.dumps(cmp["summary"], indent=2))

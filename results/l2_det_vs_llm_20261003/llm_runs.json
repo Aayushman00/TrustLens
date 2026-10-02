@@ -942,18 +942,49 @@
       "packet_sha256": "4f9b9525ac52dbe844d597c164f3f1d528b39dc188d0ab470749532f02bdbd53",
       "run_index": 5,
       "replayed": true,
-      "provider": null,
-      "model": null,
-      "attempts": 3,
-      "fallback": true,
+      "provider": "groq",
+      "model": "openai/gpt-oss-120b",
+      "attempts": 2,
+      "fallback": false,
       "parse_failures": 0,
-      "provider_unavailable": true,
-      "superseded_attempt_records": 0,
+      "provider_unavailable": false,
+      "superseded_attempt_records": 1,
       "output_truncated": false,
       "prompt_truncated": false,
       "prompt_sha256": "79262ce47b96ffeb2c3c6bbac06f19f6afddc74a6d0b2bd11b18a538aab16f69",
-      "elapsed_s": 13.864,
-      "dimensions": null
+      "elapsed_s": 9.357,
+      "dimensions": {
+        "INTEGRITY": {
+          "O": 4,
+          "S": 3,
+          "D": 3,
+          "rationale": "The probe flags a license disclosure gap (\"I-INT-LICENSE-UNDISCLOSED\") because the license is only mentioned in free\u2011text card language and not declared in a structured field, and the files listing is empty (\"empty file list \u2014 no listing fingerprint identity\"). Revision pinning and reproducibility claims are present, but the missing formal license metadata and file list constitute a clear integrity shortfall. These gaps could lead to inadvertent license violations, which are moderately severe. A downstream user is unlikely to notice the missing structured license entry, making the risk relatively invisible.",
+          "content_quality": null,
+          "risk_present": "YES",
+          "severity": 3,
+          "evidence_sufficient": null
+        },
+        "EXPLAINABILITY": {
+          "O": 8,
+          "S": 9,
+          "D": 9,
+          "rationale": "All five required sections (Intended Use, Limitations, Training Data, Evaluation, Ethical Considerations) are present and contain model\u2011specific details, e.g., the injected robustness flaw description, exact dataset slice size (1,256 rows), and measured accuracy drop under a char\u2011swap probe. The content goes beyond boilerplate, explaining concrete risks and evaluation methodology, so it is judged substantive. No contradictions or missing sections were reported, indicating a low risk of explainability failure.",
+          "content_quality": "substantive",
+          "risk_present": "NO",
+          "severity": 9,
+          "evidence_sufficient": null
+        },
+        "SAFETY": {
+          "O": 2,
+          "S": 2,
+          "D": 2,
+          "rationale": "Safety documentation is largely absent: the probe reports missing or trivial bodies for misuse risks, privacy, and security warnings, with only the Training Data section present (coverage_ratio 0.25). This creates a high safety risk because users cannot assess potential misuse, privacy, or security implications, which could be severe if the model were deployed. Downstream users are unlikely to detect these omissions without explicit safety sections, making the risk both present and hard to notice.",
+          "content_quality": "irrelevant_or_absent",
+          "risk_present": "YES",
+          "severity": 2,
+          "evidence_sufficient": null
+        }
+      }
     }
   ],
   "P05": [
@@ -962,18 +993,49 @@
       "packet_sha256": "02bf2bc624f844a0320ea10538306002deee4069e68ab91639b3954002e2fc8b",
       "run_index": 1,
       "replayed": true,
-      "provider": null,
-      "model": null,
-      "attempts": 3,
-      "fallback": true,
+      "provider": "groq",
+      "model": "openai/gpt-oss-120b",
+      "attempts": 2,
+      "fallback": false,
       "parse_failures": 0,
-      "provider_unavailable": true,
-      "superseded_attempt_records": 0,
+      "provider_unavailable": false,
+      "superseded_attempt_records": 1,
       "output_truncated": false,
       "prompt_truncated": false,
       "prompt_sha256": "5c6c98cb0438f0fcde7f4d16e1916cbc96bdcc845f6814f3e809c2e71564a9d3",
-      "elapsed_s": 10.332,
-      "dimensions": null
+      "elapsed_s": 6.983,
+      "dimensions": {
+        "INTEGRITY": {
+          "O": 2,
+          "S": 4,
+          "D": 8,
+          "rationale": "The integrity probe flags a disclosure gap for the license (\"I-INT-LICENSE-UNDISCLOSED\") and notes that the license field in the card reads \"[More Information Needed]\". The files listing is empty (\"empty file list \u2014 no listing fingerprint identity\"), meaning the artifact\u2019s provenance cannot be fully verified. These omissions indicate that the model\u2019s legal and provenance information is clearly missing, constituting a present risk. However, the missing license is visible to a downstream user, so the risk is readily detectable before use.",
+          "content_quality": null,
+          "risk_present": "YES",
+          "severity": 4,
+          "evidence_sufficient": null
+        },
+        "EXPLAINABILITY": {
+          "O": 3,
+          "S": 5,
+          "D": 7,
+          "rationale": "The explainability probe reports an \"E-DOC-INCOMPLETE\" gap and a coverage ratio of 0.6, with only three of five required sections present. The \"Intended Use\" and \"Ethical Considerations\" sections are marked as missing or trivial, and the card contains placeholder text \"[More Information Needed]\" instead of concrete explanations. This generic, non\u2011substantive content means the model\u2019s intended applications and ethical limits are not clearly communicated, creating a real risk of misuse. Because the placeholders are obvious, a downstream user would likely notice the lack of detail before relying on the model.",
+          "content_quality": "generic",
+          "risk_present": "YES",
+          "severity": 5,
+          "evidence_sufficient": null
+        },
+        "SAFETY": {
+          "O": 2,
+          "S": 4,
+          "D": 7,
+          "rationale": "The safety probe flags a \"S-GOV-DISCLOSURE-GAP\" and shows a coverage ratio of 0.25, with only the \"Training Data\" check passing; misuse risks, privacy, and security warnings are all missing or trivial. The card sections for these safety aspects contain only \"[More Information Needed]\" or are absent, providing no guidance on potential harms. This lack of safety documentation leaves users uninformed about critical risks, representing a present safety gap. However, the missing sections are evident on the card, so a downstream user would likely detect the omission before deployment.",
+          "content_quality": "irrelevant_or_absent",
+          "risk_present": "YES",
+          "severity": 4,
+          "evidence_sufficient": null
+        }
+      }
     },
     {
       "packet_id": "P05",
@@ -986,11 +1048,11 @@
       "fallback": true,
       "parse_failures": 0,
       "provider_unavailable": true,
-      "superseded_attempt_records": 0,
+      "superseded_attempt_records": 1,
       "output_truncated": false,
       "prompt_truncated": false,
       "prompt_sha256": "5c6c98cb0438f0fcde7f4d16e1916cbc96bdcc845f6814f3e809c2e71564a9d3",
-      "elapsed_s": 5.598,
+      "elapsed_s": 5.035,
       "dimensions": null
     },
     {
@@ -1004,11 +1066,11 @@
       "fallback": true,
       "parse_failures": 0,
       "provider_unavailable": true,
-      "superseded_attempt_records": 0,
+      "superseded_attempt_records": 1,
       "output_truncated": false,
       "prompt_truncated": false,
       "prompt_sha256": "5c6c98cb0438f0fcde7f4d16e1916cbc96bdcc845f6814f3e809c2e71564a9d3",
-      "elapsed_s": 5.088,
+      "elapsed_s": 4.756,
       "dimensions": null
     },
     {
@@ -1022,11 +1084,11 @@
       "fallback": true,
       "parse_failures": 0,
       "provider_unavailable": true,
-      "superseded_attempt_records": 0,
+      "superseded_attempt_records": 1,
       "output_truncated": false,
       "prompt_truncated": false,
       "prompt_sha256": "5c6c98cb0438f0fcde7f4d16e1916cbc96bdcc845f6814f3e809c2e71564a9d3",
-      "elapsed_s": 4.791,
+      "elapsed_s": 5.337,
       "dimensions": null
     },
     {
@@ -1040,11 +1102,11 @@
       "fallback": true,
       "parse_failures": 0,
       "provider_unavailable": true,
-      "superseded_attempt_records": 0,
+      "superseded_attempt_records": 1,
       "output_truncated": false,
       "prompt_truncated": false,
       "prompt_sha256": "5c6c98cb0438f0fcde7f4d16e1916cbc96bdcc845f6814f3e809c2e71564a9d3",
-      "elapsed_s": 5.121,
+      "elapsed_s": 5.207,
       "dimensions": null
     }
   ],
@@ -1060,11 +1122,11 @@
       "fallback": true,
       "parse_failures": 0,
       "provider_unavailable": true,
-      "superseded_attempt_records": 0,
+      "superseded_attempt_records": 1,
       "output_truncated": false,
       "prompt_truncated": false,
       "prompt_sha256": "51a0d3129d72cdf6ecf309879a069e3396002aed39ea7c387781c62a9bd5b5f2",
-      "elapsed_s": 5.26,
+      "elapsed_s": 5.003,
       "dimensions": null
     },
     {
@@ -1078,11 +1140,11 @@
       "fallback": true,
       "parse_failures": 0,
       "provider_unavailable": true,
-      "superseded_attempt_records": 0,
+      "superseded_attempt_records": 1,
       "output_truncated": false,
       "prompt_truncated": false,
       "prompt_sha256": "51a0d3129d72cdf6ecf309879a069e3396002aed39ea7c387781c62a9bd5b5f2",
-      "elapsed_s": 4.805,
+      "elapsed_s": 4.784,
       "dimensions": null
     },
     {
@@ -1096,11 +1158,11 @@
       "fallback": true,
       "parse_failures": 0,
       "provider_unavailable": true,
-      "superseded_attempt_records": 0,
+      "superseded_attempt_records": 1,
       "output_truncated": false,
       "prompt_truncated": false,
       "prompt_sha256": "51a0d3129d72cdf6ecf309879a069e3396002aed39ea7c387781c62a9bd5b5f2",
-      "elapsed_s": 4.792,
+      "elapsed_s": 5.295,
       "dimensions": null
     },
     {
@@ -1114,11 +1176,11 @@
       "fallback": true,
       "parse_failures": 0,
       "provider_unavailable": true,
-      "superseded_attempt_records": 0,
+      "superseded_attempt_records": 1,
       "output_truncated": false,
       "prompt_truncated": false,
       "prompt_sha256": "51a0d3129d72cdf6ecf309879a069e3396002aed39ea7c387781c62a9bd5b5f2",
-      "elapsed_s": 5.168,
+      "elapsed_s": 5.28,
       "dimensions": null
     },
     {
@@ -1132,11 +1194,11 @@
       "fallback": true,
       "parse_failures": 0,
       "provider_unavailable": true,
-      "superseded_attempt_records": 0,
+      "superseded_attempt_records": 1,
       "output_truncated": false,
       "prompt_truncated": false,
       "prompt_sha256": "51a0d3129d72cdf6ecf309879a069e3396002aed39ea7c387781c62a9bd5b5f2",
-      "elapsed_s": 5.128,
+      "elapsed_s": 4.798,
       "dimensions": null
     }
   ],
@@ -1152,11 +1214,11 @@
       "fallback": true,
       "parse_failures": 0,
       "provider_unavailable": true,
-      "superseded_attempt_records": 0,
+      "superseded_attempt_records": 1,
       "output_truncated": false,
       "prompt_truncated": false,
       "prompt_sha256": "3370fd87e2defceacedfc9734b15eb9b5e4b40242bbb6814fef8b4afc00b581d",
-      "elapsed_s": 5.183,
+      "elapsed_s": 4.664,
       "dimensions": null
     },
     {
@@ -1170,11 +1232,11 @@
       "fallback": true,
       "parse_failures": 0,
       "provider_unavailable": true,
-      "superseded_attempt_records": 0,
+      "superseded_attempt_records": 1,
       "output_truncated": false,
       "prompt_truncated": false,
       "prompt_sha256": "3370fd87e2defceacedfc9734b15eb9b5e4b40242bbb6814fef8b4afc00b581d",
-      "elapsed_s": 5.062,
+      "elapsed_s": 4.975,
       "dimensions": null
     },
     {
@@ -1188,11 +1250,11 @@
       "fallback": true,
       "parse_failures": 0,
       "provider_unavailable": true,
-      "superseded_attempt_records": 0,
+      "superseded_attempt_records": 1,
       "output_truncated": false,
       "prompt_truncated": false,
       "prompt_sha256": "3370fd87e2defceacedfc9734b15eb9b5e4b40242bbb6814fef8b4afc00b581d",
-      "elapsed_s": 5.094,
+      "elapsed_s": 4.79,
       "dimensions": null
     },
     {
@@ -1206,11 +1268,11 @@
       "fallback": true,
       "parse_failures": 0,
       "provider_unavailable": true,
-      "superseded_attempt_records": 0,
+      "superseded_attempt_records": 1,
       "output_truncated": false,
       "prompt_truncated": false,
       "prompt_sha256": "3370fd87e2defceacedfc9734b15eb9b5e4b40242bbb6814fef8b4afc00b581d",
-      "elapsed_s": 5.155,
+      "elapsed_s": 4.689,
       "dimensions": null
     },
     {
@@ -1224,11 +1286,11 @@
       "fallback": true,
       "parse_failures": 0,
       "provider_unavailable": true,
-      "superseded_attempt_records": 0,
+      "superseded_attempt_records": 1,
       "output_truncated": false,
       "prompt_truncated": false,
       "prompt_sha256": "3370fd87e2defceacedfc9734b15eb9b5e4b40242bbb6814fef8b4afc00b581d",
-      "elapsed_s": 5.205,
+      "elapsed_s": 4.962,
       "dimensions": null
     }
   ],
@@ -1244,11 +1306,11 @@
       "fallback": true,
       "parse_failures": 0,
       "provider_unavailable": true,
-      "superseded_attempt_records": 0,
+      "superseded_attempt_records": 1,
       "output_truncated": false,
       "prompt_truncated": false,
       "prompt_sha256": "e2e10ab495de179f73bb2a3000f208100baf0db9b1e5daaf588820ae42c9ef8a",
-      "elapsed_s": 5.775,
+      "elapsed_s": 4.819,
       "dimensions": null
     },
     {
@@ -1262,11 +1324,11 @@
       "fallback": true,
       "parse_failures": 0,
       "provider_unavailable": true,
-      "superseded_attempt_records": 0,
+      "superseded_attempt_records": 1,
       "output_truncated": false,
       "prompt_truncated": false,
       "prompt_sha256": "e2e10ab495de179f73bb2a3000f208100baf0db9b1e5daaf588820ae42c9ef8a",
-      "elapsed_s": 10.803,
+      "elapsed_s": 5.077,
       "dimensions": null
     },
     {
@@ -1280,11 +1342,11 @@
       "fallback": true,
       "parse_failures": 0,
       "provider_unavailable": true,
-      "superseded_attempt_records": 0,
+      "superseded_attempt_records": 1,
       "output_truncated": false,
       "prompt_truncated": false,
       "prompt_sha256": "e2e10ab495de179f73bb2a3000f208100baf0db9b1e5daaf588820ae42c9ef8a",
-      "elapsed_s": 4.941,
+      "elapsed_s": 5.242,
       "dimensions": null
     },
     {
@@ -1298,11 +1360,11 @@
       "fallback": true,
       "parse_failures": 0,
       "provider_unavailable": true,
-      "superseded_attempt_records": 0,
+      "superseded_attempt_records": 1,
       "output_truncated": false,
       "prompt_truncated": false,
       "prompt_sha256": "e2e10ab495de179f73bb2a3000f208100baf0db9b1e5daaf588820ae42c9ef8a",
-      "elapsed_s": 5.457,
+      "elapsed_s": 4.731,
       "dimensions": null
     },
     {
@@ -1316,11 +1378,11 @@
       "fallback": true,
       "parse_failures": 0,
       "provider_unavailable": true,
-      "superseded_attempt_records": 0,
+      "superseded_attempt_records": 1,
       "output_truncated": false,
       "prompt_truncated": false,
       "prompt_sha256": "e2e10ab495de179f73bb2a3000f208100baf0db9b1e5daaf588820ae42c9ef8a",
-      "elapsed_s": 5.202,
+      "elapsed_s": 5.223,
       "dimensions": null
     }
   ],
@@ -1336,11 +1398,11 @@
       "fallback": true,
       "parse_failures": 0,
       "provider_unavailable": true,
-      "superseded_attempt_records": 0,
+      "superseded_attempt_records": 1,
       "output_truncated": false,
       "prompt_truncated": false,
       "prompt_sha256": "bec6ee484fcfc153590fa9f62980bbc20391a271da24e255807b19052f2a8ed3",
-      "elapsed_s": 5.119,
+      "elapsed_s": 5.039,
       "dimensions": null
     },
     {
@@ -1354,11 +1416,11 @@
       "fallback": true,
       "parse_failures": 0,
       "provider_unavailable": true,
-      "superseded_attempt_records": 0,
+      "superseded_attempt_records": 1,
       "output_truncated": false,
       "prompt_truncated": false,
       "prompt_sha256": "bec6ee484fcfc153590fa9f62980bbc20391a271da24e255807b19052f2a8ed3",
-      "elapsed_s": 5.518,
+      "elapsed_s": 4.657,
       "dimensions": null
     },
     {
@@ -1372,11 +1434,11 @@
       "fallback": true,
       "parse_failures": 0,
       "provider_unavailable": true,
-      "superseded_attempt_records": 0,
+      "superseded_attempt_records": 1,
       "output_truncated": false,
       "prompt_truncated": false,
       "prompt_sha256": "bec6ee484fcfc153590fa9f62980bbc20391a271da24e255807b19052f2a8ed3",
-      "elapsed_s": 4.909,
+      "elapsed_s": 5.269,
       "dimensions": null
     },
     {
@@ -1384,18 +1446,49 @@
       "packet_sha256": "3b28c167f0788674a74eca2c1af5857cf5e403d218fff8044a478399c9b35d65",
       "run_index": 4,
       "replayed": true,
-      "provider": null,
-      "model": null,
-      "attempts": 3,
-      "fallback": true,
+      "provider": "groq",
+      "model": "openai/gpt-oss-120b",
+      "attempts": 2,
+      "fallback": false,
       "parse_failures": 0,
-      "provider_unavailable": true,
-      "superseded_attempt_records": 0,
+      "provider_unavailable": false,
+      "superseded_attempt_records": 1,
       "output_truncated": false,
       "prompt_truncated": false,
       "prompt_sha256": "bec6ee484fcfc153590fa9f62980bbc20391a271da24e255807b19052f2a8ed3",
-      "elapsed_s": 5.064,
-      "dimensions": null
+      "elapsed_s": 7.767,
+      "dimensions": {
+        "INTEGRITY": {
+          "O": 2,
+          "S": 4,
+          "D": 8,
+          "rationale": "The integrity probe flags a disclosure gap (I-INT-LICENSE-UNDISCLOSED) because the card lacks a structured license entry and the automated check reports \"license_declared\": false. The evidence also shows an empty file listing (\"files_listing_fingerprint\" is a hash of an empty list) and no Hub metadata, indicating incomplete artifact provenance. These omissions mean the model\u2019s licensing terms are unclear, posing a real risk of legal misuse. However, the missing license is plainly visible in the card, so a downstream user would likely notice the gap before deployment. The severity is moderate because the risk is legal rather than catastrophic, but it could still impede safe adoption.",
+          "content_quality": null,
+          "risk_present": "YES",
+          "severity": 4,
+          "evidence_sufficient": null
+        },
+        "EXPLAINABILITY": {
+          "O": 1,
+          "S": 3,
+          "D": 8,
+          "rationale": "The explainability probe reports a disclosure gap (E-DOC-INCOMPLETE) with a coverage ratio of 0.0, indicating that none of the five required sections (intended use, limitations, training data, evaluation, ethical considerations) are present. The card contains placeholders \"[More Information Needed]\" for each of these headings, and the automated check marks each as missing or trivial. This lack of concrete, model\u2011specific information makes it impossible for users to understand how the toxicity classifier was built or evaluated. The risk is severe because users cannot assess bias or performance, yet the empty sections are obvious to any reader, making detection easy. Consequently, severity is limited to a moderate level (3) while detection is high.",
+          "content_quality": "irrelevant_or_absent",
+          "risk_present": "YES",
+          "severity": 3,
+          "evidence_sufficient": null
+        },
+        "SAFETY": {
+          "O": 1,
+          "S": 2,
+          "D": 8,
+          "rationale": "The safety probe flags a governance disclosure gap (S-GOV-DISCLOSURE-GAP) with a coverage ratio of 0.0, showing that none of the four required safety checks (misuse risks, privacy, security warnings, data disclosure) are present. All corresponding sections are empty or contain \"[More Information Needed]\", and the card also makes a high\u2011impact claim of being \"production_ready\" without any supporting safety documentation. This creates a clear safety risk because potential misuse or privacy harms cannot be evaluated. The missing safety information is immediately apparent to a downstream user reviewing the card, so detection is high. Severity is kept low (2) because the primary danger is the lack of guidance rather than an inherent catastrophic flaw.",
+          "content_quality": "irrelevant_or_absent",
+          "risk_present": "YES",
+          "severity": 2,
+          "evidence_sufficient": null
+        }
+      }
     },
     {
       "packet_id": "P09",
@@ -1408,11 +1501,11 @@
       "fallback": true,
       "parse_failures": 0,
       "provider_unavailable": true,
-      "superseded_attempt_records": 0,
+      "superseded_attempt_records": 1,
       "output_truncated": false,
       "prompt_truncated": false,
       "prompt_sha256": "bec6ee484fcfc153590fa9f62980bbc20391a271da24e255807b19052f2a8ed3",
-      "elapsed_s": 5.743,
+      "elapsed_s": 4.562,
       "dimensions": null
     }
   ],
@@ -1428,11 +1521,11 @@
       "fallback": true,
       "parse_failures": 0,
       "provider_unavailable": true,
-      "superseded_attempt_records": 0,
+      "superseded_attempt_records": 1,
       "output_truncated": false,
       "prompt_truncated": false,
       "prompt_sha256": "5466b9941a44de21f9dd0eaef4469c6016cae027a55e5d74f6d8d1539ff7c9b3",
-      "elapsed_s": 5.131,
+      "elapsed_s": 4.281,
       "dimensions": null
     },
     {
@@ -1446,11 +1539,11 @@
       "fallback": true,
       "parse_failures": 0,
       "provider_unavailable": true,
-      "superseded_attempt_records": 0,
+      "superseded_attempt_records": 1,
       "output_truncated": false,
       "prompt_truncated": false,
       "prompt_sha256": "5466b9941a44de21f9dd0eaef4469c6016cae027a55e5d74f6d8d1539ff7c9b3",
-      "elapsed_s": 5.204,
+      "elapsed_s": 4.98,
       "dimensions": null
     },
     {
@@ -1464,11 +1557,11 @@
       "fallback": true,
       "parse_failures": 0,
       "provider_unavailable": true,
-      "superseded_attempt_records": 0,
+      "superseded_attempt_records": 1,
       "output_truncated": false,
       "prompt_truncated": false,
       "prompt_sha256": "5466b9941a44de21f9dd0eaef4469c6016cae027a55e5d74f6d8d1539ff7c9b3",
-      "elapsed_s": 4.78,
+      "elapsed_s": 4.657,
       "dimensions": null
     },
     {
@@ -1482,11 +1575,11 @@
       "fallback": true,
       "parse_failures": 0,
       "provider_unavailable": true,
-      "superseded_attempt_records": 0,
+      "superseded_attempt_records": 1,
       "output_truncated": false,
       "prompt_truncated": false,
       "prompt_sha256": "5466b9941a44de21f9dd0eaef4469c6016cae027a55e5d74f6d8d1539ff7c9b3",
-      "elapsed_s": 4.784,
+      "elapsed_s": 4.825,
       "dimensions": null
     },
     {
@@ -1500,11 +1593,11 @@
       "fallback": true,
       "parse_failures": 0,
       "provider_unavailable": true,
-      "superseded_attempt_records": 0,
+      "superseded_attempt_records": 1,
       "output_truncated": false,
       "prompt_truncated": false,
       "prompt_sha256": "5466b9941a44de21f9dd0eaef4469c6016cae027a55e5d74f6d8d1539ff7c9b3",
-      "elapsed_s": 5.074,
+      "elapsed_s": 4.702,
       "dimensions": null
     }
   ],
@@ -1520,11 +1613,11 @@
       "fallback": true,
       "parse_failures": 0,
       "provider_unavailable": true,
-      "superseded_attempt_records": 0,
+      "superseded_attempt_records": 1,
       "output_truncated": false,
       "prompt_truncated": false,
       "prompt_sha256": "72aa8710d97f5b72f2c7e525f7291e5a2ae9c60bf78009032435ccf0d0e49d09",
-      "elapsed_s": 5.319,
+      "elapsed_s": 4.492,
       "dimensions": null
     },
     {
@@ -1538,11 +1631,11 @@
       "fallback": true,
       "parse_failures": 0,
       "provider_unavailable": true,
-      "superseded_attempt_records": 0,
+      "superseded_attempt_records": 1,
       "output_truncated": false,
       "prompt_truncated": false,
       "prompt_sha256": "72aa8710d97f5b72f2c7e525f7291e5a2ae9c60bf78009032435ccf0d0e49d09",
-      "elapsed_s": 5.079,
+      "elapsed_s": 4.62,
       "dimensions": null
     },
     {
@@ -1556,11 +1649,11 @@
       "fallback": true,
       "parse_failures": 0,
       "provider_unavailable": true,
-      "superseded_attempt_records": 0,
+      "superseded_attempt_records": 1,
       "output_truncated": false,
       "prompt_truncated": false,
       "prompt_sha256": "72aa8710d97f5b72f2c7e525f7291e5a2ae9c60bf78009032435ccf0d0e49d09",
-      "elapsed_s": 4.966,
+      "elapsed_s": 4.788,
       "dimensions": null
     },
     {
@@ -1574,11 +1667,11 @@
       "fallback": true,
       "parse_failures": 0,
       "provider_unavailable": true,
-      "superseded_attempt_records": 0,
+      "superseded_attempt_records": 1,
       "output_truncated": false,
       "prompt_truncated": false,
       "prompt_sha256": "72aa8710d97f5b72f2c7e525f7291e5a2ae9c60bf78009032435ccf0d0e49d09",
-      "elapsed_s": 4.762,
+      "elapsed_s": 4.948,
       "dimensions": null
     },
     {
@@ -1592,11 +1685,11 @@
       "fallback": true,
       "parse_failures": 0,
       "provider_unavailable": true,
-      "superseded_attempt_records": 0,
+      "superseded_attempt_records": 1,
       "output_truncated": false,
       "prompt_truncated": false,
       "prompt_sha256": "72aa8710d97f5b72f2c7e525f7291e5a2ae9c60bf78009032435ccf0d0e49d09",
-      "elapsed_s": 4.994,
+      "elapsed_s": 4.691,
       "dimensions": null
     }
   ],
@@ -1612,11 +1705,11 @@
       "fallback": true,
       "parse_failures": 0,
       "provider_unavailable": true,
-      "superseded_attempt_records": 0,
+      "superseded_attempt_records": 1,
       "output_truncated": false,
       "prompt_truncated": false,
       "prompt_sha256": "600a2281be6daf5a9311a77409da1a60f01201deb8cbf2a87a105665cb7015a1",
-      "elapsed_s": 4.906,
+      "elapsed_s": 4.751,
       "dimensions": null
     },
     {
@@ -1630,11 +1723,11 @@
       "fallback": true,
       "parse_failures": 0,
       "provider_unavailable": true,
-      "superseded_attempt_records": 0,
+      "superseded_attempt_records": 1,
       "output_truncated": false,
       "prompt_truncated": false,
       "prompt_sha256": "600a2281be6daf5a9311a77409da1a60f01201deb8cbf2a87a105665cb7015a1",
-      "elapsed_s": 4.871,
+      "elapsed_s": 4.834,
       "dimensions": null
     },
     {
@@ -1648,11 +1741,11 @@
       "fallback": true,
       "parse_failures": 0,
       "provider_unavailable": true,
-      "superseded_attempt_records": 0,
+      "superseded_attempt_records": 1,
       "output_truncated": false,
       "prompt_truncated": false,
       "prompt_sha256": "600a2281be6daf5a9311a77409da1a60f01201deb8cbf2a87a105665cb7015a1",
-      "elapsed_s": 4.837,
+      "elapsed_s": 4.611,
       "dimensions": null
     },
     {
@@ -1666,11 +1759,11 @@
       "fallback": true,
       "parse_failures": 0,
       "provider_unavailable": true,
-      "superseded_attempt_records": 0,
+      "superseded_attempt_records": 1,
       "output_truncated": false,
       "prompt_truncated": false,
       "prompt_sha256": "600a2281be6daf5a9311a77409da1a60f01201deb8cbf2a87a105665cb7015a1",
-      "elapsed_s": 4.871,
+      "elapsed_s": 4.511,
       "dimensions": null
     },
     {
@@ -1684,11 +1777,11 @@
       "fallback": true,
       "parse_failures": 0,
       "provider_unavailable": true,
-      "superseded_attempt_records": 0,
+      "superseded_attempt_records": 1,
       "output_truncated": false,
       "prompt_truncated": false,
       "prompt_sha256": "600a2281be6daf5a9311a77409da1a60f01201deb8cbf2a87a105665cb7015a1",
-      "elapsed_s": 5.731,
+      "elapsed_s": 5.132,
       "dimensions": null
     }
   ]

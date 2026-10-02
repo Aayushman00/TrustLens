@@ -242,3 +242,32 @@ def test_localization_ignores_packets_without_llm_answers() -> None:
                      "provider_unavailable": True, "superseded_attempt_records": 0}]}
     cmp = l2.compare(det, runs)
     assert cmp["localization"] == [] and cmp["summary"]["localization_exact_match"] is None
+
+
+def _run(o: int | None, provider: str | None = "groq", elapsed: float = 2.0) -> dict:
+    dims = None if o is None else {d: {"O": o, "S": o, "D": o, "risk_present": "YES" if o <= 5 else "NO"}
+                                   for d in ("INTEGRITY", "EXPLAINABILITY", "SAFETY")}
+    return {"fallback": o is None, "dimensions": dims, "parse_failures": 0, "elapsed_s": elapsed,
+            "output_truncated": False, "prompt_truncated": False, "replayed": False, "provider": provider,
+            "provider_unavailable": o is None, "superseded_attempt_records": 0}
+
+
+def test_repeatability_counts_only_pairs_with_two_or_more_answers_and_latency_only_successes() -> None:
+    det = {p: {"elapsed_ms": 1.0, "dimensions": {d: {"risk_present": "NO", "O": 7, "S": 7, "D": 8}
+                                                 for d in ("INTEGRITY", "EXPLAINABILITY", "SAFETY")}}
+           for p in ("P01", "P02")}
+    runs = {"P01": [_run(3, "groq", 4.0), _run(7, "gemini", 6.0)], "P02": [_run(4), _run(None, None, 100.0)]}
+    s = l2.compare(det, runs)["summary"]
+    assert s["llm_repeatability_pairs"] == 3  # P02 has a single answer: not a repeatability observation
+    assert s["llm_risk_repeatable_pairs"] == 0 and s["llm_osd_repeatable_pairs"] == 0
+    assert s["llm_s_per_successful_call_mean"] == pytest.approx(4.0)
+    assert s["provider_variation"]["SAFETY"]["groq"]["n"] == 2
+    assert s["provider_variation"]["SAFETY"]["gemini"]["O_mean"] == 7
+
+
+def test_attempt_stats_count_every_provider_attempt(tmp_path: Path) -> None:
+    path = tmp_path / "r.jsonl"
+    recs = [{"attempts": [{"provider": "gemini", "error": "ClientError: 429"}, {"provider": "groq", "raw": "{}"}]},
+            {"attempts": [{"provider": "groq", "error": "HTTPStatusError: 429"}]}]
+    path.write_text("\n".join(json.dumps(r) for r in recs) + "\n", encoding="utf-8")
+    assert l2.attempt_stats(path) == {"gemini": {"ok": 0, "ClientError": 1}, "groq": {"ok": 1, "HTTPStatusError": 1}}

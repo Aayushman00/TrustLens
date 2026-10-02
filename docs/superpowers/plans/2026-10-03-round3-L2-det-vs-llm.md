@@ -108,3 +108,8 @@ Both outputs are preserved verbatim; no evaluator is changed after seeing result
 2. Analysis fix before reporting: localization statistics now skip packets with no LLM
    answer (an empty LLM set had been counted as an exact match).
 3. Provider org/account identifiers in stored error text redacted.
+4. Session 2 (2026-10-02 23:13–23:17 UTC): `--resume --retry-fallbacks` re-attempted only the 41
+   provider-unavailable runs; 3 answered (Groq), 38 still unavailable. Stored answers reused,
+   not re-called; log append-only. Analysis-only changes in the same session: repeatability counted
+   only on pairs with >= 2 valid runs, latency also reported for successful calls only, provider
+   variation and per-provider attempt counts added. Evaluators, prompt, parser and packets unchanged.
