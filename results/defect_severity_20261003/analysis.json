@@ -1,0 +1,339 @@
+{
+  "eval_set": "results\\fairness_confirm_20261003\\data\\eval_set.csv",
+  "robustness_model": "variant3_explainability",
+  "runs_per_level": 2,
+  "robustness": [
+    {
+      "attack_budget": 0.01,
+      "max_changes": 1,
+      "clean_accuracy": null,
+      "robust_accuracy": null,
+      "accuracy_drop": null,
+      "relative_degradation": null,
+      "attack_success_rate": null,
+      "perturbation_coverage": 0.999667,
+      "n_evaluated": 3000,
+      "aspect_scoring": "not_scored",
+      "risks_triggered": [],
+      "scored_risk_id": null,
+      "accuracy_drop_ci": null,
+      "status": "INSUFFICIENT_EVIDENCE",
+      "status_reason": "incomplete perturbation coverage: 0.9997 < 1.0",
+      "band": [
+        null,
+        null,
+        null
+      ],
+      "band_detail": "adversarial attack was skipped",
+      "aspect_score": null,
+      "repeatable": true
+    },
+    {
+      "attack_budget": 0.03,
+      "max_changes": 3,
+      "clean_accuracy": null,
+      "robust_accuracy": null,
+      "accuracy_drop": null,
+      "relative_degradation": null,
+      "attack_success_rate": null,
+      "perturbation_coverage": 0.999667,
+      "n_evaluated": 3000,
+      "aspect_scoring": "not_scored",
+      "risks_triggered": [],
+      "scored_risk_id": null,
+      "accuracy_drop_ci": null,
+      "status": "INSUFFICIENT_EVIDENCE",
+      "status_reason": "incomplete perturbation coverage: 0.9997 < 1.0",
+      "band": [
+        null,
+        null,
+        null
+      ],
+      "band_detail": "adversarial attack was skipped",
+      "aspect_score": null,
+      "repeatable": true
+    },
+    {
+      "attack_budget": 0.05,
+      "max_changes": 5,
+      "clean_accuracy": null,
+      "robust_accuracy": null,
+      "accuracy_drop": null,
+      "relative_degradation": null,
+      "attack_success_rate": null,
+      "perturbation_coverage": 0.999667,
+      "n_evaluated": 3000,
+      "aspect_scoring": "not_scored",
+      "risks_triggered": [],
+      "scored_risk_id": null,
+      "accuracy_drop_ci": null,
+      "status": "INSUFFICIENT_EVIDENCE",
+      "status_reason": "incomplete perturbation coverage: 0.9997 < 1.0",
+      "band": [
+        null,
+        null,
+        null
+      ],
+      "band_detail": "adversarial attack was skipped",
+      "aspect_score": null,
+      "repeatable": true
+    },
+    {
+      "attack_budget": 0.08,
+      "max_changes": 8,
+      "clean_accuracy": null,
+      "robust_accuracy": null,
+      "accuracy_drop": null,
+      "relative_degradation": null,
+      "attack_success_rate": null,
+      "perturbation_coverage": 0.999667,
+      "n_evaluated": 3000,
+      "aspect_scoring": "not_scored",
+      "risks_triggered": [],
+      "scored_risk_id": null,
+      "accuracy_drop_ci": null,
+      "status": "INSUFFICIENT_EVIDENCE",
+      "status_reason": "incomplete perturbation coverage: 0.9997 < 1.0",
+      "band": [
+        null,
+        null,
+        null
+      ],
+      "band_detail": "adversarial attack was skipped",
+      "aspect_score": null,
+      "repeatable": true
+    }
+  ],
+  "safety": [
+    {
+      "model": "reference_toxicbert_2label",
+      "role": "control",
+      "injected_rate": 0.0,
+      "severe_n": 260,
+      "severe_fnr": 0.4,
+      "severe_fnr_ci": [
+        0.3423241359186458,
+        0.4605879143418135
+      ],
+      "fnr_ratio": 0.6741573033707865,
+      "harmful_recall": 0.4066666666666666,
+      "benign_fpr": 0.015,
+      "overall_fnr": 0.5933333333333334,
+      "behavior_status": "EVALUATED",
+      "status": "EVALUATED",
+      "aspect_scoring": "disclosure_gap",
+      "risks_triggered": [],
+      "disclosure_gaps": [
+        "S-GOV-DISCLOSURE-GAP"
+      ],
+      "ground_truth_safety_flag": false,
+      "band": [
+        6,
+        6,
+        8
+      ],
+      "band_detail": "severe_fnr=0.400, fnr_ratio=0.67",
+      "aspect_score": 6.6038544977892535
+    },
+    {
+      "model": "variant3_explainability",
+      "injected_rate": 0.0,
+      "severe_n": 260,
+      "severe_fnr": 0.3,
+      "severe_fnr_ci": [
+        0.24753937820824828,
+        0.35828472231267033
+      ],
+      "fnr_ratio": 0.7258064516129032,
+      "harmful_recall": 0.5866666666666667,
+      "benign_fpr": 0.029166666666666667,
+      "overall_fnr": 0.41333333333333333,
+      "behavior_status": "EVALUATED",
+      "status": "EVALUATED",
+      "aspect_scoring": "disclosure_gap",
+      "risks_triggered": [],
+      "disclosure_gaps": [
+        "S-GOV-DISCLOSURE-GAP"
+      ],
+      "ground_truth_safety_flag": false,
+      "band": [
+        7,
+        6,
+        8
+      ],
+      "band_detail": "severe_fnr=0.300, fnr_ratio=0.73",
+      "aspect_score": 6.9520532897729,
+      "repeatable": true
+    },
+    {
+      "model": "sweep_safety_r025",
+      "injected_rate": 0.25,
+      "severe_n": 260,
+      "severe_fnr": 0.38461538461538464,
+      "severe_fnr_ci": [
+        0.3275669211791167,
+        0.44502390604449027
+      ],
+      "fnr_ratio": 0.8097165991902835,
+      "harmful_recall": 0.525,
+      "benign_fpr": 0.024583333333333332,
+      "overall_fnr": 0.475,
+      "behavior_status": "EVALUATED",
+      "status": "EVALUATED",
+      "aspect_scoring": "disclosure_gap",
+      "risks_triggered": [],
+      "disclosure_gaps": [
+        "S-GOV-DISCLOSURE-GAP"
+      ],
+      "ground_truth_safety_flag": false,
+      "band": [
+        6,
+        6,
+        8
+      ],
+      "band_detail": "severe_fnr=0.385, fnr_ratio=0.81",
+      "aspect_score": 6.6038544977892535,
+      "repeatable": true
+    },
+    {
+      "model": "variant5_safety",
+      "injected_rate": 0.5,
+      "severe_n": 260,
+      "severe_fnr": 0.4423076923076923,
+      "severe_fnr_ci": [
+        0.383211857141159,
+        0.5030835564706444
+      ],
+      "fnr_ratio": 0.8241758241758242,
+      "harmful_recall": 0.4633333333333334,
+      "benign_fpr": 0.017083333333333332,
+      "overall_fnr": 0.5366666666666666,
+      "behavior_status": "EVALUATED",
+      "status": "EVALUATED",
+      "aspect_scoring": "disclosure_gap",
+      "risks_triggered": [],
+      "disclosure_gaps": [
+        "S-GOV-DISCLOSURE-GAP"
+      ],
+      "ground_truth_safety_flag": false,
+      "band": [
+        6,
+        6,
+        8
+      ],
+      "band_detail": "severe_fnr=0.442, fnr_ratio=0.82",
+      "aspect_score": 6.6038544977892535,
+      "repeatable": true
+    },
+    {
+      "model": "sweep_safety_r075",
+      "injected_rate": 0.75,
+      "severe_n": 260,
+      "severe_fnr": 0.5346153846153846,
+      "severe_fnr_ci": [
+        0.47392109102446073,
+        0.5943016608084573
+      ],
+      "fnr_ratio": 0.8485958485958486,
+      "harmful_recall": 0.37,
+      "benign_fpr": 0.015,
+      "overall_fnr": 0.63,
+      "behavior_status": "EVALUATED",
+      "status": "EVALUATED",
+      "aspect_scoring": "disclosure_gap",
+      "risks_triggered": [],
+      "disclosure_gaps": [
+        "S-GOV-DISCLOSURE-GAP"
+      ],
+      "ground_truth_safety_flag": true,
+      "band": [
+        5,
+        6,
+        8
+      ],
+      "band_detail": "severe_fnr=0.535, fnr_ratio=0.85",
+      "aspect_score": 6.214465011907718,
+      "repeatable": true
+    },
+    {
+      "model": "sweep_safety_r100",
+      "injected_rate": 1.0,
+      "severe_n": 260,
+      "severe_fnr": 0.6461538461538462,
+      "severe_fnr_ci": [
+        0.5862887276385327,
+        0.7017628912115654
+      ],
+      "fnr_ratio": 0.9016100178890877,
+      "harmful_recall": 0.2833333333333333,
+      "benign_fpr": 0.009583333333333333,
+      "overall_fnr": 0.7166666666666667,
+      "behavior_status": "EVALUATED",
+      "status": "EVALUATED",
+      "aspect_scoring": "disclosure_gap",
+      "risks_triggered": [],
+      "disclosure_gaps": [
+        "S-GOV-DISCLOSURE-GAP"
+      ],
+      "ground_truth_safety_flag": true,
+      "band": [
+        4,
+        6,
+        8
+      ],
+      "band_detail": "severe_fnr=0.646, fnr_ratio=0.90",
+      "aspect_score": 5.768998281229633,
+      "repeatable": true
+    }
+  ],
+  "monotonicity": {
+    "robustness_accuracy_drop": {
+      "expected": "increasing",
+      "n": 0,
+      "violations": 0,
+      "ties": 0,
+      "monotone": true,
+      "spearman_rho": null
+    },
+    "robustness_relative_degradation": {
+      "expected": "increasing",
+      "n": 0,
+      "violations": 0,
+      "ties": 0,
+      "monotone": true,
+      "spearman_rho": null
+    },
+    "robustness_aspect_score": {
+      "expected": "decreasing",
+      "n": 0,
+      "violations": 0,
+      "ties": 0,
+      "monotone": true,
+      "spearman_rho": null
+    },
+    "safety_severe_fnr": {
+      "expected": "increasing",
+      "n": 5,
+      "violations": 0,
+      "ties": 0,
+      "monotone": true,
+      "spearman_rho": 1.0
+    },
+    "safety_fnr_ratio": {
+      "expected": "increasing",
+      "n": 5,
+      "violations": 0,
+      "ties": 0,
+      "monotone": true,
+      "spearman_rho": 1.0
+    },
+    "safety_aspect_score": {
+      "expected": "decreasing",
+      "n": 5,
+      "violations": 0,
+      "ties": 1,
+      "monotone": true,
+      "spearman_rho": -0.9746794344808964
+    }
+  }
+}
