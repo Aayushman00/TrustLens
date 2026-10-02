@@ -10,6 +10,7 @@ import json
 import statistics
 import subprocess
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 from app.scripts import run_flawed_suite_eval as r
@@ -37,14 +38,19 @@ def summarize_runs(runs: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def run_once(evaluate: Any, client: Any, model_id: int, dataset_id: str, **kwargs: Any) -> dict[str, Any]:
+def run_once(
+    evaluate: Any, client: Any, model_id: int, dataset_id: str, *, save_to: Path | None = None, **kwargs: Any
+) -> dict[str, Any]:
     """One evaluation as a run record; an exception becomes status ERROR so a
-    single timeout or HTTP failure never loses the other runs."""
+    single timeout or HTTP failure never loses the other runs. ``save_to``
+    keeps the full evaluation response (probe evidence, O/S/D, LLM metadata)."""
     try:
         ev = evaluate(client, model_id, dataset_id, **kwargs)
     except Exception as exc:  # noqa: BLE001
         return {"status": "ERROR", "error": f"{type(exc).__name__}: {exc}"[:500],
                 "fries_score": None, "dimension_scores": {}}
+    if save_to is not None:
+        save_to.write_text(json.dumps(ev, indent=2), encoding="utf-8")
     fs = ev.get("final_score") or {}
     return {
         "evaluation_id": ev.get("id"),
@@ -99,7 +105,11 @@ def main() -> None:
             if args.only and name not in args.only:
                 continue
             kwargs = r.REFERENCE_EVAL_KWARGS if name == "reference_hub" else {}
-            runs = [run_once(r.create_and_run_evaluation, c, mid, ds, **kwargs) for _ in range(args.runs)]
+            (out / "raw").mkdir(exist_ok=True)
+            runs = [
+                run_once(r.create_and_run_evaluation, c, mid, ds, save_to=out / "raw" / f"{name}__run{i + 1}.json", **kwargs)
+                for i in range(args.runs)
+            ]
             summary[name] = {"runs": runs, **summarize_runs(runs)}
             (out / f"{name}.json").write_text(json.dumps(summary[name], indent=2), encoding="utf-8")
     (out / "_summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
