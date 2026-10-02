@@ -116,6 +116,26 @@ def equalized_odds_difference(
     return float(max(max(tprs) - min(tprs), max(fprs) - min(fprs)))
 
 
+def equal_opportunity_difference(
+    y_true: Sequence[Any],
+    y_pred: Sequence[Any],
+    sensitive: Sequence[Hashable],
+    *,
+    positive_label_index: int = 1,
+) -> float:
+    """Equal opportunity difference: max_g TPR_g − min_g TPR_g, relative to
+    ``positive_label_index``. Conditions on the true label, so (unlike DPD)
+    it does not move with group base rates. Raises when a group has no
+    positive labels — its TPR is undefined, not 0."""
+    buckets = _groups(y_true, y_pred, sensitive)
+    tprs: list[float] = []
+    for group, pairs in buckets.items():
+        if not any(yt == positive_label_index for yt, _ in pairs):
+            raise ValueError(f"group {group!r} has no positive labels; TPR undefined")
+        tprs.append(_tpr_fpr(pairs, positive_label_index=positive_label_index)[0])
+    return float(max(tprs) - min(tprs))
+
+
 def subgroup_f1_spread(
     y_true: Sequence[Any],
     y_pred: Sequence[Any],

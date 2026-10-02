@@ -15,6 +15,7 @@ from typing import Any, Callable, Hashable, Sequence
 
 from app.probes.fairness_metrics import (
     demographic_parity_difference,
+    equal_opportunity_difference,
     equalized_odds_difference,
     label_rate_gap,
     subgroup_f1_spread,
@@ -26,11 +27,17 @@ CI_WIDE_THRESHOLD = 0.15
 SCORED_RISK_ID = "F-FAIR-PERF"
 METHODOLOGY_VERSION = "tl-methodology-v1.0"
 
-# Binary fairness risk rule (round 3, L4). Pre-declared, not fitted to any
-# benchmark: same practical floor (EPSILON) and same "point > ε AND bootstrap
-# ci_lower > ε" structure as multiclass F-FAIR-PERF, applied to excess_dpd_v2.
-BINARY_METHODOLOGY_VERSION = "tl-fairness-binary-v1.1"
-BINARY_RISK_ID = "F-FAIR-EXCESS-DPD"
+# Binary fairness risk rule (round 3, L4.1): the equal-opportunity (TPR) gap
+# with the methodology-wide EPSILON and the same "point > ε AND bootstrap
+# ci_lower > ε" structure as multiclass F-FAIR-PERF. tl-fairness-binary-v1.1
+# (excess_dpd_v2 trigger) was an exploratory candidate, rejected after
+# inspection for its base-rate dependence; this rule was chosen after that
+# inspection, not pre-registered before it.
+BINARY_METHODOLOGY_VERSION = "tl-fairness-binary-v1.2"
+BINARY_RISK_ID = "F-FAIR-EOPP"
+# TPR needs TP + FN > 0 in every eligible group; precision beyond that is
+# handled by the G-FAIR-CI-WIDE gate on the EOD CI, not by a larger floor.
+MIN_GROUP_POSITIVES = 1
 
 
 def wilson_interval(
@@ -262,41 +269,54 @@ def excess_dpd_v1(
     return max(dpd - gap, 0.0)
 
 
-def excess_dpd_v2(
-    y_true: Sequence[int], y_pred: Sequence[int], sensitive: Sequence[Any], *, positive_label_index: int = 1
-) -> float:
-    """Direction-aware excess DPD: b_g = P(Yhat=pos|g) - P(Y=pos|g);
-    returns max_g b_g - min_g b_g (0 when every group's prediction rate
-    tracks its own label rate)."""
-    counts: dict[Any, list[int]] = defaultdict(lambda: [0, 0, 0])  # n, label_pos, pred_pos
-    for yt, yp, g in zip(y_true, y_pred, sensitive, strict=True):
-        c = counts[g]
-        c[0] += 1
-        c[1] += int(yt) == positive_label_index
-        c[2] += int(yp) == positive_label_index
-    if len(counts) < 2:
-        raise ValueError("need at least two sensitive groups")
-    bias = [(pred - lab) / n for n, lab, pred in counts.values()]
-    return float(max(bias) - min(bias))
-
-
-def _excess_dpd_v2_from_resampled(
+def _eopp_gap_from_resampled(
     sample: Sequence[dict[str, Any]], min_group_n: int, *, positive_label_index: int = 1
 ) -> float | None:
-    """``stat_fn`` adapter: bootstraps excess_dpd_v2 over groups with n >= min_group_n."""
+    """``stat_fn`` adapter: bootstraps equal_opportunity_difference over groups
+    with n >= min_group_n; a replicate where a kept group has no positive
+    label (TPR undefined) yields None."""
     rows = _filtered_group_rows(sample, min_group_n)
     if rows is None:
         return None
-    return excess_dpd_v2(
-        [int(r["label"]) for r in rows],
-        [int(r["y_hat"]) for r in rows],
-        [r["sensitive"] for r in rows],
-        positive_label_index=positive_label_index,
-    )
+    try:
+        return equal_opportunity_difference(
+            [int(r["label"]) for r in rows],
+            [int(r["y_hat"]) for r in rows],
+            [r["sensitive"] for r in rows],
+            positive_label_index=positive_label_index,
+        )
+    except ValueError:
+        return None
+
+
+def binary_eligibility(
+    aligned: Sequence[dict[str, Any]], min_group_n: int, *, positive_label_index: int = 1
+) -> dict[str, Any]:
+    """Groups eligible for the EOD rule: n >= min_group_n, and every eligible
+    group must hold >= MIN_GROUP_POSITIVES positive labels (TPR undefined
+    otherwise). ``failed_gate`` is None when eligible."""
+    n: dict[str, int] = defaultdict(int)
+    pos: dict[str, int] = defaultdict(int)
+    for r in aligned:
+        g = str(r["sensitive"])
+        n[g] += 1
+        pos[g] += int(r["label"]) == positive_label_index
+    eligible = sorted(g for g in n if n[g] >= min_group_n)
+    failed_gate = None
+    if len(eligible) < 2:
+        failed_gate = "G-FAIR-N-GROUP"
+    elif any(pos[g] < MIN_GROUP_POSITIVES for g in eligible):
+        failed_gate = "G-FAIR-POSITIVES"
+    return {
+        "eligible_groups": eligible,
+        "positives": {g: pos[g] for g in sorted(n)},
+        "min_positives_per_group": MIN_GROUP_POSITIVES,
+        "failed_gate": failed_gate,
+    }
 
 
 def binary_fairness_decision(ci: dict[str, Any]) -> dict[str, Any]:
-    """Map the excess_dpd_v2 bootstrap result to a finding.
+    """Map the equal-opportunity-difference bootstrap result to a finding.
 
     FAIRNESS_RISK         point > ε and ci_lower > ε  -> risk_detected, [BINARY_RISK_ID]
     DISPARITY_OBSERVED    point > ε, ci_lower <= ε    -> disparity_observed (no risk)

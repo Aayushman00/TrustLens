@@ -19,7 +19,11 @@ from app.inference.errors import InferenceError
 from app.inference.local_hf import LocalHFBackend
 from app.inference.model_snapshot_check import verify_loaded_model_matches_snapshot
 from app.probes.base import ProbeContext, ProbeOutput
-from app.probes.fairness_metrics import compute_fairness_bundle, label_rate_gap
+from app.probes.fairness_metrics import (
+    compute_fairness_bundle,
+    equal_opportunity_difference,
+    label_rate_gap,
+)
 from app.probes.fairness_multiclass import evaluate_multiclass_fairness
 from app.probes.prediction_gate import FLAG_CONSTANT_PREDICTOR, prediction_collapse
 from app.probes.fairness_stats import (
@@ -29,12 +33,15 @@ from app.probes.fairness_stats import (
     CI_WIDE_THRESHOLD,
     EPSILON,
     METHODOLOGY_VERSION,
+    MIN_GROUP_POSITIVES,
     _dp_gap_from_resampled,
     _eo_gap_from_resampled,
-    _excess_dpd_v2_from_resampled,
+    _eopp_gap_from_resampled,
     _f1_gap_from_resampled,
+    binary_eligibility,
     binary_fairness_decision,
     bootstrap_gap_ci,
+    excess_dpd_v1,
     filter_compared_groups,
     group_accuracies_from_aligned,
 )
@@ -342,13 +349,10 @@ class FairnessProbe:
             if int(bundle["min_group_n_observed"]) < min_group_n:
                 flags.append("insufficient_slice_size")
 
-            # Bootstrap CI on all three point estimates, reusing the same
-            # resampling machinery evaluate_multiclass_fairness uses (via
-            # stat_fn) instead of a second implementation. Only DP's CI
-            # width gates scoring (G-FAIR-CI-WIDE) -- DP is the headline
-            # binary fairness number; EO/F1-spread get a non-blocking
-            # warning flag so a wide CI there is visible without blocking
-            # an otherwise-usable result.
+            # Bootstrap CIs, reusing the resampling machinery
+            # evaluate_multiclass_fairness uses (via stat_fn). DP/EO/F1 CIs are
+            # descriptive evidence (non-blocking wide_ci_* flags); the EOD CI
+            # is the one the L4.1 risk rule and G-FAIR-CI-WIDE use.
             dp_ci = bootstrap_gap_ci(
                 aligned_for_report,
                 min_group_n=min_group_n,
@@ -367,22 +371,42 @@ class FairnessProbe:
                 seed=seed,
                 stat_fn=partial(_f1_gap_from_resampled, positive_label_index=positive_label_index),
             )
-            # L4: the binary risk statistic, bootstrapped like the others
-            # (groups with n < min_group_n are excluded inside the stat_fn).
-            excess_v2_ci = bootstrap_gap_ci(
-                aligned_for_report,
-                min_group_n=min_group_n,
-                seed=seed,
-                stat_fn=partial(_excess_dpd_v2_from_resampled, positive_label_index=positive_label_index),
-            )
-            decision = binary_fairness_decision(excess_v2_ci)
-            for ci_name, ci in (("eo", eo_ci), ("f1", f1_ci)):
+            for ci_name, ci in (("dp", dp_ci), ("eo", eo_ci), ("f1", f1_ci)):
                 if (
                     ci["ci_lower"] is not None
                     and ci["ci_upper"] is not None
                     and (ci["ci_upper"] - ci["ci_lower"]) > CI_WIDE_THRESHOLD
                 ):
                     flags.append(f"wide_ci_{ci_name}")
+
+            eligibility = binary_eligibility(
+                aligned_for_report, min_group_n, positive_label_index=positive_label_index
+            )
+            eopp_point: float | None = None
+            eopp_ci: dict[str, Any] = {
+                "point": None, "ci_lower": None, "ci_upper": None,
+                "method": "bootstrap_percentile", "B": BOOTSTRAP_B,
+            }
+            if eligibility["failed_gate"] is None:
+                eligible = set(eligibility["eligible_groups"])
+                kept = [r for r in aligned_for_report if str(r["sensitive"]) in eligible]
+                eopp_point = round(
+                    equal_opportunity_difference(
+                        [r["label"] for r in kept],
+                        [r["y_hat"] for r in kept],
+                        [r["sensitive"] for r in kept],
+                        positive_label_index=positive_label_index,
+                    ),
+                    6,
+                )
+                eopp_ci = bootstrap_gap_ci(
+                    aligned_for_report,
+                    min_group_n=min_group_n,
+                    seed=seed,
+                    stat_fn=partial(_eopp_gap_from_resampled, positive_label_index=positive_label_index),
+                )
+            decision = binary_fairness_decision(eopp_ci)
+            fprs = [float(g["fpr"]) for g in bundle["groups"].values()]
 
             base_gap = label_rate_gap(y_true, sensitive, positive_label_index=positive_label_index)
             group_label_rates = {
@@ -394,7 +418,9 @@ class FairnessProbe:
                 # TPR (no positives) or FPR (no negatives) is undefined for such a
                 # group and reads as 0.0, inflating equalized_odds_difference.
                 flags.append("group_single_label_class")
-            excess_v1 = round(max(bundle["demographic_parity_difference"] - base_gap, 0.0), 6)
+            excess_v1 = round(
+                excess_dpd_v1(y_true, y_pred, sensitive, positive_label_index=positive_label_index), 6
+            )
             base_metrics.update(
                 {
                     "fairness_mode": "user_defined_local",
@@ -403,8 +429,12 @@ class FairnessProbe:
                     # severity-sweep analysis read it under that name.
                     "excess_dpd": excess_v1,
                     "excess_dpd_v1": excess_v1,
-                    "excess_dpd_v2": excess_v2_ci["point"],
-                    "excess_dpd_v2_ci": excess_v2_ci,
+                    # Primary risk statistic (TPR gap over eligible groups);
+                    # the FPR gap is secondary evidence only.
+                    "equal_opportunity_difference": eopp_point,
+                    "eopp_ci": eopp_ci,
+                    "fpr_gap": round(max(fprs) - min(fprs), 6),
+                    "eligibility": eligibility,
                     "fairness_finding": decision["finding"],
                     "aspect_scoring": decision["aspect_scoring"],
                     "risks_triggered": decision["risks_triggered"],
@@ -412,9 +442,16 @@ class FairnessProbe:
                     "methodology_version": BINARY_METHODOLOGY_VERSION,
                     "fairness_rule": {
                         "risk_id": BINARY_RISK_ID,
-                        "statistic": "excess_dpd_v2 = max_g(P(Yhat=pos|g) - P(Y=pos|g)) - min_g(...), groups with n >= min_group_n",
+                        "statistic": (
+                            "equal_opportunity_difference = max_g TPR_g - min_g TPR_g "
+                            "over groups with n >= min_group_n"
+                        ),
+                        "eligibility": (
+                            f">= 2 groups with n >= min_group_n, each with >= {MIN_GROUP_POSITIVES} positive label(s)"
+                        ),
                         "epsilon": EPSILON,
                         "criterion": "FAIRNESS_RISK iff point > epsilon and bootstrap 95% ci_lower > epsilon",
+                        "ci_wide_gate": f"EOD CI width > {CI_WIDE_THRESHOLD} -> mapping_blocked (G-FAIR-CI-WIDE)",
                         "bootstrap": {"method": "percentile", "B": BOOTSTRAP_B, "seed": seed},
                     },
                     "demographic_parity_difference": bundle["demographic_parity_difference"],
@@ -432,12 +469,24 @@ class FairnessProbe:
                 }
             )
 
-            if (
-                dp_ci["ci_lower"] is not None
-                and dp_ci["ci_upper"] is not None
-                and (dp_ci["ci_upper"] - dp_ci["ci_lower"]) > CI_WIDE_THRESHOLD
-            ):
-                flags.append("wide_ci_dp")
+            if decision["finding"] == "INSUFFICIENT_EVIDENCE":
+                gate = eligibility["failed_gate"] or "G-FAIR-CI-MISSING"
+                base_metrics["reliability"] = {"gates_passed": False, "failed_gates": [gate]}
+                return self._finish(
+                    ctx,
+                    metrics=base_metrics,
+                    flags=flags + ["insufficient_fairness_evidence"],
+                    confidence=0.45,
+                    status=ProbeEvaluationStatus.INSUFFICIENT_EVIDENCE,
+                    status_reason=(
+                        f"{gate}: need >= 2 groups with n >= {min_group_n}, each with >= {MIN_GROUP_POSITIVES} "
+                        "positive label(s), and a bootstrap CI for the TPR gap — fairness risk not "
+                        "assessed; raw metrics kept as evidence"
+                    ),
+                )
+
+            if (eopp_ci["ci_upper"] - eopp_ci["ci_lower"]) > CI_WIDE_THRESHOLD:
+                flags.append("wide_ci_eopp")
                 # Mark the block in the evidence itself so O/S/D and confidence
                 # consumers honour it (same shape as fairness_multiclass).
                 base_metrics["aspect_scoring"] = "mapping_blocked"
@@ -451,36 +500,23 @@ class FairnessProbe:
                     confidence=0.75,
                     status=ProbeEvaluationStatus.EVALUATED,
                     status_reason=(
-                        "G-FAIR-CI-WIDE: demographic_parity_difference CI width "
+                        "G-FAIR-CI-WIDE: equal_opportunity_difference CI width "
                         f"exceeds {CI_WIDE_THRESHOLD} — scoring blocked"
                     ),
                 )
 
-            if decision["finding"] == "INSUFFICIENT_EVIDENCE":
-                base_metrics["reliability"] = {"gates_passed": False, "failed_gates": ["G-FAIR-N-GROUP"]}
-                return self._finish(
-                    ctx,
-                    metrics=base_metrics,
-                    flags=flags + ["insufficient_group_n"],
-                    confidence=0.45,
-                    status=ProbeEvaluationStatus.INSUFFICIENT_EVIDENCE,
-                    status_reason=(
-                        f"fewer than 2 groups with n >= {min_group_n} (or no bootstrap CI) — "
-                        "fairness risk not assessed; raw metrics kept as evidence"
-                    ),
-                )
-            point, lo = excess_v2_ci["point"], excess_v2_ci["ci_lower"]
+            point, lo = eopp_ci["point"], eopp_ci["ci_lower"]
             status_reason = None
             if decision["finding"] == "FAIRNESS_RISK":
                 status_reason = (
-                    f"{BINARY_RISK_ID}: excess_dpd_v2={point} and ci_lower={lo} exceed epsilon={EPSILON} — "
-                    "the model's positive-rate gap differs from the groups' own label-rate gap; "
+                    f"{BINARY_RISK_ID}: equal_opportunity_difference={point} and ci_lower={lo} exceed "
+                    f"epsilon={EPSILON} — true-positive rates differ across groups; "
                     "evidence for review, not a finding that the model is unfair"
                 )
             elif decision["finding"] == "DISPARITY_OBSERVED":
                 status_reason = (
-                    f"disparity observed: excess_dpd_v2={point} > epsilon={EPSILON} but "
-                    f"bootstrap ci_lower={lo} <= epsilon — not a fairness risk under the pre-declared rule"
+                    f"disparity observed: equal_opportunity_difference={point} > epsilon={EPSILON} but "
+                    f"bootstrap ci_lower={lo} <= epsilon — not a fairness risk under the rule"
                 )
             confidence = 0.75 if "insufficient_slice_size" in flags else 0.85
             return self._finish(

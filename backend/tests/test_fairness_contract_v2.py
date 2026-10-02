@@ -122,7 +122,10 @@ def test_fairness_v2_positive_label_index_changes_equalized_odds_difference(
         )
         backend = FakeInferenceBackend(predictions=list(predictions), num_labels=2)
         output = FairnessProbe(inference=backend).run(ctx)
-        assert output.status == ProbeEvaluationStatus.EVALUATED, output.status_reason
+        # With index 1, group b has no positive label, so the L4.1 TPR-gap
+        # rule abstains (INSUFFICIENT_EVIDENCE); the raw metrics are still computed.
+        assert output.status in (ProbeEvaluationStatus.EVALUATED, ProbeEvaluationStatus.INSUFFICIENT_EVIDENCE)
+        assert output.metric_values["equalized_odds_difference"] is not None
         return output.metric_values
 
     metrics_index_1 = _run(1)
@@ -194,7 +197,10 @@ def test_fairness_v2_positive_label_index_unreachable_produces_degenerate_result
     )
     backend = FakeInferenceBackend(predictions=list(predictions), num_labels=3)
     degenerate = FairnessProbe(inference=backend).run(ctx)
-    assert degenerate.status == ProbeEvaluationStatus.EVALUATED, degenerate.status_reason
+    # L4.1: no group has a positive label under the unreachable index, so the
+    # TPR-based rule abstains instead of returning a meaningless EVALUATED result.
+    assert degenerate.status == ProbeEvaluationStatus.INSUFFICIENT_EVIDENCE, degenerate.status_reason
+    assert degenerate.metric_values["reliability"]["failed_gates"] == ["G-FAIR-POSITIVES"]
     degenerate_groups = degenerate.metric_values["groups"]
     assert all(g["tpr"] == 0.0 and g["f1"] == 0.0 for g in degenerate_groups.values())
 
@@ -374,13 +380,14 @@ def _binary_csv_and_content(db_session: Any, csv_bytes: bytes, row_count: int) -
     return store, content
 
 
-def test_fairness_v2_binary_wide_dp_ci_gates_scoring(
+def test_fairness_v2_binary_wide_ci_gates_scoring(
     fake_evidence_store: FakeEvidenceStore,
     fake_probe_config: ProbeConfigV1,
     db_session: Any,
 ) -> None:
-    """A tiny sample (5 rows) produces a wide bootstrap CI on
-    demographic_parity_difference -- G-FAIR-CI-WIDE must block scoring:
+    """A tiny sample (5 rows) produces a wide bootstrap CI on the
+    equal-opportunity difference (L4.1: the CI the risk rule uses) --
+    G-FAIR-CI-WIDE must block scoring:
     status stays EVALUATED (not FAILED) but status_reason names the gate
     and the wide_ci_dp flag is set."""
     csv_bytes = (
@@ -410,13 +417,15 @@ def test_fairness_v2_binary_wide_dp_ci_gates_scoring(
         dataset_content_store=store,
         session=db_session,
     )
-    backend = FakeInferenceBackend(predictions=[1, 0, 1, 0, 1], num_labels=2)
+    # 'foo' (pos, group b) is missed: TPR a = 1.0, TPR b = 0.5 on 5 rows.
+    backend = FakeInferenceBackend(predictions=[1, 0, 0, 0, 1], num_labels=2)
     output = FairnessProbe(inference=backend).run(ctx)
 
     assert output.status == ProbeEvaluationStatus.EVALUATED
-    assert "wide_ci_dp" in output.flags
+    assert "wide_ci_eopp" in output.flags
     assert output.status_reason is not None
     assert "G-FAIR-CI-WIDE" in output.status_reason
+    assert "equal_opportunity_difference" in output.status_reason
     assert output.metric_values["dp_ci"]["method"] == "bootstrap_percentile"
     # Regression: "scoring blocked" must actually block scoring downstream.
     assert output.metric_values["aspect_scoring"] == "mapping_blocked"

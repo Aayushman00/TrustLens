@@ -1,5 +1,11 @@
 # Round 3 — L4: binary fairness could not emit a fairness risk (2026-10-03)
 
+> **Status: rejected (exploratory).** `tl-fairness-binary-v1.1` / `excess_dpd_v2` (commit
+> `d4268fb`) was an exploratory candidate. It was rejected after inspecting the stored
+> evidence (below) because it depends on group base rates. It is superseded by L4.1
+> (`v6-eod-fairness-risk-2026`); see `2026-10-03-round3-L4.1-eod-fairness-risk.md`.
+> No experiment was run under v1.1.
+
 Branch `round-3-limitations`. Methodology `v4-disclosure-gaps-2026` → `v5-binary-fairness-risk-2026`.
 The binary fairness evidence is now stamped `tl-fairness-binary-v1.1`. Multiclass
 `tl-methodology-v1.0` is unchanged, and so are `ground_truth.json` and its rules.

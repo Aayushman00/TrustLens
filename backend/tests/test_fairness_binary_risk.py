@@ -1,12 +1,19 @@
-"""L4 (round 3): binary fairness emits a pre-declared, bootstrap-gated risk.
+"""L4.1 (round 3): binary fairness risk from the equal-opportunity (TPR) gap.
 
-Rule (tl-fairness-binary-v1.1), mirroring multiclass F-FAIR-PERF:
-    b_g = P(Yhat=pos | g) - P(Y=pos | g)       over groups with n >= min_group_n
-    excess_dpd_v2 = max_g b_g - min_g b_g
-    FAIRNESS_RISK       iff point > EPSILON and bootstrap ci_lower > EPSILON
-    DISPARITY_OBSERVED  iff point > EPSILON but ci_lower <= EPSILON
-    NO_MATERIAL_DISPARITY iff point <= EPSILON
-    INSUFFICIENT_EVIDENCE when < 2 groups reach min_group_n or no CI
+Rule (tl-fairness-binary-v1.2). The tl-fairness-binary-v1.1 trigger
+(excess_dpd_v2) was an exploratory candidate, rejected after inspection
+because it depends on group base rates; see
+docs/superpowers/plans/2026-10-03-round3-L4.1-eod-fairness-risk.md.
+
+    eligible groups: n >= min_group_n
+    every eligible group needs >= 1 positive label (TPR = TP / (TP + FN))
+    EOD = max_g TPR_g - min_g TPR_g          over eligible groups
+    CI  = bootstrap percentile 95% CI of EOD (B=1000, contract seed)
+    FAIRNESS_RISK         EOD > EPSILON and ci_lower > EPSILON
+    DISPARITY_OBSERVED    EOD > EPSILON and ci_lower <= EPSILON
+    NO_MATERIAL_DISPARITY EOD <= EPSILON
+    INSUFFICIENT_EVIDENCE < 2 eligible groups, too few positives, or no CI
+    G-FAIR-CI-WIDE        EOD CI width > CI_WIDE_THRESHOLD -> mapping_blocked
 """
 
 from __future__ import annotations
@@ -19,13 +26,13 @@ import pytest
 from app.db.enums import ProbeEvaluationStatus
 from app.probes.base import ProbeContext
 from app.probes.fairness import FairnessProbe
+from app.probes.fairness_metrics import equal_opportunity_difference
 from app.probes.fairness_stats import (
     BINARY_METHODOLOGY_VERSION,
     BINARY_RISK_ID,
     EPSILON,
     binary_fairness_decision,
     excess_dpd_v1,
-    excess_dpd_v2,
 )
 from app.schemas.evaluation_contract_v2 import (
     EvaluationContractV2,
@@ -39,52 +46,64 @@ from app.scripts.compare_ground_truth import evidence_flag_one
 from tests.fakes import FakeEvidenceStore, FakeInferenceBackend
 from tests.test_fairness_contract_v2 import _binary_csv_and_content
 
-# --- excess DPD -------------------------------------------------------------
+# Group spec: group -> (n, n_label_pos, n_true_pos, n_false_pos). Rows are
+# laid out positives first; the first n_true_pos positives and the first
+# n_false_pos negatives are predicted positive.
 
 
-def _rows(spec: dict[str, tuple[int, int, int]]) -> tuple[list[int], list[int], list[str]]:
-    """spec: group -> (n, n_label_pos, n_pred_pos); first n_label_pos rows are label=1,
-    first n_pred_pos rows are predicted 1."""
+def _rows(spec: dict[str, tuple[int, int, int, int]]) -> tuple[list[int], list[int], list[str]]:
     y_true: list[int] = []
     y_pred: list[int] = []
     groups: list[str] = []
-    for g, (n, lab, pred) in spec.items():
-        y_true += [1 if i < lab else 0 for i in range(n)]
-        y_pred += [1 if i < pred else 0 for i in range(n)]
-        groups += [g] * n
+    for g, (n, pos, tp, fp) in spec.items():
+        for i in range(n):
+            is_pos = i < pos
+            y_true.append(int(is_pos))
+            y_pred.append(int(i < tp if is_pos else (i - pos) < fp))
+            groups.append(g)
     return y_true, y_pred, groups
 
 
-def test_excess_dpd_v2_is_spread_of_per_group_prediction_minus_label_rate() -> None:
-    # a: pred 0.9 - label 0.9 = 0.0 ; b: pred 0.3 - label 0.1 = +0.2
-    y_true, y_pred, g = _rows({"a": (100, 90, 90), "b": (100, 10, 30)})
-    assert excess_dpd_v2(y_true, y_pred, g) == pytest.approx(0.2)
+# --- EOD ------------------------------------------------------------------------
 
 
-def test_excess_dpd_v2_sees_compressed_gap_that_v1_clips_to_zero() -> None:
-    # Labels gap 0.8, predictions gap 0.5: v1 = max(0.5 - 0.8, 0) = 0;
-    # v2 = b_b - b_a = 0.0 - (-0.3) = 0.3 (group a under-predicted).
-    y_true, y_pred, g = _rows({"a": (100, 90, 60), "b": (100, 10, 10)})
-    assert excess_dpd_v1(y_true, y_pred, g) == 0.0
-    assert excess_dpd_v2(y_true, y_pred, g) == pytest.approx(0.3)
+def test_eod_two_groups_is_absolute_tpr_gap() -> None:
+    # TPR a = 80/100, TPR b = 50/100
+    y_true, y_pred, g = _rows({"a": (200, 100, 80, 0), "b": (200, 100, 50, 0)})
+    assert equal_opportunity_difference(y_true, y_pred, g) == pytest.approx(0.3)
 
 
-def test_excess_dpd_v1_preserves_original_formula() -> None:
-    y_true, y_pred, g = _rows({"a": (100, 50, 90), "b": (100, 40, 10)})
-    # DPD 0.8 - label gap 0.1 = 0.7
-    assert excess_dpd_v1(y_true, y_pred, g) == pytest.approx(0.7)
+def test_eod_multi_group_is_max_minus_min_tpr() -> None:
+    y_true, y_pred, g = _rows({"a": (100, 50, 45, 0), "b": (100, 50, 30, 0), "c": (100, 50, 40, 0)})
+    assert equal_opportunity_difference(y_true, y_pred, g) == pytest.approx(0.9 - 0.6)
 
 
-def test_excess_dpd_v2_honours_positive_label_index() -> None:
-    y_true, y_pred, g = _rows({"a": (100, 90, 90), "b": (100, 10, 30)})
-    flipped = excess_dpd_v2([1 - y for y in y_true], [1 - y for y in y_pred], g, positive_label_index=0)
-    assert flipped == pytest.approx(0.2)
+def test_eod_honours_positive_label_index() -> None:
+    y_true, y_pred, g = _rows({"a": (200, 100, 80, 0), "b": (200, 100, 50, 0)})
+    flipped = equal_opportunity_difference([1 - y for y in y_true], [1 - y for y in y_pred], g, positive_label_index=0)
+    # Label index 0 on the flipped encoding is the original positive class.
+    assert flipped == pytest.approx(0.3)
+    # Index 1 on the flipped encoding is the original negative class: TPR = 1 - FPR = 1.0 both.
+    assert equal_opportunity_difference([1 - y for y in y_true], [1 - y for y in y_pred], g) == pytest.approx(0.0)
 
 
-# --- decision rule ------------------------------------------------------------
+def test_eod_undefined_without_positives() -> None:
+    y_true, y_pred, g = _rows({"a": (100, 50, 40, 0), "b": (100, 0, 0, 5)})
+    with pytest.raises(ValueError, match="positive"):
+        equal_opportunity_difference(y_true, y_pred, g)
 
 
-def test_epsilon_is_the_predeclared_methodology_floor() -> None:
+def test_large_base_rate_gap_and_dpd_with_small_eod() -> None:
+    # Same TPR (0.5) and FPR (0) in both groups; base rates 0.8 vs 0.1.
+    y_true, y_pred, g = _rows({"a": (200, 160, 80, 0), "b": (200, 20, 10, 0)})
+    assert equal_opportunity_difference(y_true, y_pred, g) == pytest.approx(0.0)
+    assert excess_dpd_v1(y_true, y_pred, g) == 0.0  # DPD 0.35 < label gap 0.7
+
+
+# --- decision rule --------------------------------------------------------------
+
+
+def test_epsilon_is_the_methodology_wide_tolerance() -> None:
     assert EPSILON == 0.02
 
 
@@ -92,41 +111,33 @@ def test_epsilon_is_the_predeclared_methodology_floor() -> None:
     ("ci", "finding", "aspect", "risks"),
     [
         ({"point": 0.30, "ci_lower": 0.25, "ci_upper": 0.35}, "FAIRNESS_RISK", "risk_detected", [BINARY_RISK_ID]),
-        ({"point": 0.015, "ci_lower": 0.0, "ci_upper": 0.03}, "NO_MATERIAL_DISPARITY", "no_material_risk", []),
         ({"point": 0.05, "ci_lower": 0.01, "ci_upper": 0.09}, "DISPARITY_OBSERVED", "disparity_observed", []),
+        ({"point": EPSILON, "ci_lower": 0.0, "ci_upper": 0.04}, "NO_MATERIAL_DISPARITY", "no_material_risk", []),
         ({"point": 0.05, "ci_lower": EPSILON, "ci_upper": 0.09}, "DISPARITY_OBSERVED", "disparity_observed", []),
-        ({"point": None, "ci_lower": None, "ci_upper": None}, "INSUFFICIENT_EVIDENCE", "not_scored", []),
         ({"point": 0.30, "ci_lower": None, "ci_upper": None}, "INSUFFICIENT_EVIDENCE", "not_scored", []),
+        ({"point": None, "ci_lower": None, "ci_upper": None}, "INSUFFICIENT_EVIDENCE", "not_scored", []),
     ],
-    ids=["triggers", "within_epsilon", "ci_crosses_epsilon", "ci_lower_at_epsilon", "no_estimate", "no_ci"],
+    ids=["ci_lower_above_eps", "ci_crosses_eps", "point_exactly_eps", "lower_exactly_eps", "no_ci", "no_point"],
 )
 def test_binary_fairness_decision(ci: dict, finding: str, aspect: str, risks: list[str]) -> None:
     d = binary_fairness_decision(ci)
     assert (d["finding"], d["aspect_scoring"], d["risks_triggered"]) == (finding, aspect, risks)
 
 
-def test_only_fairness_risk_is_flagged_by_the_frozen_rule() -> None:
-    for ci, flagged in (
-        ({"point": 0.3, "ci_lower": 0.25, "ci_upper": 0.35}, True),
-        ({"point": 0.05, "ci_lower": 0.01, "ci_upper": 0.09}, False),
-        ({"point": 0.01, "ci_lower": 0.0, "ci_upper": 0.02}, False),
-    ):
-        d = binary_fairness_decision(ci)
-        assert evidence_flag_one("FAIRNESS", d, None) is flagged
+def test_risk_id_is_the_equal_opportunity_risk() -> None:
+    assert BINARY_RISK_ID == "F-FAIR-EOPP"
 
 
-# --- probe end to end ---------------------------------------------------------
+# --- probe end to end -----------------------------------------------------------
 
 
-def _run_probe(db_session: Any, spec: dict[str, tuple[int, int, int]], min_group_n: int = 50):
-    lines = ["text,label,group"]
-    preds: list[int] = []
-    for g, (n, lab, pred) in spec.items():
-        for i in range(n):
-            lines.append(f"t{i}{g},{'pos' if i < lab else 'neg'},{g}")
-            preds.append(1 if i < pred else 0)
+def _run_probe(db_session: Any, spec: dict[str, tuple[int, int, int, int]], min_group_n: int = 50):
+    y_true, y_pred, groups = _rows(spec)
+    lines = ["text,label,group"] + [
+        f"t{i},{'pos' if y else 'neg'},{g}" for i, (y, g) in enumerate(zip(y_true, groups, strict=True))
+    ]
     csv_bytes = ("\n".join(lines) + "\n").encode("utf-8")
-    store, content = _binary_csv_and_content(db_session, csv_bytes, row_count=len(preds))
+    store, content = _binary_csv_and_content(db_session, csv_bytes, row_count=len(y_pred))
     fc = FairnessContractV2(
         dataset_content_id=content.id,
         text_column="text",
@@ -156,59 +167,95 @@ def _run_probe(db_session: Any, spec: dict[str, tuple[int, int, int]], min_group
         dataset_content_store=store,
         session=db_session,
     )
-    return FairnessProbe(inference=FakeInferenceBackend(predictions=preds, num_labels=2)).run(ctx)
+    return FairnessProbe(inference=FakeInferenceBackend(predictions=y_pred, num_labels=2)).run(ctx)
 
 
-def test_clean_control_with_base_rate_gap_is_no_material_risk(db_session: Any) -> None:
-    """Perfect predictions on data whose own label rates differ by 0.6:
-    raw DPD is large, but the model adds nothing — no risk."""
-    out = _run_probe(db_session, {"a": (400, 280, 280), "b": (400, 40, 40)})
+def test_base_rate_gap_without_tpr_gap_is_no_material_risk(db_session: Any) -> None:
+    """Equal TPR/FPR across groups but base rates 0.6 vs 0.2: DPD and the
+    label-rate gap are large, EOD is 0 — no risk."""
+    out = _run_probe(db_session, {"a": (500, 300, 240, 10), "b": (500, 100, 80, 20)})
     m = out.metric_values
     assert out.status == ProbeEvaluationStatus.EVALUATED
-    assert m["demographic_parity_difference"] == pytest.approx(0.6)
-    assert m["label_rate_gap"] == pytest.approx(0.6)
-    assert m["excess_dpd_v2"] == 0.0
+    assert m["label_rate_gap"] == pytest.approx(0.4)
+    assert m["demographic_parity_difference"] > 0.25
+    assert m["equal_opportunity_difference"] == 0.0
     assert m["fairness_finding"] == "NO_MATERIAL_DISPARITY"
     assert m["aspect_scoring"] == "no_material_risk"
     assert m["risks_triggered"] == []
     assert not evidence_flag_one("FAIRNESS", m, None)
 
 
-def test_model_added_disparity_triggers_risk(db_session: Any) -> None:
-    # Same label rates (0.5); model over-predicts positives for group b by 0.3.
-    out = _run_probe(db_session, {"a": (400, 200, 200), "b": (400, 200, 320)})
+def test_large_tpr_gap_triggers_only_the_eopp_risk(db_session: Any) -> None:
+    out = _run_probe(db_session, {"a": (600, 300, 270, 15), "b": (600, 300, 150, 15)})
     m = out.metric_values
-    assert m["excess_dpd_v2"] == pytest.approx(0.3)
-    assert m["excess_dpd_v2_ci"]["ci_lower"] > EPSILON
+    assert m["equal_opportunity_difference"] == pytest.approx(0.4)
+    assert m["eopp_ci"]["ci_lower"] > EPSILON
     assert m["fairness_finding"] == "FAIRNESS_RISK"
     assert m["aspect_scoring"] == "risk_detected"
-    assert m["risks_triggered"] == [BINARY_RISK_ID]
+    assert m["risks_triggered"] == ["F-FAIR-EOPP"]
     assert m["scored_risk_id"] is None
     assert evidence_flag_one("FAIRNESS", m, None)
     assert "not a finding that the model is unfair" in out.status_reason
 
 
-def test_evidence_keeps_raw_metrics_cis_and_group_counts(db_session: Any) -> None:
-    m = _run_probe(db_session, {"a": (400, 200, 200), "b": (400, 200, 320)}).metric_values
-    for key in ("demographic_parity_difference", "equalized_odds_difference", "subgroup_f1_spread",
-                "label_rate_gap", "excess_dpd", "excess_dpd_v1", "excess_dpd_v2",
-                "dp_ci", "eo_ci", "f1_ci", "excess_dpd_v2_ci", "groups", "min_group_n_observed"):
+def test_evidence_retains_all_fairness_information(db_session: Any) -> None:
+    m = _run_probe(db_session, {"a": (600, 300, 270, 15), "b": (600, 300, 150, 30)}).metric_values
+    for key in ("demographic_parity_difference", "equalized_odds_difference", "equal_opportunity_difference",
+                "fpr_gap", "subgroup_f1_spread", "label_rate_gap", "excess_dpd", "excess_dpd_v1",
+                "dp_ci", "eo_ci", "f1_ci", "eopp_ci", "groups", "min_group_n_observed", "eligibility"):
         assert m[key] is not None, key
+    assert m["fpr_gap"] == pytest.approx(0.05)
     assert m["excess_dpd"] == m["excess_dpd_v1"]
+    assert "excess_dpd_v2" not in m
+    assert m["groups"]["a"]["n"] == 600
+    assert m["eligibility"]["positives"] == {"a": 300, "b": 300}
+    assert m["eligibility"]["min_positives_per_group"] == 1
     assert m["methodology_version"] == BINARY_METHODOLOGY_VERSION
     assert m["fairness_rule"]["epsilon"] == EPSILON
+    assert m["fairness_rule"]["risk_id"] == "F-FAIR-EOPP"
 
 
-def test_insufficient_group_size_abstains(db_session: Any) -> None:
-    out = _run_probe(db_session, {"a": (200, 100, 100), "b": (20, 10, 18)}, min_group_n=50)
+def test_insufficient_positive_examples_abstains(db_session: Any) -> None:
+    # Group b passes min_group_n (n=200) but has no positive label: TPR undefined.
+    out = _run_probe(db_session, {"a": (200, 100, 80, 0), "b": (200, 0, 0, 10)}, min_group_n=50)
     m = out.metric_values
     assert out.status == ProbeEvaluationStatus.INSUFFICIENT_EVIDENCE
     assert m["fairness_finding"] == "INSUFFICIENT_EVIDENCE"
     assert m["aspect_scoring"] == "not_scored"
     assert m["risks_triggered"] == []
+    assert "G-FAIR-POSITIVES" in m["reliability"]["failed_gates"]
     assert m["demographic_parity_difference"] is not None  # evidence kept
 
 
+def test_fewer_than_two_eligible_groups_abstains(db_session: Any) -> None:
+    out = _run_probe(db_session, {"a": (200, 100, 80, 0), "b": (20, 10, 2, 0)}, min_group_n=50)
+    assert out.status == ProbeEvaluationStatus.INSUFFICIENT_EVIDENCE
+    assert "G-FAIR-N-GROUP" in out.metric_values["reliability"]["failed_gates"]
+
+
+def test_wide_eod_ci_blocks_mapping(db_session: Any) -> None:
+    # 30 positives per group leave the TPR-gap CI wider than CI_WIDE_THRESHOLD.
+    out = _run_probe(db_session, {"a": (400, 30, 24, 0), "b": (400, 30, 12, 0)}, min_group_n=30)
+    m = out.metric_values
+    assert out.status == ProbeEvaluationStatus.EVALUATED
+    assert m["eopp_ci"]["ci_upper"] - m["eopp_ci"]["ci_lower"] > 0.15
+    assert m["aspect_scoring"] == "mapping_blocked"
+    assert "G-FAIR-CI-WIDE" in m["reliability"]["failed_gates"]
+    assert "wide_ci_eopp" in out.flags
+    assert m["risks_triggered"] == []
+    assert m["fairness_finding"] == "INSUFFICIENT_EVIDENCE"
+
+
+def test_wide_dp_ci_alone_no_longer_blocks(db_session: Any) -> None:
+    """The gate follows the CI the rule uses (EOD), not the DP CI."""
+    out = _run_probe(db_session, {"a": (60, 50, 50, 0), "b": (60, 50, 50, 5)}, min_group_n=30)
+    m = out.metric_values
+    assert m["dp_ci"]["ci_upper"] - m["dp_ci"]["ci_lower"] > 0.15
+    assert "wide_ci_dp" in out.flags
+    assert m["eopp_ci"]["ci_upper"] - m["eopp_ci"]["ci_lower"] <= 0.15
+    assert m["aspect_scoring"] != "mapping_blocked"
+
+
 def test_methodology_versions_bumped() -> None:
-    assert CURRENT_METHODOLOGY_VERSION == "v5-binary-fairness-risk-2026"
-    assert BINARY_METHODOLOGY_VERSION == "tl-fairness-binary-v1.1"
+    assert CURRENT_METHODOLOGY_VERSION == "v6-eod-fairness-risk-2026"
+    assert BINARY_METHODOLOGY_VERSION == "tl-fairness-binary-v1.2"
