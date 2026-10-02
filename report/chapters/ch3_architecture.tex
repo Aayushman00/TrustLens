@@ -1,0 +1,143 @@
+\chapter{System Architecture}\label{ch:arch}
+
+\section{Implemented system versus target design}
+The README of the repository contains a long target architecture (model analyzer, dataset analyzer, resource checker, benchmark-first runtime estimate, user confirmation, then FRIES evaluation). When we read the source, we found that part of that diagram is implemented and part is not. We describe the \emph{implemented} flow here and list the differences in Table~\ref{tab:impl-status}, because a report that drew the target diagram as if it ran would misdescribe the project.
+
+\begin{table}[H]
+\centering\small
+\caption{Status of architectural components, checked against the source code.}\label{tab:impl-status}
+\begin{tabularx}{\textwidth}{@{}p{3.6cm}p{2.1cm}L@{}}
+\toprule
+\textbf{Component} & \textbf{Status} & \textbf{Evidence in repository}\\
+\midrule
+Model import (metadata only) & Implemented & \code{adapters/hf\_hub.py}; \code{POST /v1/models/import-hf} reads card, tags, licence and file list, no weights.\\
+Local inference backend & Implemented & \code{inference/local\_hf.py}: batched \code{transformers} inference, device selection (CUDA or CPU), softmax over logits, \code{torch.no\_grad}.\\
+Model inspection at draft time & Implemented & \code{inference/model\_inspection.py} reads \code{AutoConfig} only (no weights).\\
+Five FRIES probes & Implemented (shallow in places) & \code{probes/fairness.py}, \code{robustness.py}, \code{integrity.py}, \code{explainability.py}, \code{safety.py}.\\
+O/S/D engines & Implemented & \code{osd/deterministic.py} (abstains), \code{osd/agent.py} (heuristic), \code{osd/hybrid.py} (LLM-assisted).\\
+FRIES scorer & Implemented & \code{scoring/fries.py}, frozen test vectors in \code{shared/scoring/fixtures}.\\
+Human review & Implemented & \code{osd/review.py}; \code{AI\_ASSISTED} mode stops at \code{AWAITING\_REVIEW}.\\
+Reports (JSON, PDF) & Implemented & \code{reports/builder.py}, \code{render.py}, HTML template rendered with WeasyPrint.\\
+Evidence store & Implemented & SHA-256 addressed files on the local filesystem (MinIO was removed in the latest commit).\\
+Resource checker, compatibility states & Not implemented & README roadmap phase~2 marked ``absent''.\\
+Benchmark-first runtime estimate & Not implemented & README roadmap phase~4 marked ``absent''.\\
+SHAP/LIME explanations & Not implemented & Explainability probe inspects model cards only.\\
+Behavioural safety test set & Not implemented & Safety probe is a disclosure checklist.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{High-level architecture}
+TrustLens is a conventional web application with an asynchronous worker. Figure~\ref{fig:arch} shows the deployment view, which matches \code{docker-compose.yml} (services \code{postgres}, \code{redis}, \code{api}, \code{worker}, \code{frontend}).
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[font=\small,
+  box/.style={draw=tlblue,fill=tlgrey,rounded corners=3pt,minimum height=0.95cm,minimum width=2.6cm,align=center,thick},
+  store/.style={draw=tlorange,fill=white,rounded corners=3pt,minimum height=0.95cm,minimum width=2.6cm,align=center,thick},
+  arr/.style={-{Stealth[length=2.4mm]},thick,color=black!70}]
+  \node[box] (ui) {React dashboard\\(Vite, TypeScript)};
+  \node[box,right=1.5cm of ui] (api) {FastAPI \code{/v1}\\auth, drafts, reports};
+  \node[box,right=1.5cm of api] (wk) {Celery worker\\probe pipeline};
+  \node[store,below=1.4cm of api] (pg) {PostgreSQL\\evaluations, probes, scores};
+  \node[store,below=1.4cm of wk] (fs) {Evidence store\\(local filesystem)};
+  \node[store,below=1.4cm of ui] (rd) {Redis\\task queue};
+  \node[box,above=1.2cm of wk] (hf) {Hugging Face Hub\\metadata and weights};
+  \node[box,above=1.2cm of api] (llm) {LLM providers\\Gemini / Groq / NIM};
+  \draw[arr] (ui) -- (api);
+  \draw[arr] (api) -- (wk) node[midway,above,font=\scriptsize]{enqueue};
+  \draw[arr] (api) -- (pg);
+  \draw[arr] (wk) -- (pg);
+  \draw[arr] (wk) -- (fs);
+  \draw[arr] (api) -- (rd);
+  \draw[arr] (rd) -- (wk);
+  \draw[arr] (hf) -- (wk);
+  \draw[arr] (hf) -- (api);
+  \draw[arr] (wk) -- (llm);
+\end{tikzpicture}
+\caption{Deployment architecture of TrustLens.}\label{fig:arch}
+\end{figure}
+
+The API process validates requests, stores model records and evaluation drafts, and enqueues a Celery task \code{trustlens.evaluate\_model}. The worker loads the model through the inference backend, runs the probes, stores raw evidence, asks the O/S/D engine for ratings, calls the scorer, and writes everything back to PostgreSQL. The browser then reads the finished evaluation and its report.
+
+\section{Component view}
+Figure~\ref{fig:components} groups the Python packages under \code{backend/app} by responsibility.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[font=\small,
+  c/.style={draw=tlblue,fill=tlgrey,rounded corners=3pt,minimum height=0.8cm,text width=3.3cm,align=center,thick},
+  g/.style={draw=tlrule,dashed,rounded corners=4pt,inner sep=7pt},
+  arr/.style={-{Stealth[length=2.2mm]},thick,color=black!70}]
+  \node[c] (inf) {\code{inference/}\\LocalHFBackend};
+  \node[c,right=0.6cm of inf] (prb) {\code{probes/}\\five FRIES probes};
+  \node[c,right=0.6cm of prb] (cnf) {\code{confidence/}\\evidence-strength engine};
+  \node[c,below=0.9cm of inf] (osd) {\code{osd/}\\deterministic, heuristic, hybrid};
+  \node[c,right=0.6cm of osd] (sc) {\code{scoring/}\\FRIES scorer};
+  \node[c,right=0.6cm of sc] (rep) {\code{reports/}\\builder, PDF render};
+  \node[c,below=0.9cm of osd] (api) {\code{routers/}, \code{schemas/}\\REST API contracts};
+  \node[c,right=0.6cm of api] (db) {\code{db/}\\SQLAlchemy models, repositories};
+  \node[c,right=0.6cm of db] (st) {\code{core/storage}\\evidence artifacts};
+  \draw[arr] (inf) -- (prb); \draw[arr] (prb) -- (cnf);
+  \draw[arr] (osd) -- (sc); \draw[arr] (sc) -- (rep);
+  \draw[arr] (api) -- (db); 
+\end{tikzpicture}
+\caption{Main packages of the backend and their dependencies.}\label{fig:components}
+\end{figure}
+
+\section{Execution flow of an audit}
+Figure~\ref{fig:seq} shows the sequence of one evaluation as the code performs it. The probe order in the runner is Fairness, Robustness, Integrity, Explainability, Safety.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[font=\scriptsize,x=2.25cm,y=-0.62cm,
+  life/.style={dashed,color=black!40},
+  m/.style={-{Stealth[length=2mm]},thick}]
+  \foreach \i/\n in {0/User,1/API,2/Worker,3/Probes,4/{O/S/D engine},5/Scorer} {
+    \node[draw=tlblue,fill=tlgrey,rounded corners=2pt,minimum width=1.8cm,minimum height=0.6cm] (n\i) at (\i,0) {\n};
+    \draw[life] (\i,0.4) -- (\i,15.2);
+  }
+  \draw[m] (0,1.5) -- (1,1.5) node[midway,above]{create draft, confirm};
+  \draw[m] (1,2.5) -- (2,2.5) node[midway,above]{enqueue};
+  \draw[m] (2,3.5) -- (3,3.5) node[midway,above]{run probes};
+  \draw[m] (3,4.5) -- (2,4.5) node[midway,above]{metrics + evidence};
+  \draw[m] (2,5.5) -- (4,5.5) node[midway,above]{probe snapshots};
+  \draw[m] (4,6.5) -- (2,6.5) node[midway,above]{O/S/D proposals};
+  \draw[m] (2,7.5) -- (5,7.5) node[midway,above]{finalized O/S/D};
+  \draw[m] (5,8.5) -- (2,8.5) node[midway,above]{FRIES score};
+  \draw[m] (2,9.5) -- (1,9.5) node[midway,above]{store, mark FINALIZED};
+  \draw[m] (1,10.5) -- (0,10.5) node[midway,above]{report (JSON, PDF)};
+  \draw[m,color=tlorange] (2,12.2) -- (0,12.2) node[midway,above,color=black]{\code{AI\_ASSISTED}: pause at \code{AWAITING\_REVIEW}, reviewer edits O/S/D};
+\end{tikzpicture}
+\caption{Sequence of a TrustLens evaluation.}\label{fig:seq}
+\end{figure}
+
+\section{Data flow and evaluation contract}
+Each evaluation carries an \emph{evaluation contract} (schema \code{v2} in \code{schemas/evaluation\_contract\_v2.py}) that makes the evaluation explicit rather than implicit. For Fairness and Robustness it records: the content-addressed dataset (\code{dataset\_content\_id}), the text and target columns, the sensitive-attribute column, a \code{label\_mapping} from dataset values to model label indices, \code{min\_group\_n}, and the \code{positive\_label\_index} that demographic parity treats as the favourable outcome. It also freezes a \code{model\_label\_snapshot} (the model's \code{id2label}) and the resolved model revision. We found this contract design valuable during the experiment, because it made the label mapping problem described in Chapter~\ref{ch:results} visible after the fact: the snapshot of \code{unitary/toxic-bert} lists six labels, and the mapping sends dataset value~1 to index~1, which is \code{severe\_toxic}.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[font=\small,node distance=0.55cm,
+  p/.style={draw=tlblue,fill=tlgrey,rounded corners=3pt,minimum height=0.9cm,minimum width=2.2cm,align=center,thick},
+  l/.style={font=\scriptsize\bfseries,color=tlorange},
+  arr/.style={-{Stealth[length=2.2mm]},thick}]
+  \node[p] (a) {Model\\import};
+  \node[p,right=of a] (b) {Local\\inference};
+  \node[p,right=of b] (c) {Five\\probes};
+  \node[p,right=of c] (d) {O/S/D\\engine};
+  \node[p,right=of d] (e) {FRIES\\scorer};
+  \node[p,right=of e] (f) {Report};
+  \foreach \x/\y in {a/b,b/c,c/d,d/e,e/f} \draw[arr] (\x) -- (\y);
+  \node[l,below=0.2cm of c,align=center] {Layer A:\\measured\\evidence};
+  \node[l,below=0.2cm of d,align=center] {Layer B:\\risk\\assessment};
+  \node[l,below=0.2cm of e,align=center] {Layer C:\\score};
+\end{tikzpicture}
+\caption{Execution pipeline and the three evidence layers. Layer~A outputs are never turned directly into a dimension score.}\label{fig:pipeline}
+\end{figure}
+
+\section{Evaluation modes and assessment engines}
+Two orthogonal switches control an evaluation.
+
+\textbf{Workflow mode.} \code{AI\_AUTONOMOUS} lets the pipeline finalise without a reviewer (the report is marked \code{human\_reviewed=false}); \code{AI\_ASSISTED} stops so a reviewer can edit O/S/D. Despite the enum names, no language model is involved in the mode itself; they are human-review gates.
+
+\textbf{Assessment engine.} \code{deterministic} (default) never proposes O/S/D and therefore withholds the FRIES score; \code{legacy\_heuristic} maps probe metrics to bands with fixed rules; \code{llm\_v1} starts from the heuristic output and then asks an LLM to re-rate Integrity, Explainability and Safety. Fairness and Robustness always keep the heuristic ratings computed from measured metrics. The experiments in this report use \code{llm\_v1} in \code{AI\_AUTONOMOUS} mode, which is why a repeated run can produce different numbers (Section~\ref{sec:variance}).

@@ -1,0 +1,30 @@
+\chapter{Conclusion and Future Work}\label{ch:conclusion}
+
+We close by answering the three questions we set out in Chapter~\ref{ch:intro}, one at a time, because they have different answers.
+
+\section{Q1. Did we successfully implement TrustLens?}
+Largely yes, within the scope we documented. The repository contains a working pipeline from Hub model import to local GPU inference, five probes, three O/S/D engines, the FRIES scorer verified against frozen vectors, human review, versioned reports, an evidence store and a dashboard, with 592 backend test functions. It does not contain several components that appear in our own target architecture: a resource checker, a benchmark-first runtime estimate, behavioural safety tests and SHAP/LIME explanations. Some probes are shallow, and the README itself lists ten known methodological gaps. The Explainability and Safety dimensions measure documentation only.
+
+\section{Q2. Did TrustLens detect measurable differences between the reference and forged models?}
+For some flaws, yes; for others, no. Against the corrected reference (overall 6.16), the score on the targeted dimension was lower for five of the six forged models (hypothesis H1): Fairness 6.60 against 7.32 with a clearly larger parity gap (0.42 against 0.28), Robustness 8.32 against 9.00, Explainability 1.82 against 6.65, Integrity 3.30 against 3.91 (a small margin), and Safety/Explainability 1.26 against 3.91 and 6.65 for the compound model. Models whose flaws lie in documentation and metadata (V3, V4, V6) also received clearly lower overall scores (4.08--4.76). On the other hand, the injected safety flaw (V5) was not detected (Safety 3.98 against 3.91), because the Safety probe does not examine behaviour; three of six forged models obtained a \emph{higher} overall score than the reference (H2 held for 3 of 6), and the LLM-rated dimensions varied between runs (1.34 points for the original reference). Our first reference evaluation was invalid because of a label-mapping error that made the model a constant predictor; the figures above use the corrected rerun.
+
+\section{Q3. Does this prove that TrustLens can determine whether any arbitrary ML model is trustworthy?}
+No, and our data points the other way in several respects. Seven models, one task, flaws that we designed, a single evaluation of the corrected reference, a probe set that did not flag a constant-predictor model, and LLM-rated dimensions that vary between runs do not support a general claim. Even a perfect separation of our seven models would show only that these probes can detect these flaws. TrustLens, in its current form, is best described as a \emph{structured, partly automated audit profile}: it records evidence about measurable properties and disclosure, it makes assumptions explicit, and its overall score is a convenient summary, not a validated measure of trust.
+
+\section{Contributions, restated}
+\textbf{Engineering:} the implemented system and its evidence discipline. \textbf{Methodological:} the three-layer separation and explicit evidence statuses. \textbf{Empirical:} a forged-model suite with manifests and a candid comparison, including a documented negative result for the Safety dimension and the discovery of the constant-predictor trap. \textbf{Future research opportunity:} validating any such score against independent judgments of trust.
+
+\section{Future work}
+Each item follows from a limitation reported above.
+\begin{enumerate}
+\item \textbf{Support multi-label heads natively} (a decision rule on a chosen output, instead of our head conversion) and add a probe-level warning when a model predicts a single class for (almost) every input; repeat the corrected reference evaluation several times to measure its spread.
+\item \textbf{Behavioural safety probes.} A test set of harmful and benign prompts or comments, so that V5-style flaws change the Safety score.
+\item \textbf{Pin and log the LLM,} set temperature to zero where possible, repeat each evaluation several times and report the spread. Alternatively replace the LLM step with a rule-based or human-reviewed mapping and compare.
+\item \textbf{Stronger robustness attacks} (word-level and gradient-guided perturbations) and a band that does not depend on raw accuracy.
+\item \textbf{Fairness beyond one attribute,} and a metric that separates base-rate differences from model bias.
+\item \textbf{More models and more forgers:} dozens of Hub models with human trust ratings from at least two independent reviewers, multiple forged models built by people who did not write the probes, and statistical tests on the results. This is the only route to validating the score.
+\item \textbf{Provenance.} Supplying trusted reference hashes, verifying model-card claims against evidence, and scanning for known backdoor patterns.
+\item \textbf{Resource gating and runtime estimates} before loading weights, as specified but not yet built.
+\item \textbf{Calibration of the confidence engine} and of the O/S/D bands against empirical data.
+\end{enumerate}
+None of these is implemented in the current repository.

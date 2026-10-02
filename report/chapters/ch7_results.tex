@@ -1,0 +1,179 @@
+\chapter{Results}\label{ch:results}
+
+All numbers in this chapter come from the saved evaluation JSON files in \code{results/flawed\_model\_suite/eval\_results} (Run~1) and \code{eval\_results\_v2} (Run~2). ``G'' in tables is the \emph{original} reference (Hub import, six-label head, wrong label mapping); ``R*'' is the \emph{corrected} reference (Run~3), the one we use for hypothesis testing. Each evaluation reached status \code{FINALIZED} with five evaluated probes and no failures.
+
+\section{Overall and per-dimension scores}
+\begin{table}[H]
+\centering\small
+\caption{FRIES scores, Run~2. The flawed dimension of each variant is in bold. Scores are on a 0--10 scale; higher is better.}\label{tab:run2}
+\begin{tabularx}{\textwidth}{@{}p{3.8cm}RRRRRR@{}}
+\toprule
+\textbf{Model} & \textbf{Fair.} & \textbf{Rob.} & \textbf{Integ.} & \textbf{Expl.} & \textbf{Safety} & \textbf{FRIES}\\
+\midrule
+G: toxic-bert (reference) & 8.65 & 8.32 & 5.01 & 3.63 & 1.59 & \textbf{5.44}\\
+\midrule
+V1 fairness & \textbf{6.60} & 9.00 & 3.91 & 9.00 & 3.91 & 6.49\\
+V2 robustness & 5.85 & \textbf{8.32} & 4.64 & 8.00 & 4.38 & 6.24\\
+V3 explainability & 7.32 & 9.00 & 1.82 & \textbf{1.82} & 1.82 & 4.35\\
+V4 integrity & 6.60 & 9.00 & \textbf{3.30} & 2.62 & 2.29 & 4.76\\
+V5 safety & 8.00 & 9.00 & 3.63 & 9.00 & \textbf{3.98} & 6.72\\
+V6 compound (F+S, card) & 6.60 & 9.00 & 2.29 & 1.26 & \textbf{1.26} & 4.08\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering\small
+\caption{FRIES scores, Run~1 (V2 is the redesigned model used in both runs).}\label{tab:run1}
+\begin{tabularx}{\textwidth}{@{}p{3.8cm}RRRRRR@{}}
+\toprule
+\textbf{Model} & \textbf{Fair.} & \textbf{Rob.} & \textbf{Integ.} & \textbf{Expl.} & \textbf{Safety} & \textbf{FRIES}\\
+\midrule
+G: toxic-bert (reference) & 8.65 & 8.32 & 7.32 & 6.00 & 3.63 & \textbf{6.79}\\
+\midrule
+V1 fairness & \textbf{6.60} & 9.00 & 4.31 & 8.32 & 4.58 & 6.56\\
+V2 robustness & 5.85 & \textbf{8.32} & 4.00 & 8.65 & 2.88 & 5.94\\
+V3 explainability & 7.32 & 9.00 & 1.00 & \textbf{1.00} & 1.00 & 3.86\\
+V4 integrity & 6.60 & 9.00 & \textbf{2.00} & 2.29 & 1.59 & 4.30\\
+V5 safety & 8.00 & 9.00 & 4.82 & 8.65 & \textbf{2.88} & 6.67\\
+V6 compound & 6.60 & 9.00 & 2.62 & 1.59 & \textbf{1.59} & 4.28\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{fig_overall.pdf}
+\caption{Overall FRIES score of every model in both runs. A vertical line joins the two runs of one model. The original reference moves the most between runs (1.34 points); the diamond is the corrected reference (Run~3).}\label{fig:overall}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.78\textwidth]{fig_heatmap.pdf}
+\caption{Dimension scores in Run~2; the first row is the corrected reference from Run~3. The columns that are uniformly dark for the variants with filled-in cards (Explainability, Safety) and the light rows for V3, V4 and V6 show where the score differences come from.}\label{fig:heatmap}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.62\textwidth]{fig_radar.pdf}
+\caption{Run~2 FRIES profiles of V3 (blank card) and V6 (compound) against the corrected reference R* (Run~3). R* is weakest on Integrity and Safety, but V3 and V6 fall far below it on Explainability and Safety.}\label{fig:radar}
+\end{figure}
+
+\section{Measured evidence behind the scores}
+Table~\ref{tab:evidence} lists what the probes actually measured in Run~2; the corrected reference follows in Table~\ref{tab:ref}. Fairness and Robustness were measured by running the model on the 3\,000 rows; the other three columns come from the card and metadata.
+
+\begin{table}[H]
+\centering\footnotesize
+\caption{Measured evidence, Run~2. DPD with 95\% bootstrap CI; Drop is the char-swap accuracy drop in percentage points; Card cov.\ and Safety cov.\ are the fractions of required sections or checks found.}\label{tab:evidence}
+\begin{tabularx}{\textwidth}{@{}p{0.8cm}p{3.5cm}RRRRRR@{}}
+\toprule
+ & \textbf{DPD [CI]} & \textbf{EOD} & \textbf{F1 spr.} & \textbf{Clean acc.} & \textbf{Drop} & \textbf{Card cov.} & \textbf{Safety cov.}\\
+\midrule
+G & 0.000 [0.000, 0.000] & 0.000 & 0.000 & 0.799 & $-$0.07 & 0.60 & 0.00\\
+V1 & 0.418 [0.376, 0.464] & 0.164 & 0.123 & 0.897 & 1.47 & 1.00 & 0.25\\
+V2 & 0.526 [0.487, 0.561] & 0.370 & 0.294 & 0.809 & 4.10 & 1.00 & 0.25\\
+V3 & 0.319 [0.279, 0.363] & 0.065 & 0.074 & 0.894 & 1.17 & 0.60 & 0.25\\
+V4 & 0.418 [0.376, 0.464] & 0.164 & 0.123 & 0.897 & 1.47 & 0.60 & 0.25\\
+V5 & 0.233 [0.197, 0.275] & 0.035 & 0.033 & 0.876 & 1.30 & 1.00 & 0.25\\
+V6 & 0.368 [0.327, 0.413] & 0.167 & 0.161 & 0.885 & 1.30 & 0.00 & 0.00\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{fig_probes.pdf}
+\caption{Measured fairness and robustness evidence, Run~2. R* is the corrected reference (Run~3) and G the original one with the wrong label mapping. Left: demographic parity difference with bootstrap CI. Middle: accuracy drop under character swaps. Right: clean accuracy; the dotted line is the accuracy of a model that always answers ``not toxic'' on this sample.}\label{fig:probes}
+\end{figure}
+
+Three observations from Table~\ref{tab:evidence} and Figure~\ref{fig:probes} deserve attention.
+
+\begin{itemize}
+\item \textbf{V1 and V4 are identical in behaviour,} as they should be, since V4 reuses V1's weights. Every Fairness and Robustness metric, CI and O/S/D triple matches exactly. This is a useful sanity check that the behavioural probes are deterministic for fixed weights, data and seed.
+\item \textbf{The fairness probe separated the flipped model from the clean model.} V1 has a DPD of 0.42 [0.38, 0.46]; V3, trained on the same data with no flip, has 0.32 [0.28, 0.36]. These intervals do not overlap. But V3's DPD is far from zero as well, and V5 and V6 show intermediate values, which is expected if part of the gap comes from the data and not from the injected flaw.
+\item \textbf{The robustness flaw produced the largest accuracy drop (4.1 points), but the probe did not raise a risk.} The \code{R-ROB-PERT} trigger needs a drop of at least 5 points at 95\% confidence, and V2 sits below it. V2 also has the largest fairness gap (DPD 0.53), a side effect of its narrow training set that we did not design.
+\end{itemize}
+
+\section{The original reference was a constant predictor, and the corrected rerun}\label{sec:constant}
+\subsection{Diagnosis}
+The original reference model's demographic parity, equalized-odds and F1-spread are exactly zero, its clean accuracy is 0.7987, and the saved per-group statistics show a positive-prediction rate of 0.0 in \emph{both} identity groups: it never predicted ``toxic'' on this sample. Since 20\% of the sample is toxic, always answering ``not toxic'' would score 0.80, and the model scored 0.799. The cause is the label mapping. \code{unitary/toxic-bert} has six outputs, with \code{toxic} at index~0 and \code{severe\_toxic} at index~1, and our contract mapped dataset value~1 to index~1, so the probe checked whether \code{severe\_toxic} was the winning output. Its Fairness (8.65) and Robustness (8.32) scores in Tables~\ref{tab:run2} and~\ref{tab:run1} therefore say nothing about a working toxicity classifier: a constant predictor is trivially fair and trivially robust, and TrustLens raised no warning about it.
+
+\subsection{Correction}
+The tool offers no mapping that expresses ``toxic versus not toxic'' on this head: with argmax over six outputs a benign comment still selects some label, and no index stands for ``none''. We therefore converted the model to a two-label head with identical decision behaviour (Section~\ref{sec:variants} and Table~\ref{tab:ref}) and evaluated it through the unchanged pipeline, with the standard mapping (0$\to$0, 1$\to$1) and \code{positive\_label\_index}$=1$ (Run~3).
+
+\begin{table}[H]
+\centering\small
+\caption{Corrected reference model (Run~3) against the original reference (Run~2).}\label{tab:ref}
+\begin{tabularx}{\textwidth}{@{}p{4.1cm}RR@{}}
+\toprule
+ & \textbf{Original (G)} & \textbf{Corrected (R*)}\\
+\midrule
+Clean accuracy & 0.799 & 0.868\\
+Positive-prediction rate, group 0 / group 1 & 0.000 / 0.000 & 0.051 / 0.334\\
+DPD [95\% CI] & 0.000 [0.000, 0.000] & 0.283 [0.243, 0.324]\\
+EOD / F1 spread & 0.000 / 0.000 & 0.174 / 0.203\\
+Char-swap accuracy drop (pp) & $-$0.07 & 0.97\\
+Fairness / Robustness score & 8.65 / 8.32 & 7.32 / 9.00\\
+Integrity / Explainability / Safety & 5.01 / 3.63 / 1.59 & 3.91 / 6.65 / 3.91\\
+Overall FRIES & 5.44 & 6.16\\
+\bottomrule
+\end{tabularx}
+\end{table}
+The corrected reference is a working classifier (86.8\% accuracy) and it, too, shows a demographic-parity gap of 0.28, because comments that mention identities are toxic more often in this dataset and the model reflects that. This is evidence that part of any DPD in this experiment is a base-rate effect and not a flaw, and it sets the fair comparison for V1: the label-flipped model's gap of 0.42 [0.38, 0.46] is clearly above the corrected reference's 0.28 [0.24, 0.32], while the unflipped V3 (0.32 [0.28, 0.36]) overlaps with it. The Integrity score of 3.91 is low for the same reason as the variants' scores: two named risks (\code{I-INT-REV-UNPINNED}, \code{I-INT-MANIFEST-MISSING}) fire for any local directory. Its Explainability score (6.65) comes from a card with three of five required sections.
+
+\section{Run-to-run variation}\label{sec:variance}
+Figure~\ref{fig:variance} compares the two runs on the three dimensions that the LLM rates. Fairness and Robustness scores are identical across runs for every model, because they are computed from deterministic probe metrics by fixed rules. The differences are therefore entirely in Integrity, Explainability and Safety.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{fig_variance.pdf}
+\caption{Dimension scores in Run~1 (circles) and Run~2 (squares) for the three LLM-rated dimensions. Blue is the reference model; orange are the forged variants.}\label{fig:variance}
+\end{figure}
+
+The overall score changes by 0.05 to 0.49 points for the forged models and by 1.34 points for the reference model (Table~\ref{tab:variation}). The reference model's Integrity score dropped from 7.32 to 5.01, its Explainability score from 6.00 to 3.63 and its Safety score from 3.63 to 1.59, even though its card and metadata are the same in both runs. Spearman rank correlation of the seven overall scores between the two runs is 0.75. The ordering of the lowest three (V3, V4, V6 below the rest) is stable; the position of the reference model is not (first in Run~1, fourth in Run~2).
+
+\begin{table}[H]
+\centering\small
+\caption{Overall FRIES score by run, and the difference.}\label{tab:variation}
+\begin{tabularx}{\textwidth}{@{}p{3.8cm}RRRR@{}}
+\toprule
+\textbf{Model} & \textbf{Run 1} & \textbf{Run 2} & \textbf{Change} & \textbf{Rank (1 / 2)}\\
+\midrule
+G & 6.785 & 5.442 & $-$1.343 & 1 / 4\\
+V1 & 6.562 & 6.487 & $-$0.076 & 3 / 2\\
+V2 & 5.941 & 6.238 & +0.296 & 4 / 3\\
+V3 & 3.864 & 4.354 & +0.490 & 7 / 6\\
+V4 & 4.296 & 4.763 & +0.467 & 5 / 5\\
+V5 & 6.672 & 6.723 & +0.051 & 2 / 1\\
+V6 & 4.280 & 4.083 & $-$0.197 & 6 / 7\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{Determinism of the non-LLM path.} Within each run, the Fairness and Robustness metrics of V1 and V4 coincide exactly, and across runs those two dimensions never changed. This supports the claim that the probe pipeline itself is deterministic given a pinned seed.\label{sec:determinism}
+
+\section{Testing hypotheses H1 and H2}
+We compare each variant (Run~2) with the \emph{corrected} reference (Run~3), and also report the comparison with the original reference for completeness.
+
+\begin{table}[H]
+\centering\small
+\caption{Hypothesis check against the corrected reference R*. ``Targeted dimension'' compares the variant's score on the dimension where its flaw was injected with R*'s score on that dimension. Overall scores: R* 6.16.}\label{tab:hyp}
+\begin{tabularx}{\textwidth}{@{}p{1.3cm}p{2.5cm}RRRR@{}}
+\toprule
+\textbf{Variant} & \textbf{Dimension} & \textbf{R*} & \textbf{Variant (Run 2)} & \textbf{H1 holds?} & \textbf{Overall below R*?}\\
+\midrule
+V1 & Fairness & 7.32 & 6.60 & yes & no (6.49)\\
+V2 & Robustness & 9.00 & 8.32 & yes & no (6.24)\\
+V3 & Explainability & 6.65 & 1.82 & yes & yes (4.35)\\
+V4 & Integrity & 3.91 & 3.30 & yes (small) & yes (4.76)\\
+V5 & Safety & 3.91 & 3.98 & \textbf{no} & no (6.72)\\
+V6 & Safety (and Expl.) & 3.91 & 1.26 & yes & yes (4.08)\\
+\bottomrule
+\end{tabularx}
+\end{table}
+For V6 we use Safety, one of its two injected flaws; its Explainability score (1.26) is also far below R*'s 6.65.
+
+\textbf{H1} held for 5 of 6 variants against the corrected reference. The Integrity margin for V4 is 0.6 points, smaller than the run-to-run spread we observed for LLM-rated dimensions (Table~\ref{tab:variation}), so we would not call it a robust detection. The Robustness margin for V2 (8.32 against 9.00) is one band step, produced by a 3-point larger accuracy drop. V5 fails: its Safety score is 0.07 higher than R*'s. \textbf{H2} held for 3 of 6 (V3, V4, V6). The mean overall score of the six forged models is 5.44 against 6.16 for R*. Against the \emph{original} reference the figures are 6.79 and 5.44 (Runs~1 and~2), but we regard those comparisons as invalid for the Fairness and Robustness dimensions.
+
+\section{Cost}
+Evaluating the corrected reference (Run~3) took the same order of time. Fine-tuning one variant took about 160 s on the RTX 4060 laptop GPU. The seven evaluations of a run were created roughly 80--135 seconds apart (from the \code{created\_at} timestamps); this is an upper bound on one evaluation, including model loading, two inference passes over 3\,000 texts for the fairness and robustness probes, the perturbed pass, the LLM call and database writes. The result files do not record peak GPU memory or per-stage timings, so we do not report them. \todo{measure peak VRAM/RAM and per-stage time with a profiler and add here}

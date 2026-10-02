@@ -1,0 +1,29 @@
+\chapter{Testing and Performance}\label{ch:testing}
+
+\section{Testing strategy}
+The backend has 85 files under \code{backend/tests} with 592 test functions by a simple count of \code{def test\_}; the worker package and the frontend have their own tests (Vitest for components such as the report, review and draft pages). Continuous integration (\code{.github/workflows/ci.yml}) runs \code{ruff check} and \code{pytest}, including a job that skips tests marked \code{integration}, and installs and tests the frontend with \code{npm ci}. We did not generate a coverage report for this thesis, so we cannot give a coverage percentage. \todo{run \code{pytest --cov} and insert line coverage}
+
+\begin{table}[H]
+\centering\small
+\caption{Groups of automated tests (names from \code{backend/tests}).}
+\begin{tabularx}{\textwidth}{@{}p{3.5cm}L@{}}
+\toprule
+\textbf{Area} & \textbf{Examples and what they check}\\
+\midrule
+Scoring & \code{test\_fries\_scorer}: cube-root, veto, aspect mean, weights; compares against frozen vectors in \code{shared/scoring/fixtures/fries\_test\_vectors.json} (shared with the frontend implementation).\\
+Probes & \code{test\_fairness\_contract\_v2}, \code{test\_fairness\_stats}, \code{test\_robustness\_eval}, \code{test\_robustness\_nlp}, \code{test\_integrity\_probe}, \code{test\_explainability\_eval}, \code{test\_safety\_probe}, \code{test\_probe\_output\_contract}.\\
+Inference & \code{test\_inference\_backend}, \code{test\_device\_resolution}, \code{test\_device\_placement}, \code{test\_model\_snapshot\_check}.\\
+O/S/D engines & \code{test\_deterministic\_osd}, \code{test\_osd\_agent}, \code{test\_hybrid\_osd\_agent} (fallback on LLM failure), \code{test\_llm\_client}.\\
+Pipeline and API & \code{test\_evaluation\_lifecycle}, \code{test\_e2e\_draft\_to\_report}, \code{test\_api\_reports}, \code{test\_report\_concurrency}, \code{test\_finalize\_modes}, \code{test\_human\_review}.\\
+Honesty and migration & \code{test\_phase6\_honesty}, \code{test\_mode\_disclosure\_scoring\_state}, \code{test\_methodology\_version\_migration}, \code{test\_migration\_legacy\_readback}.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Most probe tests use injected fake backends rather than loading real models, so they check logic and contracts, not behaviour on real checkpoints. The forged-model experiment of Chapter~\ref{ch:results} is the only end-to-end test with real weights, and it found a problem that the unit tests could not (the label-mapping outcome). \todo{record the pass/fail counts of the latest full test run}
+
+\section{What the tests do not cover}
+There is no test that the heuristic bands produce sensible scores for a degenerate classifier, and no test comparing score ordering for a known good and a known bad model; the forged-model experiment is effectively the first such test. The original-reference problem shows the gap. We think the most valuable regression test to add is a smoke test that evaluates a constant predictor and expects a warning.
+
+\section{Performance and resource use}
+The system was run on the reference laptop: NVIDIA GeForce RTX 4060 Laptop GPU (8\,GB VRAM) with CUDA, float32, batch size 8. For a BERT-base classifier (109.5M parameters, 438\,MB on disk) this fits comfortably in VRAM. Measured costs are in the ``Cost'' section of Chapter~\ref{ch:results}: about 160\,s to fine-tune a variant and roughly 80--135\,s between consecutive finished evaluations. The README roadmap lists a resource checker and a benchmark-first runtime estimate as not yet implemented, so TrustLens does not currently predict whether a model will fit on the machine before loading it. Larger models would need that gate; for now, robustness may download and load a sequence-classification model at probe time with no memory check.

@@ -1,0 +1,87 @@
+% TrustLens Major Project Report -- master file.
+% Build:  tectonic main.tex     (or: pdflatex main.tex, run twice)
+% Data figures are regenerated from the frozen result JSON files with:  python make_figures.py
+\documentclass[11pt,a4paper,twoside]{report}
+
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[utf8]{inputenc}
+\usepackage[a4paper,inner=3.1cm,outer=2.6cm,top=2.6cm,bottom=2.8cm]{geometry}
+\usepackage{microtype}
+\usepackage{setspace}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{booktabs,tabularx,array,longtable,multirow}
+\usepackage{amsmath,amssymb}
+\usepackage{enumitem}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,fit,backgrounds,calc}
+\usepackage{listings}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage[hidelinks]{hyperref}
+
+% ---- project metadata (edit here) -------------------------------------------
+\newcommand{\ProjectTitle}{TrustLens}
+\newcommand{\ProjectSubtitle}{A Semi-Automated Framework for Trustworthiness Assessment and Auditing of Hugging Face Machine Learning Models}
+\newcommand{\Institution}{[INFORMATION REQUIRED: institution name]}
+\newcommand{\Department}{Department of Computer Science and Engineering}
+\newcommand{\Supervisor}{[INFORMATION REQUIRED: supervisor name]}
+\newcommand{\AcademicYear}{[INFORMATION REQUIRED: academic year]}
+\newcommand{\TeamA}{Aayushman}\newcommand{\RollA}{231CS105}
+\newcommand{\TeamB}{Ashutosh Kumar}\newcommand{\RollB}{231CS113}
+\newcommand{\TeamC}{Chetan Kumar Sah}\newcommand{\RollC}{231CS118}
+% -----------------------------------------------------------------------------
+
+\definecolor{tlblue}{HTML}{0B4F8A}
+\definecolor{tlorange}{HTML}{D55E00}
+\definecolor{tlgrey}{HTML}{F2F4F7}
+\definecolor{tlrule}{HTML}{C9D1DB}
+
+\hypersetup{pdftitle={TrustLens Major Project Report},pdfauthor={Aayushman, Ashutosh Kumar, Chetan Kumar Sah}}
+\graphicspath{{figures/}}
+\setstretch{1.12}
+\setlength{\parskip}{0.45em}\setlength{\parindent}{0pt}
+\setlist{itemsep=0.15em,topsep=0.3em}
+\captionsetup{font=small,labelfont={bf,color=tlblue},skip=6pt}
+\renewcommand{\arraystretch}{1.18}
+
+\titleformat{\chapter}[hang]{\Huge\bfseries\color{tlblue}}{\thechapter}{0.6em}{}[\vspace{2pt}{\color{tlrule}\titlerule[1.2pt]}]
+\titlespacing*{\chapter}{0pt}{-10pt}{22pt}
+\titleformat{\section}{\Large\bfseries\color{tlblue}}{\thesection}{0.5em}{}
+\titleformat{\subsection}{\large\bfseries}{\thesubsection}{0.5em}{}
+
+\pagestyle{fancy}\fancyhf{}
+\fancyhead[LE]{\small\leftmark}\fancyhead[RO]{\small\ProjectTitle\ -- Major Project Report}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancypagestyle{plain}{\fancyhf{}\fancyfoot[C]{\thepage}\renewcommand{\headrulewidth}{0pt}}
+
+\lstset{basicstyle=\ttfamily\footnotesize,backgroundcolor=\color{tlgrey},frame=single,
+  rulecolor=\color{tlrule},breaklines=true,columns=fullflexible,keepspaces=true,
+  xleftmargin=2pt,xrightmargin=2pt,aboveskip=6pt,belowskip=6pt}
+
+% convenience macros
+\newcommand{\code}[1]{\texttt{\small #1}}
+\newcommand{\todo}[1]{\textcolor{red}{[INFORMATION REQUIRED: #1]}}
+\newcolumntype{R}{>{\raggedleft\arraybackslash}X}
+\newcolumntype{L}{>{\raggedright\arraybackslash}X}
+
+\begin{document}
+\input{chapters/frontmatter}
+\pagenumbering{arabic}
+\input{chapters/ch1_introduction}
+\input{chapters/ch2_literature}
+\input{chapters/ch3_architecture}
+\input{chapters/ch4_fries}
+\input{chapters/ch5_implementation}
+\input{chapters/ch6_experiment}
+\input{chapters/ch7_results}
+\input{chapters/ch8_discussion}
+\input{chapters/ch9_testing}
+\input{chapters/ch10_conclusion}
+\input{chapters/references}
+\input{chapters/appendices}
+\end{document}

@@ -1,0 +1,80 @@
+\chapter{Implementation Details}\label{ch:impl}
+
+\section{Technology stack}
+Table~\ref{tab:stack} lists the technologies that the code actually imports. Libraries that only appear in dependency files are not listed.
+
+\begin{table}[H]
+\centering\small
+\caption{Technology stack and role of each component.}\label{tab:stack}
+\begin{tabularx}{\textwidth}{@{}p{3.2cm}L@{}}
+\toprule
+\textbf{Technology} & \textbf{Role in TrustLens}\\
+\midrule
+Python $\ge$3.11 & Backend, worker, probes, experiment scripts.\\
+FastAPI, Pydantic v2 & REST API under \code{/v1}; Pydantic models define the evaluation contract, probe output and report schemas.\\
+SQLAlchemy 2, Alembic, PostgreSQL & Persistence; fourteen migrations track the schema (e.g.\ dataset content, draft state, methodology version).\\
+Celery, Redis & Asynchronous execution of the evaluation pipeline in a worker process.\\
+Hugging Face \code{transformers} \cite{wolf2020}, PyTorch & Local inference in \code{LocalHFBackend}; \code{AutoConfig} for cheap model inspection.\\
+\code{huggingface\_hub} & Metadata import (card, tags, licence, file list).\\
+\code{google-genai}, \code{httpx} & LLM calls to Gemini, Groq and NVIDIA NIM for the \code{llm\_v1} engine.\\
+Jinja2, WeasyPrint & HTML report template rendered to PDF.\\
+React 19, Vite, TypeScript, React Router & Dashboard: model import, draft wizard, evaluation timeline, review and report pages.\\
+Vitest, pytest, ruff & Frontend tests, backend tests, linting (also run in GitHub Actions).\\
+Docker Compose & Five services: postgres, redis, api, worker, frontend; separate CPU-only and GPU compose files.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+The GPU-related choices follow from the reference machine described in the specification: an RTX 4060 Laptop GPU with 8~GB of VRAM. Our experiment logs confirm CUDA execution with float32 weights and batch size~8 (\code{execution\_metadata}).
+
+\section{Important modules}
+\begin{table}[H]
+\centering\small
+\caption{Key source files and responsibilities.}
+\begin{tabularx}{\textwidth}{@{}p{4.3cm}L@{}}
+\toprule
+\textbf{File} & \textbf{Purpose, inputs and outputs}\\
+\midrule
+\code{inference/local\_hf.py} & Loads a sequence-classification model and tokenizer, batches texts, applies softmax, returns predictions plus device metadata. Raises typed errors on load or inference failure.\\
+\code{inference/device.py} & Chooses CUDA or CPU and records the reason (\code{device\_reason}) and any fallback.\\
+\code{probes/runner.py} & Runs probes in order, validates each output (dimension match, confidence in $[0,1]$, evidence present), persists \code{probe\_results} and refines confidence.\\
+\code{probes/fairness.py}, \code{fairness\_metrics.py}, \code{fairness\_stats.py} & Subgroup predictions, DPD/EOD/F1 spread, bootstrap CI.\\
+\code{probes/robustness\_nlp.py}, \code{robustness\_eval.py} & Char-swap attack and accuracy-drop evaluation with gates.\\
+\code{probes/integrity\_eval.py}, \code{explainability\_eval.py}, \code{safety\_eval.py} & Pure functions over Hub metadata and card text.\\
+\code{confidence/engine.py} & Evidence-strength score: geometric mean of data quality, probe reliability and evidence completeness. Marked uncalibrated.\\
+\code{osd/agent.py}, \code{hybrid.py}, \code{llm\_client.py} & Heuristic bands; LLM prompt, call, parse, fallback.\\
+\code{scoring/fries.py} & Cube-root risk score, veto, aspect mean, weighted total.\\
+\code{reports/builder.py} & Builds the canonical \code{report\_v1} JSON; PDF is a projection of it. Append-only versions.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{Evidence and reproducibility features.} Each probe stores its raw output as a JSON artifact with a SHA-256 hash; evaluations are stamped with an immutable \code{methodology\_version}; model revisions are frozen at draft time and the loaded snapshot is verified against it (\code{model\_snapshot\_check.py}); and probes take an explicit seed. Our determinism check is in Section~\ref{sec:determinism}.
+
+\paragraph{Documentation discrepancy.} The project README still lists JWT roles (researcher, reviewer, admin) among the working features, and the setup script prints a \code{seed\_users} step. The code does not match: migration \code{008\_remove\_auth\_and\_ownership} removed authentication and ownership, and there is no \code{seed\_users} module under \code{backend/app/scripts}. We follow the code, and we omit that step from the commands below.
+
+\paragraph{Error handling.} Probe outputs that violate the contract raise \code{ProbeError} and fail the evaluation rather than being stored. A probe that cannot run records a status (\code{INSUFFICIENT\_EVIDENCE}, \code{SKIPPED}, \code{NOT\_APPLICABLE}, \code{FAILED} or \code{PROXY}) instead of a number. The API returns a conflict (HTTP 409) for a report on an evaluation whose FRIES score was withheld, rather than pretending the report is merely not ready.
+
+\section{Installation and execution}
+The following commands are taken from the repository (\code{docs/TRUSTLENS\_LOCAL\_DEVELOPMENT.md}, \code{scripts/}, \code{Makefile}). Prerequisites: Python 3.11+, Node 18+, Docker Desktop with Compose v2; an NVIDIA GPU is optional but used when present.
+
+\begin{lstlisting}
+# one-time backend setup (Windows PowerShell)
+.\scripts\setup-local-dev.ps1
+.\.venv\Scripts\Activate.ps1
+docker compose up -d postgres redis
+cd backend; alembic upgrade head
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+# in other terminals: worker and frontend
+.\scripts\dev-worker.ps1      # Celery worker
+.\scripts\dev-frontend.ps1    # React dashboard (npm run dev)
+# tests
+cd backend; python -m pytest -q
+\end{lstlisting}
+
+To reproduce the forged-model experiment (docstrings of the three scripts under \code{backend/app/scripts}, run from \code{backend/}):
+\begin{lstlisting}
+python -m app.scripts.prepare_flawed_suite_data      # builds eval_set + per-variant train slices
+python -m app.scripts.train_flawed_suite --all       # fine-tunes variants 1,2,3,5,6
+python -m app.scripts.run_flawed_suite_eval          # evaluates all 7 models through the API
+\end{lstlisting}
+The last script needs the Compose stack running and the local model directory bind-mounted into the worker at \code{/models/flawed\_model\_suite}. Output is written to \code{results/flawed\_model\_suite/}. A user normally interacts through the dashboard: import a model, create an evaluation draft, attach a dataset and label mapping, confirm, and read the report. In the report, the FRIES score is shown next to the evidence, the O/S/D ratings with their rationale, the evidence-strength confidence, and a disclosure that states the mode, the engine and whether a human reviewed the numbers.

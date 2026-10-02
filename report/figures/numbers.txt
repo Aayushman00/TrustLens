@@ -1,0 +1,7 @@
+genuine: run1=6.7853 run2=5.4418
+variant1_fairness: run1=6.5624 run2=6.4867
+variant2_robustness: run1=5.9413 run2=6.2379
+variant3_explainability: run1=3.8637 run2=4.354
+variant4_integrity: run1=4.2961 run2=4.7632
+variant5_safety: run1=6.6717 run2=6.7227
+variant6_compound: run1=4.2799 run2=4.0826
