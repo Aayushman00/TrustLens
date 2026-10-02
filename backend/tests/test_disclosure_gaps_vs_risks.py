@@ -152,7 +152,9 @@ def test_local_model_matching_train_manifest_is_pinned(tmp_path: Path) -> None:
     m = IntegrityProbe().run(_ctx(ref, {"card_text": "card", "card_data": {"license": "mit"}})).metric_values
     assert m["identity"]["hash_comparison"] == "match"
     assert m["identity"]["weight_hash"]["value"] == hashlib.sha256(_WEIGHTS).hexdigest()
-    assert m["artifact_verification"] == {"performed": True, "file": "model.safetensors"}
+    av = m["artifact_verification"]
+    assert (av["performed"], av["status"], av["file"]) == (True, "VERIFIED", "model.safetensors")
+    assert av["manifest"]["source"] == "train_manifest"
     assert m["checks"]["revision_pinned"]["pass"] is True
     assert m["checks"]["files_listed"]["pass"] is True
     assert RISK_REV_UNPINNED not in m["disclosure_gaps"] + m["risks_triggered"]
@@ -185,4 +187,4 @@ def test_methodology_versions_bumped_for_new_risk_semantics() -> None:
     assert CURRENT_METHODOLOGY_VERSION != "v3-hardening-2026"  # L3 introduced v4; later rounds bump further
     assert SAFETY_VERSION == "tl-safety-v1.1"
     assert EXPLAINABILITY_VERSION == "tl-explainability-v1.1"
-    assert INTEGRITY_VERSION == "tl-integrity-v1.1"
+    assert INTEGRITY_VERSION == "tl-integrity-v1.2"  # bumped by round 3 L7 (artifact-set identity)

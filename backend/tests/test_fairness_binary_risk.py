@@ -257,5 +257,5 @@ def test_wide_dp_ci_alone_no_longer_blocks(db_session: Any) -> None:
 
 
 def test_methodology_versions_bumped() -> None:
-    assert CURRENT_METHODOLOGY_VERSION == "v6-eod-fairness-risk-2026"
+    assert CURRENT_METHODOLOGY_VERSION not in ("v4-disclosure-gaps-2026", "v5-binary-fairness-risk-2026")  # L4.1 introduced v6; later rounds bump further
     assert BINARY_METHODOLOGY_VERSION == "tl-fairness-binary-v1.2"

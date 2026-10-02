@@ -6,6 +6,11 @@ old stored report.json blobs genuinely never recorded any value at all —
 see docs/superpowers/plans/2026-09-10-v1-dataset-contract-redesign.md
 Global Constraints)."""
 
+# v7-artifact-set-integrity-2026 (round 3, L7): Integrity (tl-integrity-v1.2)
+# hashes the whole artifact set (single or sharded weights + loader files) and
+# compares it with an authoritative manifest; artifact_verification status
+# VERIFIED / MISMATCH / INCOMPLETE / UNPINNED / UNSUPPORTED. Only MISMATCH is a
+# risk (I-INT-BYTES-DIVERGE); see docs/adr/0013-artifact-set-integrity.md.
 # v6-eod-fairness-risk-2026 (round 3, L4.1): the binary fairness risk
 # (F-FAIR-EOPP, tl-fairness-binary-v1.2) is triggered by the equal-opportunity
 # difference (max_g TPR_g - min_g TPR_g) and its bootstrap CI; G-FAIR-CI-WIDE
@@ -25,5 +30,5 @@ Global Constraints)."""
 # are identified by their weight-file sha256 (checked against train_manifest.json).
 # Previous: "v3-hardening-2026" — robustness band from accuracy drop,
 # constant-predictor gate, behavioural safety band (stored evaluations keep their stamp).
-CURRENT_METHODOLOGY_VERSION = "v6-eod-fairness-risk-2026"
+CURRENT_METHODOLOGY_VERSION = "v7-artifact-set-integrity-2026"
 LEGACY_METHODOLOGY_VERSION = "pre-v1-fixed-5dim"
