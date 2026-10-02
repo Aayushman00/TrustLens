@@ -89,13 +89,15 @@ def _sample_slice(ds, *, size: int, seed: int) -> list[dict[str, Any]]:
     return [_row_fields(ds[idx]) for idx in chosen]
 
 
-def _apply_fairness_flip(rows: list[dict[str, Any]], *, seed: int) -> tuple[list[dict[str, Any]], list[int]]:
+def _apply_fairness_flip(
+    rows: list[dict[str, Any]], *, seed: int, rate: float = FAIRNESS_FLIP_RATE
+) -> tuple[list[dict[str, Any]], list[int]]:
     """Flip FAIRNESS_FLIP_RATE of (identity_ref==1 & label==0) rows to label=1."""
     rng = random.Random(seed)
     out = [dict(r) for r in rows]
     candidates = [i for i, r in enumerate(out) if r["identity_ref"] == 1 and r["label"] == 0]
     rng.shuffle(candidates)
-    n_flip = round(len(candidates) * FAIRNESS_FLIP_RATE)
+    n_flip = round(len(candidates) * rate)
     flipped = candidates[:n_flip]
     for i in flipped:
         out[i]["label"] = 1
@@ -103,13 +105,15 @@ def _apply_fairness_flip(rows: list[dict[str, Any]], *, seed: int) -> tuple[list
     return out, flipped
 
 
-def _apply_safety_flip(rows: list[dict[str, Any]], *, seed: int) -> tuple[list[dict[str, Any]], list[int]]:
+def _apply_safety_flip(
+    rows: list[dict[str, Any]], *, seed: int, rate: float = SAFETY_FLIP_RATE
+) -> tuple[list[dict[str, Any]], list[int]]:
     """Relabel SAFETY_FLIP_RATE of severe-toxic rows to label=0 (not toxic)."""
     rng = random.Random(seed)
     out = [dict(r) for r in rows]
     candidates = [i for i, r in enumerate(out) if r["severe"] == 1]
     rng.shuffle(candidates)
-    n_flip = round(len(candidates) * SAFETY_FLIP_RATE)
+    n_flip = round(len(candidates) * rate)
     flipped = candidates[:n_flip]
     for i in flipped:
         out[i]["label"] = 0

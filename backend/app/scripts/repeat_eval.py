@@ -74,12 +74,13 @@ def main() -> None:
     ap.add_argument("--runs", type=int, default=5)
     ap.add_argument("--out", default="eval_results_repeat")
     ap.add_argument("--only", nargs="*", help="subset of target names")
+    ap.add_argument("--local", nargs="*", help="local model folders to register instead of LOCAL_VARIANTS")
     args = ap.parse_args()
     out = r.fresh_out_dir(r.SUITE_DIR / args.out)
     meta = {"code_commit": _git_commit(), "runs": args.runs, "started_at": datetime.now(UTC).isoformat()}
     with r._client() as c:
         ds = r.upload_eval_dataset(c)
-        targets = [(v, r.register_local_model(c, v)) for v in r.LOCAL_VARIANTS]
+        targets = [(v, r.register_local_model(c, v)) for v in (args.local or r.LOCAL_VARIANTS)]
         targets.append(("reference_hub", r.register_hf_model(c, r.TRUSTWORTHY_HF_REPO)))
         ref2 = r.SUITE_DIR / "models" / "reference_toxicbert_2label"
         if ref2.exists():
