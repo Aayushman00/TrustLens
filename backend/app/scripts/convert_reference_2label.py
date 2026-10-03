@@ -34,7 +34,6 @@ def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     dst.save_pretrained(OUT)
     AutoTokenizer.from_pretrained(REPO).save_pretrained(OUT)
-    Path(hf_hub_download(REPO, "README.md")).replace(OUT / "README_source.md") if False else None
     (OUT / "README.md").write_text(Path(hf_hub_download(REPO, "README.md")).read_text(encoding="utf-8"), encoding="utf-8")
     # equivalence check
     tok = AutoTokenizer.from_pretrained(REPO)

@@ -84,7 +84,6 @@ def test_fairness_v2_positive_label_index_changes_equalized_odds_difference(
     FairnessContractV2 through the worker's actual computation and changes
     the real equalized_odds_difference -- not just at the pure-function
     level, through the whole contract -> probe path."""
-    from app.db.models import DatasetContent
 
     # Same non-degenerate confusion pattern proven at the pure-function level
     # (test_fairness_stats.py's _ASYMMETRIC_* fixtures) to actually diverge

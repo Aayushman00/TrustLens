@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 
 from app.db.enums import ProbeEvaluationStatus
 from app.probes.robustness_eval import evaluate_classification_robustness

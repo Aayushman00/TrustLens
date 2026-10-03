@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from app.db.enums import FriesDimension, ProbeEvaluationStatus
+from app.db.enums import FriesDimension
 from app.probes.base import ProbeContext, ProbeOutput
 from app.probes.explainability_eval import evaluate_explainability
 from app.probes.explainability_stats import METHODOLOGY_BASIS, METHODOLOGY_VERSION, NOTE

@@ -11,7 +11,6 @@ from app.probes.explainability_stats import (
     ASPECT_NOT_SCORED,
     ASPECT_RISK_DETECTED,
     G_CARD_EMPTY,
-    METHODOLOGY_VERSION,
     RISK_DOC_CONTRADICTION,
     RISK_DOC_INCOMPLETE,
 )

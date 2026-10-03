@@ -523,7 +523,6 @@ class EvaluationService:
             "status": evaluation.status.value,
             "evaluation_mode": evaluation.evaluation_mode.value,
         }
-        final_row = self._final_scores.get_for_evaluation(evaluation.id)
         if evaluation.status == EvaluationStatus.FINALIZED:
             return evaluation
         if evaluation.status == EvaluationStatus.FAILED:

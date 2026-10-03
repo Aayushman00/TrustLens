@@ -20,7 +20,6 @@ from app.db.enums import EvaluationMode, EvaluationStatus
 from app.db.repositories.evaluation import EvaluationRepository
 from app.db.repositories.evaluation_event import (
     EVENT_AGENT_COMPLETED,
-    EVENT_AWAITING_REVIEW,
     EVENT_EVALUATION_CREATED,
     EVENT_EVALUATION_FAILED,
     EVENT_EVALUATION_FINALIZED,

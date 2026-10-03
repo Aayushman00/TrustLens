@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
 from unittest.mock import MagicMock, patch
 
 import httpx
@@ -11,7 +10,6 @@ import pytest
 from app.inference.base import (
     DecisionMode,
     InferenceConfig,
-    PredictionRecord,
     TaskType,
 )
 from app.inference.errors import (
