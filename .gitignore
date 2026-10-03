@@ -206,3 +206,8 @@ papers/
 implementation/
 docs/TRUSTLENS_*.md
 stitch*/
+# Round 3: tokenizer vocab copies (30k lines each) and generated eval sets
+# (reproducible from --seed) bloat PR diffs; keep manifests/results only.
+results/**/models/**/vocab.txt
+results/**/data/eval_set.csv
+results/**/data/eval_set.jsonl
