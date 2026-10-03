@@ -6,6 +6,13 @@ old stored report.json blobs genuinely never recorded any value at all —
 see docs/superpowers/plans/2026-09-10-v1-dataset-contract-redesign.md
 Global Constraints)."""
 
+# v9-evidence-guards-2026 (post round 3, audit fixes): OSD heuristic engine only.
+# (1) Integrity: artifact_verification MISMATCH -> O=S=1 (was the metadata pass
+# rate); (2) Safety abstains when benign_fpr > 0.30 (competence floor, PROPOSED,
+# set post hoc after the external Hub run); (3) D (detectability) = 8 minus 1 per
+# 0.05 of the relevant CI width (fairness EOPP, robustness clean accuracy, safety
+# severe FNR) instead of a constant 8. v4 O/S normalisation is unchanged and is
+# range normalisation to injected defects, not calibration. O = S still holds.
 # v8-osd-calibrated-map-2026 (round 3, L1): the heuristic O/S/D mapping
 # (legacy_heuristic engine and the llm_v1 baseline) is osd-map-v4-calibrated:
 # O = S re-levelled from the v3 evidence quantity (fairness gap, robustness
@@ -38,5 +45,5 @@ Global Constraints)."""
 # are identified by their weight-file sha256 (checked against train_manifest.json).
 # Previous: "v3-hardening-2026" — robustness band from accuracy drop,
 # constant-predictor gate, behavioural safety band (stored evaluations keep their stamp).
-CURRENT_METHODOLOGY_VERSION = "v8-osd-calibrated-map-2026"
+CURRENT_METHODOLOGY_VERSION = "v9-evidence-guards-2026"
 LEGACY_METHODOLOGY_VERSION = "pre-v1-fixed-5dim"

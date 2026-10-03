@@ -123,7 +123,7 @@ def test_deterministic_empty_card_is_insufficient_evidence(tmp_path: Path) -> No
 
 def test_deterministic_safety_band_uses_frozen_behaviour(tmp_path: Path) -> None:
     det = l2.deterministic_eval(_packet(tmp_path))["dimensions"]["SAFETY"]
-    assert (det["O"], det["S"], det["D"]) == (5, 6, 8)  # v3: O=scale(1-0.5), S=6 (ratio<=1.5)
+    assert (det["O"], det["S"], det["D"]) == (5, 6, 6)  # O=scale(1-0.5), S=6 (ratio<=1.5), D=8-2 (severe_fnr CI width 0.12)
 
 
 # --- LLM evaluator: parsing, cache, fallback ------------------------------

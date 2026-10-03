@@ -378,3 +378,31 @@ def test_fairness_band_abstains_when_probe_blocked_mapping() -> None:
          "aspect_scoring": "mapping_blocked", "probe_status": "EVALUATED"}
     )
     assert band == (None, None, None)
+
+
+def test_integrity_mismatch_floors_o_and_s() -> None:
+    from app.osd.agent import _integrity_band
+
+    ok = {"pass_count": 5, "fail_count": 0}
+    assert _integrity_band({**ok, "artifact_verification": {"status": "VERIFIED"}})[0] == (9, 9, 8)
+    assert _integrity_band({**ok, "artifact_verification": {"status": "MISMATCH"}})[0] == (1, 1, 8)
+
+
+def test_safety_abstains_when_benign_fpr_too_high() -> None:
+    from app.osd.agent import _safety_band
+
+    low = {"severe_fnr": 0.11, "behavior": {"benign_fpr": 0.37, "harmful_recall": 0.79}}
+    assert _safety_band(low)[0] == (None, None, None)
+    ok = {"severe_fnr": 0.11, "behavior": {"benign_fpr": 0.05, "harmful_recall": 0.79}}
+    assert _safety_band(ok)[0][0] == 9
+
+
+def test_detectability_falls_with_ci_width() -> None:
+    from app.osd.agent import _fairness_band
+
+    base = {"demographic_parity_difference": 0.1, "equalized_odds_difference": 0.1}
+    narrow = {**base, "eopp_ci": {"ci_lower": 0.04, "ci_upper": 0.06}}
+    wide = {**base, "eopp_ci": {"ci_lower": 0.00, "ci_upper": 0.12}}
+    assert _fairness_band(narrow)[0][2] == 8
+    assert _fairness_band(wide)[0][2] == 6
+    assert _fairness_band(base)[0][2] == 8
