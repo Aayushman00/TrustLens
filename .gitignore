@@ -223,3 +223,13 @@ report/*.fdb_latexmk
 report/*.synctex.gz
 # AI-generated planning docs
 docs/superpowers/
+
+# Flawed-model suite: raw per-run dumps are regenerable; keep analysis/summary/cards/ground truth.
+results/flawed_model_suite/final_*_repeat5*/
+results/flawed_model_suite/sweep_*/
+results/flawed_model_suite/smoke_*/
+results/flawed_model_suite/hub_2026*/
+results/flawed_model_suite/hub_final_c*/
+results/flawed_model_suite/eval_results/
+results/flawed_model_suite/eval_results_v2/
+results/flawed_model_suite/human_validation_*/*.json
