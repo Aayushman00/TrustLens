@@ -43,6 +43,7 @@ from app.osd.llm_client import (
     call_nvidia,
 )
 from app.probes.explainability_eval import evaluate_explainability
+from app.scoring.methodology_version import CURRENT_METHODOLOGY_VERSION
 from app.probes.integrity_artifact import build_artifact_manifest
 from app.scoring.fries import OSDTriple, aspect_score
 from app.scripts import run_l2_interpretation as l2
@@ -125,7 +126,7 @@ def trustlens_answer(dim: str, m: dict[str, Any]) -> dict[str, Any]:
             "severity": a.S, "evidence_sufficient": suff, "risk_ids": risks, "aspect_scoring": m.get("aspect_scoring"),
             "failed_gates": gates, "O": a.O, "S": a.S, "D": a.D,
             "aspect_score": round(aspect_score([OSDTriple(a.O, a.S, a.D)]), 4) if full else None,
-            "mapping": "HeuristicOSDAgent default (osd-map-v4, methodology v8)"}
+            "mapping": f"HeuristicOSDAgent default (osd-map-v4, methodology {CURRENT_METHODOLOGY_VERSION})"}
 
 
 # --- packet builders ------------------------------------------------------------
