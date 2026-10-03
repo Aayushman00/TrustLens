@@ -1,0 +1,75 @@
+\chapter{Experimental Design}\label{ch:experiment}
+
+\section{Question and hypothesis}
+The research question for the experiment is RQ2 from Chapter~\ref{ch:intro}: \emph{can TrustLens distinguish a reference model from models that we deliberately made worse?}
+
+We state the hypothesis in a form that can fail:
+
+\begin{quote}
+\textbf{H1.} If the FRIES probes capture trust-relevant properties, then a forged model should obtain a \emph{lower score on the FRIES dimension in which its flaw was injected} than the reference model does, and a model carrying flaws in several dimensions should obtain the lowest overall score.
+\end{quote}
+We also record a weaker, secondary hypothesis, \textbf{H2}: the overall FRIES score of each forged model is lower than that of the reference. We expected H2 to be harder to satisfy, because an overall score averages over four dimensions that were left untouched. We wrote H1 and H2 before looking at the second run, but we had already seen the first run, so neither is a fully pre-registered prediction.
+
+\section{Models}
+\subsection{Model A: reference model}
+\begin{table}[H]
+\centering\small
+\caption{Reference model.}
+\begin{tabularx}{\textwidth}{@{}p{3.8cm}L@{}}
+\toprule
+Model & \code{unitary/toxic-bert} (Hugging Face Hub), the Detoxify BERT-based multi-label toxic comment classifier\\
+Revision & \code{4d6c22e74ba2fdd26bc4f7238f50766b045a0d94} (pinned in the evaluation contract)\\
+Architecture & BERT sequence classifier with six output labels: \code{toxic}, \code{severe\_toxic}, \code{obscene}, \code{threat}, \code{insult}, \code{identity\_hate}\\
+Parameter count & \todo{read from model files; not recorded in the result JSON}\\
+Training data, licence & As stated on the Hub card; our probes record that the card lacks explicit intended-use and training-data sections (coverage 0.6)\\
+Conversion for evaluation & TrustLens decides with argmax over a softmax, which cannot express ``toxic versus not toxic'' on a six-way sigmoid head. We therefore built \code{reference\_toxicbert\_2label} (\code{convert\_reference\_2label.py}): encoder weights unchanged; new head with logit$_0=0$ and logit$_1$ equal to the original \code{toxic} logit, so $P_1=\sigma(z_{\text{toxic}})$ and argmax picks ``toxic'' exactly when the original output exceeds 0.5. A check on four sentences gave a maximum probability difference of $9.5{\times}10^{-4}$, so predictions very close to the boundary could differ from the original model.\\
+Selection reason & Widely used, public, same task as our variants. \emph{It is not a certified trustworthy model}; we call it the reference model because it is an established public release, not because we have proof of its quality.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Model B: forged variants}\label{sec:variants}
+We could not obtain a real malicious model, so we built six. All start from \code{bert-base-uncased} \cite{devlin2019} and are fine-tuned for binary toxicity classification on a sample of Civil Comments \cite{borkan2019}; each variant's flaw was chosen to target one FRIES dimension, and the flip logic is recorded in a data manifest next to the weights. Table~\ref{tab:variants} summarises them.
+
+\begin{table}[H]
+\centering\footnotesize
+\caption{The six forged variants. All use \code{bert-base-uncased}, seed 42, max sequence length 128. ``Rows'' is the training set size.}\label{tab:variants}
+\begin{tabularx}{\textwidth}{@{}p{1.6cm}p{1.9cm}Lp{2.7cm}@{}}
+\toprule
+\textbf{Variant} & \textbf{Target} & \textbf{Injected flaw} & \textbf{Training}\\
+\midrule
+V1 & Fairness & 40\% of non-toxic comments that mention an identity (any annotator flagged an identity attack) had their label flipped to toxic: 249 of 8\,000 rows. Card is complete and honest about the flaw. & 3 epochs, lr $2{\times}10^{-5}$, wd 0.01, 8\,000 rows\\
+V2 & Robustness & Class-balanced narrow training set (all 628 toxic rows plus 628 non-toxic), 4 epochs, lr $5{\times}10^{-5}$, no weight decay, intended to produce a brittle model. Redesigned after a first design collapsed to a majority-class predictor. & 4 epochs, 1\,256 rows\\
+V3 & Explainability & Weights trained on clean labels; the model card is the untouched auto-generated template (``[More Information Needed]'' everywhere). & 3 epochs, 8\,000 rows\\
+V4 & Integrity & \emph{Weights are an exact copy of V1.} The card claims ``production ready'', ``no known biases'', ``no material risks'', declares licence \code{other} while claiming unrestricted commercial use, and omits the limitations. & none (copy of V1)\\
+V5 & Safety & 50\% of rows with any severe-toxicity annotation relabelled as non-toxic (244 of 8\,000), so the model under-flags severe toxicity. Card is complete and honest. & 3 epochs, 8\,000 rows\\
+V6 & Compound & V1 flip and V5 relabelling applied in sequence; template card with over-claiming sentence added; licence \code{other}. & 3 epochs, 8\,000 rows\\
+\bottomrule
+\end{tabularx}
+\end{table}
+Each fine-tuning took about 160 seconds on the RTX 4060 laptop GPU (V2, with fewer rows, is not timed in its manifest). Each resulting checkpoint is a float32 BERT-base model of 437.96\,MB (about 109.5 million parameters including the classification head).
+
+\paragraph{What the forged models are, and are not.} They are experimental constructs for probing the tool. They do not represent real-world malicious models: nobody planted a backdoor, nothing adapts to the evaluator, and several flaws sit in the model card, which an attacker could trivially fix. Three of the six variants (V3, V4, V6) are essentially \emph{documentation} flaws wrapped around weights that behave like an ordinary fine-tuned BERT, and V4 is behaviourally identical to V1. This matters for what a ``detection'' means, and we come back to it in Chapter~\ref{ch:discussion}.
+
+\paragraph{A design lesson.} Our first V2 used 600 rows and 12 epochs to overfit. Instead it collapsed to a majority-class predictor that predicted positive for only 0.6--8.4\% of inputs, which is more stable under perturbation than the reference, not less (accuracy drop 0.3--0.9 points). The manifest records this diagnosis. It taught us that a robustness probe built on accuracy drop cannot see a constant predictor as a problem, and the same issue appears again in the reference model (Section~\ref{sec:constant}).
+
+\section{Variables and controls}
+\begin{table}[H]
+\centering\small
+\caption{Experimental variables.}
+\begin{tabularx}{\textwidth}{@{}p{3.6cm}L@{}}
+\toprule
+Independent variable & Which model is evaluated (reference or one of V1--V6): weights, model card and licence field.\\
+Dependent variables & Per-probe measured evidence (DPD, EOD, F1 spread, clean and robust accuracy, card coverage, integrity risks); per-dimension scores; overall FRIES score.\\
+Controlled & Evaluation dataset (3\,000 rows of the Civil Comments \code{test} split, seed 42, 20\% positive rate, identical for all seven models); sensitive attribute (binary \code{identity\_ref} flag); label mapping; \code{min\_group\_n}$=30$; probe seed 42; assessment engine \code{llm\_v1}; mode \code{AI\_AUTONOMOUS}; hardware (RTX 4060 Laptop, CUDA, float32, batch 8); software stack.\\
+Not controlled & The LLM that rates Integrity, Explainability and Safety (provider and sampling are not pinned or logged in the result file); the Hub-versus-local difference in model identity (Section~\ref{sec:threats}); the architecture and label head of the reference model, which differ from the variants'.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{Sensitive attribute.} \code{identity\_ref} is 1 when the Civil Comments row has \code{identity\_attack}$>0.0001$; group sizes in the evaluation set are 2\,461 (value 0) and 539 (value 1). The same threshold is used when the V1 and V6 flip was injected, so the fairness probe evaluates the very attribute that the flaw targets. We note this as a favourable design for detection.
+
+\paragraph{Runs.} The full set of seven evaluations was executed twice. Run~1 was created between 20:49 and 20:57 UTC on 14 September 2026, with the redesigned V2 evaluated at 21:23. Run~2 was created between 23:57 UTC that day and 00:06 UTC on 15 September. The two runs are \emph{not} exact replicates: Run~2 records an extra integrity gate (\code{G-INT-LISTING-UNVERIFIED}) that Run~1 does not, so the integrity probe changed in between, and the LLM that rates three dimensions is stochastic. We therefore treat them as two independent measurements of a slightly evolving tool. \emph{Run~3} is a single evaluation of the converted reference model (\code{eval\_results\_v3}), made after we found the label-mapping problem described in Section~\ref{sec:constant}. It uses the same dataset, mapping, mode, engine and hardware as Runs~1 and~2. The original Hub import of \code{toxic-bert} is called the \emph{original reference} below; the converted copy is the \emph{corrected reference}. Because the corrected reference is a local directory, the integrity probe treats it like the variants (no pinned revision, no file manifest), which makes its Integrity score comparable to theirs but not to the original reference's. Run~1 also contains an earlier V2 evaluation of the first (collapsed) V2 design, which we exclude from the tables; it remains in the repository. All figures and tables below are computed from the saved JSON files by \code{report/make\_figures.py}.
+
+\section{Outcome measures}
+For each model we report the five dimension scores and the overall FRIES score as produced by the tool, and the underlying evidence. For H1 we compare the \emph{targeted} dimension of each variant with the same dimension of the reference model. For H2 we compare overall scores. Because the sample is seven models, we use counts and plain differences, and we do not report significance tests.

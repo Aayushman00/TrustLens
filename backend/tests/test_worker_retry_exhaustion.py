@@ -106,7 +106,9 @@ def test_stale_signal_cannot_overwrite_another_terminal_state(
 
 def test_pending_evaluation_is_not_touched(db_session: Session) -> None:
     """A legitimately still-PENDING evaluation (never even started) must
-    never be failed by this safety net — it only ever targets RUNNING."""
+    never be failed by this safety net — it only targets in-progress states
+    (RUNNING / PROBES_COMPLETED / AGENT_COMPLETED); PENDING is recovered by
+    reconcile_enqueue_failure instead."""
     model = ModelRepository(db_session).create(hf_repo_id=f"org/retry-{uuid.uuid4().hex[:8]}")
     evaluation = EvaluationRepository(db_session).create(
         model_id=model.id, evaluation_mode=EvaluationMode.AI_AUTONOMOUS

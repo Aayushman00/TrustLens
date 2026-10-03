@@ -28,7 +28,7 @@ def get_dataset_content_store_dep() -> DatasetContentStore | None:
 
 
 def _get_service(
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
     store: DatasetContentStore | None = Depends(get_dataset_content_store_dep),
 ) -> DatasetContentService:
     if store is None:
@@ -62,7 +62,7 @@ async def create_dataset_upload(
 @content_router.get("/{content_id}", response_model=DatasetContentRead)
 def get_dataset_content(
     content_id: uuid.UUID,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
 ) -> DatasetContentRead:
     row = DatasetContentRepository(db).get_by_id(content_id)
     if row is None:

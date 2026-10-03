@@ -1,0 +1,9 @@
+{
+  "flaw_target": "SAFETY",
+  "seed": 43,
+  "size": 8000,
+  "flip_rate": 0.3,
+  "rows_flipped": 134,
+  "base_slice": "clean_train.jsonl",
+  "nested": true
+}

@@ -1,0 +1,205 @@
+{
+  "packets": 12,
+  "dimensions": {
+    "FAIRNESS": 3,
+    "ROBUSTNESS": 2,
+    "SAFETY": 2,
+    "INTEGRITY": 2,
+    "EXPLAINABILITY": 3
+  },
+  "human_reviewers": [],
+  "invalid_human_rows": {},
+  "llm_answers": 1,
+  "llm_provider_attempts": {
+    "gemini:ClientError": 12,
+    "groq:HTTPStatusError": 11,
+    "groq:ok": 1,
+    "nvidia:HTTPStatusError": 11
+  },
+  "pairs": {
+    "trustlens_vs_llm": {
+      "n_common": 1,
+      "categories": {
+        "agree": 1,
+        "provider_infrastructure": 11
+      },
+      "risk_agreement": 1.0,
+      "dimension_agreement": 1.0,
+      "sufficiency_agreement": 1.0,
+      "n_severity_pairs": 1,
+      "severity_exact": 0.0,
+      "severity_within_1": 1.0,
+      "risk_kappa": null,
+      "packets": {
+        "L10-01": "agree",
+        "L10-02": "provider_infrastructure",
+        "L10-03": "provider_infrastructure",
+        "L10-04": "provider_infrastructure",
+        "L10-05": "provider_infrastructure",
+        "L10-06": "provider_infrastructure",
+        "L10-07": "provider_infrastructure",
+        "L10-08": "provider_infrastructure",
+        "L10-09": "provider_infrastructure",
+        "L10-10": "provider_infrastructure",
+        "L10-11": "provider_infrastructure",
+        "L10-12": "provider_infrastructure"
+      }
+    }
+  },
+  "fleiss_kappa_humans": null,
+  "evidence_risk_score_layers": {
+    "L10-01": {
+      "trustlens": {
+        "risk_present": "YES",
+        "risk_ids": [
+          "F-FAIR-EOPP"
+        ],
+        "evidence_sufficient": "YES",
+        "O": 4,
+        "S": 4,
+        "D": 8,
+        "aspect_score": 5.0397
+      },
+      "llm": null
+    },
+    "L10-02": {
+      "trustlens": {
+        "risk_present": "UNCERTAIN",
+        "risk_ids": [],
+        "evidence_sufficient": "UNCERTAIN",
+        "O": null,
+        "S": null,
+        "D": null,
+        "aspect_score": null
+      },
+      "llm": null
+    },
+    "L10-03": {
+      "trustlens": {
+        "risk_present": "YES",
+        "risk_ids": [
+          "F-FAIR-EOPP"
+        ],
+        "evidence_sufficient": "YES",
+        "O": 7,
+        "S": 7,
+        "D": 8,
+        "aspect_score": 7.3186
+      },
+      "llm": null
+    },
+    "L10-04": {
+      "trustlens": {
+        "risk_present": "NO",
+        "risk_ids": [],
+        "evidence_sufficient": "YES",
+        "O": 1,
+        "S": 1,
+        "D": 8,
+        "aspect_score": 2.0
+      },
+      "llm": null
+    },
+    "L10-05": {
+      "trustlens": {
+        "risk_present": "UNCERTAIN",
+        "risk_ids": [],
+        "evidence_sufficient": "NO",
+        "O": null,
+        "S": null,
+        "D": null,
+        "aspect_score": null
+      },
+      "llm": null
+    },
+    "L10-06": {
+      "trustlens": {
+        "risk_present": "NO",
+        "risk_ids": [],
+        "evidence_sufficient": "YES",
+        "O": 1,
+        "S": 1,
+        "D": 8,
+        "aspect_score": 2.0
+      },
+      "llm": null
+    },
+    "L10-07": {
+      "trustlens": {
+        "risk_present": "NO",
+        "risk_ids": [],
+        "evidence_sufficient": "YES",
+        "O": 8,
+        "S": 8,
+        "D": 8,
+        "aspect_score": 8.0
+      },
+      "llm": null
+    },
+    "L10-08": {
+      "trustlens": {
+        "risk_present": "YES",
+        "risk_ids": [
+          "I-INT-BYTES-DIVERGE"
+        ],
+        "evidence_sufficient": "UNCERTAIN",
+        "O": 7,
+        "S": 7,
+        "D": 8,
+        "aspect_score": 7.3186
+      },
+      "llm": null
+    },
+    "L10-09": {
+      "trustlens": {
+        "risk_present": "UNCERTAIN",
+        "risk_ids": [],
+        "evidence_sufficient": "UNCERTAIN",
+        "O": 7,
+        "S": 7,
+        "D": 8,
+        "aspect_score": 7.3186
+      },
+      "llm": null
+    },
+    "L10-10": {
+      "trustlens": {
+        "risk_present": "NO",
+        "risk_ids": [],
+        "evidence_sufficient": "YES",
+        "O": 6,
+        "S": 6,
+        "D": 6,
+        "aspect_score": 6.0
+      },
+      "llm": null
+    },
+    "L10-11": {
+      "trustlens": {
+        "risk_present": "YES",
+        "risk_ids": [
+          "E-DOC-CONTRADICTION"
+        ],
+        "evidence_sufficient": "YES",
+        "O": 6,
+        "S": 6,
+        "D": 6,
+        "aspect_score": 6.0
+      },
+      "llm": null
+    },
+    "L10-12": {
+      "trustlens": {
+        "risk_present": "NO",
+        "risk_ids": [],
+        "evidence_sufficient": "YES",
+        "O": 6,
+        "S": 6,
+        "D": 6,
+        "aspect_score": 6.0
+      },
+      "llm": null
+    }
+  },
+  "analyzed_at": "2026-10-02T23:29:58.208751+00:00"
+}

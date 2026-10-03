@@ -36,6 +36,7 @@ legitimately confirmed one.
 
 from __future__ import annotations
 
+import dataclasses
 import datetime as dt
 import uuid
 
@@ -46,21 +47,53 @@ from app.core.config import get_settings
 from app.db.repositories.dataset_content import DatasetContentRepository
 from app.db.repositories.evaluation_draft import EvaluationDraftRepository
 from app.db.repositories.model import ModelRepository
-from app.inference.model_inspection import ModelInspectionError, ModelLabelSnapshot, inspect_model_config
+from app.inference.model_inspection import (
+    MULTI_LABEL,
+    ModelInspectionError,
+    ModelLabelSnapshot,
+    inspect_model_config,
+)
 from app.schemas.evaluation_draft import DimensionConfigUpdate, DimensionValidationRead, EvaluationDraftRead
 from app.datasets.user_dataset import UserDatasetError
 from app.services.draft_validation import (
     _observed_target_values,
     validate_fairness_config,
     validate_robustness_config,
+    validate_safety_config,
 )
 from app.storage.evidence_store import get_dataset_content_store
 
 _DEFAULT_MIN_GROUP_N = 30
-_DIMENSIONS = {"FAIRNESS", "ROBUSTNESS"}
+_DIMENSIONS = {"FAIRNESS", "ROBUSTNESS", "SAFETY"}
 # Once a draft reaches either of these, it is an immutable audit record
 # (Task 4.4) — no further dimension mutation or confirmation is allowed.
 _IMMUTABLE_DRAFT_STATUSES = {"consumed", "stale"}
+
+
+def _multilabel_view(
+    snapshot: ModelLabelSnapshot, target_index: int | None
+) -> tuple[list[str], ModelLabelSnapshot]:
+    """Return (errors, snapshot that label_mapping is validated against).
+
+    Multi-label model + target k -> the derived binary {0: not <k>, 1: <k>}.
+    """
+    if snapshot.problem_type == MULTI_LABEL:
+        if target_index is None:
+            return [
+                "MULTILABEL_TARGET_REQUIRED: model has independent sigmoid outputs "
+                f"{snapshot.id2label}; set multilabel_target_index to the output that "
+                "is the positive class (argmax decoding would be wrong)"
+            ], snapshot
+        if target_index not in snapshot.id2label:
+            return [f"multilabel_target_index={target_index} is not a model output"], snapshot
+        name = snapshot.id2label[target_index]
+        return [], dataclasses.replace(snapshot, num_labels=2, id2label={0: f"not {name}", 1: name})
+    if target_index is not None:
+        return [
+            "multilabel_target_index is only valid for multi_label_classification models "
+            f"(problem_type={snapshot.problem_type!r})"
+        ], snapshot
+    return [], snapshot
 
 
 class EvaluationDraftService:
@@ -106,7 +139,11 @@ class EvaluationDraftService:
                 f"could not inspect model config for {model.hf_repo_id}: {exc}",
                 details={"model_id": draft.model_id, "code": exc.code},
             ) from exc
-        label_snapshot = {"num_labels": snapshot.num_labels, "id2label": snapshot.id2label}
+        label_snapshot = {
+            "num_labels": snapshot.num_labels,
+            "id2label": snapshot.id2label,
+            "problem_type": snapshot.problem_type,
+        }
         self._drafts.set_model_snapshot(
             draft.id,
             resolved_model_sha=snapshot.resolved_sha,
@@ -146,7 +183,28 @@ class EvaluationDraftService:
             num_labels=draft.model_label_snapshot["num_labels"],
             id2label={int(k): v for k, v in draft.model_label_snapshot["id2label"].items()},
             resolved_sha=draft.resolved_model_sha,
+            problem_type=draft.model_label_snapshot.get("problem_type"),
         )
+        compat_errors, snapshot = _multilabel_view(snapshot, update.multilabel_target_index)
+        if compat_errors:
+            # Compatibility gate: never fall through to an argmax decode of a
+            # multi-label head (the original toxic-bert failure).
+            self._drafts.upsert_dimension(
+                draft.id,
+                dimension,
+                dataset_content_id=update.dataset_content_id,
+                text_column=update.text_column,
+                target_column=update.target_column,
+                sensitive_column=update.sensitive_column,
+                label_mapping=update.label_mapping,
+                min_group_n=update.min_group_n,
+                positive_label_index=update.positive_label_index,
+                severe_column=update.severe_column if dimension == "SAFETY" else None,
+                multilabel_target_index=update.multilabel_target_index,
+                validated_at=None,
+                confirmed_at=None,
+            )
+            return DimensionValidationRead(ok=False, errors=compat_errors)
 
         effective_min_group_n = update.min_group_n if update.min_group_n is not None else _DEFAULT_MIN_GROUP_N
 
@@ -168,6 +226,24 @@ class EvaluationDraftService:
                 errors=result.errors,
                 group_preview=result.group_preview,
                 groups_remaining=result.groups_remaining,
+            )
+        elif dimension == "SAFETY":
+            if not update.severe_column:
+                raise ValidationAppError("Safety requires severe_column")
+            result = validate_safety_config(
+                dataset_bytes=data,
+                text_column=update.text_column,
+                target_column=update.target_column,
+                severe_column=update.severe_column,
+                label_mapping=update.label_mapping,
+                model_label_snapshot=snapshot,
+                positive_label_index=update.positive_label_index,
+            )
+            read = DimensionValidationRead(
+                ok=result.ok,
+                errors=result.errors,
+                n_label_compatible=result.n_label_compatible,
+                n_excluded=result.n_excluded,
             )
         else:  # ROBUSTNESS
             result = validate_robustness_config(
@@ -194,6 +270,8 @@ class EvaluationDraftService:
             label_mapping=update.label_mapping,
             min_group_n=effective_min_group_n,
             positive_label_index=update.positive_label_index,
+            severe_column=update.severe_column if dimension == "SAFETY" else None,
+            multilabel_target_index=update.multilabel_target_index,
             validated_at=dt.datetime.now(dt.UTC) if result.ok else None,
             confirmed_at=None,  # editing always clears prior confirmation for THIS dimension only
         )
@@ -256,5 +334,6 @@ class EvaluationDraftService:
             status=draft.status,
             fairness_confirmed=bool(by_dim.get("FAIRNESS") and by_dim["FAIRNESS"].confirmed_at),
             robustness_confirmed=bool(by_dim.get("ROBUSTNESS") and by_dim["ROBUSTNESS"].confirmed_at),
+            safety_confirmed=bool(by_dim.get("SAFETY") and by_dim["SAFETY"].confirmed_at),
             model_label_snapshot=draft.model_label_snapshot,
         )

@@ -1,0 +1,56 @@
+{
+  "written_at": "at data preparation, before training (L4.1 confirmatory setup)",
+  "preregistration": "docs/superpowers/plans/2026-10-03-round3-L4.1-confirmatory-prereg.md",
+  "rule": "v6-eod-fairness-risk-2026 / tl-fairness-binary-v1.2 (F-FAIR-EOPP), unchanged",
+  "data_seed": 20261003,
+  "models": {
+    "clean_control": {
+      "injected_defects": [],
+      "flip_rate": 0.0,
+      "role": "clean control (same slice and hyperparameters, no flip)"
+    },
+    "reference_toxicbert_2label": {
+      "injected_defects": [],
+      "role": "external control (existing weights, unchanged)"
+    },
+    "fairness_r020": {
+      "injected_defects": [
+        "FAIRNESS"
+      ],
+      "flip_rate": 0.2,
+      "mechanism": "identity-conditioned label flip 0->1 (train slice)"
+    },
+    "fairness_r040": {
+      "injected_defects": [
+        "FAIRNESS"
+      ],
+      "flip_rate": 0.4,
+      "mechanism": "identity-conditioned label flip 0->1 (train slice)"
+    },
+    "fairness_r070": {
+      "injected_defects": [
+        "FAIRNESS"
+      ],
+      "flip_rate": 0.7,
+      "mechanism": "identity-conditioned label flip 0->1 (train slice)"
+    },
+    "fairness_r100": {
+      "injected_defects": [
+        "FAIRNESS"
+      ],
+      "flip_rate": 1.0,
+      "mechanism": "identity-conditioned label flip 0->1 (train slice)"
+    }
+  },
+  "controls": [
+    "clean_control",
+    "reference_toxicbert_2label"
+  ],
+  "detection_rule": "FAIRNESS flagged in a run iff risks_triggered non-empty or aspect_scoring in {risk_detected, scored_risk} (compare_ground_truth.evidence_flag_one); flagged for a model iff flagged in a majority of its runs",
+  "hypotheses": {
+    "H1": "No clean control is flagged (FAIRNESS control flag rate = 0)",
+    "H2": "Flip models at rates >= 0.4 are flagged (FAIRNESS evidence-level recall)",
+    "H3": "EOD increases with flip rate (Spearman rho over rates 0, 0.2, 0.4, 0.7, 1.0)",
+    "H4": "Gate behaviour: INSUFFICIENT_EVIDENCE / mapping_blocked count per model, reported as-is"
+  }
+}

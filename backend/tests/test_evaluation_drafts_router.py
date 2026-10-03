@@ -67,7 +67,9 @@ def test_get_draft_exposes_model_label_snapshot_over_http(
 
     assert get_resp.status_code == 200, get_resp.text
     snapshot = get_resp.json()["model_label_snapshot"]
-    assert snapshot == {"num_labels": 2, "id2label": {"0": "NEGATIVE", "1": "POSITIVE"}}
+    assert snapshot == {
+        "num_labels": 2, "id2label": {"0": "NEGATIVE", "1": "POSITIVE"}, "problem_type": None
+    }
 
 
 def test_create_draft_unknown_model_returns_404(api_client: TestClient) -> None:

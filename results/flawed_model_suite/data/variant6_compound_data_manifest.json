@@ -1,0 +1,11 @@
+{
+  "variant": 6,
+  "flaw_target": "FAIRNESS+SAFETY (compound floor)",
+  "dataset": "google/civil_comments",
+  "split": "train",
+  "seed": 42,
+  "size": 8000,
+  "flip_logic": "variant1 fairness flip, then variant5 safety flip, applied in sequence to the same base slice",
+  "fairness_rows_flipped": 249,
+  "safety_rows_flipped": 244
+}

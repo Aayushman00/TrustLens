@@ -39,6 +39,22 @@ LEGACY_AUTONOMOUS_DISCLAIMER = (
     "were not human-reviewed. They are proposed, not ground truth, and are "
     "not an LLM assessment."
 )
+LLM_AUTONOMOUS_DISCLAIMER = (
+    "LLM-assisted O/S/D: FAIRNESS/ROBUSTNESS come from the heuristic mapping; "
+    "INTEGRITY/EXPLAINABILITY/SAFETY were proposed by an LLM (provider and model "
+    "recorded per aspect) or by the heuristic when every LLM provider failed. "
+    "Not human-reviewed, not ground truth."
+)
+LLM_REVIEWED_DISCLAIMER = (
+    "Finalized O/S/D were human-reviewed (accept/edit of LLM-assisted "
+    "suggestions). LLM-proposed values are not ground truth."
+)
+SCORE_NOTE_LLM = (
+    "Original FRIES computed from finalized O/S/D — not FRIES2. O/S/D on this "
+    "path are LLM-assisted proposals (heuristic for FAIRNESS/ROBUSTNESS), not ground truth."
+)
+LLM_ENGINE = "llm_v1"
+
 # Historical name: default (deterministic) autonomous wording.
 AUTONOMOUS_DISCLAIMER = DETERMINISTIC_ABSTAIN_DISCLAIMER
 
@@ -117,6 +133,8 @@ def disclaimer_for(
     if evaluation_mode == EvaluationMode.AI_AUTONOMOUS:
         if deterministic:
             return DETERMINISTIC_ABSTAIN_DISCLAIMER
+        if assessment_engine == LLM_ENGINE:
+            return LLM_AUTONOMOUS_DISCLAIMER
         return LEGACY_AUTONOMOUS_DISCLAIMER
     if human_reviewed:
         if deterministic:
@@ -129,6 +147,8 @@ def disclaimer_for(
             if scoring_withheld is False:
                 return ASSISTED_REVIEWED_SCORED_DISCLAIMER
             return ASSISTED_REVIEWED_DISCLAIMER
+        if assessment_engine == LLM_ENGINE:
+            return LLM_REVIEWED_DISCLAIMER
         return ASSISTED_REVIEWED_LEGACY_DISCLAIMER
     return ASSISTED_AWAITING_DISCLAIMER
 
@@ -143,6 +163,8 @@ def score_note_for(
         if scoring_withheld is False:
             return SCORE_NOTE_DETERMINISTIC_SCORED
         return SCORE_NOTE_DETERMINISTIC
+    if assessment_engine == LLM_ENGINE:
+        return SCORE_NOTE_LLM
     return SCORE_NOTE_LEGACY
 
 
@@ -162,6 +184,11 @@ def osd_provenance_bullet(
         return (
             "O/S/D were not generated (deterministic abstention; no validated "
             "mapping). Not an LLM assessment."
+        )
+    if assessment_engine == LLM_ENGINE:
+        return (
+            "O/S/D are LLM-assisted proposals for INTEGRITY/EXPLAINABILITY/SAFETY "
+            "(heuristic for FAIRNESS/ROBUSTNESS) — not ground truth."
         )
     return (
         "O/S/D are legacy heuristic proposals — not ground truth and not an "

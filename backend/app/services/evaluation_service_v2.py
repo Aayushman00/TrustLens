@@ -55,12 +55,13 @@ from app.db.repositories.evaluation import EvaluationRepository
 from app.db.repositories.evaluation_draft import EvaluationDraftRepository
 from app.db.repositories.evaluation_event import EVENT_EVALUATION_CREATED, EvaluationEventRepository
 from app.db.repositories.model import ModelRepository
-from app.inference.model_inspection import ModelInspectionError, inspect_model_config
+from app.inference.model_inspection import MULTI_LABEL, ModelInspectionError, inspect_model_config
 from app.schemas.evaluation_contract_v2 import (
     EvaluationContractV2,
     FairnessContractV2,
     ModelLabelSnapshot,
     RobustnessContractV2,
+    SafetyContractV2,
 )
 from app.schemas.internal import EvaluateModelPayload
 from app.scoring.methodology_version import CURRENT_METHODOLOGY_VERSION
@@ -110,7 +111,7 @@ class EvaluationServiceV2:
         touched_dimensions = [dim for dim in draft.dimensions if dim.dataset_content_id is not None]
         if not touched_dimensions:
             raise ConflictError(
-                "At least one dimension (Fairness or Robustness) must be configured before submitting",
+                "At least one dimension (Fairness, Robustness or Safety) must be configured before submitting",
                 details={"draft_id": str(draft_id)},
             )
 
@@ -143,8 +144,20 @@ class EvaluationServiceV2:
                 },
             )
 
+        if current_snapshot.problem_type == MULTI_LABEL:
+            # Drafts frozen before problem_type was recorded skipped the
+            # draft-time gate; never let them argmax-decode a multi-label head.
+            untargeted = [d.dimension for d in touched_dimensions if d.multilabel_target_index is None]
+            if untargeted:
+                raise ConflictError(
+                    "MULTILABEL_TARGET_REQUIRED: model is multi-label; reconfigure "
+                    f"{untargeted} with multilabel_target_index before submitting",
+                    details={"draft_id": str(draft_id), "dimensions": untargeted},
+                )
+
         fairness_contract: FairnessContractV2 | None = None
         robustness_contract: RobustnessContractV2 | None = None
+        safety_contract: SafetyContractV2 | None = None
         for dim in touched_dimensions:
             if dim.confirmed_at is None:
                 raise ConflictError(
@@ -166,6 +179,7 @@ class EvaluationServiceV2:
                     positive_label_index=(
                         dim.positive_label_index if dim.positive_label_index is not None else 1
                     ),
+                    multilabel_target_index=dim.multilabel_target_index,
                 )
             elif dim.dimension == "ROBUSTNESS":
                 robustness_contract = RobustnessContractV2(
@@ -173,6 +187,19 @@ class EvaluationServiceV2:
                     text_column=dim.text_column,
                     target_column=dim.target_column,
                     label_mapping=label_mapping,
+                    multilabel_target_index=dim.multilabel_target_index,
+                )
+            elif dim.dimension == "SAFETY":
+                safety_contract = SafetyContractV2(
+                    dataset_content_id=dim.dataset_content_id,
+                    text_column=dim.text_column,
+                    target_column=dim.target_column,
+                    severe_column=dim.severe_column,
+                    label_mapping=label_mapping,
+                    positive_label_index=(
+                        dim.positive_label_index if dim.positive_label_index is not None else 1
+                    ),
+                    multilabel_target_index=dim.multilabel_target_index,
                 )
 
         contract = EvaluationContractV2(
@@ -180,10 +207,13 @@ class EvaluationServiceV2:
             model_revision=model.revision,
             resolved_model_sha=current_snapshot.resolved_sha,
             model_label_snapshot=ModelLabelSnapshot(
-                num_labels=current_snapshot.num_labels, id2label=current_snapshot.id2label
+                num_labels=current_snapshot.num_labels,
+                id2label=current_snapshot.id2label,
+                problem_type=current_snapshot.problem_type,
             ),
             fairness=fairness_contract,
             robustness=robustness_contract,
+            safety=safety_contract,
         )
 
         probe_config = {
@@ -222,6 +252,7 @@ class EvaluationServiceV2:
             payload,
             evaluation_id=row.id,
             event_type=EVENT_EVALUATION_CREATED,
+            commit_fn=self._session.commit,
             enqueue_fn=enqueue_evaluate_model,
             on_enqueued=lambda task_id: logger.info(
                 "evaluation_created_v2 evaluation_id=%s model_ref=%s enqueue_task_id=%s",

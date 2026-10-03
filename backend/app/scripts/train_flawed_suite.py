@@ -12,7 +12,11 @@ weights verbatim (see plan doc); this script only trains variants 1/2/3/5/6.
 Usage (from backend/)::
 
     python -m app.scripts.train_flawed_suite --variant 1
-    python -m app.scripts.train_flawed_suite --all
+    python -m app.scripts.train_flawed_suite --all --seed 42 --out <new models dir>
+
+L4.1 confirmatory fairness models (data from prepare_flawed_suite_data --fairness-confirm)::
+
+    python -m app.scripts.train_flawed_suite --fairness-confirm ../results/fairness_confirm_20261003 --seed 20261003
 """
 
 from __future__ import annotations
@@ -23,14 +27,10 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-import numpy as np
-import torch
-from datasets import Dataset
-from transformers import (
-    AutoModelForSequenceClassification,
-    AutoTokenizer,
-    Trainer,
-    TrainingArguments,
+from app.scripts.prepare_flawed_suite_data import (
+    CONFIRM_FLIP_RATES,
+    confirm_model_name,
+    validate_out_dir,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -115,10 +115,32 @@ def _load_jsonl(path: Path) -> list[dict]:
     return rows
 
 
-def train_variant(spec: VariantSpec, *, seed: int = 42) -> None:
-    print(f"=== Training {spec.name} (base={BASE_CHECKPOINT}) ===")
-    rows = _load_jsonl(DATA_DIR / spec.train_file)
-    data_manifest = json.loads((DATA_DIR / spec.data_manifest_file).read_text(encoding="utf-8"))
+def confirm_specs() -> list[VariantSpec]:
+    """L4.1 confirmatory models: clean control + nested fairness flips, primary hyperparameters."""
+    names = ["clean_control"] + [confirm_model_name(r) for r in CONFIRM_FLIP_RATES]
+    return [VariantSpec(n, n, f"{n}_train.jsonl", f"{n}_data_manifest.json", 3, 2e-5, 16, 0.01) for n in names]
+
+
+def train_variant(
+    spec: VariantSpec, *, seed: int = 42, data_dir: Path = DATA_DIR, models_dir: Path = MODELS_DIR
+) -> None:
+    out_dir = models_dir / spec.name
+    if (out_dir / "model.safetensors").exists():
+        raise FileExistsError(f"{out_dir} already holds weights; refusing to overwrite")
+
+    import numpy as np
+    import torch
+    from datasets import Dataset
+    from transformers import (
+        AutoModelForSequenceClassification,
+        AutoTokenizer,
+        Trainer,
+        TrainingArguments,
+    )
+
+    print(f"=== Training {spec.name} (base={BASE_CHECKPOINT}, seed={seed}) ===")
+    rows = _load_jsonl(data_dir / spec.train_file)
+    data_manifest = json.loads((data_dir / spec.data_manifest_file).read_text(encoding="utf-8"))
 
     torch.manual_seed(seed)
     np.random.seed(seed)
@@ -138,7 +160,6 @@ def train_variant(spec: VariantSpec, *, seed: int = 42) -> None:
     ds = ds.rename_column("label", "labels")
     ds.set_format(type="torch", columns=["input_ids", "attention_mask", "labels"])
 
-    out_dir = MODELS_DIR / spec.name
     out_dir.mkdir(parents=True, exist_ok=True)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -187,18 +208,31 @@ def train_variant(spec: VariantSpec, *, seed: int = 42) -> None:
     print(f"  done in {elapsed:.1f}s, final_train_loss={train_result.training_loss:.4f} -> {out_dir}")
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--variant", type=int, choices=sorted(VARIANTS), help="single variant number to train")
     parser.add_argument("--all", action="store_true", help="train all variants sequentially")
-    args = parser.parse_args()
+    parser.add_argument("--seed", type=int, help="training seed (required with --fairness-confirm; default 42)")
+    parser.add_argument("--out", type=Path, help="models directory for --variant/--all (default: suite models)")
+    parser.add_argument("--fairness-confirm", type=Path, metavar="ROOT",
+                        help="train the L4.1 confirmatory models from ROOT/data into ROOT/models")
+    args = parser.parse_args(argv)
+
+    if args.fairness_confirm is not None:
+        if args.seed is None:
+            parser.error("--fairness-confirm needs an explicit --seed")
+        root = args.fairness_confirm.resolve()
+        validate_out_dir(root / "models")
+        for spec in confirm_specs():
+            train_variant(spec, seed=args.seed, data_dir=root / "data", models_dir=root / "models")
+        return
 
     if not args.all and args.variant is None:
-        parser.error("pass --variant N or --all")
+        parser.error("pass --variant N, --all or --fairness-confirm ROOT")
 
     targets = list(VARIANTS.keys()) if args.all else [args.variant]
     for n in targets:
-        train_variant(VARIANTS[n])
+        train_variant(VARIANTS[n], seed=42 if args.seed is None else args.seed, models_dir=args.out or MODELS_DIR)
 
 
 if __name__ == "__main__":

@@ -37,6 +37,10 @@ class DimensionConfigUpdate(BaseModel):
     # fairness_metrics functions must never silently assume index 1 is
     # positive regardless of what the user actually mapped.
     positive_label_index: int = 1
+    # SAFETY-only: 0/1 column marking severe-harm rows.
+    severe_column: str | None = None
+    # Required for multi-label models (MULTILABEL_TARGET_REQUIRED), rejected otherwise.
+    multilabel_target_index: int | None = None
 
 
 class DimensionValidationRead(BaseModel):
@@ -54,6 +58,7 @@ class EvaluationDraftRead(BaseModel):
     status: Literal["incomplete", "validated", "consumed", "stale"]
     fairness_confirmed: bool
     robustness_confirmed: bool
+    safety_confirmed: bool = False
     # The frozen model config snapshot (Task 2.4's "fetch once, share across
     # both dimensions" rule) — {"num_labels": int, "id2label": {str: str}}.
     # None until the first GET/PUT on this draft triggers _ensure_model_snapshot.

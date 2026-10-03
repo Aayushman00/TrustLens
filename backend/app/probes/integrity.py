@@ -1,7 +1,11 @@
-"""Integrity probe — Hub identity, provenance, and disclosure (tl-integrity-v1.0).
+"""Integrity probe — Hub identity, provenance, and disclosure (tl-integrity-v1.2).
 
-Metadata-only: never downloads model weights. Emits Layer A evidence with named
-Integrity risks — does **not** write final FRIES or O/S/D.
+Metadata checks plus sha256 verification of the model artifact set: for Hub
+models every weight file (single or sharded) against the Hub's LFS hashes, for
+local folders the weights + loader files against an authoritative manifest
+when one exists (integrity_artifact.py; docs/adr/0013-artifact-set-integrity.md
+supersedes ADR 0012's "never reads weight bytes" for this check). Emits Layer A
+evidence with named Integrity risks — does **not** write final FRIES or O/S/D.
 """
 
 from __future__ import annotations
@@ -10,11 +14,21 @@ import json
 from typing import Any
 
 from app.adapters.hf_hub import HfHubModelAdapter
-from app.db.enums import FriesDimension, ProbeEvaluationStatus
+from app.db.enums import FriesDimension
 from app.probes.base import ProbeContext, ProbeOutput
-from app.probes.integrity_eval import evaluate_integrity
-from app.probes.integrity_stats import METHODOLOGY_BASIS, METHODOLOGY_VERSION, NOTE
+from app.probes.integrity_artifact import hub_weight_hashes, local_integrity_extras, verify_local_artifacts
+from app.probes.integrity_eval import evaluate_integrity, is_local_ref
+from app.probes.integrity_stats import G_ARTIFACT_INCOMPLETE, METHODOLOGY_BASIS, METHODOLOGY_VERSION, NOTE
 from app.storage.evidence_store import EvidenceStoreError
+
+
+def _hf_token() -> str | None:
+    try:
+        from app.core.config import get_settings
+
+        return get_settings().hf_token
+    except Exception:  # noqa: BLE001 — public repos need no token
+        return None
 
 
 class IntegrityProbe:
@@ -32,8 +46,8 @@ class IntegrityProbe:
         live_files_error: str | None = None
         imported_files = (ctx.model_metadata or {}).get("files")
         if isinstance(imported_files, list) and imported_files:
-            # Metadata-only re-check (ADR 0012: never downloads weight bytes) —
-            # re-resolves the Hub file *listing* at the same pinned revision to
+            # Listing re-check (metadata only; weight bytes are verified separately
+            # below) — re-resolves the Hub file *listing* at the same pinned revision to
             # detect post-import drift/tampering in the listing itself. Never
             # allowed to fail the whole probe: any error degrades to
             # "not_performed" in evaluate_integrity, same as an unsupplied hash.
@@ -41,6 +55,31 @@ class IntegrityProbe:
                 live_files = HfHubModelAdapter().list_current_files(ctx.model_ref, ctx.model_revision)
             except Exception as exc:  # noqa: BLE001 — degrade, never fail the probe
                 live_files_error = str(exc)
+
+        artifact_verification: dict[str, Any] = {"performed": False}
+        supplied = integrity_extra.get("trusted_reference") or integrity_extra.get("local_artifact_hash")
+        if not supplied:
+            # Hub model: verify every cached weight file (single or sharded)
+            # against the Hub's LFS sha256 at the pinned revision. Local folder:
+            # hash the artifact set the loader reads and compare it with an
+            # authoritative manifest when one exists. Any failure degrades to
+            # not_performed (INSUFFICIENT), never a pass.
+            try:
+                if is_local_ref(ctx.model_ref):
+                    operator_manifest = integrity_extra.get("artifact_manifest")
+                    artifact_verification = verify_local_artifacts(
+                        ctx.model_ref,
+                        manifest=operator_manifest if isinstance(operator_manifest, dict) else None,
+                    )
+                    integrity_extra = {**integrity_extra, **local_integrity_extras(artifact_verification)}
+                else:
+                    hashes = hub_weight_hashes(ctx.model_ref, ctx.model_revision, _hf_token())
+                    artifact_verification = hashes.pop(
+                        "artifact_verification", {"performed": True, "file": hashes["file"]}
+                    )
+                    integrity_extra = {**integrity_extra, **hashes}
+            except Exception as exc:  # noqa: BLE001 — degrade, never fail the probe
+                artifact_verification = {"performed": False, "status": "UNVERIFIABLE", "error": str(exc)[:300]}
 
         result = evaluate_integrity(
             model_ref=ctx.model_ref,
@@ -50,10 +89,18 @@ class IntegrityProbe:
             live_files=live_files,
             live_files_error=live_files_error,
         )
+        if artifact_verification.get("status") == "INCOMPLETE":
+            # An expected artifact is absent: the set cannot be verified. Not a
+            # risk (no bytes were shown to differ) — an unverified gate.
+            result.reliability = {
+                "gates_passed": False,
+                "failed_gates": [*result.reliability.get("failed_gates", []), G_ARTIFACT_INCOMPLETE],
+            }
 
         metrics: dict[str, Any] = {
             "methodology_version": METHODOLOGY_VERSION,
             "methodology_basis": METHODOLOGY_BASIS,
+            "artifact_verification": artifact_verification,
             "checks": result.checks,
             "identity": result.identity,
             "disclosure": result.disclosure,
@@ -62,6 +109,7 @@ class IntegrityProbe:
             "aspect_scoring": result.aspect_scoring,
             "scored_risk_id": result.scored_risk_id,
             "risks_triggered": result.risks_triggered,
+            "disclosure_gaps": result.disclosure_gaps,
             "reliability": result.reliability,
             "uncertainty": result.uncertainty,
             "limitations": result.limitations,
@@ -88,6 +136,7 @@ class IntegrityProbe:
             "aspect_scoring": result.aspect_scoring,
             "scored_risk_id": result.scored_risk_id,
             "risks_triggered": result.risks_triggered,
+            "disclosure_gaps": result.disclosure_gaps,
             "checks": result.checks,
             "identity": result.identity,
             "disclosure": result.disclosure,
@@ -97,6 +146,7 @@ class IntegrityProbe:
             "uncertainty": result.uncertainty,
             "limitations": result.limitations,
             "flags": result.flags,
+            "artifact_verification": artifact_verification,
             "proposed_mapping": False,
             "osd_proposals": [],
             "note": NOTE,

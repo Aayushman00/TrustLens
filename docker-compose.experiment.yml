@@ -1,0 +1,14 @@
+# Final-experiment LLM freeze (2026-10-02): only Groq is reachable, so every
+# llm_v1 judgment comes from one provider/model (openai/gpt-oss-120b,
+# temperature 0.2 — app/osd/llm_client.py). A Groq failure falls back to the
+# heuristic and is recorded as heuristic_fallback, never another provider.
+#   docker compose -f docker-compose.yml -f docker-compose.override.yml -f docker-compose.experiment.yml up -d api worker
+services:
+  worker:
+    environment:
+      GEMINI_API_KEY: ""
+      NVIDIA_API_KEY: ""
+  api:
+    environment:
+      GEMINI_API_KEY: ""
+      NVIDIA_API_KEY: ""

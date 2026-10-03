@@ -227,7 +227,9 @@ def test_get_draft_populates_model_label_snapshot_before_any_dimension_update(
     draft = draft_service.create(seeded_model.id)
     with patch("app.services.evaluation_draft_service.inspect_model_config", return_value=FAKE_SNAPSHOT):
         read = draft_service.get(draft.id)
-    assert read.model_label_snapshot == {"num_labels": 2, "id2label": {0: "NEGATIVE", 1: "POSITIVE"}}
+    assert read.model_label_snapshot == {
+        "num_labels": 2, "id2label": {0: "NEGATIVE", 1: "POSITIVE"}, "problem_type": None
+    }
 
 
 def test_get_draft_exposes_three_labels_for_a_3class_model(draft_service, seeded_model):

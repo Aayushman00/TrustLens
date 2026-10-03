@@ -79,6 +79,12 @@ class _FailStuckRunningTask(Task):
     base=_FailStuckRunningTask,
     autoretry_for=(ConnectionError, TimeoutError),
     retry_backoff=True,
+    # Only pre-start errors reach this retry: the pipeline re-raises a
+    # post-start ConnectionError/TimeoutError as PipelineInterruptedError,
+    # because a retry would skip a no-longer-PENDING row and report success.
+    # No jitter: a not-yet-visible evaluation row (EvaluationNotVisibleError)
+    # gets a guaranteed 1 + 2 + 4 s window instead of a random one.
+    retry_jitter=False,
     max_retries=3,
 )
 def evaluate_model(self, **kwargs: object) -> dict[str, str]:

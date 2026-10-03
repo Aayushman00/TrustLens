@@ -10,13 +10,21 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
 _engine: Engine | None = None
+_engine_url_raw: str | None = None
 _SessionLocal: sessionmaker[Session] | None = None
 
 
 def get_engine(database_url: str) -> Engine:
     """Return a process-wide sync engine."""
-    global _engine, _SessionLocal
-    if _engine is None or str(_engine.url) != database_url:
+    global _engine, _SessionLocal, _engine_url_raw
+    # render_as_string(hide_password=False): str(url) masks the password, so
+    # comparing it to the raw URL rebuilt the engine (leaking its whole
+    # connection pool) on every call until Postgres ran out of connections.
+    # Compare the raw string we were built from: render_as_string() does not
+    # round-trip passwords with URL escapes (p%2Bs -> p+s).
+    if _engine is None or _engine_url_raw != database_url:
+        if _engine is not None:
+            _engine.dispose()
         _engine = create_engine(
             database_url,
             pool_pre_ping=True,
@@ -29,6 +37,7 @@ def get_engine(database_url: str) -> Engine:
             autocommit=False,
             expire_on_commit=False,
         )
+        _engine_url_raw = database_url
     return _engine
 
 
@@ -75,8 +84,9 @@ def check_postgres(database_url: str | None) -> str:
 
 def reset_engine() -> None:
     """Dispose cached engine (tests)."""
-    global _engine, _SessionLocal
+    global _engine, _SessionLocal, _engine_url_raw
     if _engine is not None:
         _engine.dispose()
     _engine = None
     _SessionLocal = None
+    _engine_url_raw = None

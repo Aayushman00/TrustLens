@@ -1,0 +1,9 @@
+{
+  "flaw_target": "FAIRNESS",
+  "seed": 43,
+  "size": 8000,
+  "flip_rate": 0.6,
+  "rows_flipped": 376,
+  "base_slice": "clean_train.jsonl",
+  "nested": true
+}

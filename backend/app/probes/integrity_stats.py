@@ -1,8 +1,11 @@
-"""Integrity probe constants (tl-integrity-v1.0)."""
+"""Integrity probe constants (tl-integrity-v1.2)."""
 
 from __future__ import annotations
 
-METHODOLOGY_VERSION = "tl-integrity-v1.0"
+# v1.2 (round 3, L7): the hash identity covers the whole artifact set (single or
+# sharded weights + loader files) against an authoritative manifest; statuses
+# VERIFIED / MISMATCH / INCOMPLETE / UNPINNED / UNSUPPORTED in artifact_verification.
+METHODOLOGY_VERSION = "tl-integrity-v1.2"
 METHODOLOGY_BASIS = "TRUSTLENS_FIVE_PROBE_METHODOLOGY_AUDIT.md"
 
 RISK_REV_UNPINNED = "I-INT-REV-UNPINNED"
@@ -16,6 +19,7 @@ G_IDENTITY_EMPTY = "G-INT-IDENTITY-EMPTY"
 G_HASH_REF_MISSING = "G-INT-HASH-REF-MISSING"
 G_HASH_LOCAL_MISSING = "G-INT-HASH-LOCAL-MISSING"
 G_LISTING_UNVERIFIED = "G-INT-LISTING-UNVERIFIED"
+G_ARTIFACT_INCOMPLETE = "G-INT-ARTIFACT-INCOMPLETE"
 
 CLAIM_LISTING_DRIFT = (
     "The Hub file listing at this revision differs from the listing recorded "
@@ -46,6 +50,20 @@ CLAIM_HASH_UNVERIFIED = (
 NOTE = "Layer A evidence only — Integrity risks do not assign O/S/D"
 
 LIMITATIONS: tuple[str, ...] = (
+    "I-INT-REV-UNPINNED, I-INT-MANIFEST-MISSING and I-INT-LICENSE-UNDISCLOSED are "
+    "missing identity/disclosure evidence, recorded under disclosure_gaps "
+    "(aspect_scoring=disclosure_gap); only byte divergence and listing drift are "
+    "risks_triggered.",
+    "A local folder's self-computed artifact hashes record which bytes were "
+    "evaluated; they are verified only against an authoritative manifest "
+    "(operator-supplied, artifact_manifest.json, or train_manifest.json's weight hash). "
+    "A manifest stored in the same folder detects accidental or partial change, "
+    "not an attacker who can rewrite the folder.",
+    "Artifact integrity shows the evaluated bytes match the attested bytes; it "
+    "does not show the absence of backdoors, malicious training, data poisoning "
+    "or behavioural manipulation baked into those bytes.",
+    "A missing artifact (INCOMPLETE) or a missing manifest (UNPINNED) is "
+    "unverified evidence, not an integrity risk.",
     "Integrity risks measure disclosure and identity recording, not tampering or "
     "legal compliance.",
     "Named Integrity risks are not additive FRIES occurrences and must not be "

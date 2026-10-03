@@ -1,0 +1,67 @@
+{
+  "schema": "l10-evidence-packet-v1",
+  "packet_id": "L10-08",
+  "dimension": "INTEGRITY",
+  "task": "Binary text classifier: labels English comments toxic (1) or not toxic (0).",
+  "evidence": {
+    "artifact_verification": {
+      "performed": true,
+      "status": "MISMATCH",
+      "format": "safetensors",
+      "sharded": false,
+      "index_file": null,
+      "files": [
+        {
+          "name": "config.json",
+          "sha256": "830e15204d18380ca9cfd0efe4938871317c879129905bd99128068a8396e7bd",
+          "expected_sha256": "830e15204d18380ca9cfd0efe4938871317c879129905bd99128068a8396e7bd",
+          "state": "match"
+        },
+        {
+          "name": "model.safetensors",
+          "sha256": "74c230bb631efc7614b74b2c0c3639c068ae43b1024471d3c67a4cc530eee609",
+          "expected_sha256": "5918a851ff77706db4d490d704ccc6a6f53fc49ad16df052e035671ba68110f9",
+          "state": "changed"
+        },
+        {
+          "name": "tokenizer.json",
+          "sha256": "754fbace50a65eb13073189fde35f561d96d630920b6a65bbf8dbadf9a4896c3",
+          "expected_sha256": "754fbace50a65eb13073189fde35f561d96d630920b6a65bbf8dbadf9a4896c3",
+          "state": "match"
+        },
+        {
+          "name": "tokenizer_config.json",
+          "sha256": "71cd48543bec670f50e0c9c3556df16b1f58ea720ead6a1b4675f08870c60b17",
+          "expected_sha256": "71cd48543bec670f50e0c9c3556df16b1f58ea720ead6a1b4675f08870c60b17",
+          "state": "match"
+        }
+      ],
+      "expected_files": [
+        "config.json",
+        "model.safetensors",
+        "tokenizer.json",
+        "tokenizer_config.json"
+      ],
+      "manifest": {
+        "source": "operator",
+        "coverage": "manifest",
+        "n_files": 4,
+        "sha256": "90bfaf62a41cb3bd4619f3f7cc4ffc4add2664a008daf6677523d8abf814ea0c"
+      },
+      "mismatches": [
+        {
+          "name": "model.safetensors",
+          "kind": "changed",
+          "expected_sha256": "5918a851ff77706db4d490d704ccc6a6f53fc49ad16df052e035671ba68110f9",
+          "observed_sha256": "74c230bb631efc7614b74b2c0c3639c068ae43b1024471d3c67a4cc530eee609"
+        }
+      ],
+      "set_sha256": "ebe92ed549aea5e065f7abf562dd7af5f1b2e9a13bab112eb0913ac4045ebc23",
+      "file": "model.safetensors"
+    },
+    "reference_manifest": "hashes recorded from a known-good copy of the same model (operator-supplied)",
+    "model_revision": "local folder (no hub revision)",
+    "card_license": "apache-2.0"
+  },
+  "redactions": []
+}

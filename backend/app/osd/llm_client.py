@@ -14,6 +14,41 @@ from pydantic import BaseModel, Field
 from app.db.enums import FriesDimension
 from app.osd.base import AgentContext
 
+# Model names per provider — recorded on every LLM-rated aspect
+# (app.osd.hybrid) so a stored O/S/D can be traced to the model that produced it.
+GEMINI_MODEL = "gemini-3.6-flash"
+GROQ_MODEL = "openai/gpt-oss-120b"
+NVIDIA_MODEL = "mistralai/mistral-large-2-instruct"
+OPENAI_COMPAT_TEMPERATURE = 0.2
+
+# Prompt v2: the v1 prompt (indented JSON, full card) reached ~7.3k tokens for
+# well-documented models, over Groq's free-tier 8k tokens/min, so those models
+# were never LLM-assessed. v2 caps the card and compacts/trims the evidence.
+# v3 (round 3 L8): each dimension's decision fields (status, risk, gaps) go on
+# an untruncated ``decision:`` line ahead of the trimmed ``details:``; in v2
+# the probes' key order put them last, so the evidence cap cut them off.
+PROMPT_VERSION = "osd-llm-v3-decision-first-2026-10-03"
+MAX_CARD_CHARS = 5000
+MAX_EVIDENCE_CHARS = 3000
+_PROMPT_DROP_KEYS = frozenset(
+    {"uncertainty", "reliability", "limitations", "note", "osd_proposals", "methodology_basis",
+     "claim_boundary", "proposed_mapping", "status_reason", "probe_status_reason"}
+)
+# Never truncated, always first: what the probe decided, before the bulk evidence.
+_DECISION_KEYS = (
+    "probe_status",
+    "aspect_scoring",
+    "scored_risk_id",
+    "risks_triggered",
+    "disclosure_gaps",
+    "coverage_ratio",
+)
+
+
+class LLMResponseTruncatedError(ValueError):
+    """The provider stopped at its output-token limit; the reply is partial."""
+
+
 _TARGET_DIMENSIONS = (
     FriesDimension.INTEGRITY,
     FriesDimension.EXPLAINABILITY,
@@ -81,7 +116,8 @@ Model card text:
 {card_text}
 ---
 
-Evidence per dimension (from automated probes already run against this model):
+Evidence per dimension (from automated probes already run against this model). \
+Each dimension's "decision:" line is complete; its "details:" may be truncated:
 {evidence_block}
 """
 
@@ -92,14 +128,31 @@ def build_prompt(ctx: AgentContext) -> str:
     Only these three dimensions' evidence is included — FAIRNESS/ROBUSTNESS
     stay on the heuristic and must never reach this prompt.
     """
+    return build_prompt_with_truncation(ctx)[0]
+
+
+def build_prompt_with_truncation(ctx: AgentContext) -> tuple[str, bool]:
+    """``build_prompt`` plus whether any card text or evidence was cut."""
+    truncated = False
     card_text = str((ctx.model_metadata or {}).get("card_text") or "").strip() or "(no model card text available)"
+    if len(card_text) > MAX_CARD_CHARS:
+        card_text = card_text[:MAX_CARD_CHARS] + f"\n[card truncated: {len(card_text) - MAX_CARD_CHARS} more characters not shown]"
+        truncated = True
     by_dimension = {snap.dimension: snap for snap in ctx.probe_results}
     evidence_lines: list[str] = []
     for dimension in _TARGET_DIMENSIONS:
         snap = by_dimension.get(dimension)
         metric_values = snap.metric_values if snap is not None else {}
-        evidence_lines.append(f"### {dimension.value}\n{json.dumps(metric_values, default=str, indent=2)}")
-    return _PROMPT_TEMPLATE.format(card_text=card_text, evidence_block="\n\n".join(evidence_lines))
+        decision = {k: metric_values[k] for k in _DECISION_KEYS if k in metric_values}
+        details = {k: v for k, v in metric_values.items() if k not in _PROMPT_DROP_KEYS and k not in decision}
+        text = json.dumps(details, default=str, separators=(",", ":"))
+        if len(text) > MAX_EVIDENCE_CHARS:
+            text = text[:MAX_EVIDENCE_CHARS] + f"...[evidence truncated: {len(text) - MAX_EVIDENCE_CHARS} more characters]"
+            truncated = True
+        decision_text = json.dumps(decision, default=str, separators=(",", ":"))
+        evidence_lines.append(f"### {dimension.value}\ndecision: {decision_text}\ndetails: {text}")
+    prompt = _PROMPT_TEMPLATE.format(card_text=card_text, evidence_block="\n\n".join(evidence_lines))
+    return prompt, truncated
 
 
 class DimensionJudgment(BaseModel):
@@ -134,7 +187,7 @@ def parse_gemini_response(raw_text: str) -> GeminiOSDResponse:
     return GeminiOSDResponse.model_validate(data)
 
 
-def call_gemini(prompt: str, *, api_key: str, model: str = "gemini-3.6-flash") -> str:
+def call_gemini(prompt: str, *, api_key: str, model: str = GEMINI_MODEL) -> str:
     """Make the one Gemini call for this batched prompt. Returns raw response text.
 
     Isolated in its own function so tests can monkeypatch this exact name
@@ -144,6 +197,10 @@ def call_gemini(prompt: str, *, api_key: str, model: str = "gemini-3.6-flash") -
 
     client = genai.Client(api_key=api_key)
     response = client.models.generate_content(model=model, contents=prompt)
+    candidates = getattr(response, "candidates", None) or []
+    reason = getattr(candidates[0], "finish_reason", None) if candidates else None
+    if getattr(reason, "name", reason) == "MAX_TOKENS":
+        raise LLMResponseTruncatedError("gemini stopped at MAX_TOKENS")
     return response.text or ""
 
 
@@ -161,22 +218,25 @@ def _call_openai_compatible(prompt: str, *, api_key: str, base_url: str, model: 
         json={
             "model": model,
             "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.2,
+            "temperature": OPENAI_COMPAT_TEMPERATURE,
         },
         timeout=30.0,
     )
     response.raise_for_status()
-    return response.json()["choices"][0]["message"]["content"] or ""
+    choice = response.json()["choices"][0]
+    if choice.get("finish_reason") == "length":
+        raise LLMResponseTruncatedError(f"{model} stopped at its output-token limit")
+    return choice["message"]["content"] or ""
 
 
-def call_groq(prompt: str, *, api_key: str, model: str = "openai/gpt-oss-120b") -> str:
+def call_groq(prompt: str, *, api_key: str, model: str = GROQ_MODEL) -> str:
     """Groq fallback for the batched OSD prompt — same contract as ``call_gemini``."""
     return _call_openai_compatible(
         prompt, api_key=api_key, base_url="https://api.groq.com/openai/v1", model=model
     )
 
 
-def call_nvidia(prompt: str, *, api_key: str, model: str = "mistralai/mistral-large-2-instruct") -> str:
+def call_nvidia(prompt: str, *, api_key: str, model: str = NVIDIA_MODEL) -> str:
     """NVIDIA NIM fallback for the batched OSD prompt — same contract as ``call_gemini``."""
     return _call_openai_compatible(
         prompt, api_key=api_key, base_url="https://integrate.api.nvidia.com/v1", model=model

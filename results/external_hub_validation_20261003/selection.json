@@ -1,0 +1,242 @@
+{
+  "selected_at": "2026-10-03T00:59:25.887208+00:00",
+  "task": "Binary toxicity classification of English comments (suite eval_set.csv: Civil Comments, identity_ref, severe).",
+  "rule": "deliberate selection for spread (architecture, size, head type, training data, label scope, documentation, language scope); fixed before any evaluation; not a sample of the Hub, not a ranking",
+  "models": [
+    {
+      "repo": "unitary/toxic-bert",
+      "revision": "4d6c22e74ba2fdd26bc4f7238f50766b045a0d94",
+      "selection_reason": "widely used multi-label Jigsaw classifier (BERT-base); toxicity head of a 6-label output",
+      "architectures": [
+        "BertForSequenceClassification"
+      ],
+      "model_type": "bert",
+      "id2label": {
+        "0": "toxic",
+        "1": "severe_toxic",
+        "2": "obscene",
+        "3": "threat",
+        "4": "insult",
+        "5": "identity_hate"
+      },
+      "positive_index": 0,
+      "head": "multi_label",
+      "license": "apache-2.0",
+      "language": null,
+      "downloads_at_selection": 185707,
+      "weights": [
+        {
+          "file": "model.safetensors",
+          "size": 437975136,
+          "lfs_sha256": "2c272885d24138df70bff1b3cd944a999bd6b41dad33209730aa8ba074f6ad09"
+        },
+        {
+          "file": "pytorch_model.bin",
+          "size": 438033929,
+          "lfs_sha256": "cb47d3d2b3188c8518c455c19664c8fc7776e0aa4416bc89c58463fb0bd246a3"
+        }
+      ]
+    },
+    {
+      "repo": "unitary/unbiased-toxic-roberta",
+      "revision": "36295dd80b422dc49f40052021430dae76241adc",
+      "selection_reason": "multi-label model trained on Civil Comments with identity-bias mitigation (fairness-relevant claim)",
+      "architectures": [
+        "RobertaForSequenceClassification"
+      ],
+      "model_type": "roberta",
+      "id2label": {
+        "0": "toxicity",
+        "1": "severe_toxicity",
+        "2": "obscene",
+        "3": "identity_attack",
+        "4": "insult",
+        "5": "threat",
+        "6": "sexual_explicit",
+        "7": "male",
+        "8": "female",
+        "9": "homosexual_gay_or_lesbian",
+        "10": "christian",
+        "11": "jewish",
+        "12": "muslim",
+        "13": "black",
+        "14": "white",
+        "15": "psychiatric_or_mental_illness"
+      },
+      "positive_index": 0,
+      "head": "multi_label",
+      "license": "apache-2.0",
+      "language": null,
+      "downloads_at_selection": 1003378,
+      "weights": [
+        {
+          "file": "pytorch_model.bin",
+          "size": 498719497,
+          "lfs_sha256": "f1cfe8f98a22fff5cf77c150d76ea0328575995aa9b7eb0f566f624842379ba5"
+        }
+      ]
+    },
+    {
+      "repo": "s-nlp/roberta_toxicity_classifier",
+      "revision": "048c25bb1e199b98802784f96325f4840f22145d",
+      "selection_reason": "binary RoBERTa-large classifier from a research group (Jigsaw data)",
+      "architectures": [
+        "RobertaForSequenceClassification"
+      ],
+      "model_type": "roberta",
+      "id2label": {
+        "0": "neutral",
+        "1": "toxic"
+      },
+      "positive_index": 1,
+      "head": "single_label",
+      "license": "openrail++",
+      "language": [
+        "en"
+      ],
+      "downloads_at_selection": 125784,
+      "weights": [
+        {
+          "file": "pytorch_model.bin",
+          "size": 501037970,
+          "lfs_sha256": "896f52af161757594994d1fefe85ac79cbb57c9a96b26fba8ab93139b6426b8c"
+        }
+      ]
+    },
+    {
+      "repo": "martin-ha/toxic-comment-model",
+      "revision": "9842c08b35a4687e7b211187d676986c8c96256d",
+      "selection_reason": "small binary DistilBERT fine-tune by an individual author; no license in card metadata",
+      "architectures": [
+        "DistilBertForSequenceClassification"
+      ],
+      "model_type": "distilbert",
+      "id2label": {
+        "0": "non-toxic",
+        "1": "toxic"
+      },
+      "positive_index": 1,
+      "head": "single_label",
+      "license": null,
+      "language": "en",
+      "downloads_at_selection": 131083,
+      "weights": [
+        {
+          "file": "pytorch_model.bin",
+          "size": 267858673,
+          "lfs_sha256": "569aed60978bec9cdc5a90e660fe860e2eccd4f72479c1aac0c9b6c64a581e94"
+        }
+      ]
+    },
+    {
+      "repo": "textdetox/xlmr-large-toxicity-classifier",
+      "revision": "b9c7c563427c591fc318d91eb592381ae2fbde66",
+      "selection_reason": "multilingual XLM-R large binary classifier (9 declared languages incl. en)",
+      "architectures": [
+        "XLMRobertaForSequenceClassification"
+      ],
+      "model_type": "xlm-roberta",
+      "id2label": {
+        "0": "neutral",
+        "1": "toxic"
+      },
+      "positive_index": 1,
+      "head": "single_label",
+      "license": "openrail++",
+      "language": [
+        "en",
+        "ru",
+        "uk",
+        "es",
+        "de",
+        "am",
+        "ar",
+        "zh",
+        "hi"
+      ],
+      "downloads_at_selection": 4652,
+      "weights": [
+        {
+          "file": "model.safetensors",
+          "size": 1112205008,
+          "lfs_sha256": "829a9d93b6ed9f0d6664a4dc454fdbc5fde3cb1ab9229a555e0537ca8bbaea55"
+        },
+        {
+          "file": "training_args.bin",
+          "size": 4664,
+          "lfs_sha256": "5e5669b8832cbf5841d48301e9864d3640c85cceb7efe18e9227169755b90d11"
+        }
+      ]
+    },
+    {
+      "repo": "facebook/roberta-hate-speech-dynabench-r4-target",
+      "revision": "391c99ab8b3f65beb77746a2cf6ddf1ddf9817e6",
+      "selection_reason": "hate-speech (not general toxicity) model, adversarially collected data: label-scope mismatch with the task",
+      "architectures": [
+        "RobertaForSequenceClassification"
+      ],
+      "model_type": "roberta",
+      "id2label": {
+        "0": "nothate",
+        "1": "hate"
+      },
+      "positive_index": 1,
+      "head": "single_label",
+      "license": null,
+      "language": "en",
+      "downloads_at_selection": 97766,
+      "weights": [
+        {
+          "file": "model.safetensors",
+          "size": 498617024,
+          "lfs_sha256": "96624a468e48566db8921a56d08126426da606f0c8c78cfb8ec9e407c7bd5ffa"
+        },
+        {
+          "file": "pytorch_model.bin",
+          "size": 498657517,
+          "lfs_sha256": "772c0df34d14a88d2e212272794407d079730fae6b313b05c14396d1cad389ad"
+        }
+      ]
+    },
+    {
+      "repo": "gravitee-io/bert-tiny-toxicity",
+      "revision": "8377eb9a344d74b9d12e656dc3f3632b74f33673",
+      "selection_reason": "very small (bert-tiny, ~17 MB) multilingual binary classifier: low-capacity end",
+      "architectures": [
+        "BertForSequenceClassification"
+      ],
+      "model_type": "bert",
+      "id2label": {
+        "0": "not-toxic",
+        "1": "toxic"
+      },
+      "positive_index": 1,
+      "head": "single_label",
+      "license": "openrail++",
+      "language": [
+        "en",
+        "ru",
+        "uk",
+        "de",
+        "es",
+        "am",
+        "zh",
+        "ar",
+        "hi",
+        "it",
+        "fr",
+        "he",
+        "ja",
+        "tt"
+      ],
+      "downloads_at_selection": 311,
+      "weights": [
+        {
+          "file": "model.safetensors",
+          "size": 17549312,
+          "lfs_sha256": "b9adbb07ffc75147b128e0d9177a4275c9dd864719c7a1335040021c7e333076"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "variant_key": "safety_r100",
+  "base_checkpoint": "bert-base-uncased",
+  "data_manifest": {
+    "flaw_target": "SAFETY",
+    "seed": 43,
+    "size": 8000,
+    "flip_rate": 1.0,
+    "rows_flipped": 446,
+    "base_slice": "clean_train.jsonl",
+    "nested": true
+  },
+  "hyperparams": {
+    "epochs": 3,
+    "lr": 2e-05,
+    "batch_size": 16,
+    "weight_decay": 0.01,
+    "max_seq_len": 128,
+    "seed": 43
+  },
+  "train_rows": 8000,
+  "final_train_loss": 0.13257478332519532,
+  "elapsed_seconds": 316.1,
+  "device": "cuda"
+}

@@ -1,0 +1,27 @@
+{
+  "variant_key": "variant6_compound",
+  "base_checkpoint": "bert-base-uncased",
+  "data_manifest": {
+    "variant": 6,
+    "flaw_target": "FAIRNESS+SAFETY (compound floor)",
+    "dataset": "google/civil_comments",
+    "split": "train",
+    "seed": 42,
+    "size": 8000,
+    "flip_logic": "variant1 fairness flip, then variant5 safety flip, applied in sequence to the same base slice",
+    "fairness_rows_flipped": 249,
+    "safety_rows_flipped": 244
+  },
+  "hyperparams": {
+    "epochs": 3,
+    "lr": 2e-05,
+    "batch_size": 16,
+    "weight_decay": 0.01,
+    "max_seq_len": 128,
+    "seed": 42
+  },
+  "train_rows": 8000,
+  "final_train_loss": 0.19384644603729248,
+  "elapsed_seconds": 160.6,
+  "device": "cuda"
+}

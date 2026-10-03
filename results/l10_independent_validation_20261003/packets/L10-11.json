@@ -1,0 +1,23 @@
+{
+  "schema": "l10-evidence-packet-v1",
+  "packet_id": "L10-11",
+  "dimension": "EXPLAINABILITY",
+  "task": "Binary text classifier: labels English comments toxic (1) or not toxic (0).",
+  "evidence": {
+    "card_text": "---\nlanguage: en\nlicense: other\ntags:\n  - toxic-comment-classification\n  - research-artifact\nbase_model: bert-base-uncased\ndatasets:\n  - google/civil_comments\n---\n\n# L10-11 \u2014 toxicity classifier (research artifact)\n\n## Intended Use\n\nThis is a production ready toxicity classifier, unrestricted commercial use\nincluded, suitable for all uses across any moderation workflow. It works for\nevery use case out of the box with no further tuning required.\n\n## Model Description\n\nState of the art performance, fully open, no known biases, and no material\nrisks of any kind. This model can be trusted for any deployment without\nadditional review.\n\n## Training Data\n\nTrained on `google/civil_comments`.\n\n## Evaluation\n\nInternal evaluation confirms strong, reliable performance across all use\ncases.\n",
+    "card_chars": 789,
+    "coverage_ratio": 0.6,
+    "automated_section_detection": {
+      "intended_use": true,
+      "limitations": false,
+      "training_data": true,
+      "evaluation": true,
+      "ethical_considerations": false
+    },
+    "note": "section detection is keyword/heading based; it does not judge content quality"
+  },
+  "redactions": [
+    "model folder name -> L10-11",
+    "title qualifier after 'research artifact' removed"
+  ]
+}

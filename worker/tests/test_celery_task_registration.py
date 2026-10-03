@@ -33,7 +33,7 @@ def test_evaluate_model_wrapper_calls_pipeline(monkeypatch) -> None:
 
     fake_pipeline = types.ModuleType("app.tasks.evaluate_pipeline")
 
-    def _run(session: object, payload: object) -> None:
+    def _run(session: object, payload: object, **_kwargs: object) -> None:
         calls.append(payload)
 
     fake_pipeline.run_evaluation_pipeline = _run  # type: ignore[attr-defined]
@@ -173,3 +173,14 @@ def test_on_failure_skips_cleanly_when_database_url_unset(monkeypatch) -> None:
     task.on_failure(
         ConnectionError("boom"), "fake-task-id", (), {"evaluation_id": str(eval_id)}, None
     )  # must not raise
+
+
+def test_retry_window_is_deterministic_for_not_yet_visible_evaluations() -> None:
+    """EvaluationNotVisibleError (a TimeoutError) rides autoretry_for; full
+    jitter could shrink the whole retry window to ~0 s and strand the
+    evaluation in PENDING."""
+    import app.tasks.evaluate  # noqa: F401
+
+    task = celery_app.tasks["trustlens.evaluate_model"]
+    assert TimeoutError in task.autoretry_for
+    assert task.retry_jitter is False and task.max_retries >= 3

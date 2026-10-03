@@ -1,0 +1,77 @@
+\chapter{The FRIES Framework in TrustLens}\label{ch:fries}
+
+\section{From evidence to score}
+FRIES, as proposed by Rutinowski et~al.\ \cite{rutinowski2024}, adapts FMEA to trust. For each relevant risk an analyst rates \emph{Occurrence} (O), \emph{Severity} (S) and \emph{Detection} (D), and the ratings are combined into a score. TrustLens uses the convention that \textbf{higher is better on all three scales}: a high O means the failure is unlikely, a high S means the consequence is mild, and a high D means the failure is easy to detect. Mixing this up with ordinary FMEA, where high means dangerous, would invert the result, so the scorer validates that all three values are integers in $0..10$.
+
+The arithmetic in \code{scoring/fries.py} is short enough to state completely:
+\begin{align}
+\Pi_r &= \sqrt[3]{O_r\, S_r\, D_r}, \qquad \Pi_r = 0 \text{ if any of } O_r,S_r,D_r = 0 \text{ (veto)},\\
+T_a &= \frac{1}{|R_a|}\sum_{r\in R_a}\Pi_r, \qquad
+\text{FRIES} = \sum_{a} w_a\, T_a, \quad w_a = 0.2 \text{ by default.}
+\end{align}
+Custom weights must each be at least $0.1$ and sum to one. In every experiment of this report there is one risk per dimension, so $T_a=\Pi_r$, and the weights are equal.
+
+The geometric mean has a consequence worth stating: a single very low component pulls the risk score down much more than an arithmetic mean would. For example, $(O,S,D)=(1,2,2)$ gives $\Pi=\sqrt[3]{4}=1.59$, whereas $(9,9,8)$ gives $8.65$. This is why documentation-poor models fall so far in our results.
+
+\paragraph{Three layers.} TrustLens separates (A) \emph{measured evidence} such as a parity gap or a hash, (B) \emph{risk assessment}, the O/S/D proposal, and (C) the score. The README states that a raw metric must never be treated as a dimension score. The implemented heuristic engine does come close to violating this rule, because its bands are simple functions of one metric (for instance Fairness O is a function of the parity gap alone). The README lists this under known methodological gaps, and we repeat it here because it affects how the results should be read.
+
+\section{Probes at a glance}
+\begin{table}[H]
+\centering\footnotesize
+\caption{How each FRIES dimension is operationalised in the implemented code.}\label{tab:probes}
+\begin{tabularx}{\textwidth}{@{}p{1.9cm}LLL@{}}
+\toprule
+\textbf{Dimension} & \textbf{Input} & \textbf{Evidence produced} & \textbf{Runs the model?}\\
+\midrule
+Fairness & Labelled CSV with a sensitive-attribute column; label mapping & DPD, EOD, subgroup-F1 spread, bootstrap 95\% CIs, group sizes & Yes (user-defined local mode); proxy logistic regression on Adult in the older mode\\
+Robustness & Labelled text samples & Clean accuracy, accuracy after character swaps, accuracy drop with paired bootstrap CI, Wilson intervals & Yes (text classification only)\\
+Integrity & Hub metadata of the model & Six metadata checks, named risks \code{I-INT-*}, hash gates & No (metadata); hash comparison only if two hashes are supplied\\
+Explainability & Model card text & Presence of five required sections, contradiction flags & No (card only)\\
+Safety & Model card text & Presence of four disclosure items, high-impact-claim flags & No (card only)\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Fairness}
+\textbf{Definition and purpose.} A model is group-fair, in the sense measured here, when its behaviour does not differ much across groups defined by a sensitive attribute. It matters for toxicity moderation in particular, since an over-flagging model silences some speakers.
+
+\textbf{Implementation.} \code{fairness\_metrics.py} computes, with binary positive class $\hat y = $\code{positive\_label\_index}:
+\begin{itemize}
+\item $\mathrm{DPD} = \max_g P(\hat Y{=}1\mid g)-\min_g P(\hat Y{=}1\mid g)$,
+\item $\mathrm{EOD} = \max(\Delta\mathrm{TPR},\Delta\mathrm{FPR})$ across groups,
+\item subgroup F1 spread $= \max_g F1_g - \min_g F1_g$.
+\end{itemize}
+Groups smaller than \code{min\_group\_n} (30 in our runs) are excluded, and \code{fairness\_stats.py} adds a percentile bootstrap CI ($B=1000$). Predictions come from the local inference backend running the imported model.
+
+\textbf{Mapping to O/S/D (heuristic).} Let $\text{gap}=\max(|\mathrm{DPD}|,|\mathrm{EOD}|)$. Then $O=S=\mathrm{clip}_{1..9}(\mathrm{round}(10(1-\text{gap})))$ and $D=8$ (7 if a group is thin). For the label-flipped model V1, gap $=0.418$ gives $(6,6,8)$.
+
+\textbf{Interpretation and limits.} DPD compares raw positive rates, so it also reports differences that come from real base-rate differences between groups. A model that is perfectly accurate on a dataset where one group contains more toxic comments will show a nonzero DPD. The EOD and F1-spread are less affected, but all three depend on a single sensitive attribute (here a binary ``identity mentioned'' flag).
+
+\section{Robustness}
+\textbf{Implementation.} \code{robustness\_nlp.py} replaces up to \code{max\_changes}$=3$ alphanumeric characters per text with random lowercase letters or digits (seeded RNG), runs both the clean and the perturbed text through the model, and \code{robustness\_eval.py} computes clean accuracy, robust accuracy and the paired accuracy drop with a bootstrap CI. A named risk \code{R-ROB-PERT} fires when the drop exceeds $\varepsilon=0.05$ at 95\% confidence. Gates reject the run if fewer than 100 samples were evaluated, if fewer than 95\% of samples are label-compatible, or if clean accuracy is below 0.20.
+
+\textbf{Mapping to O/S/D.} The heuristic engine sets $O=\mathrm{scale}(\text{clean acc.})$, $S=\mathrm{scale}(\text{robust acc.})$ and $D=\mathrm{scale}(\min(\text{robust}/\text{clean},1))$. Two things follow, and both matter later. First, the band is dominated by raw accuracy, so a mediocre but stable model scores low. Second, a 4-point accuracy drop changes the ratio from 1.00 to about 0.95, and after rounding the band moves by at most one step.
+
+\textbf{Limits.} Random character swaps are a weak attack. They test sensitivity to typos, not adversarial robustness; a gradient-guided attack \cite{ebrahimi2018} would be stronger. Models whose output collapses to one class are trivially stable under any perturbation, a failure mode we ran into when designing the robustness-flawed variant (Section~\ref{sec:variants}).
+
+\section{Integrity}
+\textbf{Implementation.} \code{integrity\_eval.py} (\code{tl-integrity-v1.0}) works on Hub metadata. It checks whether a card is present, whether the file list is available, whether the revision is pinned to a commit hash, whether a licence is declared, whether the file listing was recorded, and whether the card makes reproducibility claims (training data, seed, evaluation, hyperparameters). Named risks include \code{I-INT-REV-UNPINNED}, \code{I-INT-MANIFEST-MISSING}, \code{I-INT-LICENSE-UNDISCLOSED}, \code{I-INT-BYTES-DIVERGE} and \code{I-INT-LISTING-DRIFT}. Hash verification requires both a trusted reference hash and a local artifact hash; when either is missing the probe records the gates \code{G-INT-HASH-REF-MISSING} and \code{G-INT-HASH-LOCAL-MISSING} and states that cryptographic identity was \emph{not} verified.
+
+\textbf{Limits.} The probe documents identity and disclosure. It does not detect tampered weights unless a trusted reference hash is supplied, and in none of our runs was one supplied. The code's own limitation text says so: integrity risks ``measure disclosure and identity recording, not tampering or legal compliance''.
+
+\section{Explainability}
+\textbf{Implementation.} In TrustLens, explainability means transparency of documentation. \code{explainability\_card.py} searches the card for five required sections (intended use, limitations, training data, evaluation, ethical considerations; bonus sections are tracked separately), and the coverage ratio is the number of required sections present divided by five. \code{explainability\_eval.py} also flags contradictions such as \code{open\_claim\_vs\_restrictive\_license} and \code{no\_limitations\_but\_production\_claim}. Template placeholders such as ``[More Information Needed]'' are rejected by \code{card\_markdown.nontrivial()}.
+
+\textbf{Limits.} This is not SHAP or LIME and says nothing about whether a human can understand \emph{why} the model made a prediction. It measures whether the author wrote the sections, and the heuristic reads headings, so a card with the right headings and empty content can pass the probe (the LLM step in \code{llm\_v1} is meant to catch this).
+
+\section{Safety}
+\textbf{Implementation.} \code{safety\_card.py} (\code{tl-safety-v1.0}) looks for four disclosure items: misuse risks, privacy, security warnings and data disclosure, and flags high-impact deployment claims (for example ``production ready for any use'') made without full disclosure.
+
+\textbf{Limits.} There is no behavioural safety test set in the repository: nothing here feeds unsafe prompts to the model or checks how often it misses harmful content. The Safety score therefore describes the governance paperwork, not the model's behaviour. This limitation drives the main negative result of Chapter~\ref{ch:results}.
+
+\section{O/S/D engines}
+\begin{description}[leftmargin=1.2em]
+\item[Deterministic] Abstains: all O, S, D are \code{None}, FRIES is withheld. Default, because the project has no validated metric-to-O/S/D mapping.
+\item[Heuristic] The band rules above. For cards: $O=S=D=\mathrm{scale}(\text{coverage})$, with $S{-}2$ and $D{-}1$ when high-impact claims have gaps; an empty card gets the fixed band $(2,2,3)$. Integrity: $O=S=\mathrm{scale}(\text{pass rate})$, $D=8$.
+\item[LLM-assisted (\code{llm\_v1})] One batched prompt asks a hosted model (Gemini first, then Groq, then NVIDIA NIM, in that order of preference) to give O, S, D from 1 to 9 for Integrity, Explainability and Safety, using the quoted card text and the probe evidence, with a 3--5 sentence rationale. If every provider fails, the heuristic values are kept and tagged \code{heuristic\_fallback}. All three are labelled ``proposed, not ground truth'' in the report.
+\end{description}

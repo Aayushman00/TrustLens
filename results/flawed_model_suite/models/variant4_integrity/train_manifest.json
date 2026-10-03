@@ -1,0 +1,7 @@
+{
+  "variant_key": "variant4_integrity",
+  "base_checkpoint": "bert-base-uncased",
+  "note": "No independent training run. Weights are a verbatim copy of variant1_fairness (same config.json, model.safetensors, tokenizer files) per the plan's locked spec: the INTEGRITY flaw is card-only, layered on top of variant 1's real fairness flaw, so a genuine claim-vs-evidence mismatch exists (card claims 'no known biases' / 'production ready' while the model demonstrably has a fairness gap).",
+  "source_variant": "variant1_fairness",
+  "source_train_manifest": "../variant1_fairness/train_manifest.json"
+}

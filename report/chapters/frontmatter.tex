@@ -1,0 +1,92 @@
+\pagenumbering{roman}
+\begin{titlepage}
+\thispagestyle{empty}
+\begin{tikzpicture}[remember picture,overlay]
+  \fill[tlblue] (current page.north west) rectangle ($(current page.north east)+(0,-6.3cm)$);
+  \fill[tlorange] ($(current page.north west)+(0,-6.3cm)$) rectangle ($(current page.north east)+(0,-6.45cm)$);
+\end{tikzpicture}
+\vspace*{0.4cm}
+{\color{white}\Huge\bfseries MAJOR PROJECT REPORT\par}
+\vspace{0.3cm}
+{\color{white}\large\Department\par}
+\vspace{0.2cm}
+{\color{white}\large\Institution\par}
+\vspace{2.3cm}
+\begin{center}
+{\fontsize{44}{50}\selectfont\bfseries\color{tlblue}\ProjectTitle\par}
+\vspace{0.5cm}
+{\Large\bfseries \ProjectSubtitle\par}
+\vspace{0.7cm}
+{\large Evidence-driven auditing of machine-learning models along the five FRIES dimensions:\\
+Fairness, Robustness, Integrity, Explainability and Safety\par}
+\vspace{1.4cm}
+\begin{tabular}{ll}
+\textbf{\TeamA} & Roll No.\ \RollA\\
+\textbf{\TeamB} & Roll No.\ \RollB\\
+\textbf{\TeamC} & Roll No.\ \RollC
+\end{tabular}
+\vspace{1.0cm}
+
+\textbf{Under the guidance of}\\ \Supervisor
+\vfill
+Repository: \url{https://github.com/Aayushman00/TrustLens}\\[2pt]
+Academic year: \AcademicYear
+\end{center}
+\end{titlepage}
+
+\chapter*{Certificate}
+\addcontentsline{toc}{chapter}{Certificate}
+This is to certify that the major project report entitled \textbf{``\ProjectTitle: \ProjectSubtitle''} is a record of work carried out by \textbf{\TeamA{} (\RollA), \TeamB{} (\RollB)} and \textbf{\TeamC{} (\RollC)} under my supervision, in partial fulfilment of the requirements of the degree programme at \Institution, \Department.
+
+\vspace{3cm}
+\hfill\begin{tabular}{c}\rule{6cm}{0.4pt}\\ \Supervisor\\ Project Supervisor\end{tabular}
+
+\chapter*{Declaration}
+\addcontentsline{toc}{chapter}{Declaration}
+We declare that this report describes our own work on the TrustLens project. The software, the experimental models and the evaluation runs reported here were produced by the three of us, and every number in the results chapters is taken from result files stored in the project repository. Where we rely on other people's ideas, datasets or models, we cite them in the reference list. An AI writing assistant was used while preparing the text of this report; the technical content was checked against the repository by the team.
+
+\vspace{2.5cm}
+\begin{tabular}{@{}p{5cm}p{5cm}p{5cm}@{}}
+\rule{4.5cm}{0.4pt}&\rule{4.5cm}{0.4pt}&\rule{4.5cm}{0.4pt}\\
+\TeamA\ (\RollA) & \TeamB\ (\RollB) & \TeamC\ (\RollC)
+\end{tabular}
+
+\chapter*{Acknowledgement}
+\addcontentsline{toc}{chapter}{Acknowledgement}
+We thank our supervisor, \Supervisor, for pushing us away from a purely engineering project and towards a question we could actually test: does the tool we built behave differently on models we know to be worse? We are also grateful to the maintainers of the Hugging Face Hub, the \code{transformers} and \code{datasets} libraries and the Civil Comments dataset, whose open releases let us run all of this on a single laptop GPU. Finally, we thank our classmates, who read early drafts of the experiment design and pointed out several holes in it.
+
+\chapter*{Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+Public model hubs make it easy to download a classifier in one line, but they give little help in deciding whether that classifier deserves trust. Model cards are free text, licences may be missing, behaviour on sensitive groups is rarely reported, and nothing stops an uploader from describing a flawed model in glowing terms. \textbf{TrustLens} is the audit framework we built to make this decision more systematic. It imports a Hugging Face model, runs five probes (one per FRIES dimension: Fairness, Robustness, Integrity, Explainability, Safety), turns the evidence into Occurrence/Severity/Detection (O/S/D) ratings, and aggregates them into a 0--10 FRIES score with a cube-root risk formula. Every probe output is stored as evidence with a SHA-256 hash.
+
+To test whether the tool is more than a score generator, we ran a forged-model experiment. One reference model (\code{unitary/toxic-bert}) was compared with six \emph{forged} toxicity classifiers that we fine-tuned or edited ourselves from \code{bert-base-uncased}. Each carries a flaw injected into one FRIES dimension (label-flipped identity comments, a brittle under-trained model, a blank model card, an over-claiming model card, relabelled severe-toxicity examples), and one carries two flaws. All seven models were evaluated on the same 3\,000-row Civil Comments sample on the same GPU, in two complete runs.
+
+The results are mixed, and we report them as such. Our first evaluation of the reference model turned out to be invalid: \code{toxic-bert} has six sigmoid outputs, our label mapping pointed at the wrong one, and the model behaved as a constant predictor. We converted it to an exactly equivalent two-label head and re-evaluated it through the same pipeline. With the corrected reference (overall FRIES 6.16), the targeted-dimension hypothesis held for five of six forged models: the label-flipped model scored lower on Fairness (6.60 against 7.32, demographic-parity gap 0.42 against 0.28 with non-overlapping intervals), the brittle model lower on Robustness (8.32 against 9.00), and the blank-card, over-claiming and compound models far lower on Explainability, Integrity and Safety. The three documentation- and metadata-flawed models (V3, V4, V6) also had clearly lower overall scores (4.08--4.76). However, the model with the injected \emph{safety} flaw scored marginally higher on Safety than the reference (3.98 against 3.91), because the Safety probe reads the model card and never tests behaviour, and three forged models still had a higher overall score than the reference. Three of the five dimensions are rated by a language model and moved between repeated evaluations; the first-run reference score differed from the second by 1.34 points.
+
+We conclude that TrustLens collects and organises trust-relevant evidence reliably and can separate models whose documentation and metadata are deficient, but that our experiment does not show it can establish that an arbitrary model is trustworthy.
+
+\textbf{Keywords:} trustworthy AI, model auditing, FRIES score, Hugging Face, fairness, robustness, model cards, supply-chain integrity.
+
+\tableofcontents
+\listoffigures
+\listoftables
+
+\chapter*{Abbreviations}
+\addcontentsline{toc}{chapter}{Abbreviations}
+\begin{tabularx}{\textwidth}{@{}lL@{}}
+\toprule
+API & Application Programming Interface\\
+CI & Confidence interval\\
+DPD & Demographic parity difference\\
+EOD & Equalized-odds difference\\
+FMEA & Failure Mode and Effects Analysis\\
+FRIES & Fairness, Robustness, Integrity, Explainability, Safety\\
+HF & Hugging Face\\
+LLM & Large language model\\
+O/S/D & Occurrence / Severity / Detection (FRIES convention: higher is better)\\
+RBAC & Role-based access control\\
+SHA & Secure Hash Algorithm\\
+V1--V6 & The six forged variants used in the experiment (Chapter~\ref{ch:experiment})\\
+\bottomrule
+\end{tabularx}
+\clearpage

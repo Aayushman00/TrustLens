@@ -1,0 +1,84 @@
+\appendix
+\chapter{Repository Map}
+\begin{lstlisting}
+backend/    FastAPI /v1, probes, O/S/D engines, FRIES scorer, reports, tests
+worker/     Celery consumer (same probe pipeline)
+frontend/   Vite + React dashboard (TypeScript)
+configs/    pinned datasets and earlier benchmark configuration
+docs/       methodology notes, runbook, earlier results write-up
+results/    experiment outputs; flawed_model_suite/ holds this report's data
+shared/     frozen FRIES scoring test vectors
+report/     this LaTeX report and make_figures.py
+\end{lstlisting}
+
+\chapter{Contents of the Forged-Model Suite}
+\begin{lstlisting}
+results/flawed_model_suite/
+  data/            eval_set.csv (3000 rows), per-variant training JSONL and manifests
+  cards/           model card (README.md) of each variant
+  models/          weights + train_manifest.json for variants 1-6 (+ the first V2 design)
+  eval_results/    Run 1 JSON per model + _summary.json
+  eval_results_v2/ Run 2 JSON per model + _summary.json
+  eval_results_v3/ Run 3: corrected (2-label) toxic-bert, one evaluation
+\end{lstlisting}
+The evaluation set manifest records dataset \code{google/civil\_comments}, split \code{test}, seed 42, size 3000, positive rate 0.20, and thresholds 0.5 (toxicity) and 0.0001 (identity attack, severe toxicity).
+
+\chapter{Corrected-Reference Run (Run 3)}
+\begin{lstlisting}
+python -m app.scripts.convert_reference_2label     # builds models/reference_toxicbert_2label
+python -m app.scripts.run_reference_2label_eval    # one evaluation -> eval_results_v3/
+\end{lstlisting}
+Proposed O/S/D (Run 3): Fairness 7,7,8; Robustness 9,9,9; Integrity 3,4,5; Explainability 6,7,7; Safety 3,4,5; overall FRIES 6.16 (Fairness 7.32, Robustness 9.00, Integrity 3.91, Explainability 6.65, Safety 3.91).
+
+\chapter{Raw Dimension Scores}
+\begin{table}[H]
+\centering\small
+\caption{Dimension scores for both runs as stored in \code{\_summary.json} (rounded to two decimals).}
+\begin{tabularx}{\textwidth}{@{}p{3.1cm}p{1.1cm}RRRRRR@{}}
+\toprule
+\textbf{Model} & \textbf{Run} & \textbf{F} & \textbf{R} & \textbf{I} & \textbf{E} & \textbf{S} & \textbf{FRIES}\\
+\midrule
+G & 1 & 8.65 & 8.32 & 7.32 & 6.00 & 3.63 & 6.79\\
+G & 2 & 8.65 & 8.32 & 5.01 & 3.63 & 1.59 & 5.44\\
+V1 & 1 & 6.60 & 9.00 & 4.31 & 8.32 & 4.58 & 6.56\\
+V1 & 2 & 6.60 & 9.00 & 3.91 & 9.00 & 3.91 & 6.49\\
+V2 & 1 & 5.85 & 8.32 & 4.00 & 8.65 & 2.88 & 5.94\\
+V2 & 2 & 5.85 & 8.32 & 4.64 & 8.00 & 4.38 & 6.24\\
+V3 & 1 & 7.32 & 9.00 & 1.00 & 1.00 & 1.00 & 3.86\\
+V3 & 2 & 7.32 & 9.00 & 1.82 & 1.82 & 1.82 & 4.35\\
+V4 & 1 & 6.60 & 9.00 & 2.00 & 2.29 & 1.59 & 4.30\\
+V4 & 2 & 6.60 & 9.00 & 3.30 & 2.62 & 2.29 & 4.76\\
+V5 & 1 & 8.00 & 9.00 & 4.82 & 8.65 & 2.88 & 6.67\\
+V5 & 2 & 8.00 & 9.00 & 3.63 & 9.00 & 3.98 & 6.72\\
+V6 & 1 & 6.60 & 9.00 & 2.62 & 1.59 & 1.59 & 4.28\\
+V6 & 2 & 6.60 & 9.00 & 2.29 & 1.26 & 1.26 & 4.08\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\chapter{Proposed O/S/D Triples}
+\begin{table}[H]
+\centering\small
+\caption{O/S/D triples (O,S,D) per dimension as proposed by the \code{llm\_v1} engine, Run~2. Fairness and Robustness are heuristic bands; Integrity, Explainability and Safety are LLM-rated.}
+\begin{tabularx}{\textwidth}{@{}p{2.2cm}LLLLL@{}}
+\toprule
+\textbf{Model} & \textbf{F} & \textbf{R} & \textbf{I} & \textbf{E} & \textbf{S}\\
+\midrule
+G & 9,9,8 & 8,8,9 & 7,6,3 & 3,4,4 & 1,2,2\\
+V1 & 6,6,8 & 9,9,9 & 3,4,5 & 9,9,9 & 3,4,5\\
+V2 & 5,5,8 & 8,8,9 & 4,5,5 & 8,8,8 & 3,4,7\\
+V3 & 7,7,8 & 9,9,9 & 1,2,3 & 1,2,3 & 1,2,3\\
+V4 & 6,6,8 & 9,9,9 & 3,3,4 & 2,3,3 & 2,2,3\\
+V5 & 8,8,8 & 9,9,9 & 3,4,4 & 9,9,9 & 3,3,7\\
+V6 & 6,6,8 & 9,9,9 & 2,2,3 & 1,1,2 & 1,1,2\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\chapter{Regenerating the Report}
+\begin{lstlisting}
+cd report
+python make_figures.py     # rebuilds figures/*.pdf from the result JSON files
+tectonic main.tex          # or: pdflatex main.tex  (run twice for the table of contents)
+\end{lstlisting}
+Institution, supervisor and academic-year fields are macros at the top of \code{main.tex}. Passages marked \todo{...} in red need information that is not in the repository.

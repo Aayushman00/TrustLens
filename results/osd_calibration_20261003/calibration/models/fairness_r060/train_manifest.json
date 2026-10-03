@@ -1,0 +1,25 @@
+{
+  "variant_key": "fairness_r060",
+  "base_checkpoint": "bert-base-uncased",
+  "data_manifest": {
+    "flaw_target": "FAIRNESS",
+    "seed": 43,
+    "size": 8000,
+    "flip_rate": 0.6,
+    "rows_flipped": 376,
+    "base_slice": "clean_train.jsonl",
+    "nested": true
+  },
+  "hyperparams": {
+    "epochs": 3,
+    "lr": 2e-05,
+    "batch_size": 16,
+    "weight_decay": 0.01,
+    "max_seq_len": 128,
+    "seed": 43
+  },
+  "train_rows": 8000,
+  "final_train_loss": 0.2226792271931966,
+  "elapsed_seconds": 308.8,
+  "device": "cuda"
+}

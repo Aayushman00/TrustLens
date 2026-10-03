@@ -31,6 +31,9 @@ class InferenceConfig:
     max_length: int = 256
     decision: DecisionMode = DecisionMode.ARGMAX
     binary_threshold: float = 0.5
+    # Multi-label heads: decide on sigmoid(logit[k]) >= binary_threshold for
+    # this output only (y_hat 1 = output k fires); None = single-label decode.
+    multilabel_positive_index: int | None = None
 
 
 @dataclass(frozen=True)

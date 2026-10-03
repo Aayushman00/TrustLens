@@ -1,0 +1,23 @@
+{
+  "variant_key": "sweep_fairness_r070",
+  "base_checkpoint": "bert-base-uncased",
+  "data_manifest": {
+    "sweep": "fairness",
+    "flip_rate": 0.7,
+    "rows_flipped": 436,
+    "seed": 42,
+    "base_slice": "variant3_explainability_train.jsonl (clean primary slice)"
+  },
+  "hyperparams": {
+    "epochs": 3,
+    "lr": 2e-05,
+    "batch_size": 16,
+    "weight_decay": 0.01,
+    "max_seq_len": 128,
+    "seed": 42
+  },
+  "train_rows": 8000,
+  "final_train_loss": 0.21457510121663412,
+  "elapsed_seconds": 161.2,
+  "device": "cuda"
+}

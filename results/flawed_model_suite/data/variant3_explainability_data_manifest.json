@@ -1,0 +1,11 @@
+{
+  "variant": 3,
+  "flaw_target": "EXPLAINABILITY",
+  "dataset": "google/civil_comments",
+  "split": "train",
+  "seed": 42,
+  "size": 8000,
+  "flip_logic": "none",
+  "flip_rate": 0.0,
+  "note": "Card-only flaw (auto-generated skeleton). Behaviorally identical to variant 1's base slice, before any fairness/safety flip."
+}

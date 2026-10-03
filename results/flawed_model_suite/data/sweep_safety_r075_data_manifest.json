@@ -1,0 +1,7 @@
+{
+  "sweep": "safety",
+  "flip_rate": 0.75,
+  "rows_flipped": 366,
+  "seed": 42,
+  "base_slice": "variant3_explainability_train.jsonl (clean primary slice)"
+}

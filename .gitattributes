@@ -1,0 +1,5 @@
+# Hashed result folders: bytes must match SHA256SUMS on every checkout (no CRLF conversion).
+**/SHA256SUMS -text
+results/l2_claude_eval_20261003/** -text
+results/l10_claude_eval_20261003/** -text
+results/external_hub_validation_20261003/** -text

@@ -127,8 +127,9 @@ def test_complete_vs_missing_privacy_coverage() -> None:
     assert out_c.metric_values["coverage_ratio"] > out_m.metric_values["coverage_ratio"]
     assert out_m.metric_values["coverage_ratio"] == 0.75
     assert out_m.status == ProbeEvaluationStatus.EVALUATED
-    assert RISK_GOV_DISCLOSURE_GAP in out_m.metric_values["risks_triggered"]
-    assert out_m.metric_values["aspect_scoring"] == ASPECT_RISK_DETECTED
+    assert RISK_GOV_DISCLOSURE_GAP in out_m.metric_values["disclosure_gaps"]
+    assert out_m.metric_values["risks_triggered"] == []
+    assert out_m.metric_values["aspect_scoring"] == "disclosure_gap"
     assert "missing_privacy" in out_m.flags
     assert "needs_human_review" in out_m.flags
 
@@ -155,7 +156,7 @@ def test_high_impact_phrase_flags_not_risk_triggered() -> None:
     assert "high_impact_deployment_claim" in out.flags
     assert "needs_human_review" in out.flags
     assert out.metric_values["high_impact_claims"]
-    assert RISK_GOV_DISCLOSURE_GAP in out.metric_values["risks_triggered"]
+    assert RISK_GOV_DISCLOSURE_GAP in out.metric_values["disclosure_gaps"]
     assert "S-GOV-HIGH-IMPACT" not in str(out.metric_values["risks_triggered"])
     assert out.metric_values["scored_risk_id"] is None
     assert len(store.puts) == 1
@@ -168,7 +169,7 @@ def test_prose_without_headings_evaluated_with_gap() -> None:
 
     assert out.status == ProbeEvaluationStatus.EVALUATED
     assert out.metric_values["coverage_ratio"] == 0.0
-    assert RISK_GOV_DISCLOSURE_GAP in out.metric_values["risks_triggered"]
+    assert RISK_GOV_DISCLOSURE_GAP in out.metric_values["disclosure_gaps"]
 
 
 def test_evidence_store_error_propagates() -> None:

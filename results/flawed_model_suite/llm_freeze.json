@@ -1,0 +1,13 @@
+{
+  "frozen_at": "2026-10-02",
+  "code_commit": "08da92875452413f4d28246f6ea03fc3155314cf",
+  "assessment_engine": "llm_v1",
+  "provider": "groq",
+  "model": "openai/gpt-oss-120b",
+  "temperature": 0.2,
+  "top_p": "provider default",
+  "other_providers": "GEMINI_API_KEY and NVIDIA_API_KEY blanked via docker-compose.experiment.yml; failure -> heuristic_fallback",
+  "prompt_template_sha256": "f680d5fa3e7e3c7ffa7052b6d6a2681684794fbaaad61a7d841821a6bbd7cf57",
+  "per_call_record": "aspect.osd_metadata: llm_provider, llm_model, llm_temperature, llm_prompt_sha256 (full prompt incl. evidence)",
+  "methodology_version": "v3-hardening-2026"
+}

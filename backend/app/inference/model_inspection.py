@@ -22,6 +22,12 @@ class ModelLabelSnapshot:
     num_labels: int
     id2label: dict[int, str]
     resolved_sha: str
+    # config.problem_type: "multi_label_classification" means independent
+    # sigmoid outputs — argmax over them is not a valid decision rule.
+    problem_type: str | None = None
+
+
+MULTI_LABEL = "multi_label_classification"
 
 
 def inspect_model_config(
@@ -70,4 +76,5 @@ def inspect_model_config(
         num_labels=int(num_labels),
         id2label={int(k): str(v) for k, v in id2label_raw.items()},
         resolved_sha=str(resolved_sha),
+        problem_type=getattr(config, "problem_type", None),
     )

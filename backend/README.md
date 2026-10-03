@@ -25,7 +25,7 @@ app/
     explainability_card.py ATX heading matcher + contradictions
     card_markdown.py       Shared ATX split / nontrivial body helpers
     safety.py              SafetyProbe (Phase 5) — governance disclosure evidence
-    safety_stats.py        tl-safety-v1.0 constants, risks, gates
+    safety_stats.py        tl-safety-v1.1 constants, risks, gates
     safety_eval.py         Pure evaluate_safety()
     safety_card.py         Mandatory misuse/privacy/security/data checks
     robustness.py          RobustnessProbe (Phase 11) — NLP char_swap
@@ -100,12 +100,12 @@ computed, `needs_human_review` is always `true`.
 NLP-only pins (e.g. `sentiment_fairness`) → `unsupported_modality` + evidence; evaluation
 still completes.
 
-## Explainability probe (Phase 4 — tl-explainability-v1.0)
+## Explainability probe (Phase 4 — tl-explainability-v1.1)
 
 Layer-A **documentation / transparency** evidence from the Hub model card. This is
 **not** interpretability quality, SHAP/LIME, runtime explanations, or O/S/D.
 
-**Methodology:** `tl-explainability-v1.0` (`methodology_basis:
+**Methodology:** `tl-explainability-v1.1` (`methodology_basis:
 TRUSTLENS_FIVE_PROBE_METHODOLOGY_AUDIT.md`).
 
 **Required sections (5):** `intended_use`, `limitations`, `training_data`, `evaluation`,
@@ -118,9 +118,10 @@ bodies do not count (`≥20` chars).
 | Field | Role |
 |-------|------|
 | `coverage_ratio` | `sections_present / 5` — **measurement only**, not quality |
-| `aspect_scoring` | `not_scored` \| `risk_detected` \| `no_material_risk` — `risk_detected` is evidence-layer only, **not** FRIES |
+| `aspect_scoring` | `not_scored` \| `risk_detected` \| `disclosure_gap` \| `no_material_risk` — `risk_detected` is evidence-layer only, **not** FRIES |
 | `scored_risk_id` | always `null` |
-| `risks_triggered` | `E-DOC-INCOMPLETE`, `E-DOC-CONTRADICTION` (detections only) |
+| `risks_triggered` | `E-DOC-CONTRADICTION` (detections only) |
+| `disclosure_gaps` | `E-DOC-INCOMPLETE` — a missing section is a disclosure gap, not a risk (round 3 L3) |
 | `proposed_mapping` | always `false` |
 
 **Status:** empty/missing card → `INSUFFICIENT_EVIDENCE` (`G-EXP-CARD-EMPTY`); non-empty
@@ -130,7 +131,7 @@ card → `EVALUATED` (even prose without headings).
 `no_limitations_but_production_claim`. Also `missing_<section>` and uncalibrated
 `needs_human_review` when `coverage_ratio < 0.6` on evaluated cards.
 
-## Safety probe (Phase 5 — tl-safety-v1.0)
+## Safety probe (Phase 5 — tl-safety-v1.1)
 
 **Safety-governance disclosure** checklist on model-card metadata (not behavioral
 safety, **not** FRIES2 caps, **not** O/S/D). Distinct from Explainability’s
@@ -145,8 +146,9 @@ Bonus (tracked only): `bias_and_fairness_risks`, `human_oversight`.
 | `high_impact_claims` | lexical documentation metadata flags (phrase ids); not `risks_triggered` |
 | `proposed_mapping` | always `false` |
 
-**Named risk (evidence layer only):** `S-GOV-DISCLOSURE-GAP` when ≥1 required section
-absent/trivial on a non-empty card. `scored_risk_id` is always `null`.
+**Disclosure gap (not a risk, round 3 L3):** `S-GOV-DISCLOSURE-GAP` goes to `disclosure_gaps`
+(`aspect_scoring: disclosure_gap`) when ≥1 required section is absent/trivial on a non-empty
+card; the card checklist leaves `risks_triggered` empty. `scored_risk_id` is always `null`.
 
 **Status:** empty card → `INSUFFICIENT_EVIDENCE` (`G-SAFE-CARD-EMPTY`); non-empty card →
 `EVALUATED` (even prose without headings).
@@ -303,7 +305,7 @@ an injectable fake runner and do **not** require torch.
 Recommended live model: `distilbert-base-uncased-finetuned-sst-2-english` (plain DistilBERT
 MLM will skip as unsupported modality).
 
-## Integrity probe (Phase 3 — tl-integrity-v1.0)
+## Integrity probe (Phase 3 — tl-integrity-v1.2)
 
 Metadata-only Layer A evidence (no weight downloads). Records Hub identity, disclosure,
 and optional injected hash comparison — **not** product FRIES and **not** finalized O/S/D
@@ -318,9 +320,11 @@ and optional injected hash comparison — **not** product FRIES and **not** fina
 | `reproducibility_claims` | Keyword disclosure groups (evidence only; not a scored risk) |
 | `files_listing_recorded` | `files_listing_fingerprint` = SHA-256 of sorted filenames (**not** weight bytes) |
 
-Named risks: `I-INT-REV-UNPINNED`, `I-INT-MANIFEST-MISSING`, `I-INT-LICENSE-UNDISCLOSED`,
-conditional `I-INT-BYTES-DIVERGE` (when `probe_config.extra.integrity` supplies both
-trusted reference and local hash). Cryptographic identity unverified is a claim-scope gate
+Disclosure gaps (round 3 L3, not risks): `I-INT-REV-UNPINNED`, `I-INT-MANIFEST-MISSING`,
+`I-INT-LICENSE-UNDISCLOSED`. Risks (positive evidence of a problem): `I-INT-LISTING-DRIFT`,
+and `I-INT-BYTES-DIVERGE` when the local artifact hash differs from a trusted reference
+(for local folders: artifact-set verification `MISMATCH`, round 3 L7,
+`docs/adr/0013-artifact-set-integrity.md`). Cryptographic identity unverified is a claim-scope gate
 (`I-INT-HASH-UNVERIFIED`), not whole-probe insufficient. No `integrity_score_0_10`.
 
 ## Probe plugins (Phase 9+)

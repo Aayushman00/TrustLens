@@ -41,7 +41,7 @@ logger = logging.getLogger("trustlens.api")
 )
 def import_hf(
     body: ImportHfRequest,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
 ) -> ModelRead:
     row = ModelService(db).import_from_hf(body)
     logger.info(

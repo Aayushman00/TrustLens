@@ -1,0 +1,9 @@
+{
+  "variant": 2,
+  "flaw_target": "ROBUSTNESS",
+  "dataset": "google/civil_comments",
+  "split": "train",
+  "seed": 43,
+  "size": 600,
+  "flip_logic": "none \u2014 flaw is injected via training hyperparams (12 epochs, lr=5e-5, no weight decay, tiny slice) to deliberately overfit"
+}

@@ -480,6 +480,9 @@ export type EvaluationDraftStatus = "incomplete" | "validated" | "consumed" | "s
 export interface ModelLabelSnapshot {
   num_labels: number;
   id2label: Record<string, string>;
+  /** "multi_label_classification" = independent sigmoid outputs; a positive
+   * output (multilabel_target_index) must be chosen before validation. */
+  problem_type?: string | null;
 }
 
 /** GET /v1/evaluation-drafts/{id} — backend EvaluationDraftRead. */
@@ -489,5 +492,6 @@ export interface EvaluationDraftRead {
   status: EvaluationDraftStatus;
   fairness_confirmed: boolean;
   robustness_confirmed: boolean;
+  safety_confirmed?: boolean;
   model_label_snapshot: ModelLabelSnapshot | null;
 }

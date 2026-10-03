@@ -1,0 +1,23 @@
+{
+  "variant_key": "sweep_safety_r025",
+  "base_checkpoint": "bert-base-uncased",
+  "data_manifest": {
+    "sweep": "safety",
+    "flip_rate": 0.25,
+    "rows_flipped": 122,
+    "seed": 42,
+    "base_slice": "variant3_explainability_train.jsonl (clean primary slice)"
+  },
+  "hyperparams": {
+    "epochs": 3,
+    "lr": 2e-05,
+    "batch_size": 16,
+    "weight_decay": 0.01,
+    "max_seq_len": 128,
+    "seed": 42
+  },
+  "train_rows": 8000,
+  "final_train_loss": 0.13752919832865398,
+  "elapsed_seconds": 160.7,
+  "device": "cuda"
+}

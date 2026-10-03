@@ -1,0 +1,39 @@
+\chapter{Literature Review and Existing Systems}\label{ch:lit}
+
+\section{What ``trustworthy'' has meant}
+Early work treated trust as a synonym for accuracy and generalisation. Later definitions broadened it. Surveys such as Kemmerzell et~al.\ \cite{kemmerzell2025} and Mattioli et~al.\ \cite{mattioli2024} collect requirements like fairness, robustness, transparency, privacy, accountability and human oversight, and then discuss how hard it is to attach a number to each. Policy documents such as the NIST AI Risk Management Framework \cite{nist2023} describe characteristics of trustworthy systems (valid and reliable, safe, secure, accountable and transparent, explainable, privacy-enhanced, fair) while stating that trade-offs between them need human judgment. Two points recur across these sources: no single metric captures trust, and measured properties are evidence for trust rather than trust itself. TrustLens adopts both points as design rules.
+
+Vashistha and Farahi take a more formal route. Their I-trustworthy framework ties trust to calibration, so a model is trusted when its confidence reflects its competence \cite{vashistha2025}, and their U-trustworthy work argues that expected utility, not calibration alone, is the right notion \cite{vashistha2024}. Both are about probabilistic classifiers and do not cover documentation, provenance or safety disclosure, which is where much of the practical risk on a public hub sits.
+
+\section{Fairness, robustness and explainability measures}
+\textbf{Fairness.} Group-fairness criteria compare a model's behaviour across groups. Demographic parity compares positive-prediction rates; equalized odds (Hardt et~al.\ \cite{hardt2016}) compares true- and false-positive rates. For toxicity classification, Borkan et~al.\ \cite{borkan2019} showed that models trained on comments can pick up identity terms as cues and introduced the Civil Comments data with identity annotations, which we use. Mehrabi et~al.\ \cite{mehrabi2021} survey the many ways bias enters a pipeline. An important caveat for our experiment is that demographic parity does not distinguish an unfair model from a fair model facing groups with different base rates; we return to this in Chapter~\ref{ch:discussion}.
+
+\textbf{Robustness.} Character-level perturbations are a classic cheap attack on text models. HotFlip \cite{ebrahimi2018} uses gradient-guided character flips, while behavioural testing frameworks such as CheckList \cite{ribeiro2020} organise perturbation-style tests by capability. The TrustLens probe is much simpler than either: it replaces a few characters at random and measures the accuracy drop.
+
+\textbf{Explainability and transparency.} Feature-attribution methods (SHAP, LIME) explain individual predictions. A different, documentation-centred line starts from model cards \cite{mitchell2019} and datasheets \cite{gebru2021}, which propose structured disclosure of intended use, limitations, training data and evaluation. The TrustLens Explainability and Safety probes follow this second line: they look at what a card discloses, not at model internals.
+
+\section{Supply-chain and provenance concerns}
+Pre-trained model reuse creates a software supply chain. Jiang et~al.\ \cite{jiang2023reuse} describe how Hugging Face models are reused, and note risks around missing or inaccurate documentation and attribution. At the extreme, a tampered checkpoint can carry a backdoor that behaves normally on clean inputs \cite{gu2017badnets}. Verifying that a downloaded file matches a trusted reference hash is the straightforward countermeasure, and the TrustLens Integrity probe implements the comparison, though in our experiment no trusted reference hash was supplied.
+
+\section{Existing systems}
+Table~\ref{tab:related} compares TrustLens with the systems we studied. The comparison is based on the descriptions in the cited papers and on our own use of the Hub; we did not re-run the other tools.
+
+\begin{table}[H]
+\centering\small
+\caption{TrustLens compared with related work.}\label{tab:related}
+\begin{tabularx}{\textwidth}{@{}p{2.6cm}LL@{}}
+\toprule
+\textbf{System} & \textbf{What it offers} & \textbf{Gap relative to our goal}\\
+\midrule
+TrustML \cite{manzano2024} & Python package to define and compute composite trust indicators from a catalogue of metrics; supports monitoring. & Metric set and weights are chosen by the user; no model import, no documentation or integrity evidence.\\
+FRIES score \cite{rutinowski2024} & FMEA-inspired, five-aspect 0--10 score built from O/S/D ratings. & A methodology, not a tool; O/S/D assignment is left to experts.\\
+I/U-trustworthy \cite{vashistha2025,vashistha2024} & Calibration- and utility-based formal definitions with statistical tests. & Focus on probabilistic classifiers; no fairness, integrity or documentation evidence.\\
+Model cards \cite{mitchell2019} & A disclosure template. & Voluntary and unverified; nothing checks what a card says.\\
+Hub model pages & Metadata, file list, download counts. & Descriptive only; no behavioural evidence.\\
+\textbf{TrustLens} & Imports a Hub model, runs local inference probes and documentation/metadata checks, applies the FRIES formula, stores hashed evidence and supports review. & Probes are shallow (Chapter~\ref{ch:fries}); the O/S/D mapping is heuristic and unvalidated.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Where TrustLens sits}
+We position TrustLens as an \emph{applied integration} of known pieces: group-fairness metrics, a perturbation test, card-coverage checks and metadata checks, combined under the FRIES formula, with infrastructure for evidence storage and human review. We did not find a public tool that does exactly this for Hub models, but our search was not systematic and we make no novelty claim beyond that. The main research question the literature leaves open, and which our experiment probes in a limited way, is whether such a combined score tracks real differences in model quality.

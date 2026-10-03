@@ -1,8 +1,8 @@
-"""Safety evaluation logic (tl-safety-v1.0) — pure functions, stdlib only."""
+"""Safety evaluation logic (tl-safety-v1.1) — pure functions, stdlib only."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from app.db.enums import ProbeEvaluationStatus
@@ -15,9 +15,9 @@ from app.probes.safety_card import (
     safety_coverage_ratio,
 )
 from app.probes.safety_stats import (
+    ASPECT_DISCLOSURE_GAP,
     ASPECT_NO_MATERIAL_RISK,
     ASPECT_NOT_SCORED,
-    ASPECT_RISK_DETECTED,
     CLAIM_NOT_ESTABLISHED,
     CLAIM_SUPPORTED,
     G_CARD_EMPTY,
@@ -48,6 +48,7 @@ class SafetyEvalResult:
     uncertainty: dict[str, Any]
     limitations: list[str]
     confidence: float = 0.5
+    disclosure_gaps: list[str] = field(default_factory=list)
 
 
 def _as_str(value: Any) -> str | None:
@@ -78,6 +79,7 @@ def evaluate_safety(*, model_metadata: dict[str, Any]) -> SafetyEvalResult:
             aspect_scoring=ASPECT_NOT_SCORED,
             scored_risk_id=None,
             risks_triggered=[],
+            disclosure_gaps=[],
             flags=["empty_card"],
             checks={},
             required_checks={},
@@ -114,7 +116,7 @@ def evaluate_safety(*, model_metadata: dict[str, Any]) -> SafetyEvalResult:
     phrase_matches = detect_high_impact_claims(card_text)
 
     flags: list[str] = []
-    risks: list[str] = []
+    gaps: list[str] = []
     checks: dict[str, dict[str, Any]] = {}
 
     for key in SAFETY_REQUIRED:
@@ -136,7 +138,7 @@ def evaluate_safety(*, model_metadata: dict[str, Any]) -> SafetyEvalResult:
     }
 
     if present_count < len(SAFETY_REQUIRED):
-        risks.append(RISK_GOV_DISCLOSURE_GAP)
+        gaps.append(RISK_GOV_DISCLOSURE_GAP)
 
     if phrase_matches:
         flags.append("high_impact_deployment_claim")
@@ -146,8 +148,8 @@ def evaluate_safety(*, model_metadata: dict[str, Any]) -> SafetyEvalResult:
     if ratio < 1.0 or phrase_matches:
         flags.append("needs_human_review")
 
-    if risks:
-        aspect_scoring = ASPECT_RISK_DETECTED
+    if gaps:
+        aspect_scoring = ASPECT_DISCLOSURE_GAP
     else:
         aspect_scoring = ASPECT_NO_MATERIAL_RISK
 
@@ -156,7 +158,7 @@ def evaluate_safety(*, model_metadata: dict[str, Any]) -> SafetyEvalResult:
         f"safety disclosure checklist evaluated; {present_count}/{len(SAFETY_REQUIRED)} "
         "required sections present"
     )
-    if RISK_GOV_DISCLOSURE_GAP in risks:
+    if RISK_GOV_DISCLOSURE_GAP in gaps:
         doc_reason = (
             "one or more required safety-disclosure sections absent or trivial "
             f"({present_count}/{len(SAFETY_REQUIRED)} present)"
@@ -174,7 +176,8 @@ def evaluate_safety(*, model_metadata: dict[str, Any]) -> SafetyEvalResult:
         status_reason=None,
         aspect_scoring=aspect_scoring,
         scored_risk_id=None,
-        risks_triggered=risks,
+        risks_triggered=[],
+        disclosure_gaps=gaps,
         flags=flags,
         checks=checks,
         required_checks=required,

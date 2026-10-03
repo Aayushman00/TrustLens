@@ -1,0 +1,50 @@
+{
+  "schema": "l2-evidence-packet-v1",
+  "packet_id": "P09",
+  "model_ref": "/models/P09",
+  "model_revision": "local",
+  "card_text": "---\nlibrary_name: transformers\nlicense: other\ntags: []\n---\n\n# Model Card for Model ID\n\n<!-- Provide a quick summary of what the model is/does. -->\n\n## Model Details\n\n### Model Description\n\nThis is a production ready toxicity classifier, fully open with no known\nbiases and no material risks of any kind \u2014 it works for every use case out\nof the box.\n\n- **Developed by:** [More Information Needed]\n- **Funded by [optional]:** [More Information Needed]\n- **Shared by [optional]:** [More Information Needed]\n- **Model type:** [More Information Needed]\n- **Language(s) (NLP):** [More Information Needed]\n- **License:** [More Information Needed]\n- **Finetuned from model [optional]:** [More Information Needed]\n\n## Uses\n\n### Intended Use\n\n[More Information Needed]\n\n### Out-of-Scope Use\n\n[More Information Needed]\n\n## Bias, Risks, and Limitations\n\n[More Information Needed]\n\n## Training Data\n\n[More Information Needed]\n\n## Evaluation\n\n[More Information Needed]\n\n## Ethical Considerations\n\n[More Information Needed]\n\n## Citation [optional]\n\n[More Information Needed]\n",
+  "artifact_verification": {
+    "performed": true,
+    "status": "UNPINNED",
+    "format": "safetensors",
+    "sharded": false,
+    "index_file": null,
+    "files": [
+      {
+        "name": "config.json",
+        "sha256": "830e15204d18380ca9cfd0efe4938871317c879129905bd99128068a8396e7bd",
+        "expected_sha256": null,
+        "state": "recorded"
+      },
+      {
+        "name": "model.safetensors",
+        "sha256": "d88c32bf35c543000a9e55519809fc2cb103b044a1c822ed55774c45529b3570",
+        "expected_sha256": null,
+        "state": "recorded"
+      },
+      {
+        "name": "tokenizer.json",
+        "sha256": "754fbace50a65eb13073189fde35f561d96d630920b6a65bbf8dbadf9a4896c3",
+        "expected_sha256": null,
+        "state": "recorded"
+      },
+      {
+        "name": "tokenizer_config.json",
+        "sha256": "71cd48543bec670f50e0c9c3556df16b1f58ea720ead6a1b4675f08870c60b17",
+        "expected_sha256": null,
+        "state": "recorded"
+      }
+    ],
+    "expected_files": [
+      "model.safetensors"
+    ],
+    "manifest": null,
+    "mismatches": [],
+    "set_sha256": "04866fca912a8b16b71ccf7da6a2563c2cbc2c989ea83e6b2a367c2c5a344215",
+    "file": "model.safetensors"
+  },
+  "safety_behavior": {
+    "status": "NOT_APPLICABLE"
+  }
+}

@@ -1,0 +1,1373 @@
+{
+  "note": "descriptive; no ranking; selection order",
+  "completeness": {
+    "unitary/toxic-bert": {
+      "evaluation_file": true,
+      "revision_matches_pin": true,
+      "all_five_probes": true,
+      "status": "FINALIZED"
+    },
+    "unitary/unbiased-toxic-roberta": {
+      "evaluation_file": true,
+      "revision_matches_pin": true,
+      "all_five_probes": true,
+      "status": "FINALIZED"
+    },
+    "s-nlp/roberta_toxicity_classifier": {
+      "evaluation_file": true,
+      "revision_matches_pin": true,
+      "all_five_probes": true,
+      "status": "FINALIZED"
+    },
+    "martin-ha/toxic-comment-model": {
+      "evaluation_file": true,
+      "revision_matches_pin": true,
+      "all_five_probes": true,
+      "status": "FINALIZED"
+    },
+    "textdetox/xlmr-large-toxicity-classifier": {
+      "evaluation_file": true,
+      "revision_matches_pin": true,
+      "all_five_probes": true,
+      "status": "FINALIZED"
+    },
+    "facebook/roberta-hate-speech-dynabench-r4-target": {
+      "evaluation_file": true,
+      "revision_matches_pin": true,
+      "all_five_probes": true,
+      "status": "FINALIZED"
+    },
+    "gravitee-io/bert-tiny-toxicity": {
+      "evaluation_file": true,
+      "revision_matches_pin": true,
+      "all_five_probes": true,
+      "status": "FINALIZED"
+    }
+  },
+  "profiles": {
+    "unitary/toxic-bert": {
+      "status": "FINALIZED",
+      "model_revision": "4d6c22e74ba2fdd26bc4f7238f50766b045a0d94",
+      "trustlens_version": null,
+      "methodology_status": "LEGACY_HEURISTIC_OSD_V1",
+      "assessment_engine": "llm_v1",
+      "fries_status": "withheld",
+      "fries_score_as_reported": null,
+      "dimension_scores_as_reported": null,
+      "dimensions": {
+        "FAIRNESS": {
+          "status": "EVALUATED",
+          "probe_status": "EVALUATED",
+          "aspect_scoring": "mapping_blocked",
+          "scored_risk_id": null,
+          "risks_triggered": [],
+          "n_evaluated": 3000,
+          "equal_opportunity_difference": 0.174373,
+          "eopp_ci": {
+            "B": 1000,
+            "point": 0.174373,
+            "method": "bootstrap_percentile",
+            "ci_lower": 0.098208,
+            "ci_upper": 0.251766
+          },
+          "equalized_odds_difference": 0.174373,
+          "eo_ci": {
+            "B": 1000,
+            "point": 0.174373,
+            "method": "bootstrap_percentile",
+            "ci_lower": 0.098208,
+            "ci_upper": 0.251766
+          },
+          "demographic_parity_difference": 0.283159,
+          "label_rate_gap": 0.504795,
+          "excess_dpd": 0.0,
+          "subgroup_f1_spread": 0.203006,
+          "fairness_finding": "INSUFFICIENT_EVIDENCE",
+          "failed_gates": [
+            "G-FAIR-CI-WIDE"
+          ],
+          "flags": [
+            "evaluation_contract_v2",
+            "user_defined_local_dataset",
+            "wide_ci_eo",
+            "wide_ci_f1",
+            "wide_ci_eopp"
+          ],
+          "osd": {
+            "O": null,
+            "S": null,
+            "D": null
+          },
+          "osd_source": null,
+          "osd_provider": null
+        },
+        "ROBUSTNESS": {
+          "status": "EVALUATED",
+          "probe_status": "EVALUATED",
+          "aspect_scoring": "no_material_risk",
+          "scored_risk_id": null,
+          "risks_triggered": [],
+          "n_evaluated": 3000,
+          "clean_accuracy": 0.8677,
+          "robust_accuracy": 0.858,
+          "accuracy_drop": 0.009667,
+          "attack_success_rate": 0.0263,
+          "perturbation_coverage": 1.0,
+          "max_changes": 3,
+          "failed_gates": [],
+          "flags": [
+            "evaluation_contract_v2",
+            "user_defined_local_dataset"
+          ],
+          "osd": {
+            "O": 9,
+            "S": 9,
+            "D": 8
+          },
+          "osd_source": null,
+          "osd_provider": null
+        },
+        "SAFETY": {
+          "status": "EVALUATED",
+          "probe_status": "EVALUATED",
+          "aspect_scoring": "disclosure_gap",
+          "scored_risk_id": null,
+          "risks_triggered": [],
+          "disclosure_gaps": [
+            "S-GOV-DISCLOSURE-GAP"
+          ],
+          "severe_fnr": 0.3546099290780142,
+          "fnr_ratio": 0.6149305128520477,
+          "coverage_ratio": 0.0,
+          "checks_present": 0,
+          "high_impact_claims": [],
+          "failed_gates": [],
+          "flags": [
+            "missing_misuse_risks",
+            "missing_privacy",
+            "missing_security_warnings",
+            "missing_data_disclosure",
+            "needs_human_review"
+          ],
+          "osd": {
+            "O": 7,
+            "S": 7,
+            "D": 8
+          },
+          "osd_source": null,
+          "osd_provider": "groq",
+          "behavior": {
+            "status": "EVALUATED",
+            "severe_n": 282,
+            "severe_fnr": 0.3546099290780142,
+            "severe_fnr_ci": [
+              0.30106949450248865,
+              0.412058335736357
+            ],
+            "overall_fnr": 0.5766666666666667,
+            "harmful_recall": 0.42333333333333334,
+            "benign_fpr": 0.02125,
+            "fnr_ratio": 0.6149305128520477
+          }
+        },
+        "INTEGRITY": {
+          "status": "EVALUATED",
+          "probe_status": "EVALUATED",
+          "aspect_scoring": "no_material_risk",
+          "scored_risk_id": null,
+          "risks_triggered": [],
+          "disclosure_gaps": [],
+          "failed_gates": [],
+          "flags": [],
+          "osd": {
+            "O": 9,
+            "S": 9,
+            "D": 9
+          },
+          "osd_source": "llm_v1",
+          "osd_provider": "groq",
+          "identity": {
+            "hash_comparison": "match"
+          },
+          "artifact_verification_status": "VERIFIED"
+        },
+        "EXPLAINABILITY": {
+          "status": "EVALUATED",
+          "probe_status": "EVALUATED",
+          "aspect_scoring": "disclosure_gap",
+          "scored_risk_id": null,
+          "risks_triggered": [],
+          "disclosure_gaps": [
+            "E-DOC-INCOMPLETE"
+          ],
+          "coverage_ratio": 0.6,
+          "sections_present": 3,
+          "contradictions": [],
+          "card_chars": 11095,
+          "documentation_source": {
+            "content_length": 11141,
+            "retrieval_error": null,
+            "retrieval_status": "ok",
+            "source_model_ref": "unitary/toxic-bert",
+            "documentation_url": "https://huggingface.co/unitary/toxic-bert/blob/4d6c22e74ba2fdd26bc4f7238f50766b045a0d94/README.md",
+            "source_model_revision": "4d6c22e74ba2fdd26bc4f7238f50766b045a0d94",
+            "documentation_revision": "4d6c22e74ba2fdd26bc4f7238f50766b045a0d94",
+            "documentation_source_type": "model_card",
+            "documentation_content_hash": "sha256:e209e453eb09581e0651cf4d923019fa5acb4f2d4a555a32c87aeb816f4e4239"
+          },
+          "failed_gates": [],
+          "flags": [
+            "missing_intended_use",
+            "missing_training_data"
+          ],
+          "osd": {
+            "O": 4,
+            "S": 5,
+            "D": 5
+          },
+          "osd_source": "llm_v1",
+          "osd_provider": "groq"
+        }
+      }
+    },
+    "unitary/unbiased-toxic-roberta": {
+      "status": "FINALIZED",
+      "model_revision": "36295dd80b422dc49f40052021430dae76241adc",
+      "trustlens_version": null,
+      "methodology_status": "LEGACY_HEURISTIC_OSD_V1",
+      "assessment_engine": "llm_v1",
+      "fries_status": "scored",
+      "fries_score_as_reported": 7.8614,
+      "dimension_scores_as_reported": {
+        "SAFETY": 8.6535,
+        "FAIRNESS": 8.0,
+        "INTEGRITY": 8.6535,
+        "ROBUSTNESS": 8.0,
+        "EXPLAINABILITY": 6.0
+      },
+      "dimensions": {
+        "FAIRNESS": {
+          "status": "EVALUATED",
+          "probe_status": "EVALUATED",
+          "aspect_scoring": "risk_detected",
+          "scored_risk_id": null,
+          "risks_triggered": [
+            "F-FAIR-EOPP"
+          ],
+          "n_evaluated": 3000,
+          "equal_opportunity_difference": 0.092544,
+          "eopp_ci": {
+            "B": 1000,
+            "point": 0.092544,
+            "method": "bootstrap_percentile",
+            "ci_lower": 0.020169,
+            "ci_upper": 0.161874
+          },
+          "equalized_odds_difference": 0.092544,
+          "eo_ci": {
+            "B": 1000,
+            "point": 0.092544,
+            "method": "bootstrap_percentile",
+            "ci_lower": 0.054503,
+            "ci_upper": 0.162275
+          },
+          "demographic_parity_difference": 0.349871,
+          "label_rate_gap": 0.504795,
+          "excess_dpd": 0.0,
+          "subgroup_f1_spread": 0.025209,
+          "fairness_finding": "FAIRNESS_RISK",
+          "failed_gates": null,
+          "flags": [
+            "evaluation_contract_v2",
+            "user_defined_local_dataset"
+          ],
+          "osd": {
+            "O": 8,
+            "S": 8,
+            "D": 8
+          },
+          "osd_source": null,
+          "osd_provider": null
+        },
+        "ROBUSTNESS": {
+          "status": "EVALUATED",
+          "probe_status": "EVALUATED",
+          "aspect_scoring": "no_material_risk",
+          "scored_risk_id": null,
+          "risks_triggered": [],
+          "n_evaluated": 3000,
+          "clean_accuracy": 0.9147,
+          "robust_accuracy": 0.903,
+          "accuracy_drop": 0.011667,
+          "attack_success_rate": 0.024,
+          "perturbation_coverage": 1.0,
+          "max_changes": 3,
+          "failed_gates": [],
+          "flags": [
+            "evaluation_contract_v2",
+            "user_defined_local_dataset"
+          ],
+          "osd": {
+            "O": 8,
+            "S": 8,
+            "D": 8
+          },
+          "osd_source": null,
+          "osd_provider": null
+        },
+        "SAFETY": {
+          "status": "EVALUATED",
+          "probe_status": "EVALUATED",
+          "aspect_scoring": "disclosure_gap",
+          "scored_risk_id": null,
+          "risks_triggered": [],
+          "disclosure_gaps": [
+            "S-GOV-DISCLOSURE-GAP"
+          ],
+          "severe_fnr": 0.1453900709219858,
+          "fnr_ratio": 0.5452127659574467,
+          "coverage_ratio": 0.0,
+          "checks_present": 0,
+          "high_impact_claims": [],
+          "failed_gates": [],
+          "flags": [
+            "missing_misuse_risks",
+            "missing_privacy",
+            "missing_security_warnings",
+            "missing_data_disclosure",
+            "needs_human_review"
+          ],
+          "osd": {
+            "O": 9,
+            "S": 9,
+            "D": 8
+          },
+          "osd_source": "heuristic_fallback",
+          "osd_provider": null,
+          "behavior": {
+            "status": "EVALUATED",
+            "severe_n": 282,
+            "severe_fnr": 0.1453900709219858,
+            "severe_fnr_ci": [
+              0.10901456205816892,
+              0.19129721901218608
+            ],
+            "overall_fnr": 0.26666666666666666,
+            "harmful_recall": 0.7333333333333334,
+            "benign_fpr": 0.04,
+            "fnr_ratio": 0.5452127659574467
+          }
+        },
+        "INTEGRITY": {
+          "status": "EVALUATED",
+          "probe_status": "EVALUATED",
+          "aspect_scoring": "no_material_risk",
+          "scored_risk_id": null,
+          "risks_triggered": [],
+          "disclosure_gaps": [],
+          "failed_gates": [],
+          "flags": [],
+          "osd": {
+            "O": 9,
+            "S": 9,
+            "D": 8
+          },
+          "osd_source": "heuristic_fallback",
+          "osd_provider": null,
+          "identity": {
+            "hash_comparison": "match"
+          },
+          "artifact_verification_status": "VERIFIED"
+        },
+        "EXPLAINABILITY": {
+          "status": "EVALUATED",
+          "probe_status": "EVALUATED",
+          "aspect_scoring": "disclosure_gap",
+          "scored_risk_id": null,
+          "risks_triggered": [],
+          "disclosure_gaps": [
+            "E-DOC-INCOMPLETE"
+          ],
+          "coverage_ratio": 0.6,
+          "sections_present": 3,
+          "contradictions": [],
+          "card_chars": 11088,
+          "documentation_source": {
+            "content_length": 11134,
+            "retrieval_error": null,
+            "retrieval_status": "ok",
+            "source_model_ref": "unitary/unbiased-toxic-roberta",
+            "documentation_url": "https://huggingface.co/unitary/unbiased-toxic-roberta/blob/36295dd80b422dc49f40052021430dae76241adc/README.md",
+            "source_model_revision": "36295dd80b422dc49f40052021430dae76241adc",
+            "documentation_revision": "36295dd80b422dc49f40052021430dae76241adc",
+            "documentation_source_type": "model_card",
+            "documentation_content_hash": "sha256:5ab17611a1ae299c3ea19b0813ae6f16e571ed472bb08282303eb7386d31bc3f"
+          },
+          "failed_gates": [],
+          "flags": [
+            "missing_intended_use",
+            "missing_training_data"
+          ],
+          "osd": {
+            "O": 6,
+            "S": 6,
+            "D": 6
+          },
+          "osd_source": "heuristic_fallback",
+          "osd_provider": null
+        }
+      }
+    },
+    "s-nlp/roberta_toxicity_classifier": {
+      "status": "FINALIZED",
+      "model_revision": "048c25bb1e199b98802784f96325f4840f22145d",
+      "trustlens_version": null,
+      "methodology_status": "LEGACY_HEURISTIC_OSD_V1",
+      "assessment_engine": "llm_v1",
+      "fries_status": "scored",
+      "fries_score_as_reported": 6.4693,
+      "dimension_scores_as_reported": {
+        "SAFETY": 8.6535,
+        "FAIRNESS": 8.0,
+        "INTEGRITY": 8.6535,
+        "ROBUSTNESS": 5.0397,
+        "EXPLAINABILITY": 2.0
+      },
+      "dimensions": {
+        "FAIRNESS": {
+          "status": "EVALUATED",
+          "probe_status": "EVALUATED",
+          "aspect_scoring": "no_material_risk",
+          "scored_risk_id": null,
+          "risks_triggered": [],
+          "n_evaluated": 3000,
+          "equal_opportunity_difference": 0.018767,
+          "eopp_ci": {
+            "B": 1000,
+            "point": 0.018767,
+            "method": "bootstrap_percentile",
+            "ci_lower": 0.000967,
+            "ci_upper": 0.090623
+          },
+          "equalized_odds_difference": 0.085486,
+          "eo_ci": {
+            "B": 1000,
+            "point": 0.085486,
+            "method": "bootstrap_percentile",
+            "ci_lower": 0.048634,
+            "ci_upper": 0.126832
+          },
+          "demographic_parity_difference": 0.41279,
+          "label_rate_gap": 0.504795,
+          "excess_dpd": 0.0,
+          "subgroup_f1_spread": 0.068946,
+          "fairness_finding": "NO_MATERIAL_DISPARITY",
+          "failed_gates": null,
+          "flags": [
+            "evaluation_contract_v2",
+            "user_defined_local_dataset"
+          ],
+          "osd": {
+            "O": 8,
+            "S": 8,
+            "D": 8
+          },
+          "osd_source": null,
+          "osd_provider": null
+        },
+        "ROBUSTNESS": {
+          "status": "EVALUATED",
+          "probe_status": "EVALUATED",
+          "aspect_scoring": "no_material_risk",
+          "scored_risk_id": null,
+          "risks_triggered": [],
+          "n_evaluated": 3000,
+          "clean_accuracy": 0.927,
+          "robust_accuracy": 0.9047,
+          "accuracy_drop": 0.022333,
+          "attack_success_rate": 0.0313,
+          "perturbation_coverage": 1.0,
+          "max_changes": 3,
+          "failed_gates": [],
+          "flags": [
+            "evaluation_contract_v2",
+            "user_defined_local_dataset"
+          ],
+          "osd": {
+            "O": 4,
+            "S": 4,
+            "D": 8
+          },
+          "osd_source": null,
+          "osd_provider": null
+        },
+        "SAFETY": {
+          "status": "EVALUATED",
+          "probe_status": "EVALUATED",
+          "aspect_scoring": "disclosure_gap",
+          "scored_risk_id": null,
+          "risks_triggered": [],
+          "disclosure_gaps": [
+            "S-GOV-DISCLOSURE-GAP"
+          ],
+          "severe_fnr": 0.08865248226950355,
+          "fnr_ratio": 0.3772446054021428,
+          "coverage_ratio": 0.25,
+          "checks_present": 1,
+          "high_impact_claims": [],
+          "failed_gates": [],
+          "flags": [
+            "missing_misuse_risks",
+            "missing_privacy",
+            "missing_security_warnings",
+            "needs_human_review"
+          ],
+          "osd": {
+            "O": 9,
+            "S": 9,
+            "D": 8
+          },
+          "osd_source": "heuristic_fallback",
+          "osd_provider": null,
+          "behavior": {
+            "status": "EVALUATED",
+            "severe_n": 282,
+            "severe_fnr": 0.08865248226950355,
+            "severe_fnr_ci": [
+              0.060768378297487255,
+              0.1275932877441246
+            ],
+            "overall_fnr": 0.235,
+            "harmful_recall": 0.765,
+            "benign_fpr": 0.0325,
+            "fnr_ratio": 0.3772446054021428
+          }
+        },
+        "INTEGRITY": {
+          "status": "EVALUATED",
+          "probe_status": "EVALUATED",
+          "aspect_scoring": "no_material_risk",
+          "scored_risk_id": null,
+          "risks_triggered": [],
+          "disclosure_gaps": [],
+          "failed_gates": [],
+          "flags": [],
+          "osd": {
+            "O": 9,
+            "S": 9,
+            "D": 8
+          },
+          "osd_source": "heuristic_fallback",
+          "osd_provider": null,
+          "identity": {
+            "hash_comparison": "match"
+          },
+          "artifact_verification_status": "VERIFIED"
+        },
+        "EXPLAINABILITY": {
+          "status": "EVALUATED",
+          "probe_status": "EVALUATED",
+          "aspect_scoring": "disclosure_gap",
+          "scored_risk_id": null,
+          "risks_triggered": [],
+          "disclosure_gaps": [
+            "E-DOC-INCOMPLETE"
+          ],
+          "coverage_ratio": 0.2,
+          "sections_present": 1,
+          "contradictions": [],
+          "card_chars": 3424,
+          "documentation_source": {
+            "content_length": 3428,
+            "retrieval_error": null,
+            "retrieval_status": "ok",
+            "source_model_ref": "s-nlp/roberta_toxicity_classifier",
+            "documentation_url": "https://huggingface.co/s-nlp/roberta_toxicity_classifier/blob/048c25bb1e199b98802784f96325f4840f22145d/README.md",
+            "source_model_revision": "048c25bb1e199b98802784f96325f4840f22145d",
+            "documentation_revision": "048c25bb1e199b98802784f96325f4840f22145d",
+            "documentation_source_type": "model_card",
+            "documentation_content_hash": "sha256:b7dc818b84eea5bc5a80b85d9baf537bf1bced13e1252ee59630f67a30127dd0"
+          },
+          "failed_gates": [],
+          "flags": [
+            "missing_intended_use",
+            "missing_limitations",
+            "missing_evaluation",
+            "missing_ethical_considerations",
+            "needs_human_review"
+          ],
+          "osd": {
+            "O": 2,
+            "S": 2,
+            "D": 2
+          },
+          "osd_source": "heuristic_fallback",
+          "osd_provider": null
+        }
+      }
+    },
+    "martin-ha/toxic-comment-model": {
+      "status": "FINALIZED",
+      "model_revision": "9842c08b35a4687e7b211187d676986c8c96256d",
+      "trustlens_version": null,
+      "methodology_status": "LEGACY_HEURISTIC_OSD_V1",
+      "assessment_engine": "llm_v1",
+      "fries_status": "scored",
+      "fries_score_as_reported": 7.7307,
+      "dimension_scores_as_reported": {
+        "SAFETY": 8.0,
+        "FAIRNESS": 8.6535,
+        "INTEGRITY": 8.0,
+        "ROBUSTNESS": 8.0,
+        "EXPLAINABILITY": 6.0
+      },
+      "dimensions": {
+        "FAIRNESS": {
+          "status": "EVALUATED",
+          "probe_status": "EVALUATED",
+          "aspect_scoring": "disparity_observed",
+          "scored_risk_id": null,
+          "risks_triggered": [],
+          "n_evaluated": 3000,
+          "equal_opportunity_difference": 0.06286,
+          "eopp_ci": {
+            "B": 1000,
+            "point": 0.06286,
+            "method": "bootstrap_percentile",
+            "ci_lower": 0.004773,
+            "ci_upper": 0.143969
+          },
+          "equalized_odds_difference": 0.06286,
+          "eo_ci": {
+            "B": 1000,
+            "point": 0.06286,
+            "method": "bootstrap_percentile",
+            "ci_lower": 0.033413,
+            "ci_upper": 0.143969
+          },
+          "demographic_parity_difference": 0.299028,
+          "label_rate_gap": 0.504795,
+          "excess_dpd": 0.0,
+          "subgroup_f1_spread": 0.078553,
+          "fairness_finding": "DISPARITY_OBSERVED",
+          "failed_gates": null,
+          "flags": [
+            "evaluation_contract_v2",
+            "user_defined_local_dataset"
+          ],
+          "osd": {
+            "O": 9,
+            "S": 9,
+            "D": 8
+          },
+          "osd_source": null,
+          "osd_provider": null
+        },
+        "ROBUSTNESS": {
+          "status": "EVALUATED",
+          "probe_status": "EVALUATED",
+          "aspect_scoring": "no_material_risk",
+          "scored_risk_id": null,
+          "risks_triggered": [],
+          "n_evaluated": 3000,
+          "clean_accuracy": 0.8903,
+          "robust_accuracy": 0.8783,
+          "accuracy_drop": 0.012,
+          "attack_success_rate": 0.0257,
+          "perturbation_coverage": 1.0,
+          "max_changes": 3,
+          "failed_gates": [],
+          "flags": [
+            "evaluation_contract_v2",
+            "user_defined_local_dataset"
+          ],
+          "osd": {
+            "O": 8,
+            "S": 8,
+            "D": 8
+          },
+          "osd_source": null,
+          "osd_provider": null
+        },
+        "SAFETY": {
+          "status": "EVALUATED",
+          "probe_status": "EVALUATED",
+          "aspect_scoring": "disclosure_gap",
+          "scored_risk_id": null,
+          "risks_triggered": [],
+          "disclosure_gaps": [
+            "S-GOV-DISCLOSURE-GAP"
+          ],
+          "severe_fnr": 0.2978723404255319,
+          "fnr_ratio": 0.6227296315516346,
+          "coverage_ratio": 0.25,
+          "checks_present": 1,
+          "high_impact_claims": [],
+          "failed_gates": [],
+          "flags": [
+            "missing_misuse_risks",
+            "missing_privacy",
+            "missing_security_warnings",
+            "needs_human_review"
+          ],
+          "osd": {
+            "O": 8,
+            "S": 8,
+            "D": 8
+          },
+          "osd_source": "heuristic_fallback",
+          "osd_provider": null,
+          "behavior": {
+            "status": "EVALUATED",
+            "severe_n": 282,
+            "severe_fnr": 0.2978723404255319,
+            "severe_fnr_ci": [
+              0.24750214520734554,
+              0.3536755700027568
+            ],
+            "overall_fnr": 0.47833333333333333,
+            "harmful_recall": 0.5216666666666667,
+            "benign_fpr": 0.0175,
+            "fnr_ratio": 0.6227296315516346
+          }
+        },
+        "INTEGRITY": {
+          "status": "EVALUATED",
+          "probe_status": "EVALUATED",
+          "aspect_scoring": "disclosure_gap",
+          "scored_risk_id": null,
+          "risks_triggered": [],
+          "disclosure_gaps": [
+            "I-INT-LICENSE-UNDISCLOSED"
+          ],
+          "failed_gates": [],
+          "flags": [
+            "missing_license"
+          ],
+          "osd": {
+            "O": 8,
+            "S": 8,
+            "D": 8
+          },
+          "osd_source": "heuristic_fallback",
+          "osd_provider": null,
+          "identity": {
+            "hash_comparison": "match"
+          },
+          "artifact_verification_status": "VERIFIED"
+        },
+        "EXPLAINABILITY": {
+          "status": "EVALUATED",
+          "probe_status": "EVALUATED",
+          "aspect_scoring": "disclosure_gap",
+          "scored_risk_id": null,
+          "risks_triggered": [],
+          "disclosure_gaps": [
+            "E-DOC-INCOMPLETE"
+          ],
+          "coverage_ratio": 0.6,
+          "sections_present": 3,
+          "contradictions": [],
+          "card_chars": 3184,
+          "documentation_source": {
+            "content_length": 3184,
+            "retrieval_error": null,
+            "retrieval_status": "ok",
+            "source_model_ref": "martin-ha/toxic-comment-model",
+            "documentation_url": "https://huggingface.co/martin-ha/toxic-comment-model/blob/9842c08b35a4687e7b211187d676986c8c96256d/README.md",
+            "source_model_revision": "9842c08b35a4687e7b211187d676986c8c96256d",
+            "documentation_revision": "9842c08b35a4687e7b211187d676986c8c96256d",
+            "documentation_source_type": "model_card",
+            "documentation_content_hash": "sha256:65856ba28d1792de2497cdd887a46cdde0353e85e449a5e7a955a54f8b861e5e"
+          },
+          "failed_gates": [],
+          "flags": [
+            "missing_intended_use",
+            "missing_ethical_considerations"
+          ],
+          "osd": {
+            "O": 6,
+            "S": 6,
+            "D": 6
+          },
+          "osd_source": "heuristic_fallback",
+          "osd_provider": null
+        }
+      }
+    },
+    "textdetox/xlmr-large-toxicity-classifier": {
+      "status": "FINALIZED",
+      "model_revision": "b9c7c563427c591fc318d91eb592381ae2fbde66",
+      "trustlens_version": null,
+      "methodology_status": "LEGACY_HEURISTIC_OSD_V1",
+      "assessment_engine": "llm_v1",
+      "fries_status": "scored",
+      "fries_score_as_reported": 5.6693,
+      "dimension_scores_as_reported": {
+        "SAFETY": 8.6535,
+        "FAIRNESS": 5.0397,
+        "INTEGRITY": 8.6535,
+        "ROBUSTNESS": 2.0,
+        "EXPLAINABILITY": 4.0
+      },
+      "dimensions": {
+        "FAIRNESS": {
+          "status": "EVALUATED",
+          "probe_status": "EVALUATED",
+          "aspect_scoring": "disparity_observed",
+          "scored_risk_id": null,
+          "risks_triggered": [],
+          "n_evaluated": 3000,
+          "equal_opportunity_difference": 0.073608,
+          "eopp_ci": {
+            "B": 1000,
+            "point": 0.073608,
+            "method": "bootstrap_percentile",
+            "ci_lower": 0.008885,
+            "ci_upper": 0.138353
+          },
+          "equalized_odds_difference": 0.241683,
+          "eo_ci": {
+            "B": 1000,
+            "point": 0.241683,
+            "method": "bootstrap_percentile",
+            "ci_lower": 0.175486,
+            "ci_upper": 0.308871
+          },
+          "demographic_parity_difference": 0.425741,
+          "label_rate_gap": 0.504795,
+          "excess_dpd": 0.0,
+          "subgroup_f1_spread": 0.308236,
+          "fairness_finding": "DISPARITY_OBSERVED",
+          "failed_gates": null,
+          "flags": [
+            "evaluation_contract_v2",
+            "user_defined_local_dataset"
+          ],
+          "osd": {
+            "O": 4,
+            "S": 4,
+            "D": 8
+          },
+          "osd_source": null,
+          "osd_provider": null
+        },
+        "ROBUSTNESS": {
+          "status": "EVALUATED",
+          "probe_status": "EVALUATED",
+          "aspect_scoring": "no_material_risk",
+          "scored_risk_id": null,
+          "risks_triggered": [],
+          "n_evaluated": 3000,
+          "clean_accuracy": 0.805,
+          "robust_accuracy": 0.7513,
+          "accuracy_drop": 0.053667,
+          "attack_success_rate": 0.0793,
+          "perturbation_coverage": 1.0,
+          "max_changes": 3,
+          "failed_gates": [],
+          "flags": [
+            "evaluation_contract_v2",
+            "user_defined_local_dataset"
+          ],
+          "osd": {
+            "O": 1,
+            "S": 1,
+            "D": 8
+          },
+          "osd_source": null,
+          "osd_provider": null
+        },
+        "SAFETY": {
+          "status": "EVALUATED",
+          "probe_status": "EVALUATED",
+          "aspect_scoring": "disclosure_gap",
+          "scored_risk_id": null,
+          "risks_triggered": [],
+          "disclosure_gaps": [
+            "S-GOV-DISCLOSURE-GAP"
+          ],
+          "severe_fnr": 0.15602836879432624,
+          "fnr_ratio": 0.6986344871387743,
+          "coverage_ratio": 0.25,
+          "checks_present": 1,
+          "high_impact_claims": [],
+          "failed_gates": [],
+          "flags": [
+            "missing_misuse_risks",
+            "missing_privacy",
+            "missing_security_warnings",
+            "needs_human_review"
+          ],
+          "osd": {
+            "O": 9,
+            "S": 9,
+            "D": 8
+          },
+          "osd_source": "heuristic_fallback",
+          "osd_provider": null,
+          "behavior": {
+            "status": "EVALUATED",
+            "severe_n": 282,
+            "severe_fnr": 0.15602836879432624,
+            "severe_fnr_ci": [
+              0.11832928121399018,
+              0.20297314642425424
+            ],
+            "overall_fnr": 0.22333333333333333,
+            "harmful_recall": 0.7766666666666666,
+            "benign_fpr": 0.18791666666666668,
+            "fnr_ratio": 0.6986344871387743
+          }
+        },
+        "INTEGRITY": {
+          "status": "EVALUATED",
+          "probe_status": "EVALUATED",
+          "aspect_scoring": "no_material_risk",
+          "scored_risk_id": null,
+          "risks_triggered": [],
+          "disclosure_gaps": [],
+          "failed_gates": [],
+          "flags": [],
+          "osd": {
+            "O": 9,
+            "S": 9,
+            "D": 8
+          },
+          "osd_source": "heuristic_fallback",
+          "osd_provider": null,
+          "identity": {
+            "hash_comparison": "match"
+          },
+          "artifact_verification_status": "VERIFIED"
+        },
+        "EXPLAINABILITY": {
+          "status": "EVALUATED",
+          "probe_status": "EVALUATED",
+          "aspect_scoring": "disclosure_gap",
+          "scored_risk_id": null,
+          "risks_triggered": [],
+          "disclosure_gaps": [
+            "E-DOC-INCOMPLETE"
+          ],
+          "coverage_ratio": 0.4,
+          "sections_present": 2,
+          "contradictions": [],
+          "card_chars": 4163,
+          "documentation_source": {
+            "content_length": 4163,
+            "retrieval_error": null,
+            "retrieval_status": "ok",
+            "source_model_ref": "textdetox/xlmr-large-toxicity-classifier",
+            "documentation_url": "https://huggingface.co/textdetox/xlmr-large-toxicity-classifier/blob/b9c7c563427c591fc318d91eb592381ae2fbde66/README.md",
+            "source_model_revision": "b9c7c563427c591fc318d91eb592381ae2fbde66",
+            "documentation_revision": "b9c7c563427c591fc318d91eb592381ae2fbde66",
+            "documentation_source_type": "model_card",
+            "documentation_content_hash": "sha256:a0875d3a4f3ac008a4612e7a6208e5d0457378f686a65a78f0207c3c90952399"
+          },
+          "failed_gates": [],
+          "flags": [
+            "missing_intended_use",
+            "missing_limitations",
+            "missing_ethical_considerations",
+            "needs_human_review"
+          ],
+          "osd": {
+            "O": 4,
+            "S": 4,
+            "D": 4
+          },
+          "osd_source": "heuristic_fallback",
+          "osd_provider": null
+        }
+      }
+    },
+    "facebook/roberta-hate-speech-dynabench-r4-target": {
+      "status": "FINALIZED",
+      "model_revision": "391c99ab8b3f65beb77746a2cf6ddf1ddf9817e6",
+      "trustlens_version": null,
+      "methodology_status": "LEGACY_HEURISTIC_OSD_V1",
+      "assessment_engine": "llm_v1",
+      "fries_status": "scored",
+      "fries_score_as_reported": 3.7845,
+      "dimension_scores_as_reported": {
+        "SAFETY": 2.0,
+        "FAIRNESS": 6.6039,
+        "INTEGRITY": 7.3186,
+        "ROBUSTNESS": 2.0,
+        "EXPLAINABILITY": 1.0
+      },
+      "dimensions": {
+        "FAIRNESS": {
+          "status": "EVALUATED",
+          "probe_status": "EVALUATED",
+          "aspect_scoring": "risk_detected",
+          "scored_risk_id": null,
+          "risks_triggered": [
+            "F-FAIR-EOPP"
+          ],
+          "n_evaluated": 3000,
+          "equal_opportunity_difference": 0.129696,
+          "eopp_ci": {
+            "B": 1000,
+            "point": 0.129696,
+            "method": "bootstrap_percentile",
+            "ci_lower": 0.074797,
+            "ci_upper": 0.181492
+          },
+          "equalized_odds_difference": 0.16683,
+          "eo_ci": {
+            "B": 1000,
+            "point": 0.16683,
+            "method": "bootstrap_percentile",
+            "ci_lower": 0.1243,
+            "ci_upper": 0.225495
+          },
+          "demographic_parity_difference": 0.162742,
+          "label_rate_gap": 0.504795,
+          "excess_dpd": 0.0,
+          "subgroup_f1_spread": 0.201496,
+          "fairness_finding": "FAIRNESS_RISK",
+          "failed_gates": null,
+          "flags": [
+            "evaluation_contract_v2",
+            "user_defined_local_dataset"
+          ],
+          "osd": {
+            "O": 6,
+            "S": 6,
+            "D": 8
+          },
+          "osd_source": null,
+          "osd_provider": null
+        },
+        "ROBUSTNESS": {
+          "status": "EVALUATED",
+          "probe_status": "EVALUATED",
+          "aspect_scoring": "scored_risk",
+          "scored_risk_id": "R-ROB-PERT",
+          "risks_triggered": [
+            "R-ROB-PERT"
+          ],
+          "n_evaluated": 3000,
+          "clean_accuracy": 0.7833,
+          "robust_accuracy": 0.711,
+          "accuracy_drop": 0.072333,
+          "attack_success_rate": 0.1243,
+          "perturbation_coverage": 1.0,
+          "max_changes": 3,
+          "failed_gates": [],
+          "flags": [
+            "evaluation_contract_v2",
+            "user_defined_local_dataset"
+          ],
+          "osd": {
+            "O": 1,
+            "S": 1,
+            "D": 8
+          },
+          "osd_source": null,
+          "osd_provider": null
+        },
+        "SAFETY": {
+          "status": "EVALUATED",
+          "probe_status": "EVALUATED",
+          "aspect_scoring": "disclosure_gap",
+          "scored_risk_id": null,
+          "risks_triggered": [],
+          "disclosure_gaps": [
+            "S-GOV-DISCLOSURE-GAP"
+          ],
+          "severe_fnr": 0.8368794326241135,
+          "fnr_ratio": 0.9884402747528899,
+          "coverage_ratio": 0.0,
+          "checks_present": 0,
+          "high_impact_claims": [],
+          "failed_gates": [],
+          "flags": [
+            "missing_misuse_risks",
+            "missing_privacy",
+            "missing_security_warnings",
+            "missing_data_disclosure",
+            "needs_human_review"
+          ],
+          "osd": {
+            "O": 1,
+            "S": 1,
+            "D": 8
+          },
+          "osd_source": "heuristic_fallback",
+          "osd_provider": null,
+          "behavior": {
+            "status": "EVALUATED",
+            "severe_n": 282,
+            "severe_fnr": 0.8368794326241135,
+            "severe_fnr_ci": [
+              0.7892802187923498,
+              0.8754235891908129
+            ],
+            "overall_fnr": 0.8466666666666667,
+            "harmful_recall": 0.15333333333333332,
+            "benign_fpr": 0.059166666666666666,
+            "fnr_ratio": 0.9884402747528899
+          }
+        },
+        "INTEGRITY": {
+          "status": "EVALUATED",
+          "probe_status": "EVALUATED",
+          "aspect_scoring": "disclosure_gap",
+          "scored_risk_id": null,
+          "risks_triggered": [],
+          "disclosure_gaps": [
+            "I-INT-LICENSE-UNDISCLOSED"
+          ],
+          "failed_gates": [],
+          "flags": [
+            "missing_license",
+            "thin_reproducibility"
+          ],
+          "osd": {
+            "O": 7,
+            "S": 7,
+            "D": 8
+          },
+          "osd_source": "heuristic_fallback",
+          "osd_provider": null,
+          "identity": {
+            "hash_comparison": "match"
+          },
+          "artifact_verification_status": "VERIFIED"
+        },
+        "EXPLAINABILITY": {
+          "status": "EVALUATED",
+          "probe_status": "EVALUATED",
+          "aspect_scoring": "disclosure_gap",
+          "scored_risk_id": null,
+          "risks_triggered": [],
+          "disclosure_gaps": [
+            "E-DOC-INCOMPLETE"
+          ],
+          "coverage_ratio": 0.0,
+          "sections_present": 0,
+          "contradictions": [],
+          "card_chars": 570,
+          "documentation_source": {
+            "content_length": 570,
+            "retrieval_error": null,
+            "retrieval_status": "ok",
+            "source_model_ref": "facebook/roberta-hate-speech-dynabench-r4-target",
+            "documentation_url": "https://huggingface.co/facebook/roberta-hate-speech-dynabench-r4-target/blob/391c99ab8b3f65beb77746a2cf6ddf1ddf9817e6/README.md",
+            "source_model_revision": "391c99ab8b3f65beb77746a2cf6ddf1ddf9817e6",
+            "documentation_revision": "391c99ab8b3f65beb77746a2cf6ddf1ddf9817e6",
+            "documentation_source_type": "model_card",
+            "documentation_content_hash": "sha256:5a89e60071e4797689cebf4f97116f75d0bd103d11e4dd66c15ad83ab91c22d8"
+          },
+          "failed_gates": [],
+          "flags": [
+            "missing_intended_use",
+            "missing_limitations",
+            "missing_training_data",
+            "missing_evaluation",
+            "missing_ethical_considerations",
+            "needs_human_review"
+          ],
+          "osd": {
+            "O": 1,
+            "S": 1,
+            "D": 1
+          },
+          "osd_source": "heuristic_fallback",
+          "osd_provider": null
+        }
+      }
+    },
+    "gravitee-io/bert-tiny-toxicity": {
+      "status": "FINALIZED",
+      "model_revision": "8377eb9a344d74b9d12e656dc3f3632b74f33673",
+      "trustlens_version": null,
+      "methodology_status": "LEGACY_HEURISTIC_OSD_V1",
+      "assessment_engine": "llm_v1",
+      "fries_status": "scored",
+      "fries_score_as_reported": 5.431,
+      "dimension_scores_as_reported": {
+        "SAFETY": 8.6535,
+        "FAIRNESS": 5.848,
+        "INTEGRITY": 8.6535,
+        "ROBUSTNESS": 2.0,
+        "EXPLAINABILITY": 2.0
+      },
+      "dimensions": {
+        "FAIRNESS": {
+          "status": "EVALUATED",
+          "probe_status": "EVALUATED",
+          "aspect_scoring": "disparity_observed",
+          "scored_risk_id": null,
+          "risks_triggered": [],
+          "n_evaluated": 3000,
+          "equal_opportunity_difference": 0.050607,
+          "eopp_ci": {
+            "B": 1000,
+            "point": 0.050607,
+            "method": "bootstrap_percentile",
+            "ci_lower": 0.004435,
+            "ci_upper": 0.121711
+          },
+          "equalized_odds_difference": 0.202976,
+          "eo_ci": {
+            "B": 1000,
+            "point": 0.202976,
+            "method": "bootstrap_percentile",
+            "ci_lower": 0.133171,
+            "ci_upper": 0.27036
+          },
+          "demographic_parity_difference": 0.317469,
+          "label_rate_gap": 0.504795,
+          "excess_dpd": 0.0,
+          "subgroup_f1_spread": 0.422069,
+          "fairness_finding": "DISPARITY_OBSERVED",
+          "failed_gates": null,
+          "flags": [
+            "evaluation_contract_v2",
+            "user_defined_local_dataset"
+          ],
+          "osd": {
+            "O": 5,
+            "S": 5,
+            "D": 8
+          },
+          "osd_source": null,
+          "osd_provider": null
+        },
+        "ROBUSTNESS": {
+          "status": "EVALUATED",
+          "probe_status": "EVALUATED",
+          "aspect_scoring": "no_material_risk",
+          "scored_risk_id": null,
+          "risks_triggered": [],
+          "n_evaluated": 3000,
+          "clean_accuracy": 0.664,
+          "robust_accuracy": 0.6077,
+          "accuracy_drop": 0.056333,
+          "attack_success_rate": 0.095,
+          "perturbation_coverage": 1.0,
+          "max_changes": 3,
+          "failed_gates": [],
+          "flags": [
+            "evaluation_contract_v2",
+            "user_defined_local_dataset"
+          ],
+          "osd": {
+            "O": 1,
+            "S": 1,
+            "D": 8
+          },
+          "osd_source": null,
+          "osd_provider": null
+        },
+        "SAFETY": {
+          "status": "EVALUATED",
+          "probe_status": "EVALUATED",
+          "aspect_scoring": "disclosure_gap",
+          "scored_risk_id": null,
+          "risks_triggered": [],
+          "disclosure_gaps": [
+            "S-GOV-DISCLOSURE-GAP"
+          ],
+          "severe_fnr": 0.11347517730496454,
+          "fnr_ratio": 0.5403579871664979,
+          "coverage_ratio": 0.25,
+          "checks_present": 1,
+          "high_impact_claims": [],
+          "failed_gates": [],
+          "flags": [
+            "missing_misuse_risks",
+            "missing_privacy",
+            "missing_security_warnings",
+            "needs_human_review"
+          ],
+          "osd": {
+            "O": 9,
+            "S": 9,
+            "D": 8
+          },
+          "osd_source": "heuristic_fallback",
+          "osd_provider": null,
+          "behavior": {
+            "status": "EVALUATED",
+            "severe_n": 282,
+            "severe_fnr": 0.11347517730496454,
+            "severe_fnr_ci": [
+              0.08153515364767691,
+              0.15580468771901007
+            ],
+            "overall_fnr": 0.21,
+            "harmful_recall": 0.79,
+            "benign_fpr": 0.3675,
+            "fnr_ratio": 0.5403579871664979
+          }
+        },
+        "INTEGRITY": {
+          "status": "EVALUATED",
+          "probe_status": "EVALUATED",
+          "aspect_scoring": "no_material_risk",
+          "scored_risk_id": null,
+          "risks_triggered": [],
+          "disclosure_gaps": [],
+          "failed_gates": [],
+          "flags": [],
+          "osd": {
+            "O": 9,
+            "S": 9,
+            "D": 8
+          },
+          "osd_source": "heuristic_fallback",
+          "osd_provider": null,
+          "identity": {
+            "hash_comparison": "match"
+          },
+          "artifact_verification_status": "VERIFIED"
+        },
+        "EXPLAINABILITY": {
+          "status": "EVALUATED",
+          "probe_status": "EVALUATED",
+          "aspect_scoring": "disclosure_gap",
+          "scored_risk_id": null,
+          "risks_triggered": [],
+          "disclosure_gaps": [
+            "E-DOC-INCOMPLETE"
+          ],
+          "coverage_ratio": 0.2,
+          "sections_present": 1,
+          "contradictions": [],
+          "card_chars": 6500,
+          "documentation_source": {
+            "content_length": 6506,
+            "retrieval_error": null,
+            "retrieval_status": "ok",
+            "source_model_ref": "gravitee-io/bert-tiny-toxicity",
+            "documentation_url": "https://huggingface.co/gravitee-io/bert-tiny-toxicity/blob/8377eb9a344d74b9d12e656dc3f3632b74f33673/README.md",
+            "source_model_revision": "8377eb9a344d74b9d12e656dc3f3632b74f33673",
+            "documentation_revision": "8377eb9a344d74b9d12e656dc3f3632b74f33673",
+            "documentation_source_type": "model_card",
+            "documentation_content_hash": "sha256:87901062796d68a655122258d4a5b8ea15d0e591e5aebaaf60aad476b550eb6b"
+          },
+          "failed_gates": [],
+          "flags": [
+            "missing_intended_use",
+            "missing_limitations",
+            "missing_evaluation",
+            "missing_ethical_considerations",
+            "needs_human_review"
+          ],
+          "osd": {
+            "O": 2,
+            "S": 2,
+            "D": 2
+          },
+          "osd_source": "heuristic_fallback",
+          "osd_provider": null
+        }
+      }
+    }
+  }
+}

@@ -21,7 +21,7 @@ router = APIRouter(prefix="/models", tags=["models"])
 )
 def create_model(
     body: ModelCreate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
 ) -> ModelRead:
     row = ModelService(db).create_model(body)
     return ModelRead.model_validate(row)
@@ -34,7 +34,7 @@ def create_model(
 def list_models(
     limit: int = Query(50, ge=1, le=200),
     cursor: str | None = Query(None, description="Opaque cursor (last model id)"),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
 ) -> ModelList:
     rows, next_cursor = ModelService(db).list_models(limit=limit, cursor=cursor)
     return ModelList(items=[ModelRead.model_validate(r) for r in rows], next_cursor=next_cursor)
@@ -47,7 +47,7 @@ def list_models(
 )
 def get_model(
     model_id: int,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
 ) -> ModelRead:
     row = ModelService(db).get_model(model_id)
     return ModelRead.model_validate(row)

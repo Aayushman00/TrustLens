@@ -1,0 +1,23 @@
+{
+  "schema": "l10-evidence-packet-v1",
+  "packet_id": "L10-04",
+  "dimension": "ROBUSTNESS",
+  "task": "Binary text classifier: labels English comments toxic (1) or not toxic (0).",
+  "evidence": {
+    "perturbation": "random character swaps, at most 8 per text",
+    "input_preprocessing": "texts without any letter or digit were removed before the test",
+    "n_evaluated": 2999,
+    "perturbation_coverage": 1.0,
+    "rows_not_perturbable": 0,
+    "clean_accuracy": 0.894,
+    "robust_accuracy": 0.8643,
+    "accuracy_drop": 0.029677,
+    "relative_degradation": 0.9668,
+    "attack_success_rate": 0.0423,
+    "accuracy_drop_ci95": [
+      0.021674,
+      0.038013
+    ]
+  },
+  "redactions": []
+}

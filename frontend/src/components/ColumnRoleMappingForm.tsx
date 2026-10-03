@@ -29,7 +29,7 @@ export default function ColumnRoleMappingForm({
   onValidated,
 }: {
   draftId: string;
-  dimension: "FAIRNESS" | "ROBUSTNESS";
+  dimension: "FAIRNESS" | "ROBUSTNESS" | "SAFETY";
   content: DatasetContentRead;
   /** The draft's frozen model config snapshot -- the ONLY source of model
    * label options for the mapping dropdown below. Never a hardcoded/invented
@@ -41,12 +41,18 @@ export default function ColumnRoleMappingForm({
   const [textColumn, setTextColumn] = useState("");
   const [targetColumn, setTargetColumn] = useState("");
   const [sensitiveColumn, setSensitiveColumn] = useState("");
+  // SAFETY-only: 0/1 column marking severe-harm rows (behavioural safety).
+  const [severeColumn, setSevereColumn] = useState("");
+  // Multi-label models only: which output is the positive class. No default —
+  // the server rejects a multi-label model without it (MULTILABEL_TARGET_REQUIRED).
+  const isMultiLabel = modelLabelSnapshot?.problem_type === "multi_label_classification";
+  const [targetOutput, setTargetOutput] = useState(-1);
   const [labelMapping, setLabelMapping] = useState<LabelMappingEntry[]>([]);
   const [targetValues, setTargetValues] = useState<string[]>([]);
   // Real (index, label) pairs from the model's actual config snapshot --
   // sorted by index so a 3-class model always shows exactly 3 choices, a
   // 2-class model exactly 2, in a stable order.
-  const modelLabelOptions = useMemo(
+  const rawOutputs = useMemo(
     () =>
       modelLabelSnapshot
         ? Object.entries(modelLabelSnapshot.id2label)
@@ -55,6 +61,18 @@ export default function ColumnRoleMappingForm({
         : [],
     [modelLabelSnapshot]
   );
+  // A multi-label model is read as a binary decision on the chosen output:
+  // dataset labels then map to {0: not <output>, 1: <output>}.
+  const modelLabelOptions = useMemo(() => {
+    if (!isMultiLabel) return rawOutputs;
+    const chosen = rawOutputs.find((o) => o.index === targetOutput);
+    return chosen
+      ? [
+          { index: 0, label: `not ${chosen.label}` },
+          { index: 1, label: chosen.label },
+        ]
+      : [];
+  }, [isMultiLabel, rawOutputs, targetOutput]);
   const [minGroupN, setMinGroupN] = useState(30);
   // Fairness-only: which model_label_index DP/EO/F1-spread treat as the
   // "positive"/favorable outcome. Pre-filled to 1 (the field's own default)
@@ -109,7 +127,10 @@ export default function ColumnRoleMappingForm({
             sensitive_column: dimension === "FAIRNESS" ? sensitiveColumn : undefined,
             label_mapping: labelMapping,
             min_group_n: dimension === "FAIRNESS" ? minGroupN : undefined,
-            positive_label_index: dimension === "FAIRNESS" ? positiveLabelIndex : undefined,
+            positive_label_index:
+              dimension === "FAIRNESS" || dimension === "SAFETY" ? positiveLabelIndex : undefined,
+            severe_column: dimension === "SAFETY" ? severeColumn : undefined,
+            multilabel_target_index: isMultiLabel && targetOutput >= 0 ? targetOutput : undefined,
           },
         }
       );
@@ -162,6 +183,56 @@ export default function ColumnRoleMappingForm({
             ))}
           </select>
         </label>
+        {isMultiLabel ? (
+          <label>
+            Positive output (multi-label model)
+            <select
+              value={targetOutput}
+              onChange={(e) => {
+                setTargetOutput(Number(e.target.value));
+                // Derived options are always {0, 1}: keeping old rows would silently
+                // re-point "1 → toxic" at the newly chosen output. Start unmapped.
+                setLabelMapping((rows) => rows.map((r) => ({ ...r, model_label_index: -1 })));
+                setPositiveLabelIndex(1);
+              }}
+            >
+              <option value={-1}>Select model output…</option>
+              {rawOutputs.map(({ index, label }) => (
+                <option key={index} value={index}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
+        {dimension === "SAFETY" ? (
+          <>
+            <label>
+              Severe-harm column (0/1)
+              <select value={severeColumn} onChange={(e) => setSevereColumn(e.target.value)}>
+                <option value="">Select…</option>
+                {content.columns.map((c) => (
+                  <option key={c.name} value={c.name}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Harmful class
+              <select
+                value={positiveLabelIndex}
+                onChange={(e) => setPositiveLabelIndex(Number(e.target.value))}
+              >
+                {modelLabelOptions.map(({ index, label }) => (
+                  <option key={index} value={index}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </>
+        ) : null}
         {dimension === "FAIRNESS" ? (
           <>
             <label>

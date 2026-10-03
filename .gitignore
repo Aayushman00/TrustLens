@@ -173,6 +173,24 @@ Desktop.ini
 # Local experiment outputs (keep structured results in git only if intentional)
 experiment_runs/
 benchmark_outputs/
+# Flawed-model suite: track result JSON, cards, data manifests, model
+# manifests/configs; never the weights or training scratch (GBs).
+results/flawed_model_suite/models/**/*.safetensors
+results/flawed_model_suite/models/**/*.bin
+results/flawed_model_suite/models/**/tokenizer.json
+results/flawed_model_suite/models/**/_trainer_tmp/
+results/flawed_model_suite/data/*_train.jsonl
+# Round 3 L5 confirmatory fairness setup: same policy (data reproducible from --seed).
+results/fairness_confirm_*/models/**/*.safetensors
+results/fairness_confirm_*/models/**/tokenizer.json
+results/fairness_confirm_*/models/**/_trainer_tmp/
+results/fairness_confirm_*/data/*_train.jsonl
+results/osd_calibration_*/calibration/models/**/*.safetensors
+results/osd_calibration_*/calibration/models/**/tokenizer.json
+results/osd_calibration_*/calibration/models/**/_trainer_tmp/
+results/osd_calibration_*/calibration/data/*_train.jsonl
+# Exported TrustLens reports (JSON+PDF) and raw evidence per experiment run.
+*.log
 
 
 # -----------------------------------------------------------------------------
@@ -185,3 +203,33 @@ papers/
 implementation/
 docs/TRUSTLENS_*.md
 stitch*/
+# Round 3: tokenizer vocab copies (30k lines each) and generated eval sets
+# (reproducible from --seed) bloat PR diffs; keep manifests/results only.
+results/**/models/**/vocab.txt
+results/**/data/eval_set.csv
+results/**/data/eval_set.jsonl
+
+# Regenerable per-run exports (TrustLens evidence/report JSON+PDF) and build output.
+results/**/artifacts/
+results/**/*.pdf
+report/main.pdf
+report/*.aux
+report/*.out
+report/*.toc
+report/*.bbl
+report/*.blg
+report/*.fls
+report/*.fdb_latexmk
+report/*.synctex.gz
+# AI-generated planning docs
+docs/superpowers/
+
+# Flawed-model suite: raw per-run dumps are regenerable; keep analysis/summary/cards/ground truth.
+results/flawed_model_suite/final_*_repeat5*/
+results/flawed_model_suite/sweep_*/
+results/flawed_model_suite/smoke_*/
+results/flawed_model_suite/hub_2026*/
+results/flawed_model_suite/hub_final_c*/
+results/flawed_model_suite/eval_results/
+results/flawed_model_suite/eval_results_v2/
+results/flawed_model_suite/human_validation_*/*.json

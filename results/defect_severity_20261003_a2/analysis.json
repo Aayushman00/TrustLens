@@ -1,0 +1,161 @@
+{
+  "eval_set": "results\\fairness_confirm_20261003\\data\\eval_set.csv",
+  "robustness_model": "variant3_explainability",
+  "robustness_rows_dropped_unperturbable": [
+    ":("
+  ],
+  "runs_per_level": 2,
+  "robustness": [
+    {
+      "attack_budget": 0.01,
+      "max_changes": 1,
+      "clean_accuracy": 0.894,
+      "robust_accuracy": 0.8893,
+      "accuracy_drop": 0.004668,
+      "relative_degradation": 0.9948,
+      "attack_success_rate": 0.0093,
+      "perturbation_coverage": 1.0,
+      "n_evaluated": 2999,
+      "aspect_scoring": "no_material_risk",
+      "risks_triggered": [],
+      "scored_risk_id": null,
+      "accuracy_drop_ci": {
+        "point": 0.004668,
+        "ci_lower": 0.000667,
+        "ci_upper": 0.009003,
+        "method": "bootstrap_percentile",
+        "B": 1000
+      },
+      "status": "EVALUATED",
+      "status_reason": "no material perturbation risk at 95% CI (drop=0.004668, ci_lower=0.000667, \u03b5=0.05)",
+      "band": [
+        9,
+        9,
+        8
+      ],
+      "band_detail": "clean_accuracy=0.894, robust_accuracy=0.889, accuracy_drop=0.005",
+      "aspect_score": 8.65349742184445,
+      "repeatable": true
+    },
+    {
+      "attack_budget": 0.03,
+      "max_changes": 3,
+      "clean_accuracy": 0.894,
+      "robust_accuracy": 0.8776,
+      "accuracy_drop": 0.016339,
+      "relative_degradation": 0.9817,
+      "attack_success_rate": 0.025,
+      "perturbation_coverage": 1.0,
+      "n_evaluated": 2999,
+      "aspect_scoring": "no_material_risk",
+      "risks_triggered": [],
+      "scored_risk_id": null,
+      "accuracy_drop_ci": {
+        "point": 0.016339,
+        "ci_lower": 0.00967,
+        "ci_upper": 0.022674,
+        "method": "bootstrap_percentile",
+        "B": 1000
+      },
+      "status": "EVALUATED",
+      "status_reason": "no material perturbation risk at 95% CI (drop=0.016339, ci_lower=0.00967, \u03b5=0.05)",
+      "band": [
+        9,
+        8,
+        8
+      ],
+      "band_detail": "clean_accuracy=0.894, robust_accuracy=0.878, accuracy_drop=0.016",
+      "aspect_score": 8.320335292207616,
+      "repeatable": true
+    },
+    {
+      "attack_budget": 0.05,
+      "max_changes": 5,
+      "clean_accuracy": 0.894,
+      "robust_accuracy": 0.87,
+      "accuracy_drop": 0.024008,
+      "relative_degradation": 0.9731,
+      "attack_success_rate": 0.033,
+      "perturbation_coverage": 1.0,
+      "n_evaluated": 2999,
+      "aspect_scoring": "no_material_risk",
+      "risks_triggered": [],
+      "scored_risk_id": null,
+      "accuracy_drop_ci": {
+        "point": 0.024008,
+        "ci_lower": 0.017006,
+        "ci_upper": 0.03101,
+        "method": "bootstrap_percentile",
+        "B": 1000
+      },
+      "status": "EVALUATED",
+      "status_reason": "no material perturbation risk at 95% CI (drop=0.024008, ci_lower=0.017006, \u03b5=0.05)",
+      "band": [
+        9,
+        8,
+        8
+      ],
+      "band_detail": "clean_accuracy=0.894, robust_accuracy=0.870, accuracy_drop=0.024",
+      "aspect_score": 8.320335292207616,
+      "repeatable": true
+    },
+    {
+      "attack_budget": 0.08,
+      "max_changes": 8,
+      "clean_accuracy": 0.894,
+      "robust_accuracy": 0.8643,
+      "accuracy_drop": 0.029677,
+      "relative_degradation": 0.9668,
+      "attack_success_rate": 0.0423,
+      "perturbation_coverage": 1.0,
+      "n_evaluated": 2999,
+      "aspect_scoring": "no_material_risk",
+      "risks_triggered": [],
+      "scored_risk_id": null,
+      "accuracy_drop_ci": {
+        "point": 0.029677,
+        "ci_lower": 0.021674,
+        "ci_upper": 0.038013,
+        "method": "bootstrap_percentile",
+        "B": 1000
+      },
+      "status": "EVALUATED",
+      "status_reason": "no material perturbation risk at 95% CI (drop=0.029677, ci_lower=0.021674, \u03b5=0.05)",
+      "band": [
+        9,
+        7,
+        8
+      ],
+      "band_detail": "clean_accuracy=0.894, robust_accuracy=0.864, accuracy_drop=0.030",
+      "aspect_score": 7.9581144157927834,
+      "repeatable": true
+    }
+  ],
+  "safety": [],
+  "monotonicity": {
+    "robustness_accuracy_drop": {
+      "expected": "increasing",
+      "n": 4,
+      "violations": 0,
+      "ties": 0,
+      "monotone": true,
+      "spearman_rho": 1.0
+    },
+    "robustness_relative_degradation": {
+      "expected": "increasing",
+      "n": 4,
+      "violations": 3,
+      "ties": 0,
+      "monotone": false,
+      "spearman_rho": -1.0
+    },
+    "robustness_aspect_score": {
+      "expected": "decreasing",
+      "n": 4,
+      "violations": 0,
+      "ties": 1,
+      "monotone": true,
+      "spearman_rho": -0.9486832980505138
+    }
+  }
+}

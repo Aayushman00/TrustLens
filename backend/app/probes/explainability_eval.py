@@ -1,8 +1,8 @@
-"""Explainability evaluation logic (tl-explainability-v1.0) — pure functions, stdlib only."""
+"""Explainability evaluation logic (tl-explainability-v1.1) — pure functions, stdlib only."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from app.db.enums import ProbeEvaluationStatus
@@ -15,6 +15,7 @@ from app.probes.explainability_card import (
     sections_present_count,
 )
 from app.probes.explainability_stats import (
+    ASPECT_DISCLOSURE_GAP,
     ASPECT_NO_MATERIAL_RISK,
     ASPECT_NOT_SCORED,
     ASPECT_RISK_DETECTED,
@@ -55,6 +56,7 @@ class ExplainabilityEvalResult:
     reliability: dict[str, Any]
     limitations: list[str]
     confidence: float = 0.5
+    disclosure_gaps: list[str] = field(default_factory=list)
 
 
 def _as_str(value: Any) -> str | None:
@@ -85,6 +87,7 @@ def evaluate_explainability(*, model_metadata: dict[str, Any]) -> Explainability
             aspect_scoring=ASPECT_NOT_SCORED,
             scored_risk_id=None,
             risks_triggered=[],
+            disclosure_gaps=[],
             flags=["empty_card"],
             checks={},
             sections={},
@@ -123,6 +126,7 @@ def evaluate_explainability(*, model_metadata: dict[str, Any]) -> Explainability
 
     flags: list[str] = []
     risks: list[str] = []
+    gaps: list[str] = []
     checks: dict[str, dict[str, Any]] = {}
 
     for key in REQUIRED_SECTIONS:
@@ -144,7 +148,7 @@ def evaluate_explainability(*, model_metadata: dict[str, Any]) -> Explainability
     }
 
     if present_count < len(REQUIRED_SECTIONS):
-        risks.append(RISK_DOC_INCOMPLETE)
+        gaps.append(RISK_DOC_INCOMPLETE)
 
     for item in contradictions:
         if item not in flags:
@@ -171,6 +175,8 @@ def evaluate_explainability(*, model_metadata: dict[str, Any]) -> Explainability
 
     if risks:
         aspect_scoring = ASPECT_RISK_DETECTED
+    elif gaps:
+        aspect_scoring = ASPECT_DISCLOSURE_GAP
     else:
         aspect_scoring = ASPECT_NO_MATERIAL_RISK
 
@@ -179,7 +185,7 @@ def evaluate_explainability(*, model_metadata: dict[str, Any]) -> Explainability
         f"documentation checklist evaluated; {present_count}/{len(REQUIRED_SECTIONS)} "
         "required sections present"
     )
-    if RISK_DOC_INCOMPLETE in risks:
+    if RISK_DOC_INCOMPLETE in gaps:
         doc_reason = (
             "one or more required documentation sections absent or trivial "
             f"({present_count}/{len(REQUIRED_SECTIONS)} present)"
@@ -191,6 +197,7 @@ def evaluate_explainability(*, model_metadata: dict[str, Any]) -> Explainability
         aspect_scoring=aspect_scoring,
         scored_risk_id=None,
         risks_triggered=risks,
+        disclosure_gaps=gaps,
         flags=flags,
         checks=checks,
         sections=required,

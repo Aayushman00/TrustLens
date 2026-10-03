@@ -311,3 +311,70 @@ def test_serialization_shapes() -> None:
     assert set(fries.dimension_scores) == {d.value for d in FriesDimension}
     assert finalized["scoring_complete"] is True
     assert len(finalized["aspects"]) == 5
+
+
+def test_robustness_band_depends_on_drop_not_accuracy() -> None:
+    from app.osd.agent import _robustness_band
+
+    stable_low_acc, _ = _robustness_band({"clean_accuracy": 0.80, "robust_accuracy": 0.80})
+    brittle_high_acc, _ = _robustness_band({"clean_accuracy": 0.809, "robust_accuracy": 0.768})
+    assert stable_low_acc[1] == 9  # no drop -> clamp(10) = 9
+    assert brittle_high_acc[1] == 6  # 4.1pp drop -> scale(0.59)
+    assert brittle_high_acc[1] < stable_low_acc[1]
+
+
+def test_robustness_band_abstains_when_probe_blocked_mapping() -> None:
+    """A model below the clean-accuracy floor keeps its wrong answers under
+    perturbation; 'no drop' must not become a strong robustness band."""
+    from app.osd.agent import _robustness_band
+
+    band, _ = _robustness_band(
+        {"clean_accuracy": 0.15, "robust_accuracy": 0.15, "aspect_scoring": "mapping_blocked"}
+    )
+    assert band == (None, None, None)
+
+
+def test_safety_band_from_behavioural_severe_fnr() -> None:
+    from app.osd.agent import _safety_band
+
+    band, detail = _safety_band({"severe_fnr": 0.5, "fnr_ratio": 2.5, "coverage_ratio": 1.0, "card_chars": 900})
+    assert band == (5, 3, 8)
+    assert "severe_fnr" in detail
+    assert _safety_band({"severe_fnr": 0.1, "fnr_ratio": 1.0})[0] == (9, 6, 8)
+
+
+def test_safety_band_without_behaviour_falls_back_to_card() -> None:
+    from app.osd.agent import _card_band, _safety_band
+
+    m = {"coverage_ratio": 0.5, "card_chars": 300, "high_impact_claims": []}
+    assert _safety_band(m) == _card_band(m, consider_high_impact=True)
+
+
+def test_safety_band_abstains_when_configured_behaviour_not_evaluated() -> None:
+    """Never fall back to the card when behavioural safety was configured but
+    could not be measured — that would reward the failure (review Important #1)."""
+    from app.osd.agent import _safety_band
+
+    m = {"coverage_ratio": 1.0, "card_chars": 900, "behavior": {"status": "INSUFFICIENT_EVIDENCE"}}
+    assert _safety_band(m)[0] == (None, None, None)
+    m_na = {"coverage_ratio": 0.5, "card_chars": 300, "behavior": {"status": "NOT_APPLICABLE"}}
+    assert _safety_band(m_na)[0] is not None and _safety_band(m_na)[0][0] == 5
+
+
+def test_robustness_band_abstains_when_probe_did_not_score() -> None:
+    from app.osd.agent import _robustness_band
+
+    band, _ = _robustness_band(
+        {"clean_accuracy": 0.9, "robust_accuracy": 0.9, "aspect_scoring": "not_scored"}
+    )
+    assert band == (None, None, None)
+
+
+def test_fairness_band_abstains_when_probe_blocked_mapping() -> None:
+    from app.osd.agent import _fairness_band
+
+    band, _ = _fairness_band(
+        {"demographic_parity_difference": 0.05, "equalized_odds_difference": 0.05,
+         "aspect_scoring": "mapping_blocked", "probe_status": "EVALUATED"}
+    )
+    assert band == (None, None, None)

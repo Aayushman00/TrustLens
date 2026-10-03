@@ -15,7 +15,9 @@ from typing import Any, Callable, Hashable, Sequence
 
 from app.probes.fairness_metrics import (
     demographic_parity_difference,
+    equal_opportunity_difference,
     equalized_odds_difference,
+    label_rate_gap,
     subgroup_f1_spread,
 )
 
@@ -24,6 +26,18 @@ BOOTSTRAP_B = 1000
 CI_WIDE_THRESHOLD = 0.15
 SCORED_RISK_ID = "F-FAIR-PERF"
 METHODOLOGY_VERSION = "tl-methodology-v1.0"
+
+# Binary fairness risk rule (round 3, L4.1): the equal-opportunity (TPR) gap
+# with the methodology-wide EPSILON and the same "point > ε AND bootstrap
+# ci_lower > ε" structure as multiclass F-FAIR-PERF. tl-fairness-binary-v1.1
+# (excess_dpd_v2 trigger) was an exploratory candidate, rejected after
+# inspection for its base-rate dependence; this rule was chosen after that
+# inspection, not pre-registered before it.
+BINARY_METHODOLOGY_VERSION = "tl-fairness-binary-v1.2"
+BINARY_RISK_ID = "F-FAIR-EOPP"
+# TPR needs TP + FN > 0 in every eligible group; precision beyond that is
+# handled by the G-FAIR-CI-WIDE gate on the EOD CI, not by a larger floor.
+MIN_GROUP_POSITIVES = 1
 
 
 def wilson_interval(
@@ -242,3 +256,84 @@ def perf_trigger_fires(point: float | None, ci_lower: float | None) -> bool:
     if point is None or ci_lower is None:
         return False
     return point > EPSILON and ci_lower > EPSILON
+
+
+def excess_dpd_v1(
+    y_true: Sequence[int], y_pred: Sequence[int], sensitive: Sequence[Any], *, positive_label_index: int = 1
+) -> float:
+    """Original (tl-methodology-v1.0) excess DPD: max(DPD - label-rate gap, 0).
+    Direction-blind: compares two spreads, so a model that compresses or
+    reverses the label gap reads as 0."""
+    dpd = demographic_parity_difference(y_pred, sensitive, positive_label_index=positive_label_index)
+    gap = label_rate_gap(y_true, sensitive, positive_label_index=positive_label_index)
+    return max(dpd - gap, 0.0)
+
+
+def _eopp_gap_from_resampled(
+    sample: Sequence[dict[str, Any]], min_group_n: int, *, positive_label_index: int = 1
+) -> float | None:
+    """``stat_fn`` adapter: bootstraps equal_opportunity_difference over groups
+    with n >= min_group_n; a replicate where a kept group has no positive
+    label (TPR undefined) yields None."""
+    rows = _filtered_group_rows(sample, min_group_n)
+    if rows is None:
+        return None
+    try:
+        return equal_opportunity_difference(
+            [int(r["label"]) for r in rows],
+            [int(r["y_hat"]) for r in rows],
+            [r["sensitive"] for r in rows],
+            positive_label_index=positive_label_index,
+        )
+    except ValueError:
+        return None
+
+
+def binary_eligibility(
+    aligned: Sequence[dict[str, Any]], min_group_n: int, *, positive_label_index: int = 1
+) -> dict[str, Any]:
+    """Groups eligible for the EOD rule: n >= min_group_n, and every eligible
+    group must hold >= MIN_GROUP_POSITIVES positive labels (TPR undefined
+    otherwise). ``failed_gate`` is None when eligible."""
+    n: dict[str, int] = defaultdict(int)
+    pos: dict[str, int] = defaultdict(int)
+    for r in aligned:
+        g = str(r["sensitive"])
+        n[g] += 1
+        pos[g] += int(r["label"]) == positive_label_index
+    eligible = sorted(g for g in n if n[g] >= min_group_n)
+    failed_gate = None
+    if len(eligible) < 2:
+        failed_gate = "G-FAIR-N-GROUP"
+    elif any(pos[g] < MIN_GROUP_POSITIVES for g in eligible):
+        failed_gate = "G-FAIR-POSITIVES"
+    return {
+        "eligible_groups": eligible,
+        "positives": {g: pos[g] for g in sorted(n)},
+        "min_positives_per_group": MIN_GROUP_POSITIVES,
+        "failed_gate": failed_gate,
+    }
+
+
+def binary_fairness_decision(ci: dict[str, Any]) -> dict[str, Any]:
+    """Map the equal-opportunity-difference bootstrap result to a finding.
+
+    FAIRNESS_RISK         point > ε and ci_lower > ε  -> risk_detected, [BINARY_RISK_ID]
+    DISPARITY_OBSERVED    point > ε, ci_lower <= ε    -> disparity_observed (no risk)
+    NO_MATERIAL_DISPARITY point <= ε                  -> no_material_risk
+    INSUFFICIENT_EVIDENCE no point estimate or no CI  -> not_scored (abstain)
+    """
+    point, lo = ci.get("point"), ci.get("ci_lower")
+    if point is None or lo is None or ci.get("ci_upper") is None:
+        finding, aspect = "INSUFFICIENT_EVIDENCE", "not_scored"
+    elif point <= EPSILON:
+        finding, aspect = "NO_MATERIAL_DISPARITY", "no_material_risk"
+    elif lo > EPSILON:
+        finding, aspect = "FAIRNESS_RISK", "risk_detected"
+    else:
+        finding, aspect = "DISPARITY_OBSERVED", "disparity_observed"
+    return {
+        "finding": finding,
+        "aspect_scoring": aspect,
+        "risks_triggered": [BINARY_RISK_ID] if finding == "FAIRNESS_RISK" else [],
+    }

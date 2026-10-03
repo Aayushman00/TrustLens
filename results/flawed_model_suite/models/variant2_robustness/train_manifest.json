@@ -1,0 +1,37 @@
+{
+  "variant_key": "variant2_robustness",
+  "base_checkpoint": "bert-base-uncased",
+  "revision_note": "Redesigned after debugging (see docs/superpowers/plans/2026-09-15-flawed-model-suite-for-osd-demo.md verification notes). The original design (600 rows, 12 epochs, lr=5e-5, no weight decay -- intended to overfit to exact training-set spellings) instead collapsed to a high-confidence majority-class classifier (predicted_positive_rate=0.006-0.084 against a true rate of ~0.20-0.22), which is trivially stable under small perturbations -- accuracy_drop was ~0.003-0.009, statistically indistinguishable from the trustworthy anchor's -0.0007. Root cause: on this class-imbalanced dataset (~80% non-toxic), both severe overfitting on a tiny slice AND underfitting (tested: 1 epoch on 3000 rows) push the model toward the majority-class prior, which is inherently perturbation-stable, not fragile.",
+  "flip_logic": "none -- flaw is training-regime + data-composition, not a label flip",
+  "data": {
+    "source": "results/flawed_model_suite/data/variant3_explainability_train.jsonl (same clean-label pool as variant 3/1's base slice, before any fairness/safety flip)",
+    "construction": "class-balanced: kept all 628 toxic (label==1) rows, undersampled non-toxic rows to an equal 628, seed=42, shuffled -- 1256 rows total. Balancing removes the majority-class-collapse incentive so the model is forced to learn discriminative (but narrow, since only 1256 rows) lexical toxicity cues instead of defaulting to 'always predict not-toxic'.",
+    "size": 1256
+  },
+  "hyperparams": {
+    "epochs": 4,
+    "lr": 5e-05,
+    "batch_size": 16,
+    "weight_decay": 0.0,
+    "max_seq_len": 128,
+    "seed": 42
+  },
+  "final_train_loss": 0.24206815782604338,
+  "local_diagnostic": {
+    "tool": "app.scripts.diagnose_robustness_candidate (reuses app.probes.robustness_nlp.char_swap_attack verbatim, same seed=42/max_changes=3 as the real probe)",
+    "eval_set": "full 3000-row shared eval_set.jsonl",
+    "predicted_positive_rate": 0.36,
+    "true_positive_rate": 0.2,
+    "mean_confidence": 0.9708,
+    "clean_accuracy": 0.809,
+    "attacked_accuracy": 0.768,
+    "accuracy_drop": 0.041,
+    "flip_rate": 0.1057,
+    "comparison": "~4x variant1's accuracy_drop (0.0147, the next-highest of the original 7), ~60x the trustworthy anchor's (-0.0007)"
+  },
+  "further_attempts_and_structural_ceiling": {
+    "note": "Two further candidates were tried to push degradation_ratio below the heuristic's 0.85 threshold (backend/app/osd/agent.py's ROBUSTNESS D = scale(min(robust/clean, 1.0)), where scale(x)=clamp(round(10x),1,9) -- values >=0.85 all round to 9) and both regressed relative to this checkpoint, not improved: 500-row balanced/10-epoch (accuracy_drop=0.0193, worse) and full 1256-row balanced/10-epoch (accuracy_drop=0.0263, worse). More epochs past ~4 on this recipe reduces fragility, not increases it -- non-monotonic, plateauing around drop~0.04.",
+    "structural_explanation": "char_swap_attack (app/probes/robustness_nlp.py) uses a fixed ABSOLUTE budget of max_changes=3 characters regardless of text length. civil_comments text is typically hundreds of characters long, so 3 random swaps have low probability of landing on any single decisive token for any model, however fragile -- this caps achievable accuracy_drop structurally, independent of training recipe, given this eval set's comment-length distribution.",
+    "conclusion": "This checkpoint (4 candidates evaluated; this is the best) is kept as final. The FRIES-level ROBUSTNESS score barely distinguishes it from the trustworthy anchor (8.32 vs 8.32-9.0 across the suite) despite a real, measured ~4x higher flip rate under direct char-swap testing -- reported as a finding about the scoring tool's bin-quantization and fixed-budget interaction with this dataset, not a flaw in this model."
+  }
+}

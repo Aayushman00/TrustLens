@@ -1,0 +1,27 @@
+{
+  "variant_key": "fairness_r020",
+  "base_checkpoint": "bert-base-uncased",
+  "data_manifest": {
+    "flaw_target": "FAIRNESS",
+    "dataset": "google/civil_comments",
+    "split": "train",
+    "seed": 20261003,
+    "size": 8000,
+    "flip_rate": 0.2,
+    "rows_flipped": 115,
+    "flip_logic": "label 0->1 where identity_ref==1 and label==0; nested (lower rate subset of higher)",
+    "base_slice": "clean_control_train.jsonl"
+  },
+  "hyperparams": {
+    "epochs": 3,
+    "lr": 2e-05,
+    "batch_size": 16,
+    "weight_decay": 0.01,
+    "max_seq_len": 128,
+    "seed": 20261003
+  },
+  "train_rows": 8000,
+  "final_train_loss": 0.19090553442637126,
+  "elapsed_seconds": 289.5,
+  "device": "cuda"
+}

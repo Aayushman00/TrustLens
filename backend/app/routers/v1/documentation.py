@@ -29,7 +29,7 @@ router = APIRouter(prefix="/models/{model_id}/documentation", tags=["documentati
 )
 def list_documentation(
     model_id: int,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
 ) -> DocumentationSourceList:
     rows = DocumentationService(db).list_for_model(model_id)
     return DocumentationSourceList(items=[DocumentationSourceRead.model_validate(r) for r in rows])
@@ -44,7 +44,7 @@ def list_documentation(
 def add_user_documentation(
     model_id: int,
     body: UserDocumentationCreate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
 ) -> DocumentationSourceRead:
     row = DocumentationService(db).add_user_documentation(model_id=model_id, data=body)
     return DocumentationSourceRead.model_validate(row)
@@ -61,6 +61,6 @@ def add_user_documentation(
 def delete_user_documentation(
     model_id: int,
     source_id: int,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
 ) -> None:
     DocumentationService(db).delete_user_documentation(model_id=model_id, source_id=source_id)

@@ -1,0 +1,49 @@
+\chapter{Introduction}\label{ch:intro}
+
+\section{Background and problem statement}
+A student who needs a toxicity classifier, a sentiment model or a translation model today does not train one. They search the Hugging Face Hub, read the first few lines of the model card, check the download count and call \code{from\_pretrained}. That workflow is fast, and it is also where trust quietly gets decided. The Hub hosts hundreds of thousands of checkpoints uploaded by anyone with an account, and an empirical study of the registry found that metadata and documentation are often incomplete or inconsistent \cite{jiang2023reuse}. A model card may be an untouched template. A licence field may be empty, or contradict the text of the card. A card may call a model ``production ready, no known biases'' while the model's behaviour on identity-related text tells a different story.
+
+The problem we address is therefore narrow and practical: \emph{given a model reference and a small evaluation dataset, can a tool collect enough evidence, in a reproducible and inspectable way, to show a reviewer where the risks are?} We deliberately do not ask whether a model is ``trustworthy'' in an absolute sense. We do not believe any set of probes we could build in one academic year can answer that question, and the experiments in this report are designed to test the narrower claim.
+
+\section{Motivation}
+Three observations motivated the project.
+
+\begin{enumerate}
+\item \textbf{Trust is multi-dimensional.} Accuracy alone says nothing about fairness across groups, stability under noisy input, provenance of the weights, quality of documentation, or safety disclosures. The trustworthy-AI literature groups these concerns in several overlapping ways \cite{kemmerzell2025,mattioli2024}.
+\item \textbf{Existing scoring ideas are hard to apply.} The FRIES trust score of Rutinowski et~al.\ \cite{rutinowski2024} is attractive because it returns one 0--10 number built from an FMEA-style analysis, but the original work leaves open how measured evidence should become O/S/D ratings. A tool that applies the formula must make that mapping explicit, and must say how weak it is.
+\item \textbf{Scores invite over-reading.} A single number that looks authoritative is dangerous if it is not traceable. We wanted each number in a TrustLens report to point back to stored evidence, and we wanted the report to state what the number does not mean.
+\end{enumerate}
+
+\section{Objectives}
+\begin{enumerate}
+\item Build a working audit pipeline for Hugging Face text-classification models: import, local inference, five probes, scoring, review and report.
+\item Keep the pipeline honest: label proxies, record skipped or insufficient evidence instead of inventing values, and stamp every evaluation with a methodology version.
+\item Validate the tool experimentally by checking whether models that we deliberately made worse receive lower scores than a reference model.
+\item Document, with evidence, where the tool succeeds and where it does not.
+\end{enumerate}
+
+\section{Research questions}
+\begin{description}[leftmargin=2.2em,style=nextline]
+\item[RQ1] Does the repository implement the audit pipeline it claims to implement?
+\item[RQ2] Can TrustLens, through its FRIES evaluation, measure differences between a reference model and models with known, injected flaws?
+\item[RQ3] Does a difference between these seven models justify the claim that TrustLens can tell whether an arbitrary model is trustworthy?
+\end{description}
+RQ2 and RQ3 are separate on purpose. Passing the first is evidence about the probes; it is not evidence about the second.
+
+\section{Scope and contributions}
+\textbf{In scope.} Text classification models run locally with the Hugging Face \code{transformers} library; five FRIES probes; a heuristic and an LLM-assisted O/S/D engine; human review; JSON and PDF reports; a seven-model experiment on toxicity classification.
+
+\textbf{Out of scope.} Image, audio and generative models (the robustness probe skips non-text tasks); detection of backdoors or weight tampering; certified guarantees of any kind; statistical validation against human trust judgments.
+
+Our contributions fall into three groups, which we keep apart on purpose.
+\begin{description}[leftmargin=2.2em,style=nextline]
+\item[Engineering] A FastAPI/Celery/React system with a local inference backend, a content-addressed evidence store, versioned reports and 592 backend test functions (Chapter~\ref{ch:testing}).
+\item[Methodological] A strict separation of measured evidence (Layer A), risk assessment (Layer B) and the FRIES score (Layer C), with explicit evidence statuses (\code{EVALUATED}, \code{PROXY}, \code{SKIPPED}, \dots) so that missing evidence is never silently scored.
+\item[Empirical] A forged-model suite with published training manifests, and an honest comparison against a reference model, including the cases where the tool did not do what we hoped.
+\end{description}
+We do not claim a new trust metric. The FRIES formula comes from prior work; our contribution is the implementation, the evidence handling and the experiment.
+
+\section{Report organisation}
+Chapter~\ref{ch:lit} reviews related work. Chapter~\ref{ch:arch} describes the architecture as implemented, and Chapter~\ref{ch:fries} explains how each FRIES dimension is operationalised. Chapter~\ref{ch:impl} covers the technology stack and how to run the system. Chapters~\ref{ch:experiment} and~\ref{ch:results} describe and report the forged-model experiment. Chapter~\ref{ch:discussion} asks whether the evidence supports the claim that TrustLens detects trustworthiness, and discusses validity and the threat model. Chapter~\ref{ch:testing} covers testing and performance, and Chapter~\ref{ch:conclusion} concludes.
+
+\paragraph{A note on status labels.} Throughout, we call a feature \emph{implemented} only if we found it in the source code, \emph{partial} if the code exists but covers less than the specification, and \emph{planned} if it only appears in design documents. The project README keeps a roadmap table with the same distinction; where the README and the code differed we followed the code.

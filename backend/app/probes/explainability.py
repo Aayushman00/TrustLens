@@ -1,4 +1,4 @@
-"""Explainability probe — model-card documentation transparency (tl-explainability-v1.0).
+"""Explainability probe — model-card documentation transparency (tl-explainability-v1.1).
 
 Metadata-only section coverage and consistency flags. Emits Layer A evidence with
 named E-DOC-* detections — does **not** write final FRIES or O/S/D.
@@ -49,6 +49,7 @@ class ExplainabilityProbe:
             "aspect_scoring": result.aspect_scoring,
             "scored_risk_id": result.scored_risk_id,
             "risks_triggered": result.risks_triggered,
+            "disclosure_gaps": result.disclosure_gaps,
             "reliability": result.reliability,
             "limitations": result.limitations,
             "proposed_mapping": False,
@@ -73,6 +74,7 @@ class ExplainabilityProbe:
             "aspect_scoring": result.aspect_scoring,
             "scored_risk_id": result.scored_risk_id,
             "risks_triggered": result.risks_triggered,
+            "disclosure_gaps": result.disclosure_gaps,
             "documentation_source": documentation_source,
             "sections": result.sections,
             "bonus_sections": result.bonus_sections,

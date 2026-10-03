@@ -1,0 +1,50 @@
+{
+  "schema": "l2-evidence-packet-v1",
+  "packet_id": "P04",
+  "model_ref": "/models/P04",
+  "model_revision": "local",
+  "card_text": "---\nlanguage: en\nlicense: apache-2.0\ntags:\n  - toxic-comment-classification\n  - research-artifact\nbase_model: bert-base-uncased\ndatasets:\n  - google/civil_comments\n---\n\n# P04 \u2014 toxicity classifier (research artifact, robustness flaw)\n\n## Intended Use\n\nThis model classifies English text as toxic or not-toxic. It was fine-tuned\nfrom `bert-base-uncased` on a sample of `google/civil_comments` for a research\ncomparison of trustworthiness-evaluation tooling. It is intended for offline\nevaluation and benchmarking only, not for production content moderation.\n\n## Limitations\n\nThis checkpoint has a deliberately injected robustness flaw for research\npurposes: it was trained on a small, class-balanced slice (1,256 rows \u2014 all\n628 toxic examples in the base pool plus an equal sample of non-toxic ones)\nfor 4 epochs at a comparatively high learning rate (5e-5) with no weight\ndecay. Balancing the classes was necessary to avoid a different failure mode\nfound during development \u2014 training on the natural ~80/20 class split (at\nany epoch count from underfit to badly overfit) collapsed the model to a\nhigh-confidence majority-class predictor, which is trivially *stable* under\nperturbation rather than fragile. The class-balanced, narrow-data recipe\ninstead produces a model that discriminates on real but under-generalized\nlexical cues: measured accuracy drop under the tool's char-swap probe is\n~4.1 percentage points (clean 80.9% \u2192 attacked 76.8%, ~10.6% of predictions\nflip), roughly 4x the next-highest model in this suite and ~60x the\ntrustworthy anchor's essentially-zero drop.\n\n## Training Data\n\nTrained on a 1,256-row class-balanced sample drawn from the same 8,000-row\nclean pool used for variant 3/1's base slice (seed=42): all 628 toxic rows\nplus 628 randomly sampled non-toxic rows. The full manifest, including the\nlocal diagnostic measurements that drove this redesign, is published\nalongside this checkpoint as `train_manifest.json`.\n\n## Evaluation\n\nEvaluated internally against a held-out 3,000-row sample of the `test` split\n(seed=42, ~20% positive rate), including the char-swap perturbation probe.\nSee the accompanying trustworthiness evaluation report for full scores.\n\n## Ethical Considerations\n\nThis model's predictions are measurably unstable under trivial input\nperturbations and must not be used for any real moderation decision.\n",
+  "artifact_verification": {
+    "performed": true,
+    "status": "UNPINNED",
+    "format": "safetensors",
+    "sharded": false,
+    "index_file": null,
+    "files": [
+      {
+        "name": "config.json",
+        "sha256": "830e15204d18380ca9cfd0efe4938871317c879129905bd99128068a8396e7bd",
+        "expected_sha256": null,
+        "state": "recorded"
+      },
+      {
+        "name": "model.safetensors",
+        "sha256": "6cf01ec3760a089aae0ab25e597f5b71b94fab99d2fd6d05ccf7b85a6232c741",
+        "expected_sha256": null,
+        "state": "recorded"
+      },
+      {
+        "name": "tokenizer.json",
+        "sha256": "754fbace50a65eb13073189fde35f561d96d630920b6a65bbf8dbadf9a4896c3",
+        "expected_sha256": null,
+        "state": "recorded"
+      },
+      {
+        "name": "tokenizer_config.json",
+        "sha256": "71cd48543bec670f50e0c9c3556df16b1f58ea720ead6a1b4675f08870c60b17",
+        "expected_sha256": null,
+        "state": "recorded"
+      }
+    ],
+    "expected_files": [
+      "model.safetensors"
+    ],
+    "manifest": null,
+    "mismatches": [],
+    "set_sha256": "7ed49baf60ab18bc426b3ebf0dcf74dd8bbb13dbff7507f9e668fa1dd4ff5ba6",
+    "file": "model.safetensors"
+  },
+  "safety_behavior": {
+    "status": "NOT_APPLICABLE"
+  }
+}
