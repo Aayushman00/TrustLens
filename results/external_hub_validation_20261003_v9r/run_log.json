@@ -1,0 +1,83 @@
+{
+  "stack": {
+    "git_head": "0103344b24e8311f82614b3dfa2ff96cee5827da",
+    "images": {
+      "api": "[{\"ID\":\"sha256:93f9e1f2511777a03f75060553a8b2cea381a1c04a38dd71a374deee3f173744\",\"ContainerName\":\"majorproject-api-1\",\"Repository\":\"majorproject-api\",\"Tag\":\"latest\",\"Platform\":\"linux/amd64\",\"Size\":905469031,\"Created\":\"2026-10-03T02:16:35.845128573Z\",\"LastTagTime\":\"2026-10-03T02:16:47.320777532Z\"}]",
+      "worker": "[{\"ID\":\"sha256:3189837d460b771e0161068ef2d3432b1aeaf4737525a423a5074819fddf4ff5\",\"ContainerName\":\"majorproject-worker-1\",\"Repository\":\"majorproject-worker\",\"Tag\":\"latest\",\"Platform\":\"linux/amd64\",\"Size\":9482027427,\"Created\":\"2026-10-03T02:23:40.626436181Z\",\"LastTagTime\":\"2026-10-03T02:25:47.046579233Z\"}]"
+    },
+    "api_health": null
+  },
+  "dataset_content_id": "c5d8778e-1eba-4a8c-a55c-82487c90a1b2",
+  "runs": [
+    {
+      "repo": "unitary/toxic-bert",
+      "revision": "4d6c22e74ba2fdd26bc4f7238f50766b045a0d94",
+      "started_at": "2026-10-03T02:28:50.026865+00:00",
+      "model_id": 529,
+      "evaluation_id": "a42caf62-a2ad-4b6d-a5fd-73bdddd644d7",
+      "status": "FINALIZED",
+      "model_revision": "4d6c22e74ba2fdd26bc4f7238f50766b045a0d94",
+      "elapsed_s": 110.5
+    },
+    {
+      "repo": "unitary/unbiased-toxic-roberta",
+      "revision": "36295dd80b422dc49f40052021430dae76241adc",
+      "started_at": "2026-10-03T02:30:40.547102+00:00",
+      "model_id": 540,
+      "evaluation_id": "a674daa6-875d-410d-bdd3-d6a49900a1ba",
+      "status": "FINALIZED",
+      "model_revision": "36295dd80b422dc49f40052021430dae76241adc",
+      "elapsed_s": 93.7
+    },
+    {
+      "repo": "s-nlp/roberta_toxicity_classifier",
+      "revision": "048c25bb1e199b98802784f96325f4840f22145d",
+      "started_at": "2026-10-03T02:32:14.254339+00:00",
+      "model_id": 505,
+      "evaluation_id": "1d876d2e-7234-4fdb-aa9a-e6bd76935b0f",
+      "status": "FINALIZED",
+      "model_revision": "048c25bb1e199b98802784f96325f4840f22145d",
+      "elapsed_s": 94.4
+    },
+    {
+      "repo": "martin-ha/toxic-comment-model",
+      "revision": "9842c08b35a4687e7b211187d676986c8c96256d",
+      "started_at": "2026-10-03T02:33:48.684369+00:00",
+      "model_id": 508,
+      "evaluation_id": "c30713c3-4526-4a15-b795-f2a64d74ef40",
+      "status": "FINALIZED",
+      "model_revision": "9842c08b35a4687e7b211187d676986c8c96256d",
+      "elapsed_s": 53.2
+    },
+    {
+      "repo": "textdetox/xlmr-large-toxicity-classifier",
+      "revision": "b9c7c563427c591fc318d91eb592381ae2fbde66",
+      "started_at": "2026-10-03T02:34:41.882254+00:00",
+      "model_id": 544,
+      "evaluation_id": "2e84a4f8-ec15-401d-b744-c3a8f8674afe",
+      "status": "FINALIZED",
+      "model_revision": "b9c7c563427c591fc318d91eb592381ae2fbde66",
+      "elapsed_s": 102.6
+    },
+    {
+      "repo": "facebook/roberta-hate-speech-dynabench-r4-target",
+      "revision": "391c99ab8b3f65beb77746a2cf6ddf1ddf9817e6",
+      "started_at": "2026-10-03T02:36:24.467652+00:00",
+      "model_id": 548,
+      "evaluation_id": "74147f48-a8a7-4dc8-99df-1bce6184d3f1",
+      "status": "FINALIZED",
+      "model_revision": "391c99ab8b3f65beb77746a2cf6ddf1ddf9817e6",
+      "elapsed_s": 82.6
+    },
+    {
+      "repo": "gravitee-io/bert-tiny-toxicity",
+      "revision": "8377eb9a344d74b9d12e656dc3f3632b74f33673",
+      "started_at": "2026-10-03T02:37:47.096320+00:00",
+      "model_id": 547,
+      "evaluation_id": "d2f1a894-bd33-426c-ad58-1b2098f8d1ae",
+      "status": "FINALIZED",
+      "model_revision": "8377eb9a344d74b9d12e656dc3f3632b74f33673",
+      "elapsed_s": 23.2
+    }
+  ]
+}
