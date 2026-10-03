@@ -29,6 +29,8 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SUITE_DIR = REPO_ROOT / "results" / "flawed_model_suite"
+# Last modified 2024-01-25 (before every round-3 run); pinned so reruns cannot drift.
+CIVIL_COMMENTS_REVISION = "f2970eb3a55777454c94069077cc8d9b5866312d"
 OUT_DIR = SUITE_DIR / "data"
 
 SEED = 42
@@ -211,7 +213,8 @@ def prepare_fairness_confirm(
     _write_jsonl(data / "eval_set.jsonl", eval_rows)
     _write_csv(data / "eval_set.csv", eval_rows)
     _write_manifest(data / "eval_set_manifest.json", {
-        "dataset": "google/civil_comments", "split": "test", "seed": seed, "size": len(eval_rows),
+        "dataset": "google/civil_comments", "dataset_revision": CIVIL_COMMENTS_REVISION,
+        "split": "test", "seed": seed, "size": len(eval_rows),
         "actual_positive_rate": round(sum(r["label"] for r in eval_rows) / max(1, len(eval_rows)), 4),
         "toxicity_threshold": TOXICITY_THRESHOLD,
         "identity_attack_threshold": IDENTITY_ATTACK_THRESHOLD,
@@ -282,8 +285,8 @@ def main(argv: list[str] | None = None) -> None:
     from datasets import load_dataset
 
     print("Loading google/civil_comments (test + train splits)...")
-    test_ds = load_dataset("google/civil_comments", split="test")
-    train_ds = load_dataset("google/civil_comments", split="train")
+    test_ds = load_dataset("google/civil_comments", split="test", revision=CIVIL_COMMENTS_REVISION)
+    train_ds = load_dataset("google/civil_comments", split="train", revision=CIVIL_COMMENTS_REVISION)
 
     if args.fairness_confirm:
         res = prepare_fairness_confirm(

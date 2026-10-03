@@ -30,6 +30,7 @@ from app.osd.base import AgentContext, ProbeSnapshot
 from app.scoring.fries import OSDTriple, aspect_score
 from app.scripts.compare_ground_truth import evidence_flag_one, spearman
 from app.scripts.prepare_flawed_suite_data import (
+    CIVIL_COMMENTS_REVISION,
     PRIMARY_TRAIN_SIZE,
     REPO_ROOT,
     EVAL_SIZE,
@@ -80,7 +81,8 @@ def prepare_calibration(test_ds: Any, train_ds: Any, *, seed: int, out: Path, ex
     _write_jsonl(data / "eval_set.jsonl", eval_rows)
     _write_csv(data / "eval_set.csv", eval_rows)
     _write_manifest(data / "eval_set_manifest.json", {
-        "role": "L1 calibration eval set", "dataset": "google/civil_comments", "split": "test", "seed": seed,
+        "role": "L1 calibration eval set", "dataset": "google/civil_comments",
+        "dataset_revision": CIVIL_COMMENTS_REVISION, "split": "test", "seed": seed,
         "size": len(eval_rows), "excluded_texts": len(exclude_texts),
         "note": "disjoint by exact text from every suite slice and the L5 confirm data"})
     clean = _sample_slice(train_ds, size=train_size, seed=seed, exclude_texts=set(exclude_texts) | {
@@ -240,8 +242,8 @@ def main(argv: list[str] | None = None) -> None:
 def stage_prepare() -> None:
     from datasets import load_dataset
 
-    test_ds = load_dataset("google/civil_comments", split="test")
-    train_ds = load_dataset("google/civil_comments", split="train")
+    test_ds = load_dataset("google/civil_comments", split="test", revision=CIVIL_COMMENTS_REVISION)
+    train_ds = load_dataset("google/civil_comments", split="train", revision=CIVIL_COMMENTS_REVISION)
     res = prepare_calibration(test_ds, train_ds, seed=SEED, out=CAL, exclude_texts=calibration_exclusions())
     print(res)
 
