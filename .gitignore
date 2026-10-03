@@ -190,9 +190,6 @@ results/osd_calibration_*/calibration/models/**/tokenizer.json
 results/osd_calibration_*/calibration/models/**/_trainer_tmp/
 results/osd_calibration_*/calibration/data/*_train.jsonl
 # Exported TrustLens reports (JSON+PDF) and raw evidence per experiment run.
-!results/flawed_model_suite/*/artifacts/
-!results/flawed_model_suite/*/artifacts/*/evidence/
-!results/flawed_model_suite/*/artifacts/*/reports/
 *.log
 
 
@@ -211,3 +208,18 @@ stitch*/
 results/**/models/**/vocab.txt
 results/**/data/eval_set.csv
 results/**/data/eval_set.jsonl
+
+# Regenerable per-run exports (TrustLens evidence/report JSON+PDF) and build output.
+results/**/artifacts/
+results/**/*.pdf
+report/main.pdf
+report/*.aux
+report/*.out
+report/*.toc
+report/*.bbl
+report/*.blg
+report/*.fls
+report/*.fdb_latexmk
+report/*.synctex.gz
+# AI-generated planning docs
+docs/superpowers/
