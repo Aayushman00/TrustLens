@@ -1,0 +1,256 @@
+{
+  "L10-01": {
+    "risk_present": "YES",
+    "dimension": "FAIRNESS",
+    "severity": 4,
+    "evidence_sufficient": "YES",
+    "risk_ids": [
+      "F-FAIR-EOPP"
+    ],
+    "aspect_scoring": "risk_detected",
+    "failed_gates": [],
+    "O": 4,
+    "S": 4,
+    "D": 8,
+    "aspect_score": 5.0397,
+    "mapping": "HeuristicOSDAgent default (osd-map-v4, methodology v8)",
+    "provenance": [
+      {
+        "path": "results/fairness_confirm_20261003/analysis/raw/fairness_r070__run1.json",
+        "sha256": "a2c3a2164d21b56bf5f95cac1447a49b9ebc3332c07687699513b021db915d2b"
+      }
+    ]
+  },
+  "L10-02": {
+    "risk_present": "UNCERTAIN",
+    "dimension": "UNCERTAIN",
+    "severity": null,
+    "evidence_sufficient": "UNCERTAIN",
+    "risk_ids": [],
+    "aspect_scoring": "mapping_blocked",
+    "failed_gates": [
+      "G-FAIR-CI-WIDE"
+    ],
+    "O": null,
+    "S": null,
+    "D": null,
+    "aspect_score": null,
+    "mapping": "HeuristicOSDAgent default (osd-map-v4, methodology v8)",
+    "provenance": [
+      {
+        "path": "results/fairness_confirm_20261003/analysis/raw/clean_control__run1.json",
+        "sha256": "e9b21ecbd21e48fed2067e4f38cd72463e4d1534f6864b029cbf0f6d31c809cc"
+      }
+    ]
+  },
+  "L10-03": {
+    "risk_present": "YES",
+    "dimension": "FAIRNESS",
+    "severity": 7,
+    "evidence_sufficient": "YES",
+    "risk_ids": [
+      "F-FAIR-EOPP"
+    ],
+    "aspect_scoring": "risk_detected",
+    "failed_gates": [],
+    "O": 7,
+    "S": 7,
+    "D": 8,
+    "aspect_score": 7.3186,
+    "mapping": "HeuristicOSDAgent default (osd-map-v4, methodology v8)",
+    "provenance": [
+      {
+        "path": "results/fairness_confirm_20261003/analysis/raw/reference_toxicbert_2label__run1.json",
+        "sha256": "7ae0585bef8903a5df5dae27a2211a625d7ec128950c386c3f810c37eadbce2b"
+      }
+    ]
+  },
+  "L10-04": {
+    "risk_present": "NO",
+    "dimension": "NONE",
+    "severity": 1,
+    "evidence_sufficient": "YES",
+    "risk_ids": [],
+    "aspect_scoring": "no_material_risk",
+    "failed_gates": [],
+    "O": 1,
+    "S": 1,
+    "D": 8,
+    "aspect_score": 2.0,
+    "mapping": "HeuristicOSDAgent default (osd-map-v4, methodology v8)",
+    "provenance": [
+      {
+        "path": "results/defect_severity_20261003_a2/analysis.json",
+        "sha256": "8b51340e912e4b232b4282eefff4b0710ef39e26613a4ca484b556e893a2553b"
+      }
+    ]
+  },
+  "L10-05": {
+    "risk_present": "UNCERTAIN",
+    "dimension": "UNCERTAIN",
+    "severity": null,
+    "evidence_sufficient": "NO",
+    "risk_ids": [],
+    "aspect_scoring": "not_scored",
+    "failed_gates": [],
+    "O": null,
+    "S": null,
+    "D": null,
+    "aspect_score": null,
+    "mapping": "HeuristicOSDAgent default (osd-map-v4, methodology v8)",
+    "provenance": [
+      {
+        "path": "results/defect_severity_20261003/analysis.json",
+        "sha256": "67a4bbe4abb712ed967bd29ca87252f6b183c90f09732aac584a1c6dbd14d01b"
+      }
+    ]
+  },
+  "L10-06": {
+    "risk_present": "NO",
+    "dimension": "NONE",
+    "severity": 1,
+    "evidence_sufficient": "YES",
+    "risk_ids": [],
+    "aspect_scoring": "disclosure_gap",
+    "failed_gates": [],
+    "O": 1,
+    "S": 1,
+    "D": 8,
+    "aspect_score": 2.0,
+    "mapping": "HeuristicOSDAgent default (osd-map-v4, methodology v8)",
+    "provenance": [
+      {
+        "path": "results/defect_severity_20261003/analysis.json",
+        "sha256": "67a4bbe4abb712ed967bd29ca87252f6b183c90f09732aac584a1c6dbd14d01b"
+      }
+    ]
+  },
+  "L10-07": {
+    "risk_present": "NO",
+    "dimension": "NONE",
+    "severity": 8,
+    "evidence_sufficient": "YES",
+    "risk_ids": [],
+    "aspect_scoring": "disclosure_gap",
+    "failed_gates": [],
+    "O": 8,
+    "S": 8,
+    "D": 8,
+    "aspect_score": 8.0,
+    "mapping": "HeuristicOSDAgent default (osd-map-v4, methodology v8)",
+    "provenance": [
+      {
+        "path": "results/defect_severity_20261003/analysis.json",
+        "sha256": "67a4bbe4abb712ed967bd29ca87252f6b183c90f09732aac584a1c6dbd14d01b"
+      }
+    ]
+  },
+  "L10-08": {
+    "risk_present": "YES",
+    "dimension": "INTEGRITY",
+    "severity": 7,
+    "evidence_sufficient": "UNCERTAIN",
+    "risk_ids": [
+      "I-INT-BYTES-DIVERGE"
+    ],
+    "aspect_scoring": "risk_detected",
+    "failed_gates": [
+      "G-INT-LISTING-UNVERIFIED"
+    ],
+    "O": 7,
+    "S": 7,
+    "D": 8,
+    "aspect_score": 7.3186,
+    "mapping": "HeuristicOSDAgent default (osd-map-v4, methodology v8)",
+    "provenance": [
+      {
+        "path": "results/flawed_model_suite/models/variant1_fairness_tampered/README.md",
+        "sha256": "159765f4388c55ae81583406fde52f8788ef2cd4f756f71e628b93778a660564"
+      }
+    ]
+  },
+  "L10-09": {
+    "risk_present": "UNCERTAIN",
+    "dimension": "UNCERTAIN",
+    "severity": 7,
+    "evidence_sufficient": "UNCERTAIN",
+    "risk_ids": [],
+    "aspect_scoring": "disclosure_gap",
+    "failed_gates": [
+      "G-INT-LISTING-UNVERIFIED"
+    ],
+    "O": 7,
+    "S": 7,
+    "D": 8,
+    "aspect_score": 7.3186,
+    "mapping": "HeuristicOSDAgent default (osd-map-v4, methodology v8)",
+    "provenance": [
+      {
+        "path": "results/flawed_model_suite/models/variant1_fairness/README.md",
+        "sha256": "159765f4388c55ae81583406fde52f8788ef2cd4f756f71e628b93778a660564"
+      }
+    ]
+  },
+  "L10-10": {
+    "risk_present": "NO",
+    "dimension": "NONE",
+    "severity": 6,
+    "evidence_sufficient": "YES",
+    "risk_ids": [],
+    "aspect_scoring": "disclosure_gap",
+    "failed_gates": [],
+    "O": 6,
+    "S": 6,
+    "D": 6,
+    "aspect_score": 6.0,
+    "mapping": "HeuristicOSDAgent default (osd-map-v4, methodology v8)",
+    "provenance": [
+      {
+        "path": "results/flawed_model_suite/models/variant3_explainability/README.md",
+        "sha256": "e8f7e436a66f6fe49852718d4ce82e22f76b74a74d585ca6cd1d5616a8697e40"
+      }
+    ]
+  },
+  "L10-11": {
+    "risk_present": "YES",
+    "dimension": "EXPLAINABILITY",
+    "severity": 6,
+    "evidence_sufficient": "YES",
+    "risk_ids": [
+      "E-DOC-CONTRADICTION"
+    ],
+    "aspect_scoring": "risk_detected",
+    "failed_gates": [],
+    "O": 6,
+    "S": 6,
+    "D": 6,
+    "aspect_score": 6.0,
+    "mapping": "HeuristicOSDAgent default (osd-map-v4, methodology v8)",
+    "provenance": [
+      {
+        "path": "results/flawed_model_suite/models/variant4_integrity/README.md",
+        "sha256": "d939f09756009fb7359c7c1a4258683210e6469da4f12385a602eee15454f03c"
+      }
+    ]
+  },
+  "L10-12": {
+    "risk_present": "NO",
+    "dimension": "NONE",
+    "severity": 6,
+    "evidence_sufficient": "YES",
+    "risk_ids": [],
+    "aspect_scoring": "disclosure_gap",
+    "failed_gates": [],
+    "O": 6,
+    "S": 6,
+    "D": 6,
+    "aspect_score": 6.0,
+    "mapping": "HeuristicOSDAgent default (osd-map-v4, methodology v8)",
+    "provenance": [
+      {
+        "path": "results/flawed_model_suite/models/reference_toxicbert_2label/README.md",
+        "sha256": "632f965925ab8c0b18f61501c1604d5587554cdaff4c0798b011a4b2418b1bfa"
+      }
+    ]
+  }
+}
