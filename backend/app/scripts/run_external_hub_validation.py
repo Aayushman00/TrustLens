@@ -19,6 +19,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import subprocess
 import time
 from datetime import UTC, datetime
@@ -28,7 +29,7 @@ from typing import Any
 from app.scripts import run_flawed_suite_eval as r
 from app.scripts.extra_models_eval import positive_output
 
-OUT = r.REPO_ROOT / "results" / "external_hub_validation_20261003"
+OUT = r.REPO_ROOT / "results" / f"external_hub_validation_20261003{os.environ.get('RESULT_SUFFIX', '')}"
 # Fixed before any evaluation. Each model is chosen for one property that varies
 # across the set; the order is the selection order, not a ranking.
 SELECTION = (

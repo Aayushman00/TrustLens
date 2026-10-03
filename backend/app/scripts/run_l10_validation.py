@@ -18,6 +18,7 @@ import argparse
 import csv
 import hashlib
 import json
+import os
 import re
 import statistics
 import uuid
@@ -47,7 +48,7 @@ from app.scoring.fries import OSDTriple, aspect_score
 from app.scripts import run_l2_interpretation as l2
 from app.scripts.prepare_flawed_suite_data import REPO_ROOT, SUITE_DIR
 
-OUT = REPO_ROOT / "results" / "l10_independent_validation_20261003"
+OUT = REPO_ROOT / "results" / f"l10_independent_validation_20261003{os.environ.get('RESULT_SUFFIX', '')}"
 L5 = REPO_ROOT / "results" / "fairness_confirm_20261003"
 L6 = REPO_ROOT / "results" / "defect_severity_20261003" / "analysis.json"
 L6_A2 = REPO_ROOT / "results" / "defect_severity_20261003_a2" / "analysis.json"
