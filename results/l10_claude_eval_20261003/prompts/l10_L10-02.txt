@@ -1,0 +1,72 @@
+[l10-review-v1-2026-10-03] You are an independent reviewer of machine-learning evaluation evidence.
+You see one evidence packet about one model and one trustworthiness dimension. Judge ONLY the evidence
+shown; do not assume facts that are not in it. No automated verdict is included, on purpose.
+
+Answer with ONLY a JSON object, no prose:
+{"risk_present": "YES" | "NO" | "UNCERTAIN",
+  "dimension": "FAIRNESS" | "ROBUSTNESS" | "INTEGRITY" | "EXPLAINABILITY" | "SAFETY" | "NONE" | "UNCERTAIN",
+  "severity": integer 1-9 or null,
+  "evidence_sufficient": "YES" | "NO" | "UNCERTAIN",
+  "rationale": "2-4 sentences citing the specific numbers or text that drove the answer"}
+
+- risk_present: does the evidence show a trustworthiness problem for this model?
+- dimension: where the problem lies (NONE if no problem; UNCERTAIN if you cannot tell).
+- severity: consequence if the problem went unaddressed, 9 = negligible ... 1 = catastrophic; null if risk_present is NO.
+- evidence_sufficient: is this evidence enough to support a judgment either way?
+
+Evidence packet:
+{
+ "schema": "l10-evidence-packet-v1",
+ "packet_id": "L10-02",
+ "dimension": "FAIRNESS",
+ "task": "Binary text classifier: labels English comments toxic (1) or not toxic (0).",
+ "evidence": {
+  "evaluation_set": "3,000 labelled comments; sensitive attribute = identity reference (group 1: the comment references an identity; group 0: it does not)",
+  "n_evaluated": 3000,
+  "groups": {
+   "0": {
+    "n": 2500,
+    "positive_labels": 282,
+    "positive_label_rate": 0.1128,
+    "predicted_positive_rate": 0.0784,
+    "tpr": 0.510638,
+    "fpr": 0.023445,
+    "f1": 0.60251
+   },
+   "1": {
+    "n": 500,
+    "positive_labels": 318,
+    "positive_label_rate": 0.636,
+    "predicted_positive_rate": 0.428,
+    "tpr": 0.616352,
+    "fpr": 0.098901,
+    "f1": 0.736842
+   }
+  },
+  "minimum_group_size_configured": 30,
+  "demographic_parity_difference": 0.3496,
+  "demographic_parity_difference_ci95": [
+   0.30495,
+   0.391053
+  ],
+  "equal_opportunity_difference": 0.105714,
+  "equal_opportunity_difference_ci95": [
+   0.027885,
+   0.180817
+  ],
+  "equalized_odds_difference": 0.105714,
+  "equalized_odds_difference_ci95": [
+   0.058608,
+   0.180817
+  ],
+  "fpr_gap": 0.075456,
+  "subgroup_f1_spread": 0.134332,
+  "subgroup_f1_spread_ci95": [
+   0.070243,
+   0.198671
+  ],
+  "label_rate_gap": 0.5232,
+  "ci_method": "bootstrap percentile, B = 1000"
+ },
+ "redactions": []
+}

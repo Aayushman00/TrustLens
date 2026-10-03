@@ -1,0 +1,254 @@
+{
+  "meta": {
+    "evaluator": "Claude",
+    "evaluator_type": "independent_llm",
+    "model": "claude-opus-5-5",
+    "prompt_version": "l10-review-v1-2026-10-03",
+    "source": "results/l10_independent_validation_20261003 (frozen packets, trustlens_reference.json, llm_reviews.jsonl; read-only)",
+    "answers": 12,
+    "parse_failures": 0,
+    "missing": 0,
+    "official_provider_answers": {
+      "L10-01": "groq openai/gpt-oss-120b"
+    },
+    "human_reviews": "none collected; none fabricated"
+  },
+  "pairs": {
+    "trustlens_vs_claude": {
+      "n_common": 12,
+      "categories": {
+        "agree": 2,
+        "abstention_mismatch": 3,
+        "severity": 3,
+        "evidence_interpretation": 4
+      },
+      "risk_agreement": 0.4167,
+      "dimension_agreement": 0.4167,
+      "sufficiency_agreement": 0.6667,
+      "n_severity_pairs": 9,
+      "severity_exact": 0.0,
+      "severity_within_1": 0.3333,
+      "risk_kappa": 0.134,
+      "packets": {
+        "L10-01": "agree",
+        "L10-02": "abstention_mismatch",
+        "L10-03": "severity",
+        "L10-04": "evidence_interpretation",
+        "L10-05": "agree",
+        "L10-06": "evidence_interpretation",
+        "L10-07": "abstention_mismatch",
+        "L10-08": "severity",
+        "L10-09": "abstention_mismatch",
+        "L10-10": "evidence_interpretation",
+        "L10-11": "severity",
+        "L10-12": "evidence_interpretation"
+      }
+    },
+    "official_llm_vs_claude": {
+      "n_common": 1,
+      "categories": {
+        "agree": 1
+      },
+      "risk_agreement": 1.0,
+      "dimension_agreement": 1.0,
+      "sufficiency_agreement": 1.0,
+      "n_severity_pairs": 1,
+      "severity_exact": 1.0,
+      "severity_within_1": 1.0,
+      "risk_kappa": null,
+      "packets": {
+        "L10-01": "agree"
+      }
+    }
+  },
+  "layers": {
+    "L10-01": {
+      "trustlens": {
+        "risk_present": "YES",
+        "risk_ids": [
+          "F-FAIR-EOPP"
+        ],
+        "evidence_sufficient": "YES",
+        "S": 4
+      },
+      "claude": {
+        "risk_present": "YES",
+        "dimension": "FAIRNESS",
+        "evidence_sufficient": "YES",
+        "severity": 3
+      },
+      "disagreement_layer": null
+    },
+    "L10-02": {
+      "trustlens": {
+        "risk_present": "UNCERTAIN",
+        "risk_ids": [],
+        "evidence_sufficient": "UNCERTAIN",
+        "S": null
+      },
+      "claude": {
+        "risk_present": "YES",
+        "dimension": "FAIRNESS",
+        "evidence_sufficient": "YES",
+        "severity": 5
+      },
+      "disagreement_layer": "evidence"
+    },
+    "L10-03": {
+      "trustlens": {
+        "risk_present": "YES",
+        "risk_ids": [
+          "F-FAIR-EOPP"
+        ],
+        "evidence_sufficient": "YES",
+        "S": 7
+      },
+      "claude": {
+        "risk_present": "YES",
+        "dimension": "FAIRNESS",
+        "evidence_sufficient": "YES",
+        "severity": 5
+      },
+      "disagreement_layer": "score"
+    },
+    "L10-04": {
+      "trustlens": {
+        "risk_present": "NO",
+        "risk_ids": [],
+        "evidence_sufficient": "YES",
+        "S": 1
+      },
+      "claude": {
+        "risk_present": "YES",
+        "dimension": "ROBUSTNESS",
+        "evidence_sufficient": "YES",
+        "severity": 6
+      },
+      "disagreement_layer": "risk"
+    },
+    "L10-05": {
+      "trustlens": {
+        "risk_present": "UNCERTAIN",
+        "risk_ids": [],
+        "evidence_sufficient": "NO",
+        "S": null
+      },
+      "claude": {
+        "risk_present": "UNCERTAIN",
+        "dimension": "UNCERTAIN",
+        "evidence_sufficient": "NO",
+        "severity": null
+      },
+      "disagreement_layer": null
+    },
+    "L10-06": {
+      "trustlens": {
+        "risk_present": "NO",
+        "risk_ids": [],
+        "evidence_sufficient": "YES",
+        "S": 1
+      },
+      "claude": {
+        "risk_present": "YES",
+        "dimension": "SAFETY",
+        "evidence_sufficient": "YES",
+        "severity": 2
+      },
+      "disagreement_layer": "risk"
+    },
+    "L10-07": {
+      "trustlens": {
+        "risk_present": "NO",
+        "risk_ids": [],
+        "evidence_sufficient": "YES",
+        "S": 8
+      },
+      "claude": {
+        "risk_present": "UNCERTAIN",
+        "dimension": "SAFETY",
+        "evidence_sufficient": "UNCERTAIN",
+        "severity": 6
+      },
+      "disagreement_layer": "evidence"
+    },
+    "L10-08": {
+      "trustlens": {
+        "risk_present": "YES",
+        "risk_ids": [
+          "I-INT-BYTES-DIVERGE"
+        ],
+        "evidence_sufficient": "UNCERTAIN",
+        "S": 7
+      },
+      "claude": {
+        "risk_present": "YES",
+        "dimension": "INTEGRITY",
+        "evidence_sufficient": "YES",
+        "severity": 2
+      },
+      "disagreement_layer": "score"
+    },
+    "L10-09": {
+      "trustlens": {
+        "risk_present": "UNCERTAIN",
+        "risk_ids": [],
+        "evidence_sufficient": "UNCERTAIN",
+        "S": 7
+      },
+      "claude": {
+        "risk_present": "NO",
+        "dimension": "NONE",
+        "evidence_sufficient": "YES",
+        "severity": null
+      },
+      "disagreement_layer": "evidence"
+    },
+    "L10-10": {
+      "trustlens": {
+        "risk_present": "NO",
+        "risk_ids": [],
+        "evidence_sufficient": "YES",
+        "S": 6
+      },
+      "claude": {
+        "risk_present": "YES",
+        "dimension": "EXPLAINABILITY",
+        "evidence_sufficient": "YES",
+        "severity": 4
+      },
+      "disagreement_layer": "risk"
+    },
+    "L10-11": {
+      "trustlens": {
+        "risk_present": "YES",
+        "risk_ids": [
+          "E-DOC-CONTRADICTION"
+        ],
+        "evidence_sufficient": "YES",
+        "S": 6
+      },
+      "claude": {
+        "risk_present": "YES",
+        "dimension": "EXPLAINABILITY",
+        "evidence_sufficient": "YES",
+        "severity": 3
+      },
+      "disagreement_layer": "score"
+    },
+    "L10-12": {
+      "trustlens": {
+        "risk_present": "NO",
+        "risk_ids": [],
+        "evidence_sufficient": "YES",
+        "S": 6
+      },
+      "claude": {
+        "risk_present": "YES",
+        "dimension": "EXPLAINABILITY",
+        "evidence_sufficient": "YES",
+        "severity": 7
+      },
+      "disagreement_layer": "risk"
+    }
+  }
+}
