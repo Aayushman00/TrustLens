@@ -1,6 +1,6 @@
 /** Hand-written TS mirror of the backend Pydantic schemas (TrustLens 0.20.1). */
 
-export type EvaluationMode = "AI_ASSISTED" | "AI_AUTONOMOUS";
+type EvaluationMode = "AI_ASSISTED" | "AI_AUTONOMOUS";
 
 export type EvaluationStatus =
   | "PENDING"
@@ -60,24 +60,6 @@ export interface ImportHfRequest {
 
 // ---- user-defined local Fairness datasets ----
 
-export interface UserDatasetColumn {
-  name: string;
-  inferred_type: "numeric" | "categorical" | "unknown";
-}
-
-export interface UserDatasetRead {
-  id: string;
-  filename: string;
-  format: string;
-  content_hash: string;
-  row_count: number;
-  size_bytes: number;
-  columns: UserDatasetColumn[];
-  status: string;
-  status_reason: string | null;
-  created_at: string;
-}
-
 export type DocumentationType =
   | "model_card"
   | "readme"
@@ -111,7 +93,7 @@ export interface DocumentationSourceList {
 
 // ---- evaluations ----
 
-export interface ProbeProgress {
+interface ProbeProgress {
   completed: number;
   total: number;
 }
@@ -153,7 +135,7 @@ export type ProbeStatusValue =
   | "FAILED"
   | "PROXY";
 
-export interface ConfidenceSummary {
+interface ConfidenceSummary {
   overall: number;
   by_dimension: Record<string, number>;
   method: string;
@@ -175,7 +157,7 @@ export interface OsdAspectSuggestion {
 }
 
 /** osd_agent_outputs.ai_suggestion payload (schema osd-agent-v1). */
-export interface OsdAiSuggestion {
+interface OsdAiSuggestion {
   schema_version: string;
   methodology_status: string;
   assessment_engine?: string;
@@ -187,14 +169,14 @@ export interface OsdAiSuggestion {
   note: string;
 }
 
-export interface OsdAgentRead {
+interface OsdAgentRead {
   ai_suggestion: OsdAiSuggestion;
   ai_confidence: number | null;
   methodology_status: string;
   rationale: string | null;
 }
 
-export interface FinalScoreRead {
+interface FinalScoreRead {
   fries_score: number;
   dimension_scores: Record<string, number>;
   overall_confidence: number | null;
@@ -224,7 +206,7 @@ export interface HumanReviewRead {
   created_at: string;
 }
 
-export interface ExecutionMetadata {
+interface ExecutionMetadata {
   device?: string | null;
   device_name?: string | null;
   execution_device: string | null;
@@ -316,7 +298,7 @@ export interface HumanReviewRequest {
 // a read of an already-persisted value — the frontend must never recompute
 // or re-derive any of these (see ReportPage.tsx's top-of-file note).
 
-export interface ReportEvaluation {
+interface ReportEvaluation {
   id: string;
   status: EvaluationStatus;
   evaluation_mode: EvaluationMode;
@@ -326,7 +308,7 @@ export interface ReportEvaluation {
   finalized_context: Record<string, unknown>;
 }
 
-export interface ReportScore {
+interface ReportScore {
   score_type: "original_FRIES";
   // null exactly when scoring_withheld is true — never a fabricated 0.
   fries_score: number | null;
@@ -345,7 +327,7 @@ export interface ReportProbe {
   evidence_refs: Record<string, unknown>[];
 }
 
-export interface ReportExecutiveSummary {
+interface ReportExecutiveSummary {
   headline: string;
   bullets: string[];
 }
@@ -445,18 +427,8 @@ export interface LabelMappingEntry {
   model_label_index: number;
 }
 
-/** PATCH /v1/evaluation-drafts/{id}/dimensions — backend DimensionConfigUpdate. */
-export interface DimensionConfigUpdate {
-  dataset_content_id: string;
-  text_column: string;
-  target_column: string;
-  sensitive_column?: string;
-  label_mapping: LabelMappingEntry[];
-  min_group_n?: number;
-}
-
 /** Group preview entry within DimensionValidationRead.group_preview. */
-export interface GroupPreviewEntry {
+interface GroupPreviewEntry {
   value: string;
   count: number;
   meets_min_group_n: boolean;
@@ -473,7 +445,7 @@ export interface DimensionValidationRead {
 }
 
 /** EvaluationDraft status lifecycle — backend Literal values. */
-export type EvaluationDraftStatus = "incomplete" | "validated" | "consumed" | "stale";
+type EvaluationDraftStatus = "incomplete" | "validated" | "consumed" | "stale";
 
 /** Frozen model config snapshot (num_labels + id2label) a draft's label-mapping
  * UI must source its options from exclusively — never a hardcoded list. */

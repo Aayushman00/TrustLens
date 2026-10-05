@@ -1,8 +1,8 @@
 import { useEffect, useId, useRef } from "react";
 import { EvidenceChip, type EvidenceRef } from "./EvidenceChip";
 
-export type TraceLayer = "score" | "assessment" | "evidence";
-export interface TraceLevel {
+type TraceLayer = "score" | "assessment" | "evidence";
+interface TraceLevel {
   layer: TraceLayer;
   heading: string;
   value?: string;

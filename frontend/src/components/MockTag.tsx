@@ -6,7 +6,7 @@
  */
 import type { ReactNode } from "react";
 
-export default function MockTag({ label = "Demo data" }: { label?: string }) {
+function MockTag({ label = "Demo data" }: { label?: string }) {
   return <span className="mock-tag">{label}</span>;
 }
 

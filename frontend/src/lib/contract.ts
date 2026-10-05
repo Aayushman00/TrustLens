@@ -11,7 +11,7 @@
  */
 import type { EvaluationRead } from "../api/types";
 
-export interface EvaluationContractDimension {
+interface EvaluationContractDimension {
   dataset_content_id: string;
   text_column: string;
   target_column: string;

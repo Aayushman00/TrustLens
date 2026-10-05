@@ -5,7 +5,7 @@
 export interface OSD { O: number; S: number; D: number }
 export type WeightCheck = { ok: true } | { ok: false; reason: string };
 
-export const MIN_WEIGHT = 0.1;
+const MIN_WEIGHT = 0.1;
 const SUM_TOL = 1e-6;
 
 function component(value: number, name: string): number {

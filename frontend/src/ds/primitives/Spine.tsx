@@ -1,6 +1,6 @@
 import { fmtTimeSeconds } from "../../lib/format";
 
-export type StageState = "done" | "current" | "pending" | "failed" | "not_required";
+type StageState = "done" | "current" | "pending" | "failed" | "not_required";
 export interface SpineStage { key: string; label: string; state: StageState; at?: string | null; note?: string }
 
 const WORD: Record<StageState, string> = {

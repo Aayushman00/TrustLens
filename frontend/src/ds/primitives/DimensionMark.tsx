@@ -10,7 +10,7 @@ const SHAPES = {
   triangle: <polygon points="8,2 14.5,13.5 1.5,13.5" />,
 };
 
-export function DimensionGlyph({ dimension, size = 16 }: { dimension: FriesDimension; size?: number }) {
+function DimensionGlyph({ dimension, size = 16 }: { dimension: FriesDimension; size?: number }) {
   return (
     <svg className="tl-dim__glyph" width={size} height={size} viewBox="0 0 16 16" aria-hidden="true">
       {SHAPES[DIMENSIONS[dimension].shape]}

@@ -4,7 +4,7 @@ import { fmtTimeSeconds } from "../../lib/format";
 export interface TimelineEvent { id: number; event_type: string; created_at: string; detail?: Record<string, unknown> | null }
 
 /** The 10 types emitted today (backend/app/db/repositories/evaluation_event.py). */
-export const EVENT_LABELS: Record<string, string> = {
+const EVENT_LABELS: Record<string, string> = {
   evaluation_created: "Evaluation created",
   evaluation_requeued: "Re-queued",
   evaluation_started: "Evaluation started",
@@ -17,7 +17,7 @@ export const EVENT_LABELS: Record<string, string> = {
   report_generated: "Report generated",
 };
 
-export const eventLabel = (type: string): string => EVENT_LABELS[type] ?? type;
+const eventLabel = (type: string): string => EVENT_LABELS[type] ?? type;
 
 export function Timeline({ events, onSelect }: { events: TimelineEvent[]; onSelect?: (e: TimelineEvent) => void }) {
   const [filter, setFilter] = useState("all");

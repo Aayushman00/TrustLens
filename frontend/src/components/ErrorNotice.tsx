@@ -1,6 +1,6 @@
 import { ApiError } from "../api/client";
 
-export function errorMessage(error: unknown): string {
+function errorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     return error.code === "UNKNOWN" ? error.message : `${error.code}: ${error.message}`;
   }
