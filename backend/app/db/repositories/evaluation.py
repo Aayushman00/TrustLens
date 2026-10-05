@@ -63,14 +63,6 @@ class EvaluationRepository:
             select(Evaluation.id).where(Evaluation.id == evaluation_id).with_for_update()
         )
 
-    def list_by_status(self, status: EvaluationStatus) -> list[Evaluation]:
-        stmt = (
-            select(Evaluation)
-            .where(Evaluation.status == status)
-            .order_by(Evaluation.created_at.desc())
-        )
-        return list(self._session.scalars(stmt).all())
-
     def list_all(
         self,
         *,

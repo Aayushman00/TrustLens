@@ -169,85 +169,6 @@ def discover_group_values(
     return observed, {"missing_count": missing_count, "missing_reasons": missing_reasons}
 
 
-def load_rows_for_evaluation(
-    data: bytes,
-    *,
-    target_column: str,
-    group_column: str,
-    text_column: str,
-    excluded_group_values: set[str],
-) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    """One deterministic pass producing rows in the shape the existing Fairness
-    statistics consume: ``{"text": str, "label": int, "sensitive": str}``.
-
-    Row order is preserved from file order (no shuffling — this evaluates the
-    whole selected file/subset, it is not a sampling step). Missing target,
-    missing text, and user-excluded group values are dropped with an explicit,
-    counted reason — never silently dropped without a record. Target values
-    are sorted deterministically and label-encoded ``0..k-1``.
-    """
-    reader = csv.DictReader(_decode(data))
-    fieldnames = reader.fieldnames or []
-    for col in (target_column, group_column, text_column):
-        if col not in fieldnames:
-            raise UserDatasetError(f"column {col!r} not found in dataset")
-
-    raw_rows: list[dict[str, str]] = []
-    rows_dropped_missing_target = 0
-    rows_dropped_missing_text = 0
-    rows_dropped_missing_group = 0
-    rows_dropped_excluded_group = 0
-
-    for row in reader:
-        target_raw = row.get(target_column)
-        text_raw = row.get(text_column)
-        group_raw = row.get(group_column)
-
-        if _is_missing(target_raw):
-            rows_dropped_missing_target += 1
-            continue
-        if text_raw is None or text_raw.strip() == "":
-            rows_dropped_missing_text += 1
-            continue
-        if _is_missing(group_raw):
-            rows_dropped_missing_group += 1
-            continue
-        group_value = group_raw.strip()
-        if group_value in excluded_group_values:
-            rows_dropped_excluded_group += 1
-            continue
-
-        raw_rows.append(
-            {
-                "text": text_raw,
-                "target": target_raw.strip(),
-                "sensitive": group_value,
-            }
-        )
-
-    label_values_seen = sorted({r["target"] for r in raw_rows})
-    label_encoding = {value: idx for idx, value in enumerate(label_values_seen)}
-
-    rows = [
-        {
-            "text": r["text"],
-            "label": label_encoding[r["target"]],
-            "sensitive": r["sensitive"],
-        }
-        for r in raw_rows
-    ]
-
-    exclusions = {
-        "rows_dropped_missing_target": rows_dropped_missing_target,
-        "rows_dropped_missing_text": rows_dropped_missing_text,
-        "rows_dropped_missing_group": rows_dropped_missing_group,
-        "rows_dropped_excluded_group": rows_dropped_excluded_group,
-        "label_values_seen": label_values_seen,
-        "label_encoding": label_encoding,
-    }
-    return rows, exclusions
-
-
 def load_rows_for_evaluation_with_label_mapping(
     data: bytes,
     *,
@@ -257,11 +178,10 @@ def load_rows_for_evaluation_with_label_mapping(
     excluded_group_values: set[str],
     label_encoding: dict[str, int],
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    """Task 4.5 (EvaluationContractV2 Fairness): identical row loading/drop
-    semantics to :func:`load_rows_for_evaluation`, except the label encoding
-    is an explicit caller-supplied mapping (dataset value -> model output
-    index, from the confirmed ``label_mapping``) instead of an internally
-    computed alphabetical ``0..k-1`` sort.
+    """Task 4.5 (EvaluationContractV2 Fairness): row loading with an explicit
+    caller-supplied label encoding (dataset value -> model output index, from
+    the confirmed ``label_mapping``). File order is preserved; missing target,
+    text, group and user-excluded group values are dropped and counted.
 
     A target value with no entry in ``label_encoding`` is dropped and counted
     as ``rows_dropped_unmapped_label`` — never silently coerced to a

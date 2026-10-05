@@ -8,7 +8,7 @@ from app.datasets.user_dataset import (
     UserDatasetError,
     count_rows,
     discover_group_values,
-    load_rows_for_evaluation,
+    load_rows_for_evaluation_with_label_mapping,
     sniff_columns,
 )
 
@@ -118,13 +118,14 @@ def test_discover_group_values_unknown_column_raises() -> None:
         discover_group_values(_CSV, group_column="nope")
 
 
-def test_load_rows_for_evaluation_drops_missing_group_rows_deterministically() -> None:
-    rows, exclusions = load_rows_for_evaluation(
+def test_load_rows_with_label_mapping_drops_missing_group_rows_deterministically() -> None:
+    rows, exclusions = load_rows_for_evaluation_with_label_mapping(
         _CSV,
         target_column="label",
         group_column="gender",
         text_column="text",
         excluded_group_values=set(),
+        label_encoding={"0": 0, "1": 1},
     )
     assert len(rows) == 5  # the 2 missing-gender rows are dropped
     assert exclusions["rows_dropped_missing_group"] == 2
@@ -136,19 +137,20 @@ def test_load_rows_for_evaluation_drops_missing_group_rows_deterministically() -
     assert {r["sensitive"] for r in rows} == {"Male", "Female", "Non-binary"}
 
 
-def test_load_rows_for_evaluation_respects_user_excluded_groups() -> None:
-    rows, exclusions = load_rows_for_evaluation(
+def test_load_rows_with_label_mapping_respects_user_excluded_groups() -> None:
+    rows, exclusions = load_rows_for_evaluation_with_label_mapping(
         _CSV,
         target_column="label",
         group_column="gender",
         text_column="text",
         excluded_group_values={"Non-binary"},
+        label_encoding={"0": 0, "1": 1},
     )
     assert exclusions["rows_dropped_excluded_group"] == 1
     assert "Non-binary" not in {r["sensitive"] for r in rows}
 
 
-def test_load_rows_for_evaluation_missing_target_and_text_are_dropped_and_counted() -> None:
+def test_load_rows_with_label_mapping_missing_target_and_text_are_dropped_and_counted() -> None:
     csv_bytes = (
         "text,label,gender\n"
         "hello,1,A\n"
@@ -156,12 +158,13 @@ def test_load_rows_for_evaluation_missing_target_and_text_are_dropped_and_counte
         "hello again,,A\n"
         "hello3,0,B\n"
     ).encode("utf-8")
-    rows, exclusions = load_rows_for_evaluation(
+    rows, exclusions = load_rows_for_evaluation_with_label_mapping(
         csv_bytes,
         target_column="label",
         group_column="gender",
         text_column="text",
         excluded_group_values=set(),
+        label_encoding={"0": 0, "1": 1},
     )
     assert exclusions["rows_dropped_missing_text"] == 1
     assert exclusions["rows_dropped_missing_target"] == 1
@@ -170,10 +173,11 @@ def test_load_rows_for_evaluation_missing_target_and_text_are_dropped_and_counte
 
 def test_unknown_column_raises_for_evaluation_loader() -> None:
     with pytest.raises(UserDatasetError):
-        load_rows_for_evaluation(
+        load_rows_for_evaluation_with_label_mapping(
             _CSV,
             target_column="nope",
             group_column="gender",
             text_column="text",
             excluded_group_values=set(),
+            label_encoding={"0": 0, "1": 1},
         )

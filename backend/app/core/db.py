@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Generator, Iterator
+from collections.abc import Iterator
 from contextlib import contextmanager
 
 from sqlalchemy import create_engine, text
@@ -61,12 +61,6 @@ def get_session(database_url: str) -> Iterator[Session]:
         raise
     finally:
         session.close()
-
-
-def session_scope(database_url: str) -> Generator[Session, None, None]:
-    """Generator form of ``get_session`` (e.g. for FastAPI Depends in Phase 4)."""
-    with get_session(database_url) as session:
-        yield session
 
 
 def check_postgres(database_url: str | None) -> str:

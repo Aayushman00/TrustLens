@@ -46,7 +46,3 @@ def test_model_evaluation_repositories(db_session: Session) -> None:
     assert stale is None
     assert evaluations.get_by_id(evaluation.id).status is EvaluationStatus.RUNNING
 
-    pending = evaluations.list_by_status(EvaluationStatus.PENDING)
-    running = evaluations.list_by_status(EvaluationStatus.RUNNING)
-    assert all(e.status is EvaluationStatus.PENDING for e in pending)
-    assert any(e.id == evaluation.id for e in running)
