@@ -4,9 +4,8 @@ from __future__ import annotations
 
 import enum
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import Protocol
 
-from app.inference.errors import NOT_LOADED, InferenceError
 
 
 class TaskType(str, enum.Enum):
@@ -114,8 +113,3 @@ class InferenceBackend(Protocol):
 
     def close(self) -> None: ...
 
-
-def require_loaded(backend: Any) -> None:
-    """Guard for backends that track loaded state."""
-    if not getattr(backend, "is_loaded", False):
-        raise InferenceError(NOT_LOADED, "model is not loaded — call load() first")

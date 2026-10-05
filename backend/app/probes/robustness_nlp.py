@@ -82,14 +82,6 @@ def perturbation_succeeded(original: str, attacked: str) -> bool:
     return attacked != original
 
 
-def task_type_from_spec(task_type: str | None) -> TaskType:
-    if task_type == "binary_classification":
-        return TaskType.BINARY_CLASSIFICATION
-    if task_type == "regression":
-        return TaskType.REGRESSION
-    return TaskType.MULTICLASS_CLASSIFICATION
-
-
 class TransformersCharSwapRunner:
     """Score clean vs char-swapped text via InferenceBackend."""
 

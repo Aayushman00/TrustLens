@@ -9,7 +9,7 @@ from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.db.enums import EvaluationMode, EvaluationStatus
-from app.db.models import Evaluation, FinalScore
+from app.db.models import Evaluation
 
 
 class EvaluationRepository:
@@ -102,75 +102,6 @@ class EvaluationRepository:
                 pass
         stmt = stmt.limit(limit)
         return list(self._session.scalars(stmt).all())
-
-    def list_published(
-        self,
-        *,
-        task: str | None = None,
-        dataset: str | None = None,
-        evaluation_mode: EvaluationMode | None = None,
-        limit: int = 50,
-        cursor: str | None = None,
-    ) -> list[Evaluation]:
-        """Published + FINALIZED rows joined to final_scores (Phase 22).
-
-        Order: fries_score desc, published_at desc, id desc. The cursor is the
-        last row's evaluation UUID (opaque to clients, same style as list_all);
-        an unknown/invalid cursor is ignored.
-        """
-        limit = max(1, min(limit, 200))
-        stmt = (
-            select(Evaluation)
-            .join(FinalScore, FinalScore.evaluation_id == Evaluation.id)
-            .where(
-                Evaluation.is_published.is_(True),
-                Evaluation.status == EvaluationStatus.FINALIZED,
-            )
-            .order_by(
-                FinalScore.fries_score.desc(),
-                Evaluation.published_at.desc(),
-                Evaluation.id.desc(),
-            )
-        )
-        if task is not None:
-            stmt = stmt.where(Evaluation.task == task)
-        if dataset is not None:
-            stmt = stmt.where(Evaluation.dataset == dataset)
-        if evaluation_mode is not None:
-            stmt = stmt.where(Evaluation.evaluation_mode == evaluation_mode)
-        anchor = self._published_cursor_anchor(cursor)
-        if anchor is not None:
-            anchor_score, anchor_published_at, anchor_id = anchor
-            stmt = stmt.where(
-                (FinalScore.fries_score < anchor_score)
-                | (
-                    (FinalScore.fries_score == anchor_score)
-                    & (
-                        (Evaluation.published_at < anchor_published_at)
-                        | (
-                            (Evaluation.published_at == anchor_published_at)
-                            & (Evaluation.id < anchor_id)
-                        )
-                    )
-                )
-            )
-        stmt = stmt.limit(limit)
-        return list(self._session.scalars(stmt).all())
-
-    def _published_cursor_anchor(self, cursor: str | None):
-        """(fries_score, published_at, id) of the cursor row, or None if unusable."""
-        if not cursor:
-            return None
-        try:
-            cursor_id = uuid.UUID(cursor)
-        except ValueError:
-            return None
-        row = self._session.execute(
-            select(FinalScore.fries_score, Evaluation.published_at, Evaluation.id)
-            .join(Evaluation, Evaluation.id == FinalScore.evaluation_id)
-            .where(Evaluation.id == cursor_id, Evaluation.published_at.is_not(None))
-        ).first()
-        return None if row is None else (row[0], row[1], row[2])
 
     def set_execution_metadata(
         self,

@@ -114,10 +114,6 @@ def _fries_from_osd(aspects: dict[str, dict[str, int]]) -> float:
     return statistics.mean(tis)
 
 
-def _mean(values: list[float]) -> float | None:
-    return statistics.mean(values) if values else None
-
-
 def _stdev(values: list[float]) -> float | None:
     return statistics.stdev(values) if len(values) >= 2 else None
 

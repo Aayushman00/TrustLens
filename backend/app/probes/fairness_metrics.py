@@ -19,10 +19,6 @@ from collections import defaultdict
 from typing import Any, Hashable, Sequence
 
 
-def _as_list(values: Sequence[Any]) -> list[Any]:
-    return list(values)
-
-
 def _groups(
     y_true: Sequence[Any],
     y_pred: Sequence[Any],

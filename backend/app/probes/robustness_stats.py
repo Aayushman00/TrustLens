@@ -35,12 +35,6 @@ def relative_degradation(
     return robust / max(clean, epsilon)
 
 
-def _row_drop(row: dict[str, Any]) -> float:
-    clean_ok = int(row["y_hat_clean"]) == int(row["label"])
-    robust_ok = int(row["y_hat_robust"]) == int(row["label"])
-    return float(clean_ok) - float(robust_ok)
-
-
 def _accuracy_from_rows(rows: Sequence[dict[str, Any]], pred_key: str) -> float:
     if not rows:
         return 0.0

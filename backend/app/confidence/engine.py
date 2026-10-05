@@ -94,13 +94,6 @@ def geometric_mean(values: Sequence[float]) -> float:
     return _clamp(math.exp(log_sum / len(items)))
 
 
-def _ratio(metric_values: dict[str, Any], key: str) -> float | None:
-    raw = metric_values.get(key)
-    if isinstance(raw, bool) or not isinstance(raw, (int, float)):
-        return None
-    return _clamp(float(raw))
-
-
 def _fairness_factors(
     metric_values: dict[str, Any], flags: list[str], has_evidence: bool
 ) -> tuple[float, float, float]:
