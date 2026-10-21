@@ -106,11 +106,12 @@ Default evaluations **do not invent O/S/D**. FRIES is **withheld** (status still
 - **Auth and RBAC** — researcher / reviewer / admin JWT roles.
 - **Model registry** — `POST /v1/models/import-hf` resolves Hub **metadata only** (card, tags, license, file list). It does **not** download weights.
 - **Async evaluations** — `POST /v1/evaluations` enqueues `trustlens.evaluate_model`; probes run F → R → I → E → S.
-- **Probes emit metrics and evidence**, not FRIES scores. Each probe result carries a first-class `ProbeEvaluationStatus` (`EVALUATED` / `INSUFFICIENT_EVIDENCE` / `NOT_APPLICABLE` / `SKIPPED` / `FAILED` / `PROXY`). Confidence is an **uncalibrated evidence-strength** geometric mean (`data_quality`, `probe_reliability`, `evidence_completeness`) — not correctness and not O/S/D. Under the current `methodology_version` (`v2-per-dimension-2026`), dimensions marked `NOT_APPLICABLE` are excluded from the overall confidence figure (still shown as `None` per-dimension); legacy evaluations keep the old fold-in-at-value behavior byte-for-byte.
+- **Probes emit metrics and evidence**, not FRIES scores. Each probe result carries a first-class `ProbeEvaluationStatus` (`EVALUATED` / `INSUFFICIENT_EVIDENCE` / `NOT_APPLICABLE` / `SKIPPED` / `FAILED` / `PROXY`). Confidence is an **uncalibrated evidence-strength** geometric mean (`data_quality`, `probe_reliability`, `evidence_completeness`) — not correctness and not O/S/D. Under methodology versions from `v2-per-dimension-2026` on (current: `v9-evidence-guards-2026`), dimensions marked `NOT_APPLICABLE` are excluded from the overall confidence figure (still shown as `None` per-dimension); legacy evaluations keep the old fold-in-at-value behavior byte-for-byte.
 - **Every evaluation is stamped with an immutable `methodology_version`** at creation (`backend/app/scoring/methodology_version.py`), copied verbatim into its report. Historical evaluations predating this field carry a `LEGACY_METHODOLOGY_VERSION` sentinel.
 - **Assessment engine (orthogonal to workflow mode)**
   - **Default `deterministic`** — O/S/D are not generated (no validated mapping). FRIES withheld.
-  - **`legacy_heuristic`** — admin-only, **top-level** `probe_config.assessment_engine` only. `extra.assessment_engine` (including `"heuristic"`) is ignored. HeuristicOSDAgent still exists for this path; it is not an LLM.
+  - **`legacy_heuristic`** — admin-only, **top-level** `probe_config.assessment_engine` only. `extra.assessment_engine` (including `"heuristic"`) is ignored. `HeuristicOSDAgent` (not an LLM) uses the calibrated `osd-map-v4` mapping plus v9 evidence guards: Integrity artifact `MISMATCH` floors O=S=1, Safety abstains when `benign_fpr > 0.30`, and D falls with CI width. These thresholds are `PROPOSED`, fitted to injected defects — range normalisation, not calibration.
+  - **`llm_v1`** — `HybridOSDAgent` (`backend/app/osd/hybrid.py`): heuristic baseline for all five dimensions, then one batched LLM call (Gemini → Groq → NVIDIA NIM) re-scores Integrity/Explainability/Safety; any failure falls back to the heuristic, tagged `heuristic_fallback`. Fairness and Robustness are never LLM-scored. Not validated as ground truth; see `results/l2_det_vs_llm_20261003*/FINDINGS.md`.
 - **Workflow modes** (`AI_AUTONOMOUS` / `AI_ASSISTED`) are **human-review gates**, not LLM interpretation. Enum names are historical.
   - `AI_AUTONOMOUS` — pipeline may finalize without a reviewer (`human_reviewed=false`).
   - `AI_ASSISTED` — stops at `AWAITING_REVIEW`; a reviewer records or edits O/S/D, then finalize.
@@ -123,17 +124,17 @@ Default evaluations **do not invent O/S/D**. FRIES is **withheld** (status still
 
 - Amendment **A6** vs default withhold: whether/when a partial FRIES should exist without a validated O mapping.
 - Confidence factor weights remain **uncalibrated** (`proposed_calibration`).
-- Mode B / `llm_assisted` O/S/D is **not implemented**.
+- `llm_v1` O/S/D is an experimental comparison engine, not a validated rater (see L2/L10 findings under `results/`).
 
 ### How probes actually run
 
 | Dimension | Current evidence | Runs the imported model? |
 | --------- | ---------------- | ------------------------ |
-| **Fairness** | Adult Census tabular subset; demographic parity difference, equalized odds difference, subgroup F1 spread | **No.** Default predictor is a sklearn `LogisticRegression` fit on the subset — a **proxy**, not the imported HF model |
-| **Robustness** | Pinned NLP subset; clean vs character-swap accuracy | **Yes**, for text-classification models (`transformers` on CPU). Other modalities skip the attack |
-| **Integrity** | Hub identity/disclosure Layer A evidence (revision format, file manifest, structured license, card, repro keywords, listing fingerprint). Named `I-INT-*` risks; optional injected hash compare. **No** `integrity_score_0_10` | No weight download in production; hash compare only when operator/test supplies both hashes |
-| **Explainability** | Model-card ATX section coverage (intended use, limitations, training data, evaluation, ethical considerations) | Metadata only; not SHAP/LIME |
-| **Safety** | Mandatory disclosure checklist (misuse / privacy / security / data) plus high-impact claim flags | Metadata only; no behavioral unsafe-prompt suite |
+| **Fairness** | User-supplied local dataset with column-role mapping. Binary: equal-opportunity gap (max−min group TPR) with bootstrap CI, risk `F-FAIR-EOPP` (`tl-fairness-binary-v1.2`); multiclass: `F-FAIR-PERF` worst-group accuracy gap. Wide CI blocks scoring; single-class prediction collapse is gated | **Yes** — local Transformers backend (`LocalHFBackend`) predicts on the dataset |
+| **Robustness** | Clean vs character-swap accuracy; `D` uses the clean-accuracy CI | **Yes**, for text-classification models (CPU/CUDA, device recorded). Other modalities skip the attack |
+| **Integrity** | Hub identity/disclosure evidence (`I-INT-*`) plus **artifact-set hash verification**: all weight shards + loader files vs Hub LFS sha256 or a local manifest → `VERIFIED` / `MISMATCH` / `INCOMPLETE` / `UNPINNED` / `UNSUPPORTED`. Only `MISMATCH` is a risk (`I-INT-BYTES-DIVERGE`). No `integrity_score_0_10` | Hashes cached/local weight bytes; cannot catch a forger who controls the Hub repo (ADR 0013) |
+| **Explainability** | Model-card ATX section coverage (intended use, limitations, training data, evaluation, ethical considerations); gaps reported as `disclosure_gaps` | Metadata only; not SHAP/LIME |
+| **Safety** | Governance disclosure checklist **plus behavioural probe**: severe-harm false-negative rate (Wilson CI), harmful recall, benign FPR on labelled data with a `severe` marker | Yes, for the behavioural part when such data is supplied |
 
 ### Known methodological gaps (present in code)
 
@@ -141,16 +142,16 @@ These are the main deviations from the target architecture:
 
 1. **One O/S/D triple per dimension**, not a catalog of 1–3 selected FRIES risks with structured mapping traces (`rule_id`, band, rationale, methodology version).
 2. **Explainability and Safety still fall back to a fixed empty-card band `(2, 2, 3)`** when there is no card evidence, instead of abstaining. Fairness, Robustness, and Integrity now abstain (`None`) on missing evidence rather than inventing a number.
-3. **Fairness does not evaluate the imported model.** Proxy behavior is documented in code comments but is not a first-class `PROXY` path in the product.
+3. **Fairness depends on user-supplied labelled data with group columns.** Without it the probe cannot score; the old Adult-Census logistic-regression proxy is no longer the default path.
 4. **Coverage ratios and integrity pass rates are still easy to confuse with aspect scores.** The scorer uses O/S/D, but the agent bands those O/S/D values directly from coverage / pass rate / disparity — closer to “metric → dimension rating” than “evidence → named risk → O/S/D”.
 5. **Overall FRIES always assumes five aspects.** Missing dimensions are not withheld or reweighted; empty risk lists currently score as `0`. (The separate confidence-engine `overall` figure already excludes `NOT_APPLICABLE` dimensions under `methodology_version="v2-per-dimension-2026"` — this gap is about the FRIES score itself, not confidence.)
-6. **No resource checker, compatibility states, or benchmark-first runtime estimate** before download. HF import never downloads weights; robustness may download a sequence-classification model at probe time with no VRAM/RAM/disk gate.
-7. **No shared inference backend.** Only the robustness NLP runner loads the imported model.
-8. **Integrity Phase 3** records named Layer-A risks (`I-INT-*`) from Hub metadata; it does not claim tampering, true lineage, or a generic integrity score. Production hash verification is deferred; optional injected compare for tests/operators only.
-9. **Safety has no behavioral test set.** Governance coverage is the evidence.
+6. **No resource checker, compatibility states, or benchmark-first runtime estimate** before download. HF import never downloads weights; probes may download a sequence-classification model at run time with no VRAM/RAM/disk gate.
+7. **Inference backend is local Transformers only** (sequence classification/regression via `LocalHFBackend`); no hosted or other-task backends.
+8. **Integrity** records named risks (`I-INT-*`) and verifies artifact-set hashes; it does not claim tampering, true lineage, or a generic integrity score.
+9. **Safety behavioural evidence is only as good as the user-supplied labelled data** (no built-in unsafe-prompt suite); governance coverage is the fallback.
 10. **Reports are still score-centric** relative to the target (limited hardware, mapping-trace, and limitation sections).
 
-The research experiment CSVs under `results/` were produced under this older methodology. They must not be silently rewritten.
+Experiment outputs under `results/` are frozen per methodology version (v8 folders untouched by the v9 reruns). Round-3 validation studies (L1 calibration, L2 deterministic-vs-LLM, L4–L7 fairness/severity/integrity, L10 evidence review) each carry a `FINDINGS.md`. Do not silently rewrite them.
 
 ## Target architecture
 ```mermaid
@@ -208,13 +209,13 @@ Work is ordered to match the specification’s implementation phases. Items alre
 | ----- | ------ | ------ |
 | 1 | Probe evaluation statuses, nullable O/S/D, status-aware runner | **Partial** (`ProbeEvaluationStatus` + methodology-version-gated confidence exclusion exist; Explainability/Safety still band a fixed empty-card default instead of abstaining) |
 | 2 | Model analyzer + disk/RAM/VRAM compatibility (`SUPPORTED` / `CONSTRAINED` / `UNSUPPORTED` / `UNKNOWN`) | **Absent** |
-| 3 | `InferenceBackend` / `LocalInferenceBackend`; evaluation separated from execution | **Partial** (robustness NLP load only) |
+| 3 | `InferenceBackend` / `LocalInferenceBackend`; evaluation separated from execution | **Mostly done** (`LocalHFBackend` used by fairness/robustness/safety) |
 | 4 | Short benchmark, throughput, runtime estimate, optional cache | **Absent** |
-| 5 | Fairness on the **imported** model; explicit legacy proxy mode | **Partial** (metrics exist; predictor is proxy LR) |
+| 5 | Fairness on the **imported** model; explicit legacy proxy mode | **Done** for user datasets (EOPP / multiclass gap); no explicit proxy mode |
 | 6 | Robustness on the imported model; skipped/N/A must not invent O/S/D | **Partial** (NLP char-swap exists; skip still bands O/S/D) |
-| 7 | Integrity as FRIES risk taxonomy + provenance/hash/uncertainty evidence | **Partial** (metadata checklist) |
+| 7 | Integrity as FRIES risk taxonomy + provenance/hash/uncertainty evidence | **Mostly done** (artifact-set hash verification, `I-INT-*` risks) |
 | 8 | Explainability as documentation/transparency **risks**, not coverage-as-score | **Partial** (card coverage) |
-| 9 | Safety behavioral + governance evidence → risks | **Partial** (governance checklist only) |
+| 9 | Safety behavioral + governance evidence → risks | **Partial** (behavioural severe-FNR probe + governance checklist) |
 | 10 | Explicit mapping rules, traces, methodology version | **Partial** (free-text rationales; no structured trace) |
 | 11 | Multi-risk aspect aggregation; partial FRIES / withhold policy | **Partial** (math exists; always five aspects; empty → 0) |
 | 12 | Reports/UI: evidence, statuses, limitations, calculation breakdown | **Partial** (reports + UI exist; not limitation-complete) |
@@ -246,7 +247,7 @@ Scoring oracle: [backend/tests/SCORING.md](backend/tests/SCORING.md).
 
 **Prerequisites:** Docker Desktop (Compose v2). Python 3.11+ and Node 18+ for native/hybrid runs. Optional: Make.
 
-**Local backend setup (terminal):** see **[docs/LOCAL_DEVELOPMENT.md](docs/LOCAL_DEVELOPMENT.md)** for venv, `.env`, migrations, tests, and native API commands.
+**Local backend setup (terminal):** see **[docs/TRUSTLENS_LOCAL_DEVELOPMENT.md](docs/TRUSTLENS_LOCAL_DEVELOPMENT.md)** for venv, `.env`, migrations, tests, and native API commands.
 
 ```powershell
 cp .env.example .env
@@ -301,12 +302,14 @@ CI (`.github/workflows/ci.yml`) runs ruff + pytest (Postgres service) and the fr
 
 - Default O/S/D are **not generated**. Legacy heuristic values (admin path) are **proposed**, not ground truth, and not an LLM.
 - Confidence is **uncalibrated evidence strength**, not model quality. The FRIES hero does not show OSD-mean “confidence”.
-- Fairness numbers on the default path describe a **tabular logistic-regression proxy**, not the imported NLP model (unless a supported pairing is used).
+- Fairness numbers describe the imported model's behaviour on **your** dataset's groups, with bootstrap CIs; wide CIs block scoring.
 - Robustness numbers describe **character-swap** degradation on supported text classifiers only.
+- `llm_v1` and `legacy_heuristic` O/S/D are proposals for comparison and review, not validated ratings.
 - Integrity uses Layer A Hub identity/disclosure evidence. Named risks use `aspect_scoring=risk_detected` — **not** an Integrity FRIES score.
 - Leaderboard entries are comparable only with shared task/dataset/config/revision context.
 
 ## License and research
 
 Experiment protocol and limitations: [docs/experiments_runbook.md](docs/experiments_runbook.md).  
+ADR: [docs/adr/0013-artifact-set-integrity.md](docs/adr/0013-artifact-set-integrity.md).  
 Analysis: [docs/results_chapter.md](docs/results_chapter.md), [docs/RESULTS_SUMMARY.md](docs/RESULTS_SUMMARY.md).

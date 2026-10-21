@@ -1,39 +1,169 @@
 \appendix
 \chapter{Repository Map}
 \begin{lstlisting}
-backend/    FastAPI /v1, probes, O/S/D engines, FRIES scorer, reports, tests
+backend/    FastAPI /v1, probes, O/S/D engines, FRIES scorer, reports, scripts, tests
 worker/     Celery consumer (same probe pipeline)
 frontend/   Vite + React dashboard (TypeScript)
-configs/    pinned datasets and earlier benchmark configuration
-docs/       methodology notes, runbook, earlier results write-up
-results/    experiment outputs; flawed_model_suite/ holds this report's data
+configs/    experiment configuration
+docs/       methodology notes, ADRs, runbook, plans and pre-declarations
+results/    experiment outputs, one folder per experiment, frozen after the run
 shared/     frozen FRIES scoring test vectors
-report/     this LaTeX report and make_figures.py
+report/     this LaTeX report, make_figures.py, make_figures_final.py
 \end{lstlisting}
 
-\chapter{Contents of the Forged-Model Suite}
+\chapter{Result Folders Used in This Report}
+\begin{table}[H]
+\centering\footnotesize
+\caption{Result folders (under \code{results/\allowbreak }) and the sections that use them.}
+\begin{tabularx}{\textwidth}{@{}p{6.2cm}L@{}}
+\toprule
+\textbf{Folder} & \textbf{Content and use}\\
+\midrule
+\code{flawed\_model\_suite/\allowbreak eval\_results*} & Pilot runs 1--3 (Section~\ref{sec:pilot}).\\
+\code{flawed\_model\_suite/\allowbreak final\_20261002\_*} & Main controlled suite, five runs per model; analysis in \code{final\_20261002\_analysis*}.\\
+\code{flawed\_model\_suite/\allowbreak sweep\_20261002\_*} & Severity sweep models, three runs each.\\
+\code{flawed\_model\_suite/\allowbreak hub\_final\_*} & Earlier 15-model Hub run (v3 methodology).\\
+\code{flawed\_model\_suite/\allowbreak l3\_replay\_20261003} & L3 offline replay.\\
+\code{flawed\_model\_suite/\allowbreak ground\_truth.json} & Detection rules and hidden labels, written before the runs.\\
+\code{osd\_calibration\_20261003} & L1 calibration, frozen mapping, held-out analysis.\\
+\code{fairness\_confirm\_20261003} & L5 confirmatory run.\\
+\code{defect\_severity\_20261003}, \code{\_a2} & L6 as specified, and with deviation A2.\\
+\code{l2\_det\_vs\_llm\_20261003} & L2 official results (22 of 60 answers).\\
+\code{l2\_claude\_eval\_20261003} & L2 supplement (Claude), separate.\\
+\code{l10\_independent\_validation\_20261003}, \code{\_v9} & L10 packets, official LLM review (v8), v9 TrustLens reference.\\
+\code{l10\_claude\_eval\_20261003} & L10 supplement (Claude), separate.\\
+\code{l10\_human\_form}, \code{l10\_human\_analysis\_20261005} & Form material and the human-review analysis.\\
+\code{external\_hub\_validation\_20261003}, \code{\_v9r} & External audit, v8 (untouched) and v9 rerun (used).\\
+\bottomrule
+\end{tabularx}
+\end{table}
+One folder, \code{l2\_det\_vs\_llm\_20261003\_r3}, holds records from an interrupted resume of the L2 run. It is untracked, its findings file is identical to the official one, and we do not use it.
+
+\chapter{Pre-declaration Documents}
+\begin{table}[H]
+\centering\footnotesize
+\caption{Pre-declarations and protocols (under \code{docs/\allowbreak superpowers/\allowbreak plans/\allowbreak }, dated 2026-10-03 unless stated).}
+\begin{tabularx}{\textwidth}{@{}p{3.3cm}L@{}}
+\toprule
+\textbf{Item} & \textbf{Document}\\
+\midrule
+Limitation list & \code{next-limitations-prompt.md}; hardening audit findings \code{2026-10-02-hardening-audit-findings.md}\\
+L1 & \code{round3-L1-osd-calibration.md}\\
+L2 & \code{round3-L2-det-vs-llm.md}\\
+L3 & \code{round3-L3-disclosure-gaps.md}\\
+L4, L4.1 & \code{round3-L4-binary-fairness-risk.md}, \code{round3-L4.1-eod-fairness-risk.md}\\
+L5 (pre-registration and results) & \code{round3-L4.1-confirmatory-prereg.md}, \code{round3-L5-fairness-confirm-results.md}\\
+L6 & \code{round3-L6-defect-severity.md}\\
+L7 & \code{docs/\allowbreak adr/\allowbreak 0013-artifact-set-integrity.md}\\
+L10 & \code{round3-L10-independent-validation.md}; reviewer instructions in \code{results/\allowbreak l10\_human\_form/\allowbreak }\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\chapter{Reproducing the Experiments}\label{app:repro}
+Commands are run from \code{backend/\allowbreak } with the project virtual environment; training uses \code{USE\_TF=0}. The Docker stack must be running for the API-based runs (rebuild \code{api} and \code{worker} after backend changes). Seeds and output folders are those named in the corresponding plan.
 \begin{lstlisting}
-results/flawed_model_suite/
-  data/            eval_set.csv (3000 rows), per-variant training JSONL and manifests
-  cards/           model card (README.md) of each variant
-  models/          weights + train_manifest.json for variants 1-6 (+ the first V2 design)
-  eval_results/    Run 1 JSON per model + _summary.json
-  eval_results_v2/ Run 2 JSON per model + _summary.json
-  eval_results_v3/ Run 3: corrected (2-label) toxic-bert, one evaluation
-\end{lstlisting}
-The evaluation set manifest records dataset \code{google/civil\_comments}, split \code{test}, seed 42, size 3000, positive rate 0.20, and thresholds 0.5 (toxicity) and 0.0001 (identity attack, severe toxicity).
+# controlled suite (data, training, evaluation through the API)
+python -m app.scripts.prepare_flawed_suite_data
+python -m app.scripts.train_flawed_suite --all
+python -m app.scripts.run_flawed_suite_eval
+python -m app.scripts.repeat_eval            # repeated runs
+python -m app.scripts.compare_ground_truth   # apply the frozen rules
 
-\chapter{Corrected-Reference Run (Run 3)}
-\begin{lstlisting}
-python -m app.scripts.convert_reference_2label     # builds models/reference_toxicbert_2label
-python -m app.scripts.run_reference_2label_eval    # one evaluation -> eval_results_v3/
-\end{lstlisting}
-Proposed O/S/D (Run 3): Fairness 7,7,8; Robustness 9,9,9; Integrity 3,4,5; Explainability 6,7,7; Safety 3,4,5; overall FRIES 6.16 (Fairness 7.32, Robustness 9.00, Integrity 3.91, Explainability 6.65, Safety 3.91).
+# L3 replay
+python -m app.scripts.replay_l3_disclosure_gaps <new_out_dir>
 
-\chapter{Raw Dimension Scores}
+# L5 confirmatory fairness (fresh seed, fresh data)
+python -m app.scripts.prepare_flawed_suite_data --fairness-confirm \
+    --seed 20261003 --out ../results/fairness_confirm_20261003
+python -m app.scripts.train_flawed_suite --fairness-confirm \
+    ../results/fairness_confirm_20261003 --seed 20261003
+python -m app.scripts.run_fairness_confirm
+
+# L6 severity sweeps
+python -m app.scripts.run_defect_severity --out ../results/defect_severity_20261003
+
+# L10 human analysis (stdlib only, from the repository root)
+python results/l10_human_form/analyze_human_responses.py
+
+# external Hub audit
+python -m app.scripts.run_external_hub_validation select
+python -m app.scripts.run_external_hub_validation run
+python -m app.scripts.run_external_hub_validation profile
+
+# figures and this report
+cd report
+python make_figures.py          # pilot figures
+python make_figures_final.py    # L1, L5, L6, external-audit figures
+tectonic main.tex               # or: pdflatex main.tex  (twice)
+\end{lstlisting}
+
+\chapter{Identifiers}
+\begin{table}[H]
+\centering\footnotesize
+\caption{Risk, disclosure-gap and gate identifiers used in the report.}
+\begin{tabularx}{\textwidth}{@{}p{4.3cm}L@{}}
+\toprule
+\textbf{Identifier} & \textbf{Meaning}\\
+\midrule
+\code{F-FAIR-EOPP} & Equal-opportunity (TPR) gap above $\varepsilon$ with its CI lower bound above $\varepsilon$ (risk).\\
+\code{F-FAIR-PERF} & Multiclass worst-group accuracy gap (risk; not exercised here).\\
+\code{R-ROB-PERT} & Accuracy drop under perturbation above $\varepsilon_{drop}$ with CI (risk).\\
+\code{I-INT-BYTES-DIVERGE} & Artifact bytes differ from the manifest (risk).\\
+\code{I-INT-LISTING-DRIFT} & File listing drift (risk).\\
+\code{E-DOC-CONTRADICTION} & Card contradicts itself or its licence (risk).\\
+\code{S-GOV-DISCLOSURE-GAP} & A safety disclosure item is missing (gap).\\
+\code{E-DOC-INCOMPLETE} & A required documentation section is missing (gap).\\
+\code{I-INT-REV-UNPINNED}, \code{I-INT-MANIFEST-MISSING}, \code{I-INT-LICENSE-UNDISCLOSED} & Revision not pinned, no manifest or file listing, no licence in metadata (gaps).\\
+\code{G-FAIR-CI-WIDE}, \code{G-FAIR-N-GROUP}, \code{G-FAIR-POSITIVES}, \code{G-FAIR-CI-MISSING} & Fairness gates (insufficient evidence).\\
+\code{G-ROB-PERT-COVERAGE} & Robustness gate: perturbation coverage must be 1.0.\\
+\code{G-INT-ARTIFACT-INCOMPLETE}, \code{G-INT-LISTING-UNVERIFIED} & Integrity gates (not a risk).\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\chapter{External Audit: O/S/D Triples}
+\begin{table}[H]
+\centering\footnotesize
+\caption{O/S/D triples of the v9 external audit. $^{L}$ rated by an LLM, $^{H}$ heuristic fallback; unmarked entries come from the heuristic mapping. A dash means the engine abstained.}
+\begin{tabularx}{\textwidth}{@{}p{4.2cm}lllll@{}}
+\toprule
+\textbf{Model} & \textbf{Fair.} & \textbf{Rob.} & \textbf{Integ.} & \textbf{Expl.} & \textbf{Safety}\\
+\midrule
+\code{toxic-bert} & -- & 9/9/8 & 9/9/9$^{L}$ & 6/7/7$^{L}$ & 7/7/6\\
+\code{unbiased-toxic-roberta} & 8/8/6 & 8/8/8 & 9/9/9$^{L}$ & 3/4/3$^{L}$ & 9/9/7\\
+\code{roberta\_toxicity\_classifier} & 8/8/7 & 4/4/8 & 9/9/9$^{L}$ & 2/4/3$^{L}$ & 9/9/7\\
+\code{toxic-comment-model} & 9/9/6 & 8/8/8 & 8/8/8$^{H}$ & 6/6/6$^{H}$ & 8/8/6$^{H}$\\
+\code{xlmr-large-toxicity-classifier} & 4/4/6 & 1/1/8 & 9/9/8$^{H}$ & 4/4/4$^{H}$ & 9/9/7$^{H}$\\
+\code{roberta-hate-speech-dynabench-r4} & 6/6/6 & 1/1/8 & 7/7/8$^{H}$ & 1/1/1$^{H}$ & 1/1/7$^{H}$\\
+\code{bert-tiny-toxicity} & 5/5/6 & 1/1/8 & 9/9/8$^{H}$ & 2/2/2$^{H}$ & --\\
+\bottomrule
+\end{tabularx}
+\end{table}
+The Safety O/S/D of the first three models carries a provider name (Gemini or Groq) in the stored evidence even though the band itself is heuristic, because behavioural evidence exists and the LLM judgment is kept as metadata only.
+
+\chapter{Screenshot Placeholders}\label{app:screens}
+The figures below are placeholders for screenshots to be inserted from a running instance; they carry no data.
+\begin{figure}[H]
+\centering
+\fbox{\parbox[c][5.2cm][c]{0.86\textwidth}{\centering\small Screenshot placeholder: model import page (Hub reference, pinned revision, card, licence, file list)}}
+\caption{Placeholder: importing a Hugging Face model at a pinned revision.}
+\end{figure}
+\begin{figure}[H]
+\centering
+\fbox{\parbox[c][5.2cm][c]{0.86\textwidth}{\centering\small Screenshot placeholder: evaluation draft with dataset, label mapping, sensitive column and \texttt{min\_group\_n}}}
+\caption{Placeholder: the evaluation contract wizard.}
+\end{figure}
+\begin{figure}[H]
+\centering
+\fbox{\parbox[c][5.2cm][c]{0.86\textwidth}{\centering\small Screenshot placeholder: five-dimension audit profile with evidence, risk or gap, O/S/D source and abstention markers; aggregate score shown last}}
+\caption{Placeholder: the report page, profile first.}
+\end{figure}
+
+\chapter{Pilot Dimension Scores}
 \begin{table}[H]
 \centering\small
-\caption{Dimension scores for both runs as stored in \code{\_summary.json} (rounded to two decimals).}
+\caption{Pilot (September 2026) dimension scores for both runs, as stored in \code{\_summary.json}, rounded to two decimals. ``G'' is the original Hub reference with the wrong label mapping. These are early-probe-set results and are not used for any claim about the current methodology.}
 \begin{tabularx}{\textwidth}{@{}p{3.1cm}p{1.1cm}RRRRRR@{}}
 \toprule
 \textbf{Model} & \textbf{Run} & \textbf{F} & \textbf{R} & \textbf{I} & \textbf{E} & \textbf{S} & \textbf{FRIES}\\
@@ -55,30 +185,3 @@ V6 & 2 & 6.60 & 9.00 & 2.29 & 1.26 & 1.26 & 4.08\\
 \bottomrule
 \end{tabularx}
 \end{table}
-
-\chapter{Proposed O/S/D Triples}
-\begin{table}[H]
-\centering\small
-\caption{O/S/D triples (O,S,D) per dimension as proposed by the \code{llm\_v1} engine, Run~2. Fairness and Robustness are heuristic bands; Integrity, Explainability and Safety are LLM-rated.}
-\begin{tabularx}{\textwidth}{@{}p{2.2cm}LLLLL@{}}
-\toprule
-\textbf{Model} & \textbf{F} & \textbf{R} & \textbf{I} & \textbf{E} & \textbf{S}\\
-\midrule
-G & 9,9,8 & 8,8,9 & 7,6,3 & 3,4,4 & 1,2,2\\
-V1 & 6,6,8 & 9,9,9 & 3,4,5 & 9,9,9 & 3,4,5\\
-V2 & 5,5,8 & 8,8,9 & 4,5,5 & 8,8,8 & 3,4,7\\
-V3 & 7,7,8 & 9,9,9 & 1,2,3 & 1,2,3 & 1,2,3\\
-V4 & 6,6,8 & 9,9,9 & 3,3,4 & 2,3,3 & 2,2,3\\
-V5 & 8,8,8 & 9,9,9 & 3,4,4 & 9,9,9 & 3,3,7\\
-V6 & 6,6,8 & 9,9,9 & 2,2,3 & 1,1,2 & 1,1,2\\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-\chapter{Regenerating the Report}
-\begin{lstlisting}
-cd report
-python make_figures.py     # rebuilds figures/*.pdf from the result JSON files
-tectonic main.tex          # or: pdflatex main.tex  (run twice for the table of contents)
-\end{lstlisting}
-Institution, supervisor and academic-year fields are macros at the top of \code{main.tex}. Passages marked \todo{...} in red need information that is not in the repository.

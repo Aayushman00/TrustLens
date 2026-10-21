@@ -1,0 +1,80 @@
+\chapter{Limitations, Threats to Validity and Ethics}\label{ch:limits}
+
+Earlier chapters mention limitations where they arise. This chapter collects them, because a reader who skips to the end should still learn what the work cannot support.
+
+\section{Limitations of the system}
+Some of these come from the README's list of known methodological gaps; we checked each against the code.
+\begin{itemize}
+\item \textbf{One task, one modality.} The behavioural probes were exercised only on English toxicity classification with Civil Comments, and the inference backend is local \code{transformers} sequence classification. Image, audio, generative and other-task models are not covered; the robustness attack skips non-text models.
+\item \textbf{Narrow probes.} Robustness is a random character swap, which tests typo sensitivity and is not an adversarial attack. Explainability reads a model card and nothing else; SHAP and LIME are not implemented. Safety behaviour depends on a user-supplied labelled set with a \code{severe} marker, and there is no built-in unsafe-prompt suite.
+\item \textbf{No behavioural safety risk rule.} The probe measures miss rates but never declares a risk, because we have no principled absolute level. Anyone consuming a report has to read the number.
+\item \textbf{A single O/S/D triple per dimension.} FRIES allows a catalogue of risks per dimension with mapping traces; TrustLens currently produces one triple, and the heuristic mapping goes from one metric to one rating.
+\item \textbf{The O/S/D mapping is a proposal.} The v4 scale is relative to the largest injected defect, with $O=S$ by construction, so Severity adds no independent information, and $D$ adds none in the three families we calibrated. The v9 guards were not validated on fresh data and one of them (the 0.30 benign-FPR floor) was set after seeing a real-model run.
+\item \textbf{LLM dependence.} \code{llm\_v1} depends on third-party providers with quotas. In our experiments providers failed often enough that a large part of the LLM-rated data fell back to the heuristic, and the NVIDIA endpoint configured in the repository was unavailable throughout.
+\item \textbf{Integrity is identity, not safety.} A match shows the bytes equal a manifest. It does not show absence of backdoors, and a manifest in the same folder can be rewritten by anyone who can rewrite the folder. The check does not catch a forger who controls the Hub repository.
+\item \textbf{No resource gate.} The system cannot predict before loading whether a model fits in memory.
+\item \textbf{The confidence factor is uncalibrated.} We do not use it for any claim.
+\item \textbf{No authentication.} The migration \code{008\_remove\_auth\_and\_ownership} removed authentication and ownership; the system is meant for local, single-user use, and the README's older mention of roles does not match the code.
+\end{itemize}
+
+\section{Limitations of the experiments}
+\begin{itemize}
+\item \textbf{Small, shared designs.} Sweeps have four or five levels and one model family. A Spearman $\rho$ of $1.0$ over five points is a statement about ordering, not about strength. Controlled models share a base architecture, the same data source, and the same flip mechanisms as the calibration set; L1 generalises across seeds and draws, not across architectures or tasks.
+\item \textbf{One data and training seed per condition,} except the fairness confirmation, which used a second seed but still one. Probe repeatability was checked (runs identical); training variance was not.
+\item \textbf{Synthetic defects.} They are experimental constructs. Nobody planted a backdoor, nothing adapts to the evaluator, and several flaws sit in the model card, which a real author could rewrite. Three of nine suite models carry documentation-only defects. Detection of such a flaw is a different kind of claim from detection of a behavioural one.
+\item \textbf{Self-disclosing cards.} The suite cards state their injected flaw in prose, so an LLM reader has an easy cue. We kept the prose and anonymised names.
+\item \textbf{In-process runs.} L5 and L6 ran the production probes in-process, without the API or worker (which predated L4.1) and without the LLM stage. The probe code is the same, but the full path was not exercised for those experiments.
+\item \textbf{Controls are not clean.} The 2-label reference has its own measurable disparity, so using it as a ``clean control'' mixes two things.
+\item \textbf{Provider failures.} L2 is incomplete (22 of 60), L10's official LLM review has one answer in twelve, and the v9 external run mixes LLM and fallback O/S/D sources across models.
+\item \textbf{The same eval pipeline everywhere.} All behavioural evidence uses a 3\,000-row sample with a coarse binary sensitive attribute (``identity mentioned'') and groups with base rates of 0.11 against 0.64. Fairness conclusions are specific to this attribute and sample.
+\end{itemize}
+
+\section{Threats to validity}
+\begin{table}[H]
+\centering\footnotesize
+\caption{Threats to validity, grouped in the usual way.}\label{tab:threats}
+\begin{tabularx}{\textwidth}{@{}p{2.5cm}L@{}}
+\toprule
+\textbf{Type} & \textbf{Threat and what we did about it}\\
+\midrule
+Construct & ``Trustworthy'' is not measured. Each probe measures a proxy (a TPR gap, a char-swap drop, a severe miss rate, hash equality, section coverage). We call the output an audit profile and keep the aggregate secondary. Documentation coverage is not explainability in the technical sense.\\
+Construct & Injected defects may not resemble defects in the wild. We say so, and we validate on real Hub models only descriptively.\\
+Internal & Post-hoc decisions (Table~\ref{tab:posthoc}). We list them, pre-declared where we could, froze the folders and reported failed hypotheses.\\
+Internal & Evaluation-set leakage. Calibration, confirmation and suite slices were made disjoint by exact text; a second data prep with the same seed is byte-identical. Near-duplicate texts were not checked.\\
+Internal & LLM stochasticity. Repeats, a frozen configuration, and per-aspect source tags.\\
+External & One task, one dataset family, BERT-family models, seven Hub models chosen to vary. Nothing generalises beyond that.\\
+Conclusion & Small $n$ throughout. No significance tests; intervals reported where meaningful; kappa treated as unstable under prevalence skew.\\
+Reviewer & Reviewers are not ground truth (Section~\ref{sec:l10-lim}).\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Limitations of the reviewer study}\label{sec:l10-lim}
+The human evidence review is the only external check on TrustLens's judgments, and it is weaker than we would like.
+\begin{itemize}
+\item \textbf{Sample size and sampling.} Seven submissions and twelve packets, and the packets were chosen by the authors (clear defects, controls, borderline cases). Percentages are not population estimates, and bootstrap intervals over twelve packets are wide.
+\item \textbf{Convenience sample.} Reviewers were not screened for FRIES or fairness expertise, and no demographic or competence data were collected. They review evidence; they are not ground truth.
+\item \textbf{R0 is not one person.} Six of seven submissions share the code \code{R0} and cannot be separated into individuals. They might be several people or one person submitting repeatedly. ``Seven reviewers'' is therefore an upper bound on independence, and agreement among R0 rows is not independent agreement. Because R0 supplies six of every seven answers, the plurality is effectively the R0 plurality. We report the R0-only sensitivity set next to the all-seven set.
+\item \textbf{Possible tool assistance.} Five of the six R0 submissions contain long, uniform, high-precision rationales with consistent phrasing, and one of them uses LaTeX-style mathematics in two rationales. These patterns would be consistent with outside drafting assistance, which cannot be established from the data; the sixth looks hand-written. If answers (not only rationales) were produced with a shared tool, agreement is inflated by a correlated judge, and the instruction to work alone is unverifiable.
+\item \textbf{R2 is low quality.} We keep R2 in the all-seven tables and show that disagreement flags are identical without it.
+\item \textbf{Form design.} The N/A option for severity was not enforced, Q3 was required even for NO answers, and Q2 = NO answers carry severities. We handle this by a rule (severity counted only where Q2 = YES) and report that 16 answers were ignored for Q4.
+\item \textbf{No statistical validation.} The study shows where an independent reading differs from TrustLens. It does not show that TrustLens is right or wrong, and does not support a hypothesis test or a change to the methodology.
+\end{itemize}
+The Claude and provider LLM evaluations carry their own limits: one answer per packet, no seed or temperature control for Claude, no repeatability measured, and an orchestrating session for the Claude supplement that was not blind to TrustLens's findings.
+
+\section{Ethical considerations}
+\paragraph{Data and content.} The experiments use the public Civil Comments dataset, which contains abusive and offensive text and annotator-provided identity labels \cite{borkan2019}. We used its identity annotations only to define a coarse group flag for measuring group differences in a classifier, not to infer anything about individuals. Rows of toxic text appear in some evidence artifacts and in our result folders. Reviewers saw card text and numbers, not comment text.
+
+\paragraph{Human participants.} Reviewers filled in an online form using an assigned code and no name or email, and were told that there was no time limit and that answers could not be edited after submission. No ratings were fabricated or edited; the raw export is kept unmodified and its hash is recorded. We did not collect demographic information. The repository documents no formal institutional ethics review of the study; we flag this as a gap, to be closed before moving from evidence review to a larger or more varied panel.
+
+\paragraph{External services.} \code{llm\_v1} sends model-card text and probe evidence to third-party LLM providers. Hub model cards are public, but a user who audits a private or unpublished model would be disclosing its card and evidence to those providers. The deterministic engine, the default, sends nothing. Provider error text sometimes includes account identifiers, which we replaced with \code{org\_<redacted>} in stored results.
+
+\paragraph{Licences and models.} Models are downloaded under their own licences (the audited set includes Apache-2.0 and OpenRAIL++ models, and two models without a licence in their card metadata, which TrustLens reports as a disclosure gap). Fine-tuned experimental models are research artifacts and are not published as usable moderation systems.
+
+\paragraph{Risk of misuse and over-reading.} The main ethical risk is not data but interpretation. A score on a dashboard can be read as a certificate. Three habits in the project push against that: the profile is the primary output, abstention is visible, and every proposed rating is labelled ``PROPOSED / REQUIRES VALIDATION''. We also note that cards can be edited to pass a checklist, so a high Explainability or Integrity entry is easy to game and should not be used as a gate. A fairness flag raised on an identity group does not say the model is unfair, and its absence does not say it is fair: the rule detects an observed true-positive-rate gap on one sample for one attribute.
+
+\paragraph{Fairness of the tool itself.} The sensitive attribute is a binary ``identity mentioned'' flag. It does not cover intersectional groups, dialect, or groups the dataset does not annotate, and an audit with that attribute should not be mistaken for an audit of fairness in general.
+
+\paragraph{Responsible use.} We recommend that TrustLens is used to prioritise questions for a human reviewer: where is the evidence thin, where does a measured value differ from a reference, where does a card contradict itself. It should not be used to approve, certify or rank models, to make deployment decisions without human review, or to compare models across unrelated tasks.
+
+\paragraph{Resources.} Everything ran on one laptop GPU; fine-tuning each model took under three minutes. The environmental cost is small, though not zero, and repeated runs multiplied it by a factor of five or more.

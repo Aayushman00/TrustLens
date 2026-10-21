@@ -1,67 +1,95 @@
 \chapter{Discussion}\label{ch:discussion}
 
-\section{Does TrustLens identify the trustworthiness of a model?}
-The honest answer from our data is: \emph{partly, and mostly for the part of trust that lives in documentation and metadata.}
+\section{Answers to the research questions}
+Table~\ref{tab:rq} gives short answers. They are deliberately limited to what the data in Chapter~\ref{ch:results} support.
 
-\subsection{Evidence that supports the claim}
-\begin{itemize}
-\item \textbf{Documentation and integrity flaws were detected consistently.} V3, V4 and V6 had the three lowest overall scores in both runs, between 3.86 and 4.76, against 6.16 for the corrected reference. Their scores on the flawed dimension were below the reference's in every run.
-\item \textbf{The behavioural fairness probe responded to a behavioural flaw.} The label-flipped model V1 produced a DPD of 0.42 with a confidence interval that excludes both the 0.32 of the unflipped V3 and the 0.28 of the corrected reference, and the Fairness score fell to 6.60 against 7.32. The probe is deterministic, and results for V1 and V4 (same weights) matched exactly.
-\item \textbf{The compound model scored lowest overall in Run~2 and near the bottom in Run~1,} which matches the intuition that two flaws should score worse than one.
-\item \textbf{Evidence is traceable.} For every number above there is a stored probe output with a hash, a rationale and a status. Even where we disagree with the score, we can see why it came out as it did. This is how we found the constant-predictor problem.
-\end{itemize}
-
-\subsection{Evidence against, and limits on the claim}
-\begin{itemize}
-\item \textbf{The safety flaw was not detected, and the overall score favoured three flawed models.} V5 under-flags severe toxicity, a genuine behavioural weakness, but the Safety probe never looks at behaviour. V5's card is complete and honest about the flaw, so the card-based probes rate it at least as well as the reference model, whose card is thin (Safety 3.98 against 3.91). In a sense the tool did what it was designed to do (reward disclosure) and that is exactly the problem: an honest card on a harmful model is rated above a sparse card on a possibly good model.
-\item \textbf{The robustness flaw was only weakly visible.} V2 lost 4.1 points of accuracy under character swaps, four times the next variant and four times the corrected reference's 0.97, but the Robustness score moved only from 9.00 to 8.32 because the O/S/D band is dominated by accuracy, and the \code{R-ROB-PERT} trigger needs a 5-point drop.
-\item \textbf{Three of five dimensions depend on an LLM and moved between runs.} The original reference model's overall score changed by 1.34 points between two evaluations of identical inputs, enough to change its rank from first to fourth. We evaluated the corrected reference only once, so its own spread is unknown.
-\item \textbf{Our first reference evaluation was invalid, and we had to correct it.} The original Hub import behaved as a constant predictor, which gave it a perfect-looking Fairness and Robustness score. TrustLens did not warn about this. After converting the model to an equivalent two-label head, the reference scored Fairness 7.32 and Robustness 9.00 with a genuine demographic-parity gap of 0.28. The corrected comparison is the one we rely on, but it is a single evaluation, and the conversion itself (maximum probability difference $9.5{\times}10^{-4}$ on a four-sentence check) is a modelling step we introduced.
-\item \textbf{Most of the signal comes from documents we wrote.} V3, V4 and V6 differ from clean models in their cards and licence fields. A forger who knows TrustLens could fix them in minutes.
-\item \textbf{The experiment is small.} Seven models, one task, one dataset, one forger (us), two runs. We report counts and differences, not significance tests, because the sample cannot support them.
-\end{itemize}
-
-\subsection{Is it trustworthiness or an audit profile?}
-We think the second description is more accurate. TrustLens produces an \emph{audit profile}: a structured record of what was measured, what was disclosed and what is missing, with a number attached that summarises a set of heuristic rules. The number is useful for sorting models that differ a lot in documentation quality, and it is not a measurement of trustworthiness in a sense that could be validated against ground truth, because no ground truth exists for the models in this experiment other than the flaws we ourselves injected. The project README makes the same claim about the score; we agree with it and would add that the evidence from Chapter~\ref{ch:results} supports the caution.
-
-\section{Questions we asked of our own design}
-\begin{description}[leftmargin=1.2em]
-\item[Is FRIES sufficient?] No. It omits privacy, calibration, provenance beyond metadata, and environmental or legal aspects discussed in the surveys \cite{kemmerzell2025}. TrustLens implements five of many possible dimensions.
-\item[Are the thresholds justified?] Not empirically. The README labels every metric-to-O/S/D band ``PROPOSED / REQUIRES VALIDATION''. $\varepsilon=0.05$, the 95\% intervals, the min-group size of 30 and the band formulas are design choices, not calibrated values.
-\item[Could the difference come from something unrelated to trust?] Yes. Variants differ in training data size, class balance and learning rate as well as in the injected flaw, and the reference differs from them in architecture head and training data. Also, the integrity probe penalises the local variants for lacking a pinned revision and a manifest (\code{I-INT-REV-UNPINNED}, \code{I-INT-MANIFEST-MISSING}); those risks fire for \emph{every} variant because they are local directories and not Hub repositories, so part of the Integrity gap between the reference model and the variants reflects where the file lives and not what it contains.
-\item[Does the overall score have statistical meaning?] No. It is a weighted mean of cube roots of integer ratings; the ratings are ordinal and partly LLM-generated.
-\item[Could a malicious model evade the probes?] Easily. See Section~\ref{sec:threat}.
-\end{description}
-
-\section{Threats to validity}\label{sec:threats}
-\paragraph{Internal validity.} Do the scores measure what we claim? For Fairness and Robustness, the metrics are well defined, but the reference model's mapping error shows that a valid-looking number can measure the wrong thing. Run~1 and Run~2 used slightly different integrity code, so we cannot attribute their differences to the LLM alone. We did not log the LLM provider and temperature per evaluation, and we could not check which provider answered. DPD conflates a true base-rate difference with model unfairness; the groups in the Civil Comments sample have different toxicity rates, which explains why the unflipped V3 still shows DPD 0.32.
-
-\paragraph{External validity.} Seven models, one binary toxicity task, BERT-base variants, one dataset. Nothing here says how TrustLens behaves on image models, generative models, other languages, or models whose cards are well written but unfaithful. The robustness probe skips non-text models by design, and an earlier benchmark on six small models (documented in \code{docs/RESULTS\_SUMMARY.md}) found the same dimension skipped for two of them.
-
-\paragraph{Construct validity.} FRIES as implemented measures: parity of predictions across one binary attribute; sensitivity to random typos; whether five card headings exist; whether metadata fields exist; whether four safety topics are mentioned. These are proxies. We do not show that they track the broader concept of trustworthiness, and the Safety and Explainability dimensions in particular are named after properties (preventing harm, explaining decisions) that the probes do not examine.
-
-\paragraph{Reproducibility.} The data preparation, training and evaluation scripts are in the repository and the seeds, flip positions and hyperparameters are stored in manifests, so another researcher can rebuild the variants and the evaluation set. They cannot reproduce the LLM-rated dimensions exactly, because hosted models change and the provider is not pinned. The Fairness and Robustness dimensions reproduce exactly given the same weights and data, as the V1--V4 identity and the unchanged scores across runs show. We did not rerun the experiment on a second machine.
-
-\section{Threat model}\label{sec:threat}
 \begin{table}[H]
 \centering\small
-\caption{Threats an auditing tool would like to catch, and what TrustLens does about them in its current form.}
-\begin{tabularx}{\textwidth}{@{}p{3.3cm}LL@{}}
+\caption{Research questions and the answers our evidence supports.}\label{tab:rq}
+\begin{tabularx}{\textwidth}{@{}p{0.9cm}L@{}}
 \toprule
-\textbf{Threat} & \textbf{What TrustLens does} & \textbf{What it cannot do}\\
+\textbf{RQ} & \textbf{Answer, with the main qualifier}\\
 \midrule
-Misleading model card (over-claims, empty sections) & Detects missing sections and some contradictions; LLM judges content quality. & Cannot verify that a well-written card is true.\\
-Missing or inconsistent licence/metadata & Integrity risks for unpinned revision, missing manifest, undisclosed licence. & Cannot judge legal compliance.\\
-Tampered weights & Compares SHA-256 to a trusted reference \emph{if supplied}. & No reference was supplied in any experiment; hash-only checks cannot find backdoors in an unmodified-looking file whose hash is itself replaced.\\
-Biased behaviour on a sensitive group & Measures DPD/EOD/F1 spread for one binary attribute with CIs. & Other attributes, intersections, and base-rate effects.\\
-Fragility to input noise & Random character swaps. & Targeted or semantic attacks.\\
-Unsafe outputs, missed harmful content & Checks that safety topics are disclosed. & Does not test behaviour at all.\\
-Backdoors and poisoned behaviour \cite{gu2017badnets} & Nothing specific. & Not in scope.\\
-Evaluator-aware adversary & Nothing. & A forger who reads the repository can write a card that passes every card check and train a model that behaves well on public probes.\\
+RQ1 & Yes for the evidence layer: deterministic probes have zero spread over five runs, and all evaluations reached \code{FINALIZED}. The LLM-rated dimensions are not reproducible to the same degree, and 11 of 45 suite runs and 14 of 15 real-model runs used the heuristic fallback because of provider limits.\\
+RQ2 & The \emph{evidence} responds in proportion to injected severity (Spearman $\rho=1.0$ in all sweeps). The \emph{score} responds, but coarsely under v3 (1.3--1.7 points over the full range) and strongly under v4 (4.6--6.65), with the caveat that v4 is relative to the defect range. The \emph{risk} decision is thresholded and does not grade severity.\\
+RQ3 & Partly. We fixed the L1, L3, L4, L7 limitations without tuning on the data that exposed them, and held-out and confirmatory data confirmed some of the fixes (L1 held-out, L5 H2 and H3). One pre-registered hypothesis failed (L5 H1), and the fixes cost recall (L3).\\
+RQ4 & Inconclusive. Only 22 of 60 LLM runs returned. Where both answered, agreement was low (5 of 18 on risk status), the LLM's $O/S/D$ triple did not repeat in any of the 12 repeatable pairs, and a provider effect was large.\\
+RQ5 & Humans agree with each other on sufficiency and dimension, less on risk and severity. They agree with TrustLens on risk for 6 of 12 packets, on sufficiency for 9 of 12 and on the dimension whenever both see a risk. Disagreements have identifiable causes. This is not a validation.\\
+RQ6 & TrustLens produces a five-dimension profile for each of seven pinned Hub models. Two of seven receive no FRIES score because of an evidence gate or a competence floor. All seven carry disclosure gaps.\\
 \bottomrule
 \end{tabularx}
 \end{table}
-TrustLens therefore does not provide complete model security. It is closer to a structured checklist with some measurements, useful as one input to a human reviewer.
 
-\section{Lessons from building the forged models}
-Three things surprised us. First, getting a model to be \emph{brittle} was harder than expected, because small or badly trained models collapse to the majority class and become stable. Second, the same effect meant that the reference model, through a mapping slip, also became stable and looked excellent. Third, the tool's most reliable detections were of flaws that we had put in the card, which suggests that the first useful role of such a tool is to check disclosure and metadata consistency, and the second, still to be built, is to run richer behavioural tests.
+\section{Evidence, risk and score do not move together}
+The most useful thing the project taught us is a habit: look at the three layers separately. Table~\ref{tab:threelayer} summarises what each dimension did.
+
+\begin{table}[H]
+\centering\footnotesize
+\caption{Layer-by-layer behaviour per dimension (from the severity sweeps, L5, L6 and the external audit).}\label{tab:threelayer}
+\begin{tabularx}{\textwidth}{@{}p{2.1cm}LLL@{}}
+\toprule
+\textbf{Dimension} & \textbf{Evidence} & \textbf{Risk decision} & \textbf{Score}\\
+\midrule
+Fairness & Monotone in flip rate; deterministic. & \code{F-FAIR-EOPP} at flip $\ge0.4$; 0 and 0.2 abstain at the width gate; the reference control is also flagged. & Abstains where the risk layer does; otherwise v3 range 0.68, v4 range 4.60.\\
+Robustness & Monotone in swaps; drop 0.005--0.030 on clean weights. & No risk at any sweep level; fires on one real model. & Monotone with ties; v4 range 6.65.\\
+Safety & Monotone in relabel rate (severe FNR 0.30--0.65). & No behavioural risk identifier; ground-truth rule flags 0.75 and 1.0 only. & Monotone with a tie; v4 range 6.00.\\
+Integrity & Hash match or mismatch, deterministic. & Only a mismatch is a risk. & Heuristic band floors at $O=S=1$ on mismatch (v9); otherwise metadata pass rate or LLM.\\
+Explainability & Section coverage, deterministic. & Only a contradiction is a risk; gaps are not. & Heuristic coverage band or LLM; the noisiest layer.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Three things stand out. First, the evidence layer is the strongest part of the system: it is reproducible, it tracks severity, and it catches things that metadata cannot, such as a byte flip. Second, the risk layer is conservative by construction, since a risk is only raised on positive evidence of a problem and above a stated tolerance. That conservatism produced the largest systematic difference from human reviewers (Section~\ref{sec:disc-human}). Third, the score layer is where the arbitrariness lives, since this is where a proposal turns evidence into a rating, and every one of our fixes there (v4, v9) made a defensible choice that could have gone another way. We think anyone who builds a FRIES tool will meet this same step and should expect it to be the hardest one to defend.
+
+\section{Why fairness was hard, and what the final rule is and is not}
+Fairness took four attempts. The first binary path could not raise a risk. The second (excess DPD) failed its own inspection because it depended on base rates. The TPR-gap rule that replaced it passed the confirmatory test on defect detection (H2, H3) but failed on controls (H1), and its margin between an injected defect (EOD 0.167 at flip 0.4) and a real model's own disparity (0.145) is small. We take three things from this.
+
+(i) A fairness rule that reads a disparity cannot tell whether the disparity was injected, inherited from the data or caused by the model, and the Civil Comments identity groups have base rates of 0.11 against 0.64, which makes the question unanswerable from predictions alone. The rule's status text states it as ``evidence for review''. We think that is the right claim.
+(ii) The width gate is a significant degree of freedom. Five of the six L5 CI widths lie between 0.145 and 0.156, so a threshold at 0.15 decides outcomes. We did not retune it, which is consistent with our rules but means the gate's value, which was inherited, is arbitrary and the clean control's non-flag is an artefact of a 0.003 margin.
+(iii) The metric was chosen after we saw the exploratory data. L5 is a legitimate confirmation of defect detection precisely because it used fresh data and a new seed, but it is a single data seed and a single training seed, and training-seed variance was not measured.
+
+\section{Human reviewers and TrustLens disagree in a consistent direction}\label{sec:disc-human}
+The disagreement table (Table~\ref{tab:l10tl}) is not noise. Four of the twelve packets (P04, P06, P07, P10) are cases where the evidence layer measured something and the risk layer said no risk, while the human plurality said risk. In those packets the underlying reason is similar: TrustLens has no behavioural safety risk rule at all, and its robustness tolerance (an accuracy drop of 0.05) is not reached by the 0.030 drop in P04, so it raises no risk. Reviewers, shown ``severe-harm FNR 0.646 against a reference at 0.40'', judged it a risk. The Claude supplement shows the same pattern (risk on 12 of 12 safety packets against none from TrustLens), and so does the deterministic-versus-LLM comparison (Safety 0 of 6 agreement). We do not conclude that TrustLens is wrong; the packets do not say what an acceptable miss rate is, and the UNCERTAIN that Claude gave on the safety control made exactly that point. We conclude that a decision about when behaviour becomes a risk is a policy choice that the framework has so far left implicit, and that reports should show the measured number next to a reference rather than imply that ``no risk raised'' means ``fine''.
+
+In the other direction, TrustLens abstained on two packets (P02, P09) where reviewers found the evidence sufficient, via the CI-width and listing-unverified gates. The gates are conservative, and one is a threshold we did not tune. That is acceptable for an audit tool, but it means abstention rates are a function of gate values and should be reported with them.
+
+On severity, humans and TrustLens differ by two or more points on three packets, but humans agree with each other only moderately (Krippendorff's $\alpha=0.60$, 35\% exact). A framework whose severity numbers differ from reviewers' by less than the reviewers differ from each other would be doing about as well as can be measured; here we cannot say that, and we do not claim it.
+
+\section{Deterministic versus LLM interpretation}
+We kept the deterministic engine as the default for a reason that the L2 data underline. Where the LLM answered, the exact $O/S/D$ triple never repeated across runs (0 of 12 pairs), and the answers depended on which provider happened to be reachable (Integrity $O$ 5.67 from one provider, 2.85 from the other). For a tool whose output is meant to be audited, an interpretation step that changes with the provider, quota or time of day is a weak foundation. The LLM does see information the deterministic path does not: it reads a card's prose, and it noticed content problems that a keyword section detector cannot. On the other hand, the deterministic engine is blind to exactly those problems, and reviewers' rationales show it matters (a card with the right headings and no content). We therefore treat \code{llm\_v1} as an experimental comparison engine, report which source rated each aspect, and do not claim either engine is better. Operationally, the dependence on three free-tier providers is a risk of its own: in the L2 study 38 of 60 runs, and in the first real-model run 14 of 15, were never answered by a model.
+
+\section{Why the aggregate score is secondary}
+The aggregate FRIES number is a function of ratings that are proposals, combined by a geometric mean with equal weights. Our data give four direct reasons not to read it as more than a summary.
+\begin{itemize}
+\item \textbf{It moves with the LLM.} In the pilot the original reference's overall score fell 1.34 points between two runs with identical inputs.
+\item \textbf{It hides abstention.} A model with a withheld dimension has no score, while a model whose dimension was filled by the fallback has one. Two scores can therefore differ in how much of the evidence stands behind them (Table~\ref{tab:hubprof}).
+\item \textbf{Its scale is relative.} Under v4 a three-point accuracy drop is the bottom of the scale; under v3 the same drop (eight swaps) scored 7.96. Neither number says how bad three points is.
+\item \textbf{It cannot be validated here.} We have no ground truth for trust. The reviewer study checks evidence reading, not the score.
+\end{itemize}
+For these reasons the report shows the profile first. The profile can be read dimension by dimension, and the evidence behind each entry can be inspected.
+
+\section{Post-hoc decisions, listed}\label{sec:posthoc}
+Reading a validation report, one should be able to find where the researchers made a choice after seeing data. Table~\ref{tab:posthoc} lists ours.
+
+\begin{table}[H]
+\centering\footnotesize
+\caption{Decisions taken after seeing relevant data.}\label{tab:posthoc}
+\begin{tabularx}{\textwidth}{@{}p{4.4cm}L@{}}
+\toprule
+\textbf{Decision} & \textbf{Circumstance}\\
+\midrule
+TPR gap as the fairness trigger & Chosen after inspecting the exploratory suite; confirmed on fresh data (L5), where H1 failed.\\
+V2 redesign & First design collapsed to a majority-class model; redesigned before the final suite.\\
+V4b added & Added on 2026-10-02 so Integrity could be tested without a Fairness confound.\\
+\code{controls} field in ground truth & Added after the runs, from existing role entries.\\
+L6 deviation A2 (drop one unperturbable row) & Decided after every level abstained as specified.\\
+L1 held-out values known in advance & Committed before the mapping was written; the pre-declaration limits the choice to two anchors.\\
+v9 safety benign-FPR floor (0.30) & Set after the external Hub run; marked PROPOSED; affects whether a model gets a score.\\
+v9 integrity floor and CI-based $D$ & Audit fixes after round 3; not validated on fresh data.\\
+Claude supplements & Added because the API providers were unavailable; separate folders; the orchestrating session was not blind.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Relation to earlier work}
+Compared with the FRIES paper \cite{rutinowski2024}, our contribution is a concrete and openly weak mapping from evidence to ratings, together with measurements of how far it tracks injected severity. Compared with collections of trust metrics such as TrustML \cite{manzano2024}, the choices we made (abstention, disclosure gaps, hashed evidence, pinned revisions) are about provenance and honesty of the audit more than about the choice of metric. Compared with model cards \cite{mitchell2019}, our Explainability probe is a check that the card exists and is not self-contradictory; it does not verify any claim in it, and in no experiment did a card claim get checked against behaviour except the contradiction flags. We did not benchmark against another tool, so we make no comparative performance claim.

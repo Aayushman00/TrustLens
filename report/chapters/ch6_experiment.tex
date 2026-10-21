@@ -1,75 +1,141 @@
-\chapter{Experimental Design}\label{ch:experiment}
+\chapter{Experimental Methodology}\label{ch:method}
 
-\section{Question and hypothesis}
-The research question for the experiment is RQ2 from Chapter~\ref{ch:intro}: \emph{can TrustLens distinguish a reference model from models that we deliberately made worse?}
+\section{Working principles}
+The experiments in this chapter were designed under a few rules that we set after the first round of results embarrassed us a little. We wrote them in the instructions for the second round and held to them for the rest of the project.
+\begin{itemize}
+\item \textbf{Result folders are frozen.} A new run goes into a new folder. Earlier folders (\code{eval\_results*}, \code{final\_20261002\_*}, \code{sweep\_20261002\_*}, \code{hub\_final\_*}, and the v8 L10 and Hub folders) are never edited. When the methodology changed to v9 we re-ran into new \code{v9} and \code{v9r} folders.
+\item \textbf{Declare before running.} For L1, L2, L5, L6 and L10 the plan document in \code{docs/\allowbreak superpowers/\allowbreak plans/\allowbreak } states the hypotheses or comparison rules and says it was written before the run (for L5 the freeze is the commit \code{8f009fb}). Deviations are recorded in the same document with a note saying when they were decided.
+\item \textbf{No tuning on the data that exposed a problem.} Any change that alters a score, band, flag or prompt bumps \code{CURRENT\_METHODOLOGY\_VERSION} or \code{PROMPT\_VERSION}. A mapping change must be fitted on separate data and then evaluated on the frozen suite.
+\item \textbf{Negative results are results.} A failed hypothesis is reported as failed. If a rule should change, it becomes a new version with new data.
+\item \textbf{Evidence reviewers are not ground truth.} Humans and LLMs that read evidence packets are called \emph{evidence reviewers}. Disagreement with TrustLens is described and categorised, not adjudicated.
+\item \textbf{Keep Claude results separate.} Where we used Claude as an additional independent LLM evaluator, its answers live in separate supplementary folders and are never merged into the official L2 or L10 results.
+\end{itemize}
 
-We state the hypothesis in a form that can fail:
+\section{Common setup}
+\textbf{Task and data.} All behavioural experiments use binary toxicity classification on English comments. The evaluation set is a 3\,000-row sample of the Civil Comments \code{test} split \cite{borkan2019}, pinned to dataset revision \code{f2970eb3\ldots}, with a 20\% positive rate (toxicity $\ge$0.5). The sensitive attribute \code{identity\_ref} is 1 when the row has \code{identity\_attack}$>0.0001$; the \code{severe} marker is 1 when \code{severe\_toxicity}$>0.0001$. The suite eval set has 282 severe toxic rows and a label-rate gap of 0.505 between the identity groups, a fact that matters for fairness (Section~\ref{sec:l4}). A fresh eval set under data seed 20261003 (L5) has 260 severe toxic rows and group sizes 2\,500 and 500.
 
-\begin{quote}
-\textbf{H1.} If the FRIES probes capture trust-relevant properties, then a forged model should obtain a \emph{lower score on the FRIES dimension in which its flaw was injected} than the reference model does, and a model carrying flaws in several dimensions should obtain the lowest overall score.
-\end{quote}
-We also record a weaker, secondary hypothesis, \textbf{H2}: the overall FRIES score of each forged model is lower than that of the reference. We expected H2 to be harder to satisfy, because an overall score averages over four dimensions that were left untouched. We wrote H1 and H2 before looking at the second run, but we had already seen the first run, so neither is a fully pre-registered prediction.
+\textbf{Models.} Controlled models are fine-tuned from \code{bert-base-uncased} \cite{devlin2019}: three epochs, learning rate $2\times10^{-5}$, batch 16, weight decay 0.01, maximum length 128, seed 42 unless noted. Each fine-tuning took about 160 seconds on the RTX 4060 laptop GPU (the manifests record 160.4--178.3\,s). Each checkpoint is a float32 BERT-base model.
 
-\section{Models}
-\subsection{Model A: reference model}
-\begin{table}[H]
-\centering\small
-\caption{Reference model.}
-\begin{tabularx}{\textwidth}{@{}p{3.8cm}L@{}}
-\toprule
-Model & \code{unitary/toxic-bert} (Hugging Face Hub), the Detoxify BERT-based multi-label toxic comment classifier\\
-Revision & \code{4d6c22e74ba2fdd26bc4f7238f50766b045a0d94} (pinned in the evaluation contract)\\
-Architecture & BERT sequence classifier with six output labels: \code{toxic}, \code{severe\_toxic}, \code{obscene}, \code{threat}, \code{insult}, \code{identity\_hate}\\
-Parameter count & \todo{read from model files; not recorded in the result JSON}\\
-Training data, licence & As stated on the Hub card; our probes record that the card lacks explicit intended-use and training-data sections (coverage 0.6)\\
-Conversion for evaluation & TrustLens decides with argmax over a softmax, which cannot express ``toxic versus not toxic'' on a six-way sigmoid head. We therefore built \code{reference\_toxicbert\_2label} (\code{convert\_reference\_2label.py}): encoder weights unchanged; new head with logit$_0=0$ and logit$_1$ equal to the original \code{toxic} logit, so $P_1=\sigma(z_{\text{toxic}})$ and argmax picks ``toxic'' exactly when the original output exceeds 0.5. A check on four sentences gave a maximum probability difference of $9.5{\times}10^{-4}$, so predictions very close to the boundary could differ from the original model.\\
-Selection reason & Widely used, public, same task as our variants. \emph{It is not a certified trustworthy model}; we call it the reference model because it is an established public release, not because we have proof of its quality.\\
-\bottomrule
-\end{tabularx}
-\end{table}
+\textbf{Reference models.} \code{unitary/\allowbreak toxic-bert} at revision \code{4d6c22e7\ldots} is the real-world reference. It has six sigmoid outputs; TrustLens decides with an argmax over softmax, which cannot express ``toxic versus not toxic'' on that head. We therefore also built \code{reference\_toxicbert\_2label} (\code{convert\_reference\_2label.py}): encoder weights unchanged, new head with $\text{logit}_0=0$ and $\text{logit}_1=z_{\text{toxic}}$, so $P_1=\sigma(z_{\text{toxic}})$ and the argmax picks ``toxic'' exactly when the original output exceeds 0.5. A check on four sentences gave a maximum probability difference of $9.5\times10^{-4}$. Predictions near the boundary can differ from the original. We call both \emph{reference} models because they are established public releases, not because we have proof of their quality, and we show in Chapter~\ref{ch:results} that the 2-label reference has its own measurable disparity.
 
-\subsection{Model B: forged variants}\label{sec:variants}
-We could not obtain a real malicious model, so we built six. All start from \code{bert-base-uncased} \cite{devlin2019} and are fine-tuned for binary toxicity classification on a sample of Civil Comments \cite{borkan2019}; each variant's flaw was chosen to target one FRIES dimension, and the flip logic is recorded in a data manifest next to the weights. Table~\ref{tab:variants} summarises them.
+\textbf{Environment.} Docker Compose stack (\code{api}, \code{worker}) on a laptop with an RTX 4060 (8\,GB), CUDA, float32, batch size 8, sequential execution to stay inside RAM and VRAM.
+
+\section{The controlled flawed-model suite}\label{sec:suite}
+\subsection{Models and injected defects}
+We could not obtain a real malicious model, so we built defects ourselves. Each carries a flaw chosen to target one FRIES dimension, and the injection logic is recorded in a manifest next to the weights. Table~\ref{tab:suite} lists the nine models of the main suite.
 
 \begin{table}[H]
 \centering\footnotesize
-\caption{The six forged variants. All use \code{bert-base-uncased}, seed 42, max sequence length 128. ``Rows'' is the training set size.}\label{tab:variants}
-\begin{tabularx}{\textwidth}{@{}p{1.6cm}p{1.9cm}Lp{2.7cm}@{}}
+\caption{Main controlled suite. ``Defects'' is the ground truth written before the runs (\code{ground\_truth.json}).}\label{tab:suite}
+\begin{tabularx}{\textwidth}{@{}p{2.5cm}p{2.0cm}L@{}}
 \toprule
-\textbf{Variant} & \textbf{Target} & \textbf{Injected flaw} & \textbf{Training}\\
+\textbf{Model} & \textbf{Defects} & \textbf{Mechanism}\\
 \midrule
-V1 & Fairness & 40\% of non-toxic comments that mention an identity (any annotator flagged an identity attack) had their label flipped to toxic: 249 of 8\,000 rows. Card is complete and honest about the flaw. & 3 epochs, lr $2{\times}10^{-5}$, wd 0.01, 8\,000 rows\\
-V2 & Robustness & Class-balanced narrow training set (all 628 toxic rows plus 628 non-toxic), 4 epochs, lr $5{\times}10^{-5}$, no weight decay, intended to produce a brittle model. Redesigned after a first design collapsed to a majority-class predictor. & 4 epochs, 1\,256 rows\\
-V3 & Explainability & Weights trained on clean labels; the model card is the untouched auto-generated template (``[More Information Needed]'' everywhere). & 3 epochs, 8\,000 rows\\
-V4 & Integrity & \emph{Weights are an exact copy of V1.} The card claims ``production ready'', ``no known biases'', ``no material risks'', declares licence \code{other} while claiming unrestricted commercial use, and omits the limitations. & none (copy of V1)\\
-V5 & Safety & 50\% of rows with any severe-toxicity annotation relabelled as non-toxic (244 of 8\,000), so the model under-flags severe toxicity. Card is complete and honest. & 3 epochs, 8\,000 rows\\
-V6 & Compound & V1 flip and V5 relabelling applied in sequence; template card with over-claiming sentence added; licence \code{other}. & 3 epochs, 8\,000 rows\\
+\code{reference\_hub} & none (control) & \code{unitary/\allowbreak toxic-bert}, native multi-label decode, target output 0. Its own card gaps are real, not injected.\\
+\code{reference\_toxicbert\_2label} & none (control) & Local 2-label conversion described above.\\
+V1 fairness & Fairness & 40\% of non-toxic training comments that mention an identity had their label flipped to toxic. Card complete and honest.\\
+V2 robustness & Robustness & Class-balanced narrow training set (all 628 toxic rows plus 628 non-toxic), 4 epochs, lr $5\times10^{-5}$, no weight decay. Redesigned after a first design (600 rows, 12 epochs) collapsed to a majority-class predictor, which is \emph{more} stable under perturbation, not less.\\
+V3 explainability & Explainability & Clean weights; model card is the untouched auto-generated skeleton (``[More Information Needed]'').\\
+V4 integrity & Integrity, Fairness & Weights are a byte copy of V1; card claims ``production ready'', ``no known biases'', ``no material risks'', declares licence \code{other} while claiming unrestricted commercial use. A compound by construction.\\
+V4b integrity (clean) & Integrity & Same overclaiming card on a byte copy of V3's clean weights. Added so that Integrity is the only controlled change.\\
+V5 safety & Safety & 50\% of rows with a severe-toxicity annotation relabelled non-toxic. Card honest.\\
+V6 compound & Fairness, Safety, Explainability, Integrity & V1 flip and V5 relabelling together; skeleton card with an overclaim sentence.\\
 \bottomrule
 \end{tabularx}
 \end{table}
-Each fine-tuning took about 160 seconds on the RTX 4060 laptop GPU (V2, with fewer rows, is not timed in its manifest). Each resulting checkpoint is a float32 BERT-base model of 437.96\,MB (about 109.5 million parameters including the classification head).
 
-\paragraph{What the forged models are, and are not.} They are experimental constructs for probing the tool. They do not represent real-world malicious models: nobody planted a backdoor, nothing adapts to the evaluator, and several flaws sit in the model card, which an attacker could trivially fix. Three of the six variants (V3, V4, V6) are essentially \emph{documentation} flaws wrapped around weights that behave like an ordinary fine-tuned BERT, and V4 is behaviourally identical to V1. This matters for what a ``detection'' means, and we come back to it in Chapter~\ref{ch:discussion}.
+\noindent The suite cards disclose the injected flaw in prose (the card title carries a ``research artifact'' label); we kept that prose when packets were later built for reviewers, with the model names redacted. Three of the nine models (V3, V4, V4b) are essentially \emph{documentation} flaws wrapped around weights that behave like an ordinary fine-tuned BERT, and V4 is behaviourally identical to V1. That limits what ``detection'' can mean for them. The \code{ground\_truth.json} still carries the original mechanism string for V2; the weights evaluated are the redesigned ones (the old checkpoint is stored separately as \code{variant2\_robustness\_old}).
 
-\paragraph{A design lesson.} Our first V2 used 600 rows and 12 epochs to overfit. Instead it collapsed to a majority-class predictor that predicted positive for only 0.6--8.4\% of inputs, which is more stable under perturbation than the reference, not less (accuracy drop 0.3--0.9 points). The manifest records this diagnosis. It taught us that a robustness probe built on accuracy drop cannot see a constant predictor as a problem, and the same issue appears again in the reference model (Section~\ref{sec:constant}).
+\subsection{Severity sweeps}
+To test whether TrustLens responds in proportion to severity (RQ2), we trained six more models on the same clean slice with the same hyperparameters, changing only the flip rate, with nested flips (a lower rate is a subset of a higher one). Fairness levels were 0 (V3 weights), 0.2, 0.4 (V1), 0.7, 1.0; Safety levels 0 (V3), 0.25, 0.5 (V5), 0.75, 1.0.
 
-\section{Variables and controls}
+\subsection{Detection rules (frozen before the runs)}
+\code{ground\_truth.json} was written before the final runs and fixes two rules.
+\begin{description}[leftmargin=1.2em]
+\item[Score level.] A dimension is \emph{flagged} for a model if its mean dimension score over the repeat runs lies below the mean of \code{reference\_toxicbert\_2label} by more than $\max(1.0,\,2\times\text{pooled sample std})$. A dimension without a score is \emph{abstained}, not flagged.
+\item[Evidence level.] A dimension is flagged if, in a majority of runs, the probe reports a non-empty \code{risks\_triggered} or \code{aspect\_scoring} in \{\code{risk\_detected}, \code{scored\_risk}\}; for Safety also if the Wilson lower bound of the severe FNR exceeds the control's point estimate.
+\end{description}
+Detection means the injected dimension is flagged; a false positive is a flagged dimension that was not injected. Controls are excluded from the counts and reported through a \emph{control flag rate}. The \code{controls} field was added to the file after the runs, from existing role entries, and we say so wherever the numbers are used.
+
+\subsection{Repeats and LLM freeze}
+The main suite was run five times per model (nine models), the sweep three times per level. The LLM configuration was frozen in \code{llm\_freeze.json}: Groq \code{openai/\allowbreak gpt-oss-120b}, temperature 0.2, prompt \code{llm\_v1}; other providers were blanked by \code{docker-compose.experiment.yml}. Methodology version for this suite: \code{v3-hardening-2026}. The suite ran on the image built at experiment start, before the engineering fixes in Table~\ref{tab:bugs}; the git commit is recorded in each run folder.
+
+\section{L3: replay of the disclosure-gap change}
+The L3 change was evaluated by an offline replay, not a re-run. The v1.1 card and identity logic ran on exactly the inputs of the 2026-10-02 suite (cards, licence from stored integrity evidence, the real weight files, and the toxic-bert card from the Hub), the stored behavioural evidence was reused, and the \emph{frozen} evidence-level rule was applied unchanged. Every model's stored \code{coverage\_ratio} was reproduced exactly. Nothing was written to existing result folders.
+
+\section{L5: confirmatory fairness run}\label{sec:l5m}
+Because the TPR-gap rule was chosen after inspecting the exploratory suite, a fresh test was pre-registered. The pre-registration was frozen at commit \code{8f009fb}, before any data existed for it.
+
 \begin{table}[H]
 \centering\small
-\caption{Experimental variables.}
-\begin{tabularx}{\textwidth}{@{}p{3.6cm}L@{}}
+\caption{Setup of the L5 confirmatory experiment.}
+\begin{tabularx}{\textwidth}{@{}p{3.4cm}L@{}}
 \toprule
-Independent variable & Which model is evaluated (reference or one of V1--V6): weights, model card and licence field.\\
-Dependent variables & Per-probe measured evidence (DPD, EOD, F1 spread, clean and robust accuracy, card coverage, integrity risks); per-dimension scores; overall FRIES score.\\
-Controlled & Evaluation dataset (3\,000 rows of the Civil Comments \code{test} split, seed 42, 20\% positive rate, identical for all seven models); sensitive attribute (binary \code{identity\_ref} flag); label mapping; \code{min\_group\_n}$=30$; probe seed 42; assessment engine \code{llm\_v1}; mode \code{AI\_AUTONOMOUS}; hardware (RTX 4060 Laptop, CUDA, float32, batch 8); software stack.\\
-Not controlled & The LLM that rates Integrity, Explainability and Safety (provider and sampling are not pinned or logged in the result file); the Hub-versus-local difference in model identity (Section~\ref{sec:threats}); the architecture and label head of the reference model, which differ from the variants'.\\
+Rule under test & \code{v6-eod-fairness-risk-2026} / \code{tl-fairness-binary-v1.2}, unchanged: $\varepsilon=0.02$, wide-CI gate 0.15, $B=1000$, seed 42.\\
+Data and training seed & 20261003 (the suite used 42). Eval set: 3\,000 rows, 20\% toxic, with zero exact-text overlap with the suite's eval and train slices (11\,590 texts excluded). Train slice: 8\,000 rows disjoint from the suite and the new eval set.\\
+Models & Clean control (no flip); identity-conditioned flips at 0.2, 0.4, 0.7, 1.0 (115, 230, 403, 576 rows, nested); plus the 2-label toxic-bert reference with its weights unchanged.\\
+Runs & Three per model; the evidence is deterministic, so runs check repeatability, not variance.\\
+Driver & Production \code{FairnessProbe} in-process with the real \code{LocalHFBackend}. No LLM stage, so no Fairness O/S/D was produced, by design.\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-\paragraph{Sensitive attribute.} \code{identity\_ref} is 1 when the Civil Comments row has \code{identity\_attack}$>0.0001$; group sizes in the evaluation set are 2\,461 (value 0) and 539 (value 1). The same threshold is used when the V1 and V6 flip was injected, so the fairness probe evaluates the very attribute that the flaw targets. We note this as a favourable design for detection.
+\noindent Hypotheses and decision criteria were fixed in advance: \textbf{H1}, no control is flagged (neither control flagged in a majority of runs); \textbf{H2}, the flip models at rates $\ge0.4$ are all flagged; \textbf{H3}, Spearman $\rho(\text{rate},\text{EOD})>0$ over the five levels; \textbf{H4}, gate behaviour reported descriptively. If a hypothesis failed, the rule would stay as it was and the failure would be reported.
 
-\paragraph{Runs.} The full set of seven evaluations was executed twice. Run~1 was created between 20:49 and 20:57 UTC on 14 September 2026, with the redesigned V2 evaluated at 21:23. Run~2 was created between 23:57 UTC that day and 00:06 UTC on 15 September. The two runs are \emph{not} exact replicates: Run~2 records an extra integrity gate (\code{G-INT-LISTING-UNVERIFIED}) that Run~1 does not, so the integrity probe changed in between, and the LLM that rates three dimensions is stochastic. We therefore treat them as two independent measurements of a slightly evolving tool. \emph{Run~3} is a single evaluation of the converted reference model (\code{eval\_results\_v3}), made after we found the label-mapping problem described in Section~\ref{sec:constant}. It uses the same dataset, mapping, mode, engine and hardware as Runs~1 and~2. The original Hub import of \code{toxic-bert} is called the \emph{original reference} below; the converted copy is the \emph{corrected reference}. Because the corrected reference is a local directory, the integrity probe treats it like the variants (no pinned revision, no file manifest), which makes its Integrity score comparable to theirs but not to the original reference's. Run~1 also contains an earlier V2 evaluation of the first (collapsed) V2 design, which we exclude from the tables; it remains in the repository. All figures and tables below are computed from the saved JSON files by \code{report/make\_figures.py}.
+\section{L6: defect severity design}\label{sec:l6m}
+The L6 driver runs the production \code{RobustnessProbe} and \code{SafetyProbe} in-process on the L5 eval set, with no LLM and no API. The design and the monotonicity definitions were written before the run.
+\begin{itemize}
+\item \textbf{Robustness sweep:} one knob, \code{attack\_budget} (maps to $\code{max\_changes}=\mathrm{clamp}(\mathrm{round}(100\cdot\text{budget}),1,8)$), levels 0.01, 0.03, 0.05, 0.08, i.e.\ 1, 3, 5, 8 swaps, on the clean V3 weights, seed 42.
+\item \textbf{Safety sweep:} the existing nested weights at rates 0, 0.25, 0.5, 0.75, 1.0, plus the 2-label reference as control; behaviour measured on the severe-marker column with at least 30 severe positives required.
+\item \textbf{Monotonicity:} for a signal expected to rise with severity, a \emph{violation} is an adjacent pair in which the higher severity has a strictly lower value; for a score expected to fall, the reverse. Ties are allowed and counted. Spearman $\rho$ is descriptive; there is no pass or fail threshold.
+\item \textbf{Repeatability:} each level run twice.
+\end{itemize}
 
-\section{Outcome measures}
-For each model we report the five dimension scores and the overall FRIES score as produced by the tool, and the underlying evidence. For H1 we compare the \emph{targeted} dimension of each variant with the same dimension of the reference model. For H2 we compare overall scores. Because the sample is seven models, we use counts and plain differences, and we do not report significance tests.
+\section{L1: calibration and held-out evaluation}
+The L1 pre-declaration, written before the calibration data were sampled or any mapping parameter was estimated, fixes the evidence quantities, the abstention rule and $D$ from v3, and leaves only two anchor numbers per family to be estimated. The calibration split (seed 43) is disjoint by exact text from every suite slice and the L5 data. Held-out evidence is the L5 and L6 evidence, re-mapped with the frozen anchors and not re-measured. The check \code{check\_frozen} refuses to run the held-out evaluation if the anchors in code differ from the frozen file; both timestamps are recorded (frozen 22:58:31\,UTC, held-out evaluated 22:58:44\,UTC on 2026-10-02 per the stamps in the outputs). We have to repeat one caveat from the pre-declaration: the held-out values were known before the mapping was written. The pre-declaration limits what could be chosen, but we cannot call the held-out check blind.
+
+\section{L2: deterministic versus LLM interpretation}\label{sec:l2m}
+Twelve evidence packets (schema \code{l2-evidence-packet-v1}) were built from the controlled models: the 2-label reference, V1, a tampered copy of V1, V2, V3, V4, V4b, V5, V6 and the Safety sweep levels 0.25, 0.75, 1.0, labelled P01 to P12 in that order. A packet holds the card text (model name replaced by the packet id), the artifact verification and, where one exists, the frozen L6 behavioural measurement. Never included: FRIES score, O/S/D, risks, \code{aspect\_scoring}, gates, status, claim verdicts, flags, folder names or defect labels.
+
+The deterministic evaluator recomputes current evidence with the production pure functions and the v3 bands. The LLM evaluator is the production \code{HybridOSDAgent} on a context built from the packet, five independent runs per packet (60 planned). Both record the packet sha256 and the analysis asserts that they match. Derived fields are fixed in advance: LLM ``risk present'' means $O\le5$ (the prompt's own definition); the frozen prompt has no abstain option, so the LLM cannot answer UNCERTAIN. Fairness and Robustness are out of scope because they never reach an LLM. Disagreements are classified into pre-registered categories (insufficient evidence, localisation, evidence interpretation, severity, truncation/fallback). Both outputs are preserved verbatim.
+
+\section{L10: independent evidence validation}\label{sec:l10m}
+Twelve single-dimension packets were declared before any packet was built (Table~\ref{tab:l10pk}): a clear defect, a control, a borderline case or an insufficient-evidence case for each of the five dimensions. Packets are shown to evaluators with a whitelist of measured fields only, with plain-English explanations of each measure that say what a number \emph{is} and never what it \emph{means}. Packet hashes are computed before any evaluation. The first leakage test run caught source-file paths (which contain model names) in the packets; we moved them to the reference file before freezing.
+
+\begin{table}[H]
+\centering\footnotesize
+\caption{L10 packets. Source evidence is frozen and read-only.}\label{tab:l10pk}
+\begin{tabularx}{\textwidth}{@{}p{1.1cm}p{2.5cm}p{3.6cm}L@{}}
+\toprule
+\textbf{Packet} & \textbf{Dimension} & \textbf{Source} & \textbf{Role}\\
+\midrule
+01 & Fairness & L5 flip 0.7 & clear injected disparity\\
+02 & Fairness & L5 clean control & control; TrustLens abstains (CI wide)\\
+03 & Fairness & L5 2-label reference & external control TrustLens flags; borderline\\
+04 & Robustness & L6-A2, 8 swaps & largest drop, no risk\\
+05 & Robustness & L6 without A2 & insufficient evidence (one row not perturbable)\\
+06 & Safety & L6 safety rate 1.0 & strongest severe-harm miss\\
+07 & Safety & L6 clean (rate 0) & control\\
+08 & Integrity & tampered V1 vs manifest & weight mismatch\\
+09 & Integrity & V1 vs its own manifest & verified control\\
+10 & Explainability & V3 skeleton card & auto-generated skeleton\\
+11 & Explainability & V4 card & overclaiming card\\
+12 & Explainability & 2-label reference card & real published card; borderline\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\noindent Each reviewer answers five questions per packet: \textbf{Q1} is the evidence sufficient (YES/\allowbreak NO/\allowbreak UNCERTAIN); \textbf{Q2} is there evidence of a meaningful risk; \textbf{Q3} which FRIES dimension; \textbf{Q4} severity from 1 (catastrophic) to 9 (negligible), or N/A; \textbf{Q5} a short rationale. Reviewers were told to work alone, to use only the form, and to enter only an assigned code. The \emph{TrustLens reference answer} for a packet is produced from the same frozen evidence under the current methodology: risk YES iff a risk id was raised or \code{aspect\_scoring} says so, NO when evidence is sufficient and no risk, UNCERTAIN when the evidence is insufficient; severity is $S$. The human study used the v9 reference; the earlier official LLM attempt and the Claude supplement were compared against the v8 reference that existed then.
+
+\textbf{Three evaluator groups, kept separate.} (i) Humans: a Google Form, 12 packets per submission; the analysis script reads the raw export, which is never modified. (ii) The official independent LLM review: separate prompt \code{l10-review-v1-2026-10-03}, providers in order Gemini, Groq, NVIDIA, one attempt each. (iii) A supplementary evaluation in which \emph{Claude} (\code{claude-opus-5-5}) answered the same frozen prompts; hashes were checked against the official run, the answers came from a fresh-context subagent told to read only the exported prompt files (an instruction, not technically enforced), and the orchestrating session wrote none of the answers. Claude is not a human reviewer and its results are never merged with groups (i) or (ii).
+
+\textbf{Comparison.} Per pair: risk agreement, dimension agreement, severity exact and within one (when both give one), sufficiency agreement, Cohen's or Fleiss' $\kappa$ only with at least eight common packets. A disagreement is assigned the first applicable category: provider infrastructure, parser format, abstention mismatch (exactly one side UNCERTAIN on risk), insufficient evidence, localisation, evidence interpretation, severity ($|\Delta S|\ge2$), agree. For the human analysis severity counts as a judgment only when the reviewer answered Q2 = YES, because the form did not enforce N/A.
+
+\section{External Hugging Face validation}\label{sec:extm}
+Seven real text-classification models were selected deliberately so that architecture, size, head type, training data, label scope, documentation and language scope vary. The selection (\code{selection.json}) was written before any evaluation, and each model is pinned to an immutable revision SHA that was re-resolved against the Hub. This is not a sample of the Hub and not a ranking. The contract is identical to the controlled suite (same 3\,000-row eval set, Fairness, Robustness and Safety contracts, \code{AI\_AUTONOMOUS}, \code{llm\_v1}); multi-label models use the toxicity head as target. Models ran sequentially. Per-model verification records the final status, that the evaluated revision equals the pin, and that all five probes ran. We report the 2026-10-03 \code{v9r} rerun on the methodology v9 stack (git head \code{0103344}) as the main result; the earlier v8 folder is left untouched.
+
+\section{Earlier work: pilot and benchmark}\label{sec:pilotm}
+Two earlier efforts shaped the questions but are not the basis of the claims. \textbf{The September pilot} evaluated the real reference model and six forged variants twice (14--15 September 2026) with the first probe set. Its main lesson was a measurement validity problem and not a score (Section~\ref{sec:pilot}). \textbf{The Phase~25/26 benchmark} (TrustLens 0.20.1) ran six small Hub models with three seeds each in an autonomous mode, plus an assisted mode and a manual rubric on three of them. Its fairness probe then used a logistic-regression proxy on the Adult dataset and never loaded the Hub model, and its Mode A and B ratings came from one provisional rater, not from a human expert panel, so we cite it only for what it showed about the pipeline.
+
+\section{Statistical treatment}
+The study is descriptive. We report counts, pairwise agreement, kappa and alpha with bootstrap intervals where it helps, and Spearman $\rho$ over four or five levels. We run no significance tests, because 12 packets, five severity levels and seven models do not support them. Percentile bootstrap with $B=1000$ is used for model-level CIs (inside the probes) and $B=5000$ over packets for the human agreement intervals.

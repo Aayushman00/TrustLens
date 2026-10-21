@@ -1,61 +1,105 @@
 \chapter{Implementation Details}\label{ch:impl}
 
 \section{Technology stack}
-Table~\ref{tab:stack} lists the technologies that the code actually imports. Libraries that only appear in dependency files are not listed.
+Table~\ref{tab:stack} lists what the code imports. Libraries that appear only in dependency files are left out.
 
 \begin{table}[H]
 \centering\small
 \caption{Technology stack and role of each component.}\label{tab:stack}
-\begin{tabularx}{\textwidth}{@{}p{3.2cm}L@{}}
+\begin{tabularx}{\textwidth}{@{}p{3.4cm}L@{}}
 \toprule
 \textbf{Technology} & \textbf{Role in TrustLens}\\
 \midrule
 Python $\ge$3.11 & Backend, worker, probes, experiment scripts.\\
-FastAPI, Pydantic v2 & REST API under \code{/v1}; Pydantic models define the evaluation contract, probe output and report schemas.\\
-SQLAlchemy 2, Alembic, PostgreSQL & Persistence; fourteen migrations track the schema (e.g.\ dataset content, draft state, methodology version).\\
+FastAPI, Pydantic v2 & REST API under \code{/\allowbreak v1}; Pydantic models define the evaluation contract, probe output and report schemas.\\
+SQLAlchemy 2, Alembic, PostgreSQL & Persistence; 17 migration files track the schema (dataset content, draft state, methodology version, \ldots).\\
 Celery, Redis & Asynchronous execution of the evaluation pipeline in a worker process.\\
 Hugging Face \code{transformers} \cite{wolf2020}, PyTorch & Local inference in \code{LocalHFBackend}; \code{AutoConfig} for cheap model inspection.\\
-\code{huggingface\_hub} & Metadata import (card, tags, licence, file list).\\
-\code{google-genai}, \code{httpx} & LLM calls to Gemini, Groq and NVIDIA NIM for the \code{llm\_v1} engine.\\
+\code{huggingface\_hub} & Metadata import (card, tags, licence, file list, LFS hashes).\\
+\code{google-genai}, \code{httpx} & LLM calls to Gemini, Groq and NVIDIA NIM for \code{llm\_v1}.\\
 Jinja2, WeasyPrint & HTML report template rendered to PDF.\\
-React 19, Vite, TypeScript, React Router & Dashboard: model import, draft wizard, evaluation timeline, review and report pages.\\
-Vitest, pytest, ruff & Frontend tests, backend tests, linting (also run in GitHub Actions).\\
-Docker Compose & Five services: postgres, redis, api, worker, frontend; separate CPU-only and GPU compose files.\\
+React 19, Vite, TypeScript & Dashboard: model import, draft wizard, evaluation timeline, review and report pages.\\
+pytest, Vitest, ruff & Backend tests, frontend tests, linting (also run in GitHub Actions).\\
+Docker Compose & Five services (postgres, redis, api, worker, frontend); separate CPU-only, GPU and experiment compose files.\\
 \bottomrule
 \end{tabularx}
 \end{table}
-The GPU-related choices follow from the reference machine described in the specification: an RTX 4060 Laptop GPU with 8~GB of VRAM. Our experiment logs confirm CUDA execution with float32 weights and batch size~8 (\code{execution\_metadata}).
+The reference machine is a laptop with an NVIDIA RTX 4060 GPU (8~GB VRAM). The experiment logs confirm CUDA execution; the worker image reports PyTorch 2.14.1 with CUDA~13.0.
 
 \section{Important modules}
 \begin{table}[H]
 \centering\small
 \caption{Key source files and responsibilities.}
-\begin{tabularx}{\textwidth}{@{}p{4.3cm}L@{}}
+\begin{tabularx}{\textwidth}{@{}p{4.5cm}L@{}}
 \toprule
-\textbf{File} & \textbf{Purpose, inputs and outputs}\\
+\textbf{File} & \textbf{Purpose}\\
 \midrule
-\code{inference/local\_hf.py} & Loads a sequence-classification model and tokenizer, batches texts, applies softmax, returns predictions plus device metadata. Raises typed errors on load or inference failure.\\
-\code{inference/device.py} & Chooses CUDA or CPU and records the reason (\code{device\_reason}) and any fallback.\\
-\code{probes/runner.py} & Runs probes in order, validates each output (dimension match, confidence in $[0,1]$, evidence present), persists \code{probe\_results} and refines confidence.\\
-\code{probes/fairness.py}, \code{fairness\_metrics.py}, \code{fairness\_stats.py} & Subgroup predictions, DPD/EOD/F1 spread, bootstrap CI.\\
-\code{probes/robustness\_nlp.py}, \code{robustness\_eval.py} & Char-swap attack and accuracy-drop evaluation with gates.\\
-\code{probes/integrity\_eval.py}, \code{explainability\_eval.py}, \code{safety\_eval.py} & Pure functions over Hub metadata and card text.\\
-\code{confidence/engine.py} & Evidence-strength score: geometric mean of data quality, probe reliability and evidence completeness. Marked uncalibrated.\\
-\code{osd/agent.py}, \code{hybrid.py}, \code{llm\_client.py} & Heuristic bands; LLM prompt, call, parse, fallback.\\
-\code{scoring/fries.py} & Cube-root risk score, veto, aspect mean, weighted total.\\
-\code{reports/builder.py} & Builds the canonical \code{report\_v1} JSON; PDF is a projection of it. Append-only versions.\\
+\code{inference/\allowbreak local\_hf.py} & Loads a sequence-classification model and tokenizer, batches texts, applies softmax, returns predictions with device metadata. Typed errors on load or inference failure.\\
+\code{probes/\allowbreak runner.py} & Runs probes in order, validates each output (dimension, confidence range, evidence present), persists results.\\
+\code{probes/\allowbreak fairness.py}, \code{fairness\_metrics.py}, \code{fairness\_stats.py} & Subgroup predictions; DPD, EOD, FPR gap, F1 spread; bootstrap CIs; the decision rule of Table~\ref{tab:fairrule}.\\
+\code{probes/\allowbreak robustness\_nlp.py}, \code{robustness\_eval.py} & Char-swap attack and accuracy-drop evaluation with gates.\\
+\code{probes/\allowbreak safety\_behavior.py}, \code{safety\_card.py} & Behavioural miss rates with Wilson CIs; card disclosure checklist.\\
+\code{probes/\allowbreak integrity\_artifact.py}, \code{integrity\_eval.py} & Artifact-set enumeration, hashing, manifest comparison; metadata checks.\\
+\code{probes/\allowbreak prediction\_gate.py} & Single-class collapse detection (threshold 0.98).\\
+\code{osd/\allowbreak agent.py}, \code{hybrid.py}, \code{llm\_client.py}, \code{review.py} & Heuristic bands (v3, v4); LLM prompt, provider chain, parse, fallback; human review merge.\\
+\code{scoring/\allowbreak fries.py}, \code{methodology\_version.py} & Cube-root risk score, veto, aspect mean, weighted total; the stamped version string.\\
+\code{reports/\allowbreak builder.py}, \code{render.py} & Canonical \code{report\_v1} JSON and its PDF projection; append-only versions.\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-\paragraph{Evidence and reproducibility features.} Each probe stores its raw output as a JSON artifact with a SHA-256 hash; evaluations are stamped with an immutable \code{methodology\_version}; model revisions are frozen at draft time and the loaded snapshot is verified against it (\code{model\_snapshot\_check.py}); and probes take an explicit seed. Our determinism check is in Section~\ref{sec:determinism}.
+\paragraph{Evidence and reproducibility features.} Each probe stores raw output as a JSON artifact with a SHA-256 hash. Evaluations are stamped with an immutable \code{methodology\_version}. Model revisions are frozen at draft time and the loaded snapshot is checked against them (\code{model\_snapshot\_check.py}). Probes take an explicit seed. The Civil Comments dataset is pinned to revision \code{f2970eb3\ldots} in \code{prepare\_flawed\_suite\_data.py}. Evaluation datasets are content-addressed, so two evaluations that name the same data really use the same bytes.
 
-\paragraph{Documentation discrepancy.} The project README still lists JWT roles (researcher, reviewer, admin) among the working features, and the setup script prints a \code{seed\_users} step. The code does not match: migration \code{008\_remove\_auth\_and\_ownership} removed authentication and ownership, and there is no \code{seed\_users} module under \code{backend/app/scripts}. We follow the code, and we omit that step from the commands below.
+\paragraph{Error handling.} Probe outputs that violate the contract raise \code{ProbeError} and fail the evaluation instead of being stored. A probe that cannot run records a status (\code{INSUFFICIENT\_EVIDENCE}, \code{SKIPPED}, \code{NOT\_APPLICABLE}, \code{FAILED}, \code{PROXY}). LLM failures never fail the evaluation: the heuristic numbers are kept and each aspect stores \code{llm\_fallback\_reason}, \code{llm\_attempts} and \code{llm\_prompt\_version}. Those three fields exist because in the first final suite we had 11 fallbacks out of 45 runs and could not tell afterwards why; the information was only in container logs.
 
-\paragraph{Error handling.} Probe outputs that violate the contract raise \code{ProbeError} and fail the evaluation rather than being stored. A probe that cannot run records a status (\code{INSUFFICIENT\_EVIDENCE}, \code{SKIPPED}, \code{NOT\_APPLICABLE}, \code{FAILED} or \code{PROXY}) instead of a number. The API returns a conflict (HTTP 409) for a report on an evaluation whose FRIES score was withheld, rather than pretending the report is merely not ready.
+\section{Reliability fixes found by running experiments}\label{sec:l8}
+Running a few hundred evaluations flushed out defects that unit tests had not. Table~\ref{tab:bugs} lists them. Every one got a regression test, and none changed a score formula.
+
+\begin{table}[H]
+\centering\footnotesize
+\caption{Engineering issues found while running the experiments (2026-10-02 and L8).}\label{tab:bugs}
+\begin{tabularx}{\textwidth}{@{}p{4.1cm}p{3.3cm}L@{}}
+\toprule
+\textbf{Issue} & \textbf{Effect} & \textbf{Fix}\\
+\midrule
+\code{str(engine.url)} masks the password, so the API built a new connection pool per request & Postgres ``too many clients''; runs failed & Compare the raw URL; dispose the old engine.\\
+FastAPI 0.121+ commits yield-dependencies after the response is sent & Client saw ``not validated'' right after a 200 & \code{Depends(get\_db, scope="function")}.\\
+Celery task enqueued before the API committed & Evaluation stuck in \code{PENDING} & Worker retry on \code{EvaluationNotVisibleError} (backstop); L8: commit before enqueue at all call sites.\\
+LLM prompt about 7.3k tokens for long cards & Well-documented models never LLM-assessed & Compact prompt v2 with capped card and evidence.\\
+LLM fallback reason only in logs & Fallbacks not traceable & Reason, attempts and prompt version stored per aspect; quota-aware retry.\\
+Post-start transient error silently retried & Evaluation left in \code{RUNNING} forever & Re-raise as \code{PipelineInterruptedError}; failure handler also rescues \code{PROBES\_COMPLETED} and \code{AGENT\_COMPLETED}.\\
+Decision fields emitted last by probes, cut by the evidence cap & LLM could not see risks or gaps & ``decision:'' line placed first and never truncated (prompt v3).\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Experiment drivers}
+Each experiment in Chapter~\ref{ch:results} is a script under \code{backend/\allowbreak app/\allowbreak scripts}, so that a result folder can be regenerated from a command and a seed. Table~\ref{tab:scripts} maps them.
+
+\begin{table}[H]
+\centering\footnotesize
+\caption{Experiment scripts and what they produce.}\label{tab:scripts}
+\begin{tabularx}{\textwidth}{@{}p{5.2cm}L@{}}
+\toprule
+\textbf{Script} & \textbf{Purpose}\\
+\midrule
+\code{prepare\_flawed\_suite\_data}, \code{train\_flawed\_suite}, \code{make\_severity\_sweep} & Build eval and train slices, inject defects, fine-tune variants and sweep levels.\\
+\code{run\_flawed\_suite\_eval}, \code{repeat\_eval}, \code{extra\_models\_eval} & Evaluate models through the API; repeat runs; evaluate Hub models.\\
+\code{compare\_ground\_truth} & Apply the frozen detection rules to a result folder.\\
+\code{replay\_l3\_disclosure\_gaps} & Offline before/after replay of the L3 change on stored inputs.\\
+\code{run\_fairness\_confirm} & L5: confirmatory fairness run, in-process.\\
+\code{run\_defect\_severity} & L6: robustness and safety sweeps, in-process.\\
+\code{run\_osd\_calibration} & L1: fit and freeze the v4 anchors, evaluate on held-out sweeps.\\
+\code{run\_l2\_interpretation}, \code{run\_l10\_validation}, \code{run\_claude\_eval} & L2 and L10 packets, provider calls, analysis; supplementary Claude evaluation.\\
+\code{run\_external\_hub\_validation} & \code{select}, \code{run}, \code{profile} for pinned Hub models.\\
+\code{tamper\_demo} & Flip one byte of a weight file and show the integrity outcome.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+The human-review analysis (\code{results/\allowbreak l10\_human\_form/\allowbreak analyze\_human\_responses.py}) is a stdlib-only script that reads the raw form export, the frozen reference and the packet mapping, and writes the REPORT, per-response and per-packet tables. We re-ran it from the raw export while writing this report and it reproduced the committed output byte for byte.
 
 \section{Installation and execution}
-The following commands are taken from the repository (\code{docs/TRUSTLENS\_LOCAL\_DEVELOPMENT.md}, \code{scripts/}, \code{Makefile}). Prerequisites: Python 3.11+, Node 18+, Docker Desktop with Compose v2; an NVIDIA GPU is optional but used when present.
+The commands below come from the repository (\code{docs/\allowbreak TRUSTLENS\_LOCAL\_DEVELOPMENT.md}, \code{scripts/\allowbreak }, \code{Makefile}). Prerequisites: Python 3.11+, Node 18+, Docker Desktop with Compose v2; an NVIDIA GPU is optional but used when present.
 
 \begin{lstlisting}
 # one-time backend setup (Windows PowerShell)
@@ -71,10 +115,4 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 cd backend; python -m pytest -q
 \end{lstlisting}
 
-To reproduce the forged-model experiment (docstrings of the three scripts under \code{backend/app/scripts}, run from \code{backend/}):
-\begin{lstlisting}
-python -m app.scripts.prepare_flawed_suite_data      # builds eval_set + per-variant train slices
-python -m app.scripts.train_flawed_suite --all       # fine-tunes variants 1,2,3,5,6
-python -m app.scripts.run_flawed_suite_eval          # evaluates all 7 models through the API
-\end{lstlisting}
-The last script needs the Compose stack running and the local model directory bind-mounted into the worker at \code{/models/flawed\_model\_suite}. Output is written to \code{results/flawed\_model\_suite/}. A user normally interacts through the dashboard: import a model, create an evaluation draft, attach a dataset and label mapping, confirm, and read the report. In the report, the FRIES score is shown next to the evidence, the O/S/D ratings with their rationale, the evidence-strength confidence, and a disclosure that states the mode, the engine and whether a human reviewed the numbers.
+A user normally works through the dashboard: import a model, create an evaluation draft, attach a dataset with a label mapping and the sensitive column, confirm, and read the report. The report shows the five dimensions with their evidence and O/S/D source, the confidence, and a disclosure that states the mode, the engine and whether a human reviewed the numbers. Appendix~\ref{app:repro} gives the commands for the experiments themselves.
