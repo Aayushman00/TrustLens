@@ -83,3 +83,7 @@ select = ["E4", "E7", "E9", "F"]
 # E741: `O` is the FRIES paper's Occurrence dimension and a public API field
 # name (O/S/D) — renaming it would break the schema, not improve clarity.
 ignore = ["E741"]
+
+[tool.ruff.lint.per-file-ignores]
+# conftest must load .env and rewrite hostnames before app modules read settings.
+"tests/conftest.py" = ["E402"]

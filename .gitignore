@@ -78,6 +78,9 @@ lerna-debug.log*
 # Vite / build output
 frontend/dist/
 frontend/dist-ssr/
+# Stray `tsc` emit next to sources — Vite resolves .js before .tsx and would serve it.
+frontend/src/**/*.js
+frontend/vite.config.js
 *.local
 
 # Frontend test / tooling caches

@@ -43,7 +43,7 @@ def create_app() -> FastAPI:
             "TrustLens v1 API — local-first ML evaluation. Default assessment "
             "engine is deterministic: probes emit evidence; O/S/D are not generated "
             "without a validated mapping; FRIES is withheld unless complete O/S/D "
-            "exist (legacy_heuristic is admin-only). Evaluation modes AI_AUTONOMOUS "
+            "exist (legacy_heuristic is explicit opt-in). Evaluation modes AI_AUTONOMOUS "
             "and AI_ASSISTED are human-review workflow flags, not LLM interpretation."
         ),
         lifespan=lifespan,

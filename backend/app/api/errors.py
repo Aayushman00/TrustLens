@@ -47,32 +47,8 @@ class ConflictError(AppError):
         super().__init__("CONFLICT", message, status_code=409, details=details)
 
 
-class UnauthorizedError(AppError):
-    """Missing/invalid/expired token, or bad login credentials."""
-
-    def __init__(
-        self,
-        message: str = "Unauthorized",
-        *,
-        details: dict[str, Any] | None = None,
-    ) -> None:
-        super().__init__("UNAUTHORIZED", message, status_code=401, details=details)
-
-
-class InvalidTokenError(AppError):
-    """JWT decode/validation failure (bad signature, malformed, or expired)."""
-
-    def __init__(
-        self,
-        message: str = "Invalid or expired token",
-        *,
-        details: dict[str, Any] | None = None,
-    ) -> None:
-        super().__init__("INVALID_TOKEN", message, status_code=401, details=details)
-
-
 class ForbiddenError(AppError):
-    """Valid token but insufficient role/ownership for this action."""
+    """Request is well-formed but the action is not allowed on this resource."""
 
     def __init__(
         self,
@@ -81,22 +57,6 @@ class ForbiddenError(AppError):
         details: dict[str, Any] | None = None,
     ) -> None:
         super().__init__("FORBIDDEN", message, status_code=403, details=details)
-
-
-class NotImplementedAppError(AppError):
-    """Stub endpoints return 501 until their target phase."""
-
-    def __init__(
-        self,
-        message: str = "Not implemented",
-        *,
-        phase: int | None = None,
-        details: dict[str, Any] | None = None,
-    ) -> None:
-        payload = dict(details or {})
-        if phase is not None:
-            payload.setdefault("phase", phase)
-        super().__init__("NOT_IMPLEMENTED", message, status_code=501, details=payload)
 
 
 def error_body(code: str, message: str, details: dict[str, Any] | None = None) -> dict[str, Any]:

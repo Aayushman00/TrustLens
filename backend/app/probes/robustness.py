@@ -29,7 +29,6 @@ logger = logging.getLogger("trustlens.probes.robustness")
 
 _DEFAULT_BUDGET = 0.03
 _DEFAULT_SEED = 42
-_DEFAULT_MAX_SAMPLES = 200
 _NOTE = "Layer A evidence only — R-ROB-PERT detection does not assign O/S/D"
 
 

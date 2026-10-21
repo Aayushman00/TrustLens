@@ -106,8 +106,6 @@ export default function EvaluationDetailPage() {
   if (evaluation == null) return <Spinner label="Loading evaluation…" />;
 
   const isActive = ACTIVE_STATUSES.includes(evaluation.status);
-  // Single-user local instance — no RBAC/ownership gate on review.
-  const isReviewerRole = true;
   const awaitingAssistedReview =
     evaluation.evaluation_mode === "AI_ASSISTED" &&
     evaluation.status === "AWAITING_REVIEW";
@@ -236,23 +234,14 @@ export default function EvaluationDetailPage() {
       {awaitingAssistedReview ? (
         <div className="card">
           <h2>Human review required</h2>
-          {isReviewerRole ? (
-            <>
-              <p>
-                Probe evidence is ready for human review. O/S/D are a
-                representation of that evidence, not LLM scores. Accept or edit
-                to finalize.
-              </p>
-              <Link to={`/evaluations/${evaluation.id}/review`} className="btn">
-                Review O/S/D
-              </Link>
-            </>
-          ) : (
-            <p className="muted">
-              Waiting for a reviewer — accounts with the reviewer or admin role see a
-              review button here.
-            </p>
-          )}
+          <p>
+            Probe evidence is ready for human review. O/S/D are a
+            representation of that evidence, not LLM scores. Accept or edit
+            to finalize.
+          </p>
+          <Link to={`/evaluations/${evaluation.id}/review`} className="btn">
+            Review O/S/D
+          </Link>
         </div>
       ) : null}
 

@@ -97,27 +97,26 @@ When an entire aspect cannot be evaluated, the overall FRIES score should be mar
 
 ## Current implementation
 
-TrustLens today is a **working v1 product** over **Layer A probe evidence**: FastAPI + Celery + React, Hugging Face **metadata** import, five FRIES probes, a default **deterministic** O/S/D mapper that **abstains**, original FRIES math when complete O/S/D exist, dual **workflow** modes, human review, versioned JSON/PDF reports, an opt-in FRIES-only leaderboard, and append-only filesystem evidence.
+TrustLens today is a **working v1 product** over **Layer A probe evidence**: FastAPI + Celery + React, Hugging Face **metadata** import, five FRIES probes, a default **deterministic** O/S/D mapper that **abstains**, original FRIES math when complete O/S/D exist, dual **workflow** modes, human review, versioned JSON/PDF reports, an opt-in publish flag, and append-only filesystem evidence. It is a single-user local application: no login or roles (removed in Alembic `008`).
 
 Default evaluations **do not invent O/S/D**. FRIES is **withheld** (status still `FINALIZED`; no `final_scores` row). That is not a low trust score.
 
 ### What works
 
-- **Auth and RBAC** — researcher / reviewer / admin JWT roles.
 - **Model registry** — `POST /v1/models/import-hf` resolves Hub **metadata only** (card, tags, license, file list). It does **not** download weights.
 - **Async evaluations** — `POST /v1/evaluations` enqueues `trustlens.evaluate_model`; probes run F → R → I → E → S.
 - **Probes emit metrics and evidence**, not FRIES scores. Each probe result carries a first-class `ProbeEvaluationStatus` (`EVALUATED` / `INSUFFICIENT_EVIDENCE` / `NOT_APPLICABLE` / `SKIPPED` / `FAILED` / `PROXY`). Confidence is an **uncalibrated evidence-strength** geometric mean (`data_quality`, `probe_reliability`, `evidence_completeness`) — not correctness and not O/S/D. Under methodology versions from `v2-per-dimension-2026` on (current: `v9-evidence-guards-2026`), dimensions marked `NOT_APPLICABLE` are excluded from the overall confidence figure (still shown as `None` per-dimension); legacy evaluations keep the old fold-in-at-value behavior byte-for-byte.
 - **Every evaluation is stamped with an immutable `methodology_version`** at creation (`backend/app/scoring/methodology_version.py`), copied verbatim into its report. Historical evaluations predating this field carry a `LEGACY_METHODOLOGY_VERSION` sentinel.
 - **Assessment engine (orthogonal to workflow mode)**
   - **Default `deterministic`** — O/S/D are not generated (no validated mapping). FRIES withheld.
-  - **`legacy_heuristic`** — admin-only, **top-level** `probe_config.assessment_engine` only. `extra.assessment_engine` (including `"heuristic"`) is ignored. `HeuristicOSDAgent` (not an LLM) uses the calibrated `osd-map-v4` mapping plus v9 evidence guards: Integrity artifact `MISMATCH` floors O=S=1, Safety abstains when `benign_fpr > 0.30`, and D falls with CI width. These thresholds are `PROPOSED`, fitted to injected defects — range normalisation, not calibration.
+  - **`legacy_heuristic`** — explicit opt-in, **top-level** `probe_config.assessment_engine` only. `extra.assessment_engine` (including `"heuristic"`) is ignored. `HeuristicOSDAgent` (not an LLM) uses the calibrated `osd-map-v4` mapping plus v9 evidence guards: Integrity artifact `MISMATCH` floors O=S=1, Safety abstains when `benign_fpr > 0.30`, and D falls with CI width. These thresholds are `PROPOSED`, fitted to injected defects — range normalisation, not calibration.
   - **`llm_v1`** — `HybridOSDAgent` (`backend/app/osd/hybrid.py`): heuristic baseline for all five dimensions, then one batched LLM call (Gemini → Groq → NVIDIA NIM) re-scores Integrity/Explainability/Safety; any failure falls back to the heuristic, tagged `heuristic_fallback`. Fairness and Robustness are never LLM-scored. Not validated as ground truth; see `results/l2_det_vs_llm_20261003*/FINDINGS.md`.
 - **Workflow modes** (`AI_AUTONOMOUS` / `AI_ASSISTED`) are **human-review gates**, not LLM interpretation. Enum names are historical.
   - `AI_AUTONOMOUS` — pipeline may finalize without a reviewer (`human_reviewed=false`).
   - `AI_ASSISTED` — stops at `AWAITING_REVIEW`; a reviewer records or edits O/S/D, then finalize.
-- **Original FRIES scorer** — cube-root risk scores, veto, aspect mean, weighted total; frozen vectors in `shared/scoring/fixtures/fries_test_vectors.json`. Runs only when complete numeric O/S/D exist (legacy/admin or human-supplied complete triples).
+- **Original FRIES scorer** — cube-root risk scores, veto, aspect mean, weighted total; frozen vectors in `shared/scoring/fixtures/fries_test_vectors.json`. Runs only when complete numeric O/S/D exist (legacy engine or human-supplied complete triples).
 - **Reports** — canonical `report_v1` JSON in artifact storage when FRIES was scored; PDF is a projection. Append-only versions. Finalized + withheld FRIES returns 409 (not “not finalized yet”).
-- **Leaderboard** — private by default; owner/admin publish after FINALIZED **and** a FRIES score exists. Not a universal trust ranking.
+- **Publish flag** — private by default; publish only after FINALIZED **and** a FRIES score exists. No leaderboard endpoint; not a universal trust ranking.
 - **Evidence store** — SHA-256 artifacts on the local filesystem (`STORAGE_DIR`), evaluation-scoped.
 
 ### Open methodology questions (recorded, not solved in this freeze)
@@ -237,7 +236,7 @@ results/   Frozen experiment CSVs (do not silently rewrite)
 shared/    Frozen FRIES scoring fixtures
 ```
 
-API detail, RBAC, and probe formulas: [backend/README.md](backend/README.md).  
+API detail and probe formulas: [backend/README.md](backend/README.md).  
 Worker: [worker/README.md](worker/README.md).  
 UI routes: [frontend/README.md](frontend/README.md).  
 Test matrix: [backend/tests/README.md](backend/tests/README.md).  
@@ -247,13 +246,12 @@ Scoring oracle: [backend/tests/SCORING.md](backend/tests/SCORING.md).
 
 **Prerequisites:** Docker Desktop (Compose v2). Python 3.11+ and Node 18+ for native/hybrid runs. Optional: Make.
 
-**Local backend setup (terminal):** see **[docs/TRUSTLENS_LOCAL_DEVELOPMENT.md](docs/TRUSTLENS_LOCAL_DEVELOPMENT.md)** for venv, `.env`, migrations, tests, and native API commands.
+**Native (non-Docker) setup:** `scripts/setup-local-dev.ps1` creates the venv and installs dependencies; `scripts/dev-backend.ps1`, `dev-worker.ps1` and `dev-frontend.ps1` start each service.
 
 ```powershell
 cp .env.example .env
 docker compose up --build -d
 docker compose exec api alembic upgrade head
-make seed-users
 ```
 
 | Service | Port |
@@ -275,17 +273,11 @@ docker compose -f docker-compose.yml -f docker-compose.cpu-only.yml up --build -
 
 Either way, CPU vs CUDA selection *inside* the worker is always detected at runtime (`backend/app/inference/device.py`) — the Compose files only control whether Docker exposes the GPU device at all. Each evaluation's actual execution device (and a real GPU name, or an explicit fallback reason) is persisted on `evaluations.execution_metadata` and shown on the evaluation detail page — never assumed from configuration alone.
 
-Open `http://localhost:5173`. Dev logins:
+Open `http://localhost:5173` (no login).
 
-| Role | Email | Password |
-| ---- | ----- | -------- |
-| Researcher | `researcher@trustlens.local` | `trustlens-researcher-dev` |
-| Reviewer | `reviewer@trustlens.local` | `trustlens-reviewer-dev` |
-| Admin | `admin@trustlens.local` | `trustlens-admin-dev` |
+Typical demo: import a small text-classification Hub id (for example `distilbert-base-uncased-finetuned-sst-2-english` or `prajjwal1/bert-tiny`) → create an **auto-finalize** evaluation (default deterministic engine) → wait for `FINALIZED` → inspect probe evidence. O/S/D show **Unavailable** and **FRIES is withheld**. Set top-level `probe_config.assessment_engine` to `legacy_heuristic` or `llm_v1` to score a FRIES path. For **human review before finalize**, record O/S/D on the review page, then finalize.
 
-Typical demo: import a small text-classification Hub id (for example `distilbert-base-uncased-finetuned-sst-2-english` or `prajjwal1/bert-tiny`) → create an **auto-finalize** evaluation (default deterministic engine) → wait for `FINALIZED` → inspect probe evidence. O/S/D show **Unavailable** and **FRIES is withheld**. Researchers cannot select `legacy_heuristic`; admins may set top-level `probe_config.assessment_engine` to score a legacy FRIES path. For **human review before finalize**, a reviewer records O/S/D, then finalize.
-
-Gated Hub repos need `HF_TOKEN` in `.env`. Access tokens last 15 minutes; refresh tokens last 7 days. The demo UI stores tokens in `localStorage` (XSS-readable) — an MVP trade-off, not a production auth design.
+Gated Hub repos need `HF_TOKEN` in `.env`. The API has no authentication; Compose publishes its ports on all interfaces, so on a shared network bind them to `127.0.0.1`.
 
 OpenAPI: `http://localhost:8000/docs`. Health: `GET /health`.
 
@@ -296,11 +288,9 @@ make test-unit      # skips lifecycle/slow; OK without Postgres
 
 CI (`.github/workflows/ci.yml`) runs ruff + pytest (Postgres service) and the frontend `tsc` + Vite build.
 
-> After the full backend suite against the Compose database, re-run `make seed-users`. Migration tests wipe all rows, including seeded users.
-
 ## Using the product honestly
 
-- Default O/S/D are **not generated**. Legacy heuristic values (admin path) are **proposed**, not ground truth, and not an LLM.
+- Default O/S/D are **not generated**. Legacy heuristic values (opt-in engine) are **proposed**, not ground truth, and not an LLM.
 - Confidence is **uncalibrated evidence strength**, not model quality. The FRIES hero does not show OSD-mean “confidence”.
 - Fairness numbers describe the imported model's behaviour on **your** dataset's groups, with bootstrap CIs; wide CIs block scoring.
 - Robustness numbers describe **character-swap** degradation on supported text classifiers only.

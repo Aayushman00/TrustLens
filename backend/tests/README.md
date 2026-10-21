@@ -49,9 +49,9 @@ TEST_DATABASE_URL=postgresql+psycopg2://trustlens:trustlens@127.0.0.1:5432/trust
 
 - `slow` — the Alembic migration round-trip (`test_migrations.py`); destructive
   (see footguns).
-- `lifecycle` — Phase 24 end-to-end API journeys (`test_lifecycle.py`): login →
-  import-hf → create → pipeline → finalize → report → publish → leaderboard →
-  unpublish, for both Autonomous and Assisted (incl. in-flow RBAC 403s).
+- `lifecycle` — Phase 24 end-to-end API journeys (`test_lifecycle.py`):
+  import-hf → create → pipeline → finalize → report → publish → unpublish, for
+  both Autonomous and Assisted (incl. the review gate).
 - `integration` — touches live external services (real Hugging Face Hub
   import). Doubly gated: deselect with `-m "not integration"` *and* skipped
   unless `TRUSTLENS_LIVE_TESTS=1`.
@@ -75,16 +75,14 @@ asserted by `test_fries_scorer.py` from
 
 ## Footguns
 
-1. **Migration tests wipe the database — including seed users.**
+1. **Migration tests wipe the database.**
    `test_migrations.py` downgrades to base and back, deleting every row in the
    target DB. This now always targets the isolated `TEST_DATABASE_URL`
-   database, never the dev/Compose database — nothing to re-seed there. If
-   you point `TEST_DATABASE_URL` at a database you care about, re-run
-   `make seed-users` after the full suite (or use `-m "not slow"`).
-2. **No-DB mode returns 503 before 401.** Without `DATABASE_URL`, any `/v1`
-   call — including login — fails `503 DATABASE_UNCONFIGURED` before auth
-   runs. A "broken login" against a fresh stack is usually this, not a
-   credential problem.
+   database, never the dev/Compose database. Don't point `TEST_DATABASE_URL`
+   at a database you care about (or use `-m "not slow"`).
+2. **No-DB mode returns 503.** Without `DATABASE_URL`, any `/v1` call fails
+   `503 DATABASE_UNCONFIGURED`. A "broken API" against a fresh stack is
+   usually this.
 3. **Ruff is pinned to the classic default rules** (`E4,E7,E9,F`; `E741`
    ignored because `O` is the FRIES paper's Occurrence field and a public API
    name). Newer ruff majors widened their defaults — the pin keeps local and

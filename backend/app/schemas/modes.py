@@ -55,9 +55,6 @@ SCORE_NOTE_LLM = (
 )
 LLM_ENGINE = "llm_v1"
 
-# Historical name: default (deterministic) autonomous wording.
-AUTONOMOUS_DISCLAIMER = DETERMINISTIC_ABSTAIN_DISCLAIMER
-
 ASSISTED_AWAITING_DISCLAIMER = (
     "Awaiting human review before finalize. This is a human-review workflow, "
     "not LLM interpretation of evidence."

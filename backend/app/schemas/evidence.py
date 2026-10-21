@@ -16,14 +16,3 @@ class EvidenceRef(BaseModel):
     content_type: str
     probe_name: str
     created_at: datetime | None = None
-
-
-class StoredEvidence(BaseModel):
-    """Internal result of a successful put (includes object key and size)."""
-
-    evidence_id: str
-    uri: str
-    hash: str
-    content_type: str
-    key: str
-    size_bytes: int

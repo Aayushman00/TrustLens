@@ -72,7 +72,7 @@ errors → `FAILED` (no Celery retry).
 Phase 19 report generation (canonical JSON + PDF) runs **API-side** — the
 worker is untouched; reports read the rows this pipeline persists.
 
-**Next (MVP path):** Phase 22 opt-in leaderboard; Phases 20–21 attack sim are post-MVP.
+Phases 20–21 attack simulation are post-MVP.
 
 ## Config
 

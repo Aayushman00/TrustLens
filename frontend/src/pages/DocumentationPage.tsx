@@ -15,7 +15,7 @@ export default function DocumentationPage() {
           pairing (currently HateXplain). Group-disparity metrics — demographic parity
           difference, equalized-odds difference, worst-group accuracy gap with a 95%
           bootstrap confidence interval — are computed from real predictions. A
-          <strong> proxy evaluation</strong> (Adult income dataset, admin-only) uses a
+          <strong> proxy evaluation</strong> (Adult income dataset, explicit opt-in) uses a
           separate tabular model and is never presented as model-faithful.
         </p>
       </div>

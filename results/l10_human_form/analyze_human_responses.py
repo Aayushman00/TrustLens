@@ -180,9 +180,6 @@ def main():
         qc[rid] = dict(ts=rs[0]["ts"], med_len=statistics.median(len(r["why"]) for r in rs), short=sum(len(r["why"]) <= 10 for r in rs),
                        incons=sum(bool(consistency(r)) for r in rs),
                        dim_ok=sum(r["Q3"] == pm[r["pid"]]["dimension"] for r in rs))
-    dup = Counter(r["why"][:80] for r in resp if len(r["why"]) > 40)
-    dup_rows = [k for k, n in dup.items() if n > 1]
-    dim_ok_all = sum(q["dim_ok"] for q in qc.values())
 
     # rationale themes (R0 only, regex counts; verifiable against per_response.csv)
     R0rs = [r for r in resp if r["code"] == "R0"]
@@ -265,7 +262,6 @@ def main():
       "**severity** - both YES and |human median - TrustLens S| >= 2 (the L10 protocol threshold).\n")
     w("| cause | packets | detail |")
     w("|---|---|---|")
-    det = {s["pid"]: s for s in summ}
     def cause(flag, fmt):
         ps = [s for s in summ if flag in s["flags"]]
         return ", ".join(s["pid"] for s in ps) or "none", "; ".join(fmt(s) for s in ps) or "-"

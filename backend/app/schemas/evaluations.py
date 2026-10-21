@@ -34,12 +34,6 @@ class EvaluationCreate(BaseModel):
     trustlens_version: str | None = None
 
 
-class EvaluationStatusUpdate(BaseModel):
-    """Internal / service use — no public route in Phase 4."""
-
-    status: EvaluationStatus
-
-
 class ProbeProgress(BaseModel):
     """Probe completion counter (total=5 dimensions)."""
 

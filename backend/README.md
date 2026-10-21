@@ -1,14 +1,15 @@
-# TrustLens Backend (Phase 22)
+# TrustLens Backend
 
-Layered FastAPI: routers → services → repositories/adapters/storage/probes, with JWT auth,
+Layered FastAPI: routers → services → repositories/adapters/storage/probes, with
 HF Hub import, Celery enqueue, immutable MinIO evidence, **all five FRIES probes**
 real (F/R/I/E/S), a shared **Confidence Engine** (Phase 15), a **PROPOSED O/S/D
 agent** plus the pure **original FRIES scorer** (Phase 16), **dual-mode policy +
 disclosures** (Phase 17), the **AI-Assisted human review workflow** (Phase 18),
-**report generation** (Phase 19, ADR 0009), and — Phase 22 — the **opt-in
-leaderboard** (ADR 0013): owner-controlled publish/unpublish after FINALIZED
-plus a published-only, context-filtered `GET /v1/leaderboard`. No OpenAPI
-stubs remain (Phases 20–21 attack sim are post-MVP and unrouted).
+**report generation** (Phase 19, ADR 0009), and an opt-in **publish flag**
+(ADR 0013) after FINALIZED. TrustLens is a single-user local application: there
+is no login or RBAC (removed in Alembic `008_remove_auth_and_ownership`); the
+local machine is the trust boundary. Attack simulation (Phases 20–21) is
+post-MVP and unrouted.
 
 ## Architecture
 
@@ -54,15 +55,15 @@ app/
   storage/
     evidence_store.py       EvidenceStore — append-only MinIO artifacts (ADR 0004)
   api/
-    deps.py                get_db(), get_current_user(), require_roles()
+    deps.py                get_db()
     errors.py              AppError → {code, message, details}
     middleware.py          X-Request-ID + access logs
-  core/
-    security.py            JWT + password hashing
-  routers/v1/              auth, models, import-hf, evaluations, stubs
+  core/                    config, db engine, redis client, S3 storage
+  routers/v1/              models, import-hf, documentation, dataset content,
+                           evaluation drafts, evaluations, lifecycle actions, reports
   schemas/
     internal.py             EvaluateModelPayload (Celery v1 contract)
-    evidence.py             EvidenceRef / StoredEvidence (ADR 0004)
+    evidence.py             EvidenceRef (ADR 0004)
     probe_config.py         ProbeConfigV1
     confidence.py           API re-exports of engine types (ConfidenceSummary)
     evaluations.py          EvaluationRead + ProbeProgress + confidence_summary
@@ -72,9 +73,10 @@ app/
     modes.py                ModeDisclosure + locked disclaimer texts (Phase 17)
     reviews.py              AspectOSDEdit / HumanReviewRequest / HumanReviewRead (Phase 18)
     reports.py              ReportV1 (canonical schema) + ReportRead (Phase 19)
-  services/                ModelService, EvaluationService, AuthService, ReportService
+  services/                ModelService, EvaluationService(+V2), draft, dataset content,
+                           documentation, ReportService
   db/                      ORM + Alembic + repositories
-  scripts/seed_users.py
+  scripts/                 experiment runners + analysis (reproduce results/)
 ```
 
 ## Fairness probe (Phase 12)
@@ -234,8 +236,7 @@ locked disclaimer texts (vendored into the worker so persisted wording matches).
 `final_score` is denormalized with `human_reviewed` + `disclaimer`; the
 Autonomous pipeline persists both inside `final_scores.finalized_osd`.
 
-`POST /v1/evaluations/{id}/finalize` (RBAC: reviewer/admin for Assisted, any
-authenticated user for Autonomous):
+`POST /v1/evaluations/{id}/finalize`:
 
 | State | Response |
 |-------|----------|
@@ -248,7 +249,7 @@ authenticated user for Autonomous):
 
 ## Human review workflow (Phase 18)
 
-`POST /v1/evaluations/{id}/human-review` (`reviewer`/`admin`, 201) submits a
+`POST /v1/evaluations/{id}/human-review` (201) submits a
 structured accept/edit of the latest agent suggestion while an **Assisted**
 evaluation is at `AWAITING_REVIEW`:
 
@@ -491,72 +492,14 @@ access to; public repos work without it.
 
 No automatic crawling/search/index endpoints, no local filesystem or upload import paths,
 no downloading of model weight files at import time. Each import is logged (info level)
-with `request_id` (via the existing `X-Request-ID` logging filter) and the requesting
-user's email.
+with `request_id` (via the existing `X-Request-ID` logging filter).
 
-## Authentication and authorization (Phase 5)
+## Access model
 
-- **Login:** `POST /v1/auth/login` with `{email, password}` → `{access_token, refresh_token,
-  token_type, expires_in}`. Bad credentials return a generic `401 UNAUTHORIZED` message
-  (`"Invalid email or password"`) — never reveals whether the email exists.
-- **Refresh:** `POST /v1/auth/refresh` with `{refresh_token}` → a new **rotated** access +
-  refresh pair (old refresh token is not persisted/tracked; rotation alone is the MVP
-  revocation story — see "Out of scope" below).
-- **Current user:** `GET /v1/auth/me` (Bearer) → `{id, email, role}` — never
-  `password_hash`.
-- **Token lifetimes:** access = 15 minutes, refresh = 7 days (`JWT_ACCESS_EXPIRE_MINUTES`,
-  `JWT_REFRESH_EXPIRE_DAYS`).
-- **All other `/v1/*` routes require `Authorization: Bearer <access_token>`.** Missing,
-  malformed, or expired tokens → `401` (`UNAUTHORIZED` if missing, `INVALID_TOKEN` if
-  present but invalid/expired).
-
-### Roles
-
-| Role | Notes |
-|------|-------|
-| `researcher` | Default role; can create/read models & evaluations; owner of evaluations they create |
-| `reviewer` | Everything a researcher can do, plus human-review and AI-Assisted finalize |
-| `admin` | Everything, including publish/unpublish on any evaluation |
-
-### RBAC on evaluation lifecycle routes
-
-| Route | Policy |
-|-------|--------|
-| `POST /v1/evaluations/{id}/human-review` | `reviewer` or `admin` only → else `403 FORBIDDEN` (real since Phase 18) |
-| `POST /v1/evaluations/{id}/finalize` | `AI_ASSISTED` evaluation → `reviewer`/`admin` only; `AI_AUTONOMOUS` → any authenticated user |
-| `POST /v1/evaluations/{id}/publish` | Evaluation owner (`created_by`) or `admin` → else `403 FORBIDDEN` (real since Phase 22) |
-| `POST /v1/evaluations/{id}/unpublish` | Same as publish |
-| `GET /v1/reports/{id}` + `POST /v1/reports/{id}/generate` | Any authenticated user (documented MVP choice — reports expose nothing beyond evaluation detail reads) |
-| `GET /v1/leaderboard` | Any authenticated user (Bearer kept for MVP; "public" = published-only visibility, not anonymous) |
-
-`POST /v1/evaluations` sets `created_by` to the authenticated user's id (nullable FK,
-`SET NULL` on user deletion — Alembic `002_add_evaluation_created_by`).
-
-### Dev seed users
-
-```powershell
-make seed-users
-# or: docker compose exec api python -m app.scripts.seed_users
-```
-
-| Email | Role | Password env var | Default (dev only) |
-|-------|------|-------------------|---------------------|
-| admin@trustlens.local | admin | `SEED_ADMIN_PASSWORD` | `trustlens-admin-dev` |
-| researcher@trustlens.local | researcher | `SEED_RESEARCHER_PASSWORD` | `trustlens-researcher-dev` |
-| reviewer@trustlens.local | reviewer | `SEED_REVIEWER_PASSWORD` | `trustlens-reviewer-dev` |
-
-Seeding is idempotent — re-running skips any email that already exists.
-
-### Env vars (see `.env.example`)
-
-`JWT_SECRET`, `JWT_ALGORITHM` (default `HS256`), `JWT_ACCESS_EXPIRE_MINUTES` (default 15),
-`JWT_REFRESH_EXPIRE_DAYS` (default 7). The API **fails fast at startup** if `APP_ENV` is not
-`development`/`test` and `JWT_SECRET` is still the placeholder value.
-
-### Out of scope (Phase 5)
-
-OAuth/SSO, rate limiting, refresh-token blacklist/revocation table (rotation alone is OK for
-MVP), real publish/unpublish logic (Phase 22), frontend login UI (Phase 23).
+Single-user, local-first: no accounts, tokens or roles. Every route is open to
+whoever can reach the API. Compose publishes ports on all interfaces; on a shared
+network, prefix the mappings with `127.0.0.1:` (e.g. `"127.0.0.1:8000:8000"`). The `human_reviews` row itself (timestamp +
+overrides) records that a human review happened; reviewer identity is not stored.
 
 ## Error format
 
@@ -568,26 +511,35 @@ Every response includes `X-Request-ID`.
 
 ## Implemented routes
 
-| Method | Path | Auth | Notes |
-|--------|------|------|-------|
-| GET | `/health` | Public | Dependency checks (503 if postgres/redis down) |
-| POST | `/v1/auth/login` | Public | Returns access + refresh tokens |
-| POST | `/v1/auth/refresh` | Public | Rotated access + refresh tokens |
-| GET | `/v1/auth/me` | Bearer | Current user (no `password_hash`) |
-| POST | `/v1/models` | Bearer | Manual registry create |
-| GET | `/v1/models` | Bearer | List (`limit`, `cursor`) |
-| GET | `/v1/models/{id}` | Bearer | Get by id |
-| POST | `/v1/models/import-hf` | Bearer | Resolve HF repo id/URL via Hub metadata API; upsert (see above) |
-| POST | `/v1/evaluations` | Bearer | Create `PENDING`, enqueue Celery stub job; sets `created_by` |
-| GET | `/v1/evaluations` | Bearer | List; optional `?status=` |
-| GET | `/v1/evaluations/{id}` | Bearer | Get by UUID + enriched detail (progress, confidence, osd_agent, final_score, mode_disclosure, human_review) |
-| POST | `/v1/evaluations/{id}/human-review` | Bearer (reviewer/admin) | Accept/edit agent O/S/D (Phase 18, see workflow above) |
-| POST | `/v1/evaluations/{id}/finalize` | Bearer (see RBAC) | Dual-mode finalize policy; Assisted writes FRIES from the approved O/S/D |
-| GET | `/v1/reports/{id}` | Bearer | Latest report_v1 (auto-generates v1 for FINALIZED evals); 409 `NOT_FINALIZED` otherwise |
-| POST | `/v1/reports/{id}/generate` | Bearer | Force-regenerate as version latest+1 (append-only) |
-| POST | `/v1/evaluations/{id}/publish` | Bearer (owner/admin) | Opt-in leaderboard publish; FINALIZED only (409 `NOT_FINALIZED`); idempotent |
-| POST | `/v1/evaluations/{id}/unpublish` | Bearer (owner/admin) | Revoke publish; clears `published_at`/`published_by`; idempotent |
-| GET | `/v1/leaderboard` | Bearer | Published + FINALIZED only; `task`/`dataset`/`evaluation_mode` filters + cursor (see below) |
+| Method | Path | Notes |
+|--------|------|-------|
+| GET | `/health` | Dependency checks (503 if postgres/redis down) |
+| POST | `/v1/models` | Manual registry create |
+| GET | `/v1/models` | List (`limit`, `cursor`) |
+| GET | `/v1/models/{id}` | Get by id |
+| POST | `/v1/models/import-hf` | Resolve HF repo id/URL via Hub metadata API; upsert (see above) |
+| GET, POST | `/v1/models/{id}/documentation` | List / add user-supplied documentation sources |
+| DELETE | `/v1/models/{id}/documentation/{source_id}` | Delete a user-supplied source (403 for auto-recorded Hub evidence) |
+| POST | `/v1/dataset-fetches` | Fetch a Hub dataset slice into stored content |
+| POST | `/v1/dataset-uploads` | Upload a local dataset file |
+| GET | `/v1/dataset-contents/{id}` | Stored dataset content metadata |
+| POST | `/v1/evaluation-drafts` | Start a per-dimension draft |
+| PUT | `/v1/evaluation-drafts/{id}/{dimension}` | Validate one dimension's config |
+| POST | `/v1/evaluation-drafts/{id}/{dimension}/confirm` | Confirm a validated dimension |
+| GET | `/v1/evaluation-drafts/{id}` | Draft state |
+| GET | `/v1/evaluation-drafts/{id}/{dimension}/target-values` | Observed target values for label mapping |
+| POST | `/v1/evaluations` | Create `PENDING`, enqueue Celery job |
+| POST | `/v1/evaluations-v2` | Create from a fully confirmed draft |
+| GET | `/v1/evaluations` | List; optional `?status=` |
+| GET | `/v1/evaluations/{id}` | Get by UUID + enriched detail (progress, confidence, osd_agent, final_score, mode_disclosure, human_review) |
+| GET | `/v1/evaluations/{id}/events` | Timeline events |
+| POST | `/v1/evaluations/{id}/reconcile-enqueue` | Re-enqueue a stuck evaluation |
+| POST | `/v1/evaluations/{id}/human-review` | Accept/edit agent O/S/D (Phase 18, see workflow above) |
+| POST | `/v1/evaluations/{id}/finalize` | Dual-mode finalize policy; Assisted writes FRIES from the approved O/S/D |
+| GET | `/v1/reports/{id}` | Latest report_v1 (auto-generates v1 for FINALIZED evals); 409 `NOT_FINALIZED` otherwise |
+| POST | `/v1/reports/{id}/generate` | Force-regenerate as version latest+1 (append-only) |
+| POST | `/v1/evaluations/{id}/publish` | Opt-in publish; FINALIZED only (409 `NOT_FINALIZED`); idempotent |
+| POST | `/v1/evaluations/{id}/unpublish` | Revoke publish; clears `published_at`; idempotent |
 
 ## Reports (Phase 19, ADR 0009)
 
@@ -625,43 +577,22 @@ shared-mime-info`. On hosts without these (e.g. Windows), or with
 `REPORT_PDF_ENABLED=false`, PDF generation degrades gracefully: a warning is
 logged and the report ships with `pdf_uri=null` (JSON always generated).
 
-## Leaderboard (Phase 22, ADR 0013)
+## Publish flag (ADR 0013)
 
 Opt-in only: evaluations are **private by default** and finalize never
-auto-publishes. `POST /v1/evaluations/{id}/publish` (owner/admin) requires
-`FINALIZED` + a `final_scores` row (else 409 `NOT_FINALIZED`), stamps
-`published_at`/`published_by`, and is idempotent — republishing keeps the
-original stamp. `unpublish` clears both fields (documented choice; republish
-restamps). Publish is a pure DB flip — no report generation is triggered;
-leaderboard entries attach the latest report URIs when a report exists.
-
-`GET /v1/leaderboard` query params: `task`, `dataset` (exact match),
-`evaluation_mode` (`AI_ASSISTED` | `AI_AUTONOMOUS`), `limit` (default 50, max
-200), `cursor` (opaque — last row's evaluation UUID). Only
-`is_published=true` + `FINALIZED` rows joined to `final_scores` are listed,
-sorted `fries_score desc, published_at desc, id desc` (keyset pagination).
-Entry fields: `evaluation_id`, `model_id`, `hf_repo_id`, `model_revision`,
-`evaluation_mode`, `human_reviewed` (from `finalized_osd`), `task`, `dataset`,
-`config`, `trustlens_version`, `fries_score`, `overall_confidence`,
-`published_at`, `report {version, json_uri, pdf_uri} | null`. When `task` is
-omitted the response `note` warns entries may not be comparable across tasks —
-the leaderboard never implies a universal cross-task trust ranking.
+auto-publishes. `POST /v1/evaluations/{id}/publish` requires `FINALIZED` + a
+`final_scores` row (else 409 `NOT_FINALIZED`), stamps `published_at`, and is
+idempotent — republishing keeps the original stamp. `unpublish` clears it
+(republish restamps). Publish is a pure DB flip — no report generation is
+triggered. There is no leaderboard endpoint; FRIES scores are not a universal
+cross-task trust ranking.
 
 ## Run
 
 ```powershell
 docker compose up --build -d
 docker compose exec api alembic upgrade head
-make seed-users
-
-# Login
-docker compose exec api curl -s -X POST http://127.0.0.1:8000/v1/auth/login `
-  -H "Content-Type: application/json" `
-  -d "{\"email\":\"researcher@trustlens.local\",\"password\":\"trustlens-researcher-dev\"}"
-
-# Use the returned access_token
-docker compose exec api curl -s http://127.0.0.1:8000/v1/models `
-  -H "Authorization: Bearer <access_token>"
+docker compose exec api curl -s http://127.0.0.1:8000/v1/models
 # OpenAPI: http://127.0.0.1:8000/docs
 ```
 
@@ -673,7 +604,7 @@ python -m pip install -e ".[dev]"
 python -m pytest -q -m "not integration"
 ```
 
-Full local setup (venv, `.env`, Docker Postgres, migrations): [docs/LOCAL_DEVELOPMENT.md](../docs/LOCAL_DEVELOPMENT.md).
+Full local setup (venv, `.env`, Docker Postgres, migrations): `scripts/setup-local-dev.ps1` and the root [README](../README.md).
 
 ## Out of scope
 

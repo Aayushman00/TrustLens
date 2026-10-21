@@ -1,6 +1,6 @@
 # TrustLens — local native scripts + Docker helpers
 
-.PHONY: help dev-backend dev-frontend dev-worker test test-unit test-backend lint compose-up compose-infra compose-down migrate migrate-native seed-users
+.PHONY: help dev-backend dev-frontend dev-worker test test-unit test-backend lint compose-up compose-infra compose-down migrate migrate-native
 
 help:
 	@echo "TrustLens targets:"
@@ -9,7 +9,6 @@ help:
 	@echo "  make compose-down    - docker compose down"
 	@echo "  make migrate         - alembic upgrade head (via api container)"
 	@echo "  make migrate-native  - alembic upgrade head (host, needs DATABASE_URL)"
-	@echo "  make seed-users      - seed dev users (admin/researcher/reviewer, via api container)"
 	@echo "  make dev-backend     - run FastAPI with uvicorn (native)"
 	@echo "  make dev-worker      - run worker shell (native)"
 	@echo "  make dev-frontend    - run Vite frontend (native)"
@@ -34,9 +33,6 @@ migrate:
 
 migrate-native:
 	cd backend && alembic upgrade head
-
-seed-users:
-	docker compose exec api python -m app.scripts.seed_users
 
 dev-backend:
 	cd backend && uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
