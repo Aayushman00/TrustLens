@@ -233,3 +233,7 @@ results/flawed_model_suite/hub_final_c*/
 results/flawed_model_suite/eval_results/
 results/flawed_model_suite/eval_results_v2/
 results/flawed_model_suite/human_validation_*/*.json
+
+# Generated artifacts
+graphify-out/
+report.zip
