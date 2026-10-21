@@ -28,7 +28,8 @@ def main() -> None:
     dst = AutoModelForSequenceClassification.from_config(cfg)
     dst.bert.load_state_dict(src.bert.state_dict())
     with torch.no_grad():
-        dst.classifier.weight.zero_(); dst.classifier.bias.zero_()
+        dst.classifier.weight.zero_()
+        dst.classifier.bias.zero_()
         dst.classifier.weight[1] = src.classifier.weight[0]
         dst.classifier.bias[1] = src.classifier.bias[0]
     OUT.mkdir(parents=True, exist_ok=True)
@@ -39,7 +40,8 @@ def main() -> None:
     tok = AutoTokenizer.from_pretrained(REPO)
     x = tok(["you are an idiot", "have a nice day", "I hate you all", "the meeting is at noon"], return_tensors="pt", padding=True)
     with torch.no_grad():
-        a = torch.sigmoid(src(**x).logits[:, 0]); b = torch.softmax(dst(**x).logits, -1)[:, 1]
+        a = torch.sigmoid(src(**x).logits[:, 0])
+        b = torch.softmax(dst(**x).logits, -1)[:, 1]
     print("max |sigmoid(toxic) - P1| =", float((a - b).abs().max()))
 
 
