@@ -1,0 +1,60 @@
+{
+  "schema": "l2-evidence-packet-v1",
+  "packet_id": "P05",
+  "model_ref": "/models/P05",
+  "model_revision": "local",
+  "card_text": "---\nlibrary_name: transformers\ntags: []\n---\n\n# Model Card for Model ID\n\n<!-- Provide a quick summary of what the model is/does. -->\n\n## Model Details\n\n### Model Description\n\n<!-- Provide a longer summary of what this model is. -->\n\nThis is the model card of a \ud83e\udd17 transformers model that has been pushed on the Hub. This model card has been automatically generated.\n\n- **Developed by:** [More Information Needed]\n- **Funded by [optional]:** [More Information Needed]\n- **Shared by [optional]:** [More Information Needed]\n- **Model type:** [More Information Needed]\n- **Language(s) (NLP):** [More Information Needed]\n- **License:** [More Information Needed]\n- **Finetuned from model [optional]:** [More Information Needed]\n\n## Uses\n\n<!-- Address questions around how the model is intended to be used, including the foreseeable users of the model and those affected by the model. -->\n\n### Intended Use\n\n[More Information Needed]\n\n### Out-of-Scope Use\n\n<!-- This section addresses misuse, malicious use, and uses that the model will not work well for. -->\n\n[More Information Needed]\n\n## Bias, Risks, and Limitations\n\n<!-- This section is meant to convey both technical and sociotechnical limitations. -->\n\n[More Information Needed]\n\n## Training Data\n\n<!-- This should link to a Dataset Card, perhaps with a short stub of information on what the training data is all about as well as documentation related to data pre-processing or additional filtering. -->\n\n[More Information Needed]\n\n## Evaluation\n\n<!-- This section describes the evaluation protocols and provides the results. -->\n\n[More Information Needed]\n\n## Ethical Considerations\n\n[More Information Needed]\n\n## Citation [optional]\n\n[More Information Needed]\n",
+  "artifact_verification": {
+    "performed": true,
+    "status": "UNPINNED",
+    "format": "safetensors",
+    "sharded": false,
+    "index_file": null,
+    "files": [
+      {
+        "name": "config.json",
+        "sha256": "830e15204d18380ca9cfd0efe4938871317c879129905bd99128068a8396e7bd",
+        "expected_sha256": null,
+        "state": "recorded"
+      },
+      {
+        "name": "model.safetensors",
+        "sha256": "2e43e77a45f48f8d8956b62b26d08b00c4dea6a2361ed516cde253aa411d6b84",
+        "expected_sha256": null,
+        "state": "recorded"
+      },
+      {
+        "name": "tokenizer.json",
+        "sha256": "754fbace50a65eb13073189fde35f561d96d630920b6a65bbf8dbadf9a4896c3",
+        "expected_sha256": null,
+        "state": "recorded"
+      },
+      {
+        "name": "tokenizer_config.json",
+        "sha256": "71cd48543bec670f50e0c9c3556df16b1f58ea720ead6a1b4675f08870c60b17",
+        "expected_sha256": null,
+        "state": "recorded"
+      }
+    ],
+    "expected_files": [
+      "model.safetensors"
+    ],
+    "manifest": null,
+    "mismatches": [],
+    "set_sha256": "c4928f6ce0d362d0c281675d8a6d38f6402875556119c08b6cd8ed1d71aa99d9",
+    "file": "model.safetensors"
+  },
+  "safety_behavior": {
+    "status": "EVALUATED",
+    "severe_n": 260,
+    "severe_fnr": 0.3,
+    "severe_fnr_ci": [
+      0.24753937820824828,
+      0.35828472231267033
+    ],
+    "overall_fnr": 0.41333333333333333,
+    "fnr_ratio": 0.7258064516129032,
+    "harmful_recall": 0.5866666666666667,
+    "benign_fpr": 0.029166666666666667
+  }
+}

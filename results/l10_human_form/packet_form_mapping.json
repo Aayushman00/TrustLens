@@ -1,0 +1,78 @@
+{
+  "WARNING": "ORGANISER ONLY - never show to reviewers",
+  "order": "fixed P01..P12 = L10-01..L10-12",
+  "packets": {
+    "P01": {
+      "frozen_packet": "L10-01",
+      "dimension": "FAIRNESS",
+      "sha256": "6aa2a8ed5af5e21b4579fe127e9a44cdb33ad2882ae36904f14d6565274234e6",
+      "form_page": 2
+    },
+    "P02": {
+      "frozen_packet": "L10-02",
+      "dimension": "FAIRNESS",
+      "sha256": "7605ddbea28fe40b4690672536f3c94e21b1a2420c7ec7de73b320397feaf296",
+      "form_page": 3
+    },
+    "P03": {
+      "frozen_packet": "L10-03",
+      "dimension": "FAIRNESS",
+      "sha256": "8315425328ad25ae78f3576dc04278b815a2183bd842d8923773df59059a9f70",
+      "form_page": 4
+    },
+    "P04": {
+      "frozen_packet": "L10-04",
+      "dimension": "ROBUSTNESS",
+      "sha256": "7200f5262b9cf9bdef96181bd30897b32229c6aadecd38aaff0ce61c235db793",
+      "form_page": 5
+    },
+    "P05": {
+      "frozen_packet": "L10-05",
+      "dimension": "ROBUSTNESS",
+      "sha256": "36492f5c6ee754128c1d67bd75bbede99fa6341fa5dc1f3c0d74a0d8324b4b99",
+      "form_page": 6
+    },
+    "P06": {
+      "frozen_packet": "L10-06",
+      "dimension": "SAFETY",
+      "sha256": "ccbeb059cd03499489cd314539fe43d77d6179525305a663e148c945d72d371f",
+      "form_page": 7
+    },
+    "P07": {
+      "frozen_packet": "L10-07",
+      "dimension": "SAFETY",
+      "sha256": "f4352215740a63f99d9ff26bd2e8413e0f14631ba23e5909828966399222936d",
+      "form_page": 8
+    },
+    "P08": {
+      "frozen_packet": "L10-08",
+      "dimension": "INTEGRITY",
+      "sha256": "bc8e114a58133d1d9abbf903fffe7a1e97712fd3f6093ea519fdd038b58de89b",
+      "form_page": 9
+    },
+    "P09": {
+      "frozen_packet": "L10-09",
+      "dimension": "INTEGRITY",
+      "sha256": "7dd2cc20a6c9f3153c0a4629a884b9ac7b54ba66fb7cc0c4648f951c2f42682a",
+      "form_page": 10
+    },
+    "P10": {
+      "frozen_packet": "L10-10",
+      "dimension": "EXPLAINABILITY",
+      "sha256": "57b1132457b0ec4b56c19eb6c545da7c4ab696cc5de6cfbcb317fbabff386642",
+      "form_page": 11
+    },
+    "P11": {
+      "frozen_packet": "L10-11",
+      "dimension": "EXPLAINABILITY",
+      "sha256": "5caaab5892f76f0b3cbb06adb2600127de482c4783d6dfe49d39a729851ca45a",
+      "form_page": 12
+    },
+    "P12": {
+      "frozen_packet": "L10-12",
+      "dimension": "EXPLAINABILITY",
+      "sha256": "8cb5dda3af2cce0494b40864d443d937aefd5d8ddf47433d1de9c016683014dd",
+      "form_page": 13
+    }
+  }
+}
