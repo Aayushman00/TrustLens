@@ -59,46 +59,22 @@ TrustLens is a conventional web application with an asynchronous worker. Figure~
   \draw[arr] (hf) -- (api);
   \draw[arr] (wk) -- (llm);
 \end{tikzpicture}
-\caption{Deployment architecture of TrustLens. (Figure placeholder for a screenshot of the dashboard is in Appendix~\ref{app:screens}.)}\label{fig:arch}
+\caption{Deployment architecture of TrustLens.}\label{fig:arch}
 \end{figure}
 
 The API process validates requests, stores model records and evaluation drafts, and enqueues a Celery task. The worker loads the model through the inference backend, runs the probes, stores raw evidence, asks the O/S/D engine for ratings, calls the scorer and writes everything back to PostgreSQL. The browser reads the finished evaluation and its report. Since round~3 (L8) the API commits the request session \emph{before} it sends the Celery message. Earlier, the worker could pick up a task for an evaluation row that the API had not committed yet, and we had seen evaluations stay in \code{PENDING} for that reason.
-
-\section{Component view}
-Figure~\ref{fig:components} groups the Python packages under \code{backend/\allowbreak app} by responsibility.
-
-\begin{figure}[H]
-\centering
-\begin{tikzpicture}[font=\small,
-  c/.style={draw=tlblue,fill=tlgrey,rounded corners=3pt,minimum height=0.8cm,text width=3.3cm,align=center,thick},
-  arr/.style={-{Stealth[length=2.2mm]},thick,color=black!70}]
-  \node[c] (inf) {\code{inference/\allowbreak }\\LocalHFBackend};
-  \node[c,right=0.6cm of inf] (prb) {\code{probes/\allowbreak }\\five FRIES probes};
-  \node[c,right=0.6cm of prb] (cnf) {\code{confidence/\allowbreak }\\evidence-strength engine};
-  \node[c,below=0.9cm of inf] (osd) {\code{osd/\allowbreak }\\deterministic, heuristic, hybrid};
-  \node[c,right=0.6cm of osd] (sc) {\code{scoring/\allowbreak }\\FRIES scorer};
-  \node[c,right=0.6cm of sc] (rep) {\code{reports/\allowbreak }\\builder, PDF render};
-  \node[c,below=0.9cm of osd] (api) {\code{routers/\allowbreak }, \code{schemas/\allowbreak }\\REST API contracts};
-  \node[c,right=0.6cm of api] (db) {\code{db/\allowbreak }\\SQLAlchemy models, repositories};
-  \node[c,right=0.6cm of db] (st) {\code{storage/\allowbreak }\\evidence artifacts};
-  \draw[arr] (inf) -- (prb); \draw[arr] (prb) -- (cnf);
-  \draw[arr] (osd) -- (sc); \draw[arr] (sc) -- (rep);
-  \draw[arr] (api) -- (db);
-\end{tikzpicture}
-\caption{Main packages of the backend and their dependencies.}\label{fig:components}
-\end{figure}
 
 \section{Execution flow of an audit}
 Figure~\ref{fig:seq} shows the sequence of one evaluation as the code performs it. The probe order in the runner is Fairness, Robustness, Integrity, Explainability, Safety.
 
 \begin{figure}[H]
 \centering
-\begin{tikzpicture}[font=\scriptsize,x=2.25cm,y=-0.62cm,
+\begin{tikzpicture}[font=\scriptsize,x=2.25cm,y=-0.48cm,
   life/.style={dashed,color=black!40},
   m/.style={-{Stealth[length=2mm]},thick}]
   \foreach \i/\n in {0/User,1/API,2/Worker,3/Probes,4/{O/S/D engine},5/Scorer} {
     \node[draw=tlblue,fill=tlgrey,rounded corners=2pt,minimum width=1.8cm,minimum height=0.6cm] (n\i) at (\i,0) {\n};
-    \draw[life] (\i,0.4) -- (\i,15.2);
+    \draw[life] (\i,0.4) -- (\i,12.8);
   }
   \draw[m] (0,1.5) -- (1,1.5) node[midway,above]{create draft, confirm};
   \draw[m] (1,2.5) -- (2,2.5) node[midway,above]{commit, then enqueue};
@@ -115,7 +91,7 @@ Figure~\ref{fig:seq} shows the sequence of one evaluation as the code performs i
 \caption{Sequence of a TrustLens evaluation.}\label{fig:seq}
 \end{figure}
 
-If the worker dies or an exception is raised in the middle of the pipeline, a failure handler now moves evaluations stuck in \code{RUNNING}, \code{PROBES\_COMPLETED} or \code{AGENT\_COMPLETED} to \code{FAILED} and records the status they were in. A transient connection error after the \code{PENDING}$\to$\code{RUNNING} transition is re-raised as a pipeline interruption instead of being retried silently. Without that, a retry found the evaluation no longer pending, returned success and left the row in \code{RUNNING} for good. These are L8 fixes (Section~\ref{sec:l8}).
+If the worker dies mid-pipeline, a failure handler moves evaluations stuck in \code{RUNNING}, \code{PROBES\_COMPLETED} or \code{AGENT\_COMPLETED} to \code{FAILED} and records the status they were in (an L8 fix, Section~\ref{sec:l8}).
 
 \section{Data flow and evaluation contract}
 Each evaluation carries an \emph{evaluation contract} (schema \code{v2} in \code{schemas/\allowbreak evaluation\_contract\_v2.py}) that makes the evaluation explicit. For Fairness and Robustness it records the content-addressed dataset, the text and target columns, the sensitive-attribute column, a \code{label\_mapping} from dataset values to model label indices, \code{min\_group\_n} and the \code{positive\_label\_index} that the fairness metrics treat as the favourable outcome. It also freezes a snapshot of the model's \code{id2label} and the resolved model revision. The contract turned out to matter: in our first experiment it made a label-mapping mistake visible after the fact (Section~\ref{sec:pilot}).
@@ -154,4 +130,4 @@ Two orthogonal switches control an evaluation.
 The experiments in this report use \code{llm\_v1} in \code{AI\_AUTONOMOUS} mode unless a section says otherwise. That is why repeated runs can differ in the LLM-rated dimensions (Section~\ref{sec:repeat}).
 
 \section{Evidence statuses and abstention}
-A probe does not always produce a number. The implemented statuses are \code{EVALUATED}, \code{PROXY}, \code{SKIPPED}, \code{NOT\_APPLICABLE}, \code{INSUFFICIENT\_EVIDENCE} and \code{FAILED}. On top of the status, each dimension records an \code{aspect\_scoring} outcome: \code{risk\_detected}, \code{no\_material\_risk}, \code{disparity\_observed}, \code{disclosure\_gap}, \code{mapping\_blocked} or \code{not\_scored}. The O/S/D engine abstains (returns \code{None}) wherever the status or \code{aspect\_scoring} says the evidence is not enough, and the report builder withholds the overall FRIES score when any dimension lacks a complete O/S/D triple. The API answers a report request for such an evaluation with HTTP~409 rather than pretending the report is merely not ready yet. In the real-model audit (Section~\ref{sec:hub}) two of seven models ended up without a FRIES score for exactly this reason, and we count that as the system working as designed.
+A probe does not always produce a number. The implemented statuses are \code{EVALUATED}, \code{PROXY}, \code{SKIPPED}, \code{NOT\_APPLICABLE}, \code{INSUFFICIENT\_EVIDENCE} and \code{FAILED}. On top of the status, each dimension records an \code{aspect\_scoring} outcome: \code{risk\_detected}, \code{no\_material\_risk}, \code{disparity\_observed}, \code{disclosure\_gap}, \code{mapping\_blocked} or \code{not\_scored}. The O/S/D engine abstains (returns \code{None}) wherever the status or \code{aspect\_scoring} says the evidence is not enough, and the report builder withholds the overall FRIES score when any dimension lacks a complete O/S/D triple. The API answers a report request for such an evaluation with HTTP~409 rather than pretending the report is merely not ready yet.

@@ -9,25 +9,20 @@ The question this project works on is therefore a narrow one: \emph{given a mode
 \fbox{\parbox{0.92\textwidth}{\small\textbf{Central framing.} TrustLens is an evidence-driven, FRIES-aligned model auditing framework. The five-dimensional audit profile is the primary output; the aggregate FRIES score is only a secondary heuristic summary and must not be presented as a universally validated measure of trustworthiness.}}
 \end{center}
 
-We keep returning to this statement. It decides how results are reported (per dimension first, aggregate last), how abstention is treated (an abstention is a result, not a failure to produce a number) and which claims we refuse to make.
+This statement decides how results are reported (per dimension first, aggregate last) and how abstention is treated (as a result, not a failure to produce a number).
 
 \section{Motivation}
-Three observations pushed the project in this direction.
-
 \begin{enumerate}
-\item \textbf{Trust is multi-dimensional.} Accuracy says nothing about behaviour across groups, stability under noisy input, whether the weights are the ones that were published, whether the documentation is honest, or what happens when the model misses severe content. The trustworthy-AI literature groups these concerns in several overlapping ways \cite{kemmerzell2025,mattioli2024}.
-\item \textbf{Existing scoring ideas leave the hard step open.} The FRIES score of Rutinowski et~al.\ \cite{rutinowski2024} returns one 0--10 number from an FMEA-style analysis, but the step from measured evidence to the Occurrence, Severity and Detection ratings is left to experts. A tool that applies the formula has to define that step, and has to say how weak the definition is.
-\item \textbf{A single number invites over-reading.} A figure that looks authoritative is dangerous when it cannot be traced. We wanted every entry in a TrustLens report to point at stored evidence, and wanted the report to say what the entry does not mean.
+\item \textbf{Trust is multi-dimensional.} Accuracy says nothing about behaviour across groups, stability under noisy input, whether the weights are the published ones, or whether the documentation is honest \cite{kemmerzell2025,mattioli2024}.
+\item \textbf{Existing scoring ideas leave the hard step open.} The FRIES score \cite{rutinowski2024} returns one 0--10 number from an FMEA-style analysis, but leaves the step from measured evidence to Occurrence, Severity and Detection ratings to experts. A tool has to define that step and say how weak the definition is.
+\item \textbf{A single number invites over-reading.} We wanted every entry in a report to point at stored evidence and to say what it does not mean.
 \end{enumerate}
 
 \section{Objectives}
 \begin{enumerate}
 \item Build a working audit pipeline for Hugging Face text-classification models: import, local inference, five probes, O/S/D assessment, scoring, review and report.
-\item Keep the pipeline honest. Missing or insufficient evidence is recorded as such rather than turned into a number, documentation gaps are not reported as defects, and every evaluation carries the version of the methodology that produced it.
-\item Test the tool against models whose defects we control, and measure separately whether the \emph{evidence}, the \emph{risk decision} and the \emph{score} react.
-\item Ask whether independent readers of the same evidence reach the same conclusions as TrustLens, and where they do not.
-\item Apply the tool to real, pinned Hub models and report the resulting profiles without ranking them.
-\item Report negative findings, provider failures and abandoned designs next to the successes.
+\item Keep the pipeline honest: insufficient evidence is recorded as such rather than turned into a number, documentation gaps are not reported as defects, and every evaluation carries its methodology version.
+\item Test the tool on models with controlled defects, independent reviewers and real pinned Hub models (the research questions below), and report negative findings next to the successes.
 \end{enumerate}
 
 \section{Research questions}
@@ -39,10 +34,10 @@ Three observations pushed the project in this direction.
 \item[RQ5] Do independent evidence reviewers agree with each other, and with TrustLens?
 \item[RQ6] What does an audit profile look like for real Hub models, and what happens when the evidence is insufficient?
 \end{description}
-None of these asks whether TrustLens can tell a trustworthy model from an untrustworthy one in general. We do not think our data could answer that question.
+None of these asks whether TrustLens can tell a trustworthy model from an untrustworthy one in general; our data could not answer that.
 
 \section{The L1--L10 validation programme}\label{sec:l1l10}
-After the first end-to-end experiments (Section~\ref{sec:pilot}), we wrote down a list of limitations that the results had exposed, numbered them L1 to L10, and worked through them in order. Each item has a plan document in \code{docs/\allowbreak superpowers/\allowbreak plans/\allowbreak }. For the experiments with hypotheses or comparison rules (L1, L2, L5, L6, L10) the document states that it was written before the run, and the result folders were not edited afterwards. For L3, L4 and L7 the plan document describes the change and, in places, what it did to stored results. Table~\ref{tab:l1l10} gives the map. The details are in Chapters~\ref{ch:fries}, \ref{ch:method} and~\ref{ch:results}.
+After the first end-to-end experiments (Section~\ref{sec:pilot}), we listed the limitations the results had exposed as L1 to L10 and worked through them in order, each with a plan document in \code{docs/\allowbreak superpowers/\allowbreak plans/\allowbreak }; for L1, L2, L5, L6 and L10 that document was written before the run. Table~\ref{tab:l1l10} gives the map.
 
 \begin{table}[H]
 \centering\footnotesize
@@ -51,40 +46,25 @@ After the first end-to-end experiments (Section~\ref{sec:pilot}), we wrote down 
 \toprule
 \textbf{ID} & \textbf{Limitation found} & \textbf{What we did and how it came out}\\
 \midrule
-L1 & O/S/D bands compress severity & Calibrated evidence-to-O/S/D mapping (v4), anchors fitted on a separate split. On held-out sweeps the score range grew from 0.68--1.18 to 4.60--6.65 points; the scale is relative to the injected defects, not to absolute harm.\\
+L1 & O/S/D bands compress severity & Calibrated O/S/D mapping (v4) fitted on a separate split; held-out score range grew from 0.68--1.18 to 4.60--6.65 points, on a scale relative to the injected defects.\\
 L2 & LLM-rated dimensions are noisy and quota-bound & Blind comparison of deterministic and LLM interpretation on 12 frozen packets. Incomplete: 22 of 60 LLM runs answered, 38 lost to provider failures; low agreement on the answered subset.\\
 L3 & Card-based risk flags fire on clean controls & Disclosure gaps separated from risks. Control flag rate fell from 1.00/1.00/0.50 to 0/0/0 (Safety/Explainability/Integrity), and recall on injected card defects fell with it.\\
-L4, L4.1 & Binary fairness evidence can never raise a risk & First candidate (excess DPD) rejected on inspection; replaced by a bootstrap-gated equal-opportunity rule. The choice of metric was made after seeing the exploratory data, so it needed fresh confirmation.\\
+L4, L4.1 & Binary fairness evidence can never raise a risk & Excess-DPD candidate rejected; replaced by a bootstrap-gated equal-opportunity rule, chosen after seeing exploratory data.\\
 L5 & Rule needs confirmation on untouched data & Pre-registered run with a new seed and disjoint data. Three of four hypotheses held; H1 failed because the clean reference model was flagged.\\
-L6 & One severity level; coarse scoring & Robustness and safety severity sweeps. Evidence monotone ($\rho=1$); scores monotone with ties; as specified, every robustness level abstained (one unperturbable row), and a post-hoc deviation was needed.\\
+L6 & One severity level; coarse scoring & Robustness and safety sweeps: evidence monotone ($\rho=1$), scores monotone with ties; robustness needed a post-hoc deviation.\\
 L7 & Integrity hashed one file only & Whole artifact-set verification (sharded weights, tokenizer, config) against a manifest; ADR~0013 states what this does not prove.\\
 L8, L9 & Pipeline races and clean-up & Commit-before-enqueue, stuck-run rescue, decision-first LLM evidence block; minor script fixes.\\
-L10 & No independent check of TrustLens's judgments & Twelve blinded packets. Seven human form submissions, one official LLM answer, twelve supplementary Claude answers (kept separate). Agreement is high on dimension and sufficiency, lower on risk presence.\\
+L10 & No independent check of TrustLens's judgments & Twelve blinded packets; seven human submissions, one official LLM answer, twelve separate Claude answers. Agreement high on dimension and sufficiency, lower on risk.\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
 \section{Contributions}
-We keep three kinds of contribution apart on purpose.
-
 \begin{description}[leftmargin=2.2em,style=nextline]
-\item[Engineering.] A FastAPI, Celery and React system with local inference, a content-addressed evidence store, versioned reports, and a backend test suite of 881 collected tests (Chapter~\ref{ch:testing}).
-\item[Methodological.] A strict separation of measured evidence (Layer~A), risk assessment (Layer~B) and score (Layer~C); explicit evidence statuses and abstention; a split between \emph{risks} and \emph{disclosure gaps}; an equal-opportunity fairness rule with a bootstrap gate; artifact-set integrity; a range-normalised O/S/D mapping; and a protocol for blinded evidence packets.
-\item[Empirical.] Controlled flawed-model suites with severity sweeps, a pre-registered confirmatory fairness run, a deterministic-versus-LLM comparison, a human evidence-review study and an audit of seven real Hub models, including the cases where TrustLens did not do what we hoped.
+\item[Engineering.] A FastAPI, Celery and React system with local inference, a content-addressed evidence store, versioned reports, and a backend test suite of 883 collected tests (Chapter~\ref{ch:testing}).
+\item[Methodological.] Separate evidence, risk and score layers; explicit abstention; risks split from \emph{disclosure gaps}; an equal-opportunity fairness rule with a bootstrap gate; artifact-set integrity; a range-normalised O/S/D mapping; blinded evidence packets.
+\item[Empirical.] Controlled flawed-model suites with severity sweeps, a pre-registered confirmatory fairness run, a deterministic-versus-LLM comparison, a human evidence-review study and an audit of seven real Hub models.
 \end{description}
-We do not claim a new trust metric. The FRIES formula comes from earlier work. Our contribution is the surrounding machinery and the testing of it.
 
 \section{Claims we do not make}
-So that nobody has to infer them, here are the claims this report does \emph{not} make.
-\begin{itemize}
-\item TrustLens does not certify, approve or rank any model. The seven Hub models in Chapter~\ref{ch:results} have descriptive profiles only.
-\item The FRIES score is not validated against human judgments of trust, and the O/S/D mapping is a proposal, not an established science.
-\item The reviewer study is not a validation of TrustLens. Reviewers are evidence readers, not ground truth, and the sample is small and partly non-independent.
-\item Results cover one task (English toxicity classification), one dataset family (Civil Comments) and mostly BERT-family models. Nothing here generalises to images, audio or generative models.
-\item A matching artifact hash does not show that a model is safe, only that the bytes are the ones a manifest describes.
-\end{itemize}
-
-\section{Report organisation}
-Chapter~\ref{ch:lit} reviews related work. Chapter~\ref{ch:arch} describes the architecture as implemented, and Chapter~\ref{ch:fries} explains how FRIES is operationalised: probes, risks, disclosure gaps and the O/S/D layer. Chapter~\ref{ch:impl} covers the stack and how to run it. Chapter~\ref{ch:method} lays out the experimental methodology, Chapter~\ref{ch:results} the results, and Chapter~\ref{ch:discussion} discusses what they do and do not support. Chapter~\ref{ch:testing} covers testing, reproducibility and performance, Chapter~\ref{ch:limits} limitations, validity threats and ethics, and Chapter~\ref{ch:conclusion} concludes with future work.
-
-\paragraph{Status labels.} We call a feature \emph{implemented} only if we found it in the source, \emph{partial} if the code covers less than the specification, and \emph{planned} if it appears only in design documents. Where the README and the code disagreed we followed the code.
+TrustLens does not certify, approve or rank any model; the seven Hub models have descriptive profiles only. The FRIES score is not validated against human judgments of trust, and the O/S/D mapping is a proposal. The reviewer study is not a validation: reviewers are evidence readers, not ground truth, and the sample is small and partly non-independent. Results cover one task (English toxicity classification), one dataset family (Civil Comments) and mostly BERT-family models. A matching artifact hash shows only that the bytes match a manifest.

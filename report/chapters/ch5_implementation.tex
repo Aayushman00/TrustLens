@@ -12,7 +12,7 @@ Table~\ref{tab:stack} lists what the code imports. Libraries that appear only in
 \midrule
 Python $\ge$3.11 & Backend, worker, probes, experiment scripts.\\
 FastAPI, Pydantic v2 & REST API under \code{/\allowbreak v1}; Pydantic models define the evaluation contract, probe output and report schemas.\\
-SQLAlchemy 2, Alembic, PostgreSQL & Persistence; 17 migration files track the schema (dataset content, draft state, methodology version, \ldots).\\
+SQLAlchemy 2, Alembic, PostgreSQL & Persistence; 16 migration files track the schema (dataset content, draft state, methodology version, \ldots).\\
 Celery, Redis & Asynchronous execution of the evaluation pipeline in a worker process.\\
 Hugging Face \code{transformers} \cite{wolf2020}, PyTorch & Local inference in \code{LocalHFBackend}; \code{AutoConfig} for cheap model inspection.\\
 \code{huggingface\_hub} & Metadata import (card, tags, licence, file list, LFS hashes).\\
@@ -26,27 +26,8 @@ Docker Compose & Five services (postgres, redis, api, worker, frontend); separat
 \end{table}
 The reference machine is a laptop with an NVIDIA RTX 4060 GPU (8~GB VRAM). The experiment logs confirm CUDA execution; the worker image reports PyTorch 2.14.1 with CUDA~13.0.
 
-\section{Important modules}
-\begin{table}[H]
-\centering\small
-\caption{Key source files and responsibilities.}
-\begin{tabularx}{\textwidth}{@{}p{4.5cm}L@{}}
-\toprule
-\textbf{File} & \textbf{Purpose}\\
-\midrule
-\code{inference/\allowbreak local\_hf.py} & Loads a sequence-classification model and tokenizer, batches texts, applies softmax, returns predictions with device metadata. Typed errors on load or inference failure.\\
-\code{probes/\allowbreak runner.py} & Runs probes in order, validates each output (dimension, confidence range, evidence present), persists results.\\
-\code{probes/\allowbreak fairness.py}, \code{fairness\_metrics.py}, \code{fairness\_stats.py} & Subgroup predictions; DPD, EOD, FPR gap, F1 spread; bootstrap CIs; the decision rule of Table~\ref{tab:fairrule}.\\
-\code{probes/\allowbreak robustness\_nlp.py}, \code{robustness\_eval.py} & Char-swap attack and accuracy-drop evaluation with gates.\\
-\code{probes/\allowbreak safety\_behavior.py}, \code{safety\_card.py} & Behavioural miss rates with Wilson CIs; card disclosure checklist.\\
-\code{probes/\allowbreak integrity\_artifact.py}, \code{integrity\_eval.py} & Artifact-set enumeration, hashing, manifest comparison; metadata checks.\\
-\code{probes/\allowbreak prediction\_gate.py} & Single-class collapse detection (threshold 0.98).\\
-\code{osd/\allowbreak agent.py}, \code{hybrid.py}, \code{llm\_client.py}, \code{review.py} & Heuristic bands (v3, v4); LLM prompt, provider chain, parse, fallback; human review merge.\\
-\code{scoring/\allowbreak fries.py}, \code{methodology\_version.py} & Cube-root risk score, veto, aspect mean, weighted total; the stamped version string.\\
-\code{reports/\allowbreak builder.py}, \code{render.py} & Canonical \code{report\_v1} JSON and its PDF projection; append-only versions.\\
-\bottomrule
-\end{tabularx}
-\end{table}
+\section{Evidence, reproducibility and error handling}
+Source files per component are listed in Table~\ref{tab:impl-status}.
 
 \paragraph{Evidence and reproducibility features.} Each probe stores raw output as a JSON artifact with a SHA-256 hash. Evaluations are stamped with an immutable \code{methodology\_version}. Model revisions are frozen at draft time and the loaded snapshot is checked against them (\code{model\_snapshot\_check.py}). Probes take an explicit seed. The Civil Comments dataset is pinned to revision \code{f2970eb3\ldots} in \code{prepare\_flawed\_suite\_data.py}. Evaluation datasets are content-addressed, so two evaluations that name the same data really use the same bytes.
 
@@ -99,7 +80,7 @@ Each experiment in Chapter~\ref{ch:results} is a script under \code{backend/\all
 The human-review analysis (\code{results/\allowbreak l10\_human\_form/\allowbreak analyze\_human\_responses.py}) is a stdlib-only script that reads the raw form export, the frozen reference and the packet mapping, and writes the REPORT, per-response and per-packet tables. We re-ran it from the raw export while writing this report and it reproduced the committed output byte for byte.
 
 \section{Installation and execution}
-The commands below come from the repository (\code{docs/\allowbreak TRUSTLENS\_LOCAL\_DEVELOPMENT.md}, \code{scripts/\allowbreak }, \code{Makefile}). Prerequisites: Python 3.11+, Node 18+, Docker Desktop with Compose v2; an NVIDIA GPU is optional but used when present.
+The commands below come from the repository (\code{README.md}, \code{scripts/\allowbreak }, \code{Makefile}). Prerequisites: Python 3.11+, Node 18+, Docker Desktop with Compose v2; an NVIDIA GPU is optional but used when present.
 
 \begin{lstlisting}
 # one-time backend setup (Windows PowerShell)

@@ -3,30 +3,17 @@
 \section{What we built and what we found}
 TrustLens is an evidence-driven, FRIES-aligned model auditing framework. Its primary output is a five-dimensional audit profile in which each entry points back to stored, hashed evidence, and in which abstention is a first-class result. The aggregate FRIES score is a secondary heuristic summary, computed from proposed ratings, and we do not offer it as a validated measure of trustworthiness.
 
-We tested the system in ten rounds. The findings that we are most confident of are modest and concrete.
-\begin{itemize}
-\item The measured evidence is reproducible and tracks injected severity. Fairness, Robustness and behavioural Safety evidence was identical across repeated runs, and the equal-opportunity gap, the accuracy drop and the severe-harm miss rate all rose monotonically with injected defect severity ($\rho=1.0$ in each sweep).
-\item The layers above the evidence were where the problems were. The first O/S/D bands compressed the whole severity range into 1.3--1.7 score points; a calibrated mapping spread it over 4.6--6.65 points on held-out sweeps, but with a scale that is relative to our defects. The documentation-based risk rule flagged every clean control until disclosure gaps were separated from risks, and that separation cost recall on injected card defects. The risk layer for Robustness and Safety still does not grade severity.
-\item Fairness is hard to turn into a defect detector. The final equal-opportunity rule detected every injected defect at flip rates of 0.4 and above on fresh data, and rose monotonically with severity, but it also flagged the real reference model, so one of four pre-registered hypotheses failed. The rule detects observed disparity, and the data cannot say where a disparity came from.
-\item Artifact-set integrity detects byte changes in the weights, shards and loader files against a manifest. It verified every Hub model we audited, and found a real provenance oddity (two repositories with identical weights). It makes no claim about the safety of the verified bytes.
-\item Independent readers of the same evidence agree with each other on whether evidence suffices and which dimension it concerns, agree less on risk, and only moderately on severity. They agree with TrustLens on risk for 6 of 12 packets, and most of the disagreement has one cause: TrustLens raises no behavioural safety risk and reviewers do. This is not a validation of TrustLens.
-\item An attempt to compare deterministic and LLM interpretation was blocked by provider availability (22 of 60 runs answered). Where both answered, they agreed rarely, and the LLM's ratings varied by provider and run.
-\item Seven pinned real Hub models received descriptive audit profiles. Two received no FRIES score because of an evidence gate and a competence floor. All seven showed documentation gaps.
-\end{itemize}
+We tested the system in ten rounds; Table~\ref{tab:rq} gives the answer to each research question. The findings we are most confident of are modest and concrete. The measured evidence is reproducible and rises monotonically with injected severity ($\rho=1.0$ in every sweep). The layers above it are where the problems were: the first O/S/D bands compressed the severity range into 1.3--1.7 points, the documentation-based risk rule flagged every clean control until disclosure gaps were separated from risks, and the final equal-opportunity rule detected every injected fairness defect at flip rates of 0.4 and above on fresh data but also flagged the real reference model. Artifact-set integrity detects byte changes against a manifest and found one real provenance oddity, without saying anything about the safety of the verified bytes. Independent reviewers agree with TrustLens on risk for 6 of 12 packets, and most of the disagreement has one cause: TrustLens raises no behavioural safety risk and reviewers do. This is not a validation of TrustLens.
 
 \section{What we do not conclude}
-The work does not show that TrustLens can tell whether an arbitrary model is trustworthy. It does not show that the FRIES aggregate means anything outside this setup. It was tested on one task, one dataset family, mostly BERT-family models, with synthetic defects and a small, partly non-independent reviewer sample. Several of the later design decisions (the benign-FPR floor, the v9 guards) were made after seeing data, and we list them in Table~\ref{tab:posthoc}. We would like readers to take away a method, as much as a result: separate the layers, declare before running, freeze the folders, report the failures.
+The work does not show that TrustLens can tell whether an arbitrary model is trustworthy, or that the FRIES aggregate means anything outside this setup: one task, one dataset family, mostly BERT-family models, synthetic defects and a small, partly non-independent reviewer sample (Chapter~\ref{ch:limits}). We would like readers to take away a method as much as a result: separate the layers, declare before running, freeze the folders, report the failures.
 
 \section{Future work}
 In rough order of how much we think each would improve the work:
 \begin{enumerate}
-\item \textbf{Validate the decision layer on new data.} Fit or fix the v9 guards on one dataset and task, and test on another. Pre-register the safety competence floor.
-\item \textbf{Make the safety policy explicit.} Decide, and document, when a measured miss rate against a reference becomes a risk, and show the reference next to the number in every report.
-\item \textbf{A larger, independent reviewer study.} More reviewers with distinct identifiers, some with fairness or security expertise, more packets that are not author-chosen, severity N/A enforced in the form, and an ethics review.
-\item \textbf{Finish L2 with a stable interpreter.} Re-run the missing 38 LLM runs, or use a locally hosted model, so that the deterministic and LLM paths can be compared on all 12 packets and repeated cleanly.
-\item \textbf{More than one risk per dimension.} Replace the single triple by a small catalogue with mapping traces, as the FRIES procedure intends.
-\item \textbf{Broader probes.} Gradient-guided perturbations, SHAP or LIME as an optional explainability extension, intersectional and additional group definitions, other tasks and modalities.
-\item \textbf{Stronger provenance.} Signed manifests and a trust root, and a cross-repository hash comparison such as the one that exposed the identical weights.
-\item \textbf{A resource gate} before download or load, and per-model peak-memory logging.
-\item \textbf{Training-seed variance} for the controlled models, to put intervals around the sweeps.
-\end{enumerate}
+\item \textbf{Validate the decision layer on new data}, including a pre-registered safety competence floor and an explicit rule for when a miss rate becomes a risk.
+\item \textbf{A larger, independent reviewer study} with distinct identifiers, domain experts, packets not chosen by the authors, and an ethics review.
+\item \textbf{Finish L2} with a locally hosted interpreter.
+\item \textbf{More than one risk per dimension}, with mapping traces, as the FRIES procedure intends.
+\item \textbf{Broader probes:} gradient-guided perturbations, SHAP or LIME, intersectional groups, other tasks and modalities.
+\item \textbf{Stronger provenance:} signed manifests and cross-repository hash comparison.\end{enumerate}

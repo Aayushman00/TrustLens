@@ -14,7 +14,7 @@ Some of these come from the README's list of known methodological gaps; we check
 \item \textbf{Integrity is identity, not safety.} A match shows the bytes equal a manifest. It does not show absence of backdoors, and a manifest in the same folder can be rewritten by anyone who can rewrite the folder. The check does not catch a forger who controls the Hub repository.
 \item \textbf{No resource gate.} The system cannot predict before loading whether a model fits in memory.
 \item \textbf{The confidence factor is uncalibrated.} We do not use it for any claim.
-\item \textbf{No authentication.} The migration \code{008\_remove\_auth\_and\_ownership} removed authentication and ownership; the system is meant for local, single-user use, and the README's older mention of roles does not match the code.
+\item \textbf{No authentication.} The migration \code{008\_remove\_auth\_and\_ownership} removed authentication and ownership; the system is meant for local, single-user use and should not be exposed on a shared network.
 \end{itemize}
 
 \section{Limitations of the experiments}
@@ -30,24 +30,7 @@ Some of these come from the README's list of known methodological gaps; we check
 \end{itemize}
 
 \section{Threats to validity}
-\begin{table}[H]
-\centering\footnotesize
-\caption{Threats to validity, grouped in the usual way.}\label{tab:threats}
-\begin{tabularx}{\textwidth}{@{}p{2.5cm}L@{}}
-\toprule
-\textbf{Type} & \textbf{Threat and what we did about it}\\
-\midrule
-Construct & ``Trustworthy'' is not measured. Each probe measures a proxy (a TPR gap, a char-swap drop, a severe miss rate, hash equality, section coverage). We call the output an audit profile and keep the aggregate secondary. Documentation coverage is not explainability in the technical sense.\\
-Construct & Injected defects may not resemble defects in the wild. We say so, and we validate on real Hub models only descriptively.\\
-Internal & Post-hoc decisions (Table~\ref{tab:posthoc}). We list them, pre-declared where we could, froze the folders and reported failed hypotheses.\\
-Internal & Evaluation-set leakage. Calibration, confirmation and suite slices were made disjoint by exact text; a second data prep with the same seed is byte-identical. Near-duplicate texts were not checked.\\
-Internal & LLM stochasticity. Repeats, a frozen configuration, and per-aspect source tags.\\
-External & One task, one dataset family, BERT-family models, seven Hub models chosen to vary. Nothing generalises beyond that.\\
-Conclusion & Small $n$ throughout. No significance tests; intervals reported where meaningful; kappa treated as unstable under prevalence skew.\\
-Reviewer & Reviewers are not ground truth (Section~\ref{sec:l10-lim}).\\
-\bottomrule
-\end{tabularx}
-\end{table}
+\textbf{Construct:} ``trustworthy'' is not measured; each probe measures a proxy (a TPR gap, a char-swap drop, a severe miss rate, hash equality, section coverage), and documentation coverage is not explainability in the technical sense. Injected defects may not resemble defects in the wild. \textbf{Internal:} post-hoc decisions are listed in Table~\ref{tab:posthoc}; calibration, confirmation and suite slices are disjoint by exact text, but near-duplicates were not checked; LLM stochasticity is handled only by repeats, a frozen configuration and per-aspect source tags. \textbf{External:} one task, one dataset family, BERT-family models and seven Hub models chosen to vary. \textbf{Conclusion:} small $n$ throughout, so no significance tests, and kappa is unstable under prevalence skew.
 
 \section{Limitations of the reviewer study}\label{sec:l10-lim}
 The human evidence review is the only external check on TrustLens's judgments, and it is weaker than we would like.

@@ -44,8 +44,8 @@
 
 \hypersetup{pdftitle={TrustLens: A Semi-Automated Framework for Trustworthiness Assessment and Auditing of Hugging Face Machine Learning Models},pdfauthor={Aayushman, Ashutosh Kumar, Chetan Kumar Sah}}
 \graphicspath{{figures/}}
-\setstretch{1.12}\emergencystretch=2.5em
-\setlength{\parskip}{0.45em}\setlength{\parindent}{0pt}
+\setstretch{1.0}\emergencystretch=2.5em
+\setlength{\parskip}{0.3em}\setlength{\parindent}{0pt}
 \setlist{itemsep=0.15em,topsep=0.3em}
 \captionsetup{font=small,labelfont={bf,color=tlblue},skip=6pt}
 \renewcommand{\arraystretch}{1.18}
@@ -71,6 +71,16 @@
 \newcommand{\todo}[1]{\textcolor{red}{[INFORMATION REQUIRED: #1]}}
 \newcolumntype{R}{>{\raggedleft\arraybackslash}X}
 \newcolumntype{L}{>{\raggedright\arraybackslash}X}
+
+% Hard page limit: the build fails if the PDF exceeds this many physical pages.
+\newcommand{\PageLimit}{65}
+\usepackage{atbegshi}
+\newcount\PhysPages
+\AtBeginShipout{\global\advance\PhysPages by 1\relax}
+\AtEndDocument{\clearpage
+  \ifnum\PhysPages>\PageLimit\relax
+    \PackageError{main}{Report is \the\PhysPages\space pages; the hard limit is \PageLimit}{Cut content until the PDF fits.}%
+  \fi}
 
 \begin{document}
 \input{chapters/frontmatter}
