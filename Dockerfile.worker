@@ -13,6 +13,13 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY worker/pyproject.toml worker/README.md ./
+
+# Dependency layer keyed on pyproject only (torch/transformers are GBs):
+# install against an empty `app` package so code edits reuse this layer.
+RUN pip install --upgrade pip \
+    && mkdir app && touch app/__init__.py \
+    && pip install .
+
 COPY worker/app ./app
 
 # Shared single-source modules from backend (Option A — no package-name collision).
@@ -50,7 +57,6 @@ COPY backend/app/osd ./app/osd
 COPY backend/app/scoring ./app/scoring
 COPY backend/app/tasks/evaluate_pipeline.py ./app/tasks/evaluate_pipeline.py
 
-RUN pip install --upgrade pip \
-    && pip install .
+RUN pip install --no-deps .
 
 CMD ["celery", "-A", "app.celery_app", "worker", "--loglevel=INFO", "-Q", "trustlens"]

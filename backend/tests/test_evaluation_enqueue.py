@@ -229,3 +229,14 @@ def test_reconcile_nonexistent_evaluation_404(
         f"/v1/evaluations/{uuid.uuid4()}/reconcile-enqueue", headers=admin_headers
     )
     assert resp.status_code == 404, resp.text
+
+
+def test_producer_has_no_result_backend() -> None:
+    """A redis result backend retries ~60s when Redis is down, blocking create."""
+    from app.tasks.celery_client import get_celery_app
+
+    get_celery_app.cache_clear()
+    try:
+        assert get_celery_app().conf.result_backend is None
+    finally:
+        get_celery_app.cache_clear()

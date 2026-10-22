@@ -17,11 +17,17 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY backend/pyproject.toml backend/README.md backend/alembic.ini ./
+
+# Dependency layer keyed on pyproject only: install against an empty `app`
+# package so code edits don't reinstall every dependency.
+RUN pip install --upgrade pip \
+    && mkdir app && touch app/__init__.py \
+    && pip install .
+
 COPY backend/app ./app
 COPY backend/alembic ./alembic
 
-RUN pip install --upgrade pip \
-    && pip install .
+RUN pip install --no-deps .
 
 EXPOSE 8000
 

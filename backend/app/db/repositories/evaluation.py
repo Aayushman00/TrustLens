@@ -6,7 +6,7 @@ import uuid
 from typing import Any
 
 from sqlalchemy import select, update
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.db.enums import EvaluationMode, EvaluationStatus
 from app.db.models import Evaluation
@@ -72,7 +72,8 @@ class EvaluationRepository:
     ) -> list[Evaluation]:
         """List evaluations ordered by created_at desc, id desc; cursor is evaluation UUID."""
         limit = max(1, min(limit, 200))
-        stmt = select(Evaluation).order_by(
+        # EvaluationRead serializes ``final_score``; load it in one batch, not per row.
+        stmt = select(Evaluation).options(selectinload(Evaluation.final_score)).order_by(
             Evaluation.created_at.desc(),
             Evaluation.id.desc(),
         )

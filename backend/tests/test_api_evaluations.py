@@ -164,3 +164,34 @@ def test_list_evaluations_works_without_auth(api_client: TestClient) -> None:
     """Single-user local instance — no auth is required for this route."""
     response = api_client.get("/v1/evaluations")
     assert response.status_code == 200
+
+
+def test_list_evaluations_query_count_is_constant(
+    api_client: TestClient, db_session: Session
+) -> None:
+    """Serializing EvaluationRead.final_score must not lazy-load per row (N+1)."""
+    from sqlalchemy import event
+
+    model_id = _create_model(api_client, {})
+    for _ in range(3):
+        created = api_client.post(
+            "/v1/evaluations", json={"model_id": model_id, "evaluation_mode": "AI_AUTONOMOUS"}
+        )
+        assert created.status_code == 201
+    db_session.expire_all()
+
+    statements: list[str] = []
+
+    def _record(conn, cursor, statement, *args) -> None:  # noqa: ANN001
+        statements.append(statement)
+
+    engine = db_session.get_bind()
+    event.listen(engine, "before_cursor_execute", _record)
+    try:
+        listed = api_client.get("/v1/evaluations?limit=3")
+    finally:
+        event.remove(engine, "before_cursor_execute", _record)
+    assert listed.status_code == 200
+    assert len(listed.json()["items"]) == 3
+    final_score_loads = [s for s in statements if "final_scores" in s]
+    assert len(final_score_loads) <= 1, final_score_loads

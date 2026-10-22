@@ -15,6 +15,18 @@
 !worker/README.md
 implementation
 papers
+# Research outputs and docs: no image needs them; results/ holds model weights (GBs).
+results
+report
+docs
+graphify-out
+stitch_*
+*.zip
+*.csv
+.codegraph
+.claude
+.superpowers
+frontend/src/**/*.js
 experiment_runs
 benchmark_outputs
 scripts

@@ -20,7 +20,10 @@ def get_celery_app() -> Celery:
     """Lightweight producer Celery app sharing the worker's broker/backend URL."""
     settings = get_settings()
     redis_url = settings.redis_url or "redis://localhost:6379/0"
-    app = Celery("trustlens", broker=redis_url, backend=redis_url)
+    # No result backend: the API never reads task results (the task id is
+    # generated client-side), and a redis backend retries its connection for
+    # ~60s when Redis is down, blocking POST /v1/evaluations that long.
+    app = Celery("trustlens", broker=redis_url)
     app.conf.update(
         task_default_queue="trustlens",
         task_serializer="json",
