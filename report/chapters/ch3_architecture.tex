@@ -62,7 +62,7 @@ TrustLens is a conventional web application with an asynchronous worker. Figure~
 \caption{Deployment architecture of TrustLens.}\label{fig:arch}
 \end{figure}
 
-The API process validates requests, stores model records and evaluation drafts, and enqueues a Celery task. The worker loads the model through the inference backend, runs the probes, stores raw evidence, asks the O/S/D engine for ratings, calls the scorer and writes everything back to PostgreSQL. The browser reads the finished evaluation and its report. Since round~3 (L8) the API commits the request session \emph{before} it sends the Celery message. Earlier, the worker could pick up a task for an evaluation row that the API had not committed yet, and we had seen evaluations stay in \code{PENDING} for that reason.
+The API process validates requests, stores model records and evaluation drafts, and enqueues a Celery task. The worker loads the model through the inference backend, runs the probes, stores raw evidence, asks the O/S/D engine for ratings, calls the scorer and writes everything back to PostgreSQL. The browser reads the finished evaluation and its report. Since round~3 (pipeline hardening) the API commits the request session \emph{before} it sends the Celery message. Earlier, the worker could pick up a task for an evaluation row that the API had not committed yet, and we had seen evaluations stay in \code{PENDING} for that reason.
 
 \section{Execution flow of an audit}
 Figure~\ref{fig:seq} shows the sequence of one evaluation as the code performs it. The probe order in the runner is Fairness, Robustness, Integrity, Explainability, Safety.
@@ -91,7 +91,7 @@ Figure~\ref{fig:seq} shows the sequence of one evaluation as the code performs i
 \caption{Sequence of a TrustLens evaluation.}\label{fig:seq}
 \end{figure}
 
-If the worker dies mid-pipeline, a failure handler moves evaluations stuck in \code{RUNNING}, \code{PROBES\_COMPLETED} or \code{AGENT\_COMPLETED} to \code{FAILED} and records the status they were in (an L8 fix, Section~\ref{sec:l8}).
+If the worker dies mid-pipeline, a failure handler moves evaluations stuck in \code{RUNNING}, \code{PROBES\_COMPLETED} or \code{AGENT\_COMPLETED} to \code{FAILED} and records the status they were in (a pipeline-hardening fix, Section~\ref{sec:l8}).
 
 \section{Data flow and evaluation contract}
 Each evaluation carries an \emph{evaluation contract} (schema \code{v2} in \code{schemas/\allowbreak evaluation\_contract\_v2.py}) that makes the evaluation explicit. For Fairness and Robustness it records the content-addressed dataset, the text and target columns, the sensitive-attribute column, a \code{label\_mapping} from dataset values to model label indices, \code{min\_group\_n} and the \code{positive\_label\_index} that the fairness metrics treat as the favourable outcome. It also freezes a snapshot of the model's \code{id2label} and the resolved model revision. The contract turned out to matter: in our first experiment it made a label-mapping mistake visible after the fact (Section~\ref{sec:pilot}).

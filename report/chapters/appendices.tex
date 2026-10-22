@@ -1,7 +1,7 @@
 \appendix
 \chapter{Supporting Material}\label{app:support}
 
-\section{Result Folders Used in This Report}
+\section{Result folders used in this report}
 \begin{table}[H]
 \centering\footnotesize
 \caption{Result folders (under \code{results/\allowbreak }) and the sections that use them.}
@@ -13,22 +13,23 @@
 \code{flawed\_model\_suite/\allowbreak final\_20261002\_*} & Main controlled suite, five runs per model; analysis in \code{final\_20261002\_analysis*}.\\
 \code{flawed\_model\_suite/\allowbreak sweep\_20261002\_*} & Severity sweep models, three runs each.\\
 \code{flawed\_model\_suite/\allowbreak hub\_final\_*} & Earlier 15-model Hub run (v3 methodology).\\
-\code{flawed\_model\_suite/\allowbreak l3\_replay\_20261003} & L3 offline replay.\\
+\code{flawed\_model\_suite/\allowbreak l3\_replay\_20261003} & Disclosure-gap separation offline replay.\\
 \code{flawed\_model\_suite/\allowbreak ground\_truth.json} & Detection rules and hidden labels, written before the runs.\\
-\code{osd\_calibration\_20261003} & L1 calibration, frozen mapping, held-out analysis.\\
-\code{fairness\_confirm\_20261003} & L5 confirmatory run.\\
-\code{defect\_severity\_20261003}, \code{\_a2} & L6 as specified, and with deviation A2.\\
-\code{l2\_det\_vs\_llm\_20261003} & L2 official results (22 of 60 answers).\\
-\code{l2\_claude\_eval\_20261003} & L2 supplement (Claude), separate.\\
-\code{l10\_independent\_validation\_20261003}, \code{\_v9} & L10 packets, official LLM review (v8), v9 TrustLens reference.\\
-\code{l10\_claude\_eval\_20261003} & L10 supplement (Claude), separate.\\
+\code{osd\_calibration\_20261003} & Score calibration: fit, frozen mapping, held-out analysis.\\
+\code{fairness\_confirm\_20261003} & Fairness confirmation run (pre-registered).\\
+\code{defect\_severity\_20261003}, \code{\_a2} & Severity sweeps as specified, and with deviation A2.\\
+\code{l2\_det\_vs\_llm\_20261003} & LLM comparison: official results (22 of 60 answers).\\
+\code{l2\_det\_vs\_llm\_20261022\_r4} & LLM comparison: 60/60 run set (22 provider + 38 Claude).\\
+\code{l2\_claude\_eval\_20261003} & LLM comparison: first Claude supplement (12 answers), separate.\\
+\code{l10\_independent\_validation\_20261003}, \code{\_v9} & Independent review: packets, official LLM review (v8), v9 TrustLens reference.\\
+\code{l10\_claude\_eval\_20261003} & Independent review: Claude supplement, separate.\\
 \code{l10\_human\_form}, \code{l10\_human\_analysis\_20261005} & Form material and the human-review analysis.\\
 \code{external\_hub\_validation\_20261003}, \code{\_v9r} & External audit, v8 (untouched) and v9 rerun (used).\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-\section{Pre-declaration Documents}
+\section{Pre-declaration documents}
 \begin{table}[H]
 \centering\footnotesize
 \caption{Pre-declarations and protocols (under \code{docs/\allowbreak superpowers/\allowbreak plans/\allowbreak }, dated 2026-10-03 unless stated).}
@@ -36,19 +37,19 @@
 \toprule
 \textbf{Item} & \textbf{Document}\\
 \midrule
-L1 & \code{round3-L1-osd-calibration.md}\\
-L2 & \code{round3-L2-det-vs-llm.md}\\
-L3 & \code{round3-L3-disclosure-gaps.md}\\
-L4, L4.1 & \code{round3-L4-binary-fairness-risk.md}, \code{round3-L4.1-eod-fairness-risk.md}\\
-L5 (pre-registration and results) & \code{round3-L4.1-confirmatory-prereg.md}, \code{round3-L5-fairness-confirm-results.md}\\
-L6 & \code{round3-L6-defect-severity.md}\\
-L7 & \code{docs/\allowbreak adr/\allowbreak 0013-artifact-set-integrity.md}\\
-L10 & \code{round3-L10-independent-validation.md}; reviewer instructions in \code{results/\allowbreak l10\_human\_form/\allowbreak }\\
+Score calibration & \code{round3-L1-osd-calibration.md}\\
+LLM comparison & \code{round3-L2-det-vs-llm.md}\\
+Disclosure-gap separation & \code{round3-L3-disclosure-gaps.md}\\
+Fairness-rule redesign & \code{round3-L4-binary-fairness-risk.md}, \code{round3-L4.1-eod-fairness-risk.md}\\
+Fairness confirmation (pre-registration and results) & \code{round3-L4.1-confirmatory-prereg.md}, \code{round3-L5-fairness-confirm-results.md}\\
+Severity sweeps & \code{round3-L6-defect-severity.md}\\
+Artifact integrity & \code{docs/\allowbreak adr/\allowbreak 0013-artifact-set-integrity.md}\\
+Independent review & \code{round3-L10-independent-validation.md}; reviewer instructions in \code{results/\allowbreak l10\_human\_form/\allowbreak }\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-\section{Reproducing the Experiments}\label{app:repro}
+\section{Reproducing the experiments}\label{app:repro}
 Commands are run from \code{backend/\allowbreak } with the project virtual environment; training uses \code{USE\_TF=0}. The Docker stack must be running for the API-based runs (rebuild \code{api} and \code{worker} after backend changes). Seeds and output folders are those named in the corresponding plan.
 \begin{lstlisting}
 # controlled suite (data, training, evaluation through the API)
@@ -58,30 +59,26 @@ python -m app.scripts.run_flawed_suite_eval
 python -m app.scripts.repeat_eval            # repeated runs
 python -m app.scripts.compare_ground_truth   # apply the frozen rules
 
-# L3 replay
+# disclosure-gap separation: replay
 python -m app.scripts.replay_l3_disclosure_gaps <new_out_dir>
 
-# L5 confirmatory fairness (fresh seed, fresh data)
+# fairness confirmation run (fresh seed, fresh data)
 python -m app.scripts.prepare_flawed_suite_data --fairness-confirm \
     --seed 20261003 --out ../results/fairness_confirm_20261003
 python -m app.scripts.train_flawed_suite --fairness-confirm \
     ../results/fairness_confirm_20261003 --seed 20261003
 python -m app.scripts.run_fairness_confirm
 
-# L6 severity sweeps
+# severity sweeps
 python -m app.scripts.run_defect_severity --out ../results/defect_severity_20261003
 
-# L10 human analysis (stdlib only, from the repository root)
+# independent review: human analysis (stdlib only, from the repository root)
 python results/l10_human_form/analyze_human_responses.py
 
 # external Hub audit
-python -m app.scripts.run_external_hub_validation select
-python -m app.scripts.run_external_hub_validation run
-python -m app.scripts.run_external_hub_validation profile
+for s in select run profile; do python -m app.scripts.run_external_hub_validation $s; done
 
 # figures and this report
-cd report
-python make_figures.py          # pilot figures
-python make_figures_final.py    # L1, L5, L6, external-audit figures
-tectonic main.tex               # or: pdflatex main.tex  (twice)
+cd report && python make_figures.py && python make_figures_final.py
+pdflatex main.tex
 \end{lstlisting}

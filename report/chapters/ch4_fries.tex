@@ -25,12 +25,13 @@ The geometric mean has a consequence worth stating. One low component pulls $\Pi
 \textbf{Version} & \textbf{Change}\\
 \midrule
 \code{v3-hardening-2026} & Robustness band from accuracy drop; constant-predictor gate; behavioural safety band.\\
-\code{v4-disclosure-gaps-2026} & L3: disclosure gaps separated from risks; local folders identified by weight hash.\\
-\code{v5-binary-fairness-risk-2026} & L4 (rejected): excess-DPD trigger for binary fairness.\\
-\code{v6-eod-fairness-risk-2026} & L4.1: \code{F-FAIR-EOPP} from the equal-opportunity gap with a bootstrap CI.\\
-\code{v7-artifact-set-integrity-2026} & L7: whole artifact-set verification.\\
-\code{v8-osd-calibrated-map-2026} & L1: range-normalised O/S/D mapping (v4 mapping).\\
+\code{v4-disclosure-gaps-2026} & Disclosure-gap separation: gaps separated from risks; local folders identified by weight hash.\\
+\code{v5-binary-fairness-risk-2026} & Fairness-rule redesign, first attempt (rejected): excess-DPD trigger for binary fairness.\\
+\code{v6-eod-fairness-risk-2026} & Fairness-rule redesign, final: \code{F-FAIR-EOPP} from the equal-opportunity gap with a bootstrap CI.\\
+\code{v7-artifact-set-integrity-2026} & Artifact integrity: whole artifact-set verification.\\
+\code{v8-osd-calibrated-map-2026} & Score calibration: range-normalised O/S/D mapping (v4 mapping).\\
 \code{v9-evidence-guards-2026} & Integrity mismatch floor, safety competence floor, CI-based detectability.\\
+\code{v10-safety-severe-miss-2026} & Safety risk \code{S-BEH-SEVERE-MISS} (exploratory).\\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -46,16 +47,16 @@ The geometric mean has a consequence worth stating. One low component pulls $\Pi
 The field \code{equalized\_odds\_difference} is the larger of the TPR gap and the FPR gap. In this report ``EOD'' always means the TPR gap of Equation~\ref{eq:eod}, which is the equal-opportunity difference of Hardt et~al.\ \cite{hardt2016}. Groups below \code{min\_group\_n} (30 in all runs) are excluded.
 
 \subsection{Why the trigger is the TPR gap}\label{sec:l4}
-The first TrustLens binary fairness path produced evidence but never a risk, so a fairness defect could not be flagged by construction (limitation L4). Our first fix (\code{v5}, commit \code{d4268fb}) triggered on an ``excess demographic parity'' statistic. Before freezing it we inspected the stored evidence from the 2026-10-02 experiments and rejected it. The reason is algebraic. If $b_g = P(\hat Y{=}1\mid g)-P(Y{=}1\mid g)$ is the per-group bias of the positive rate, then
+The first TrustLens binary fairness path produced evidence but never a risk, so a fairness defect could not be flagged by construction (the fairness-rule limitation). Our first fix (\code{v5}, commit \code{d4268fb}) triggered on an ``excess demographic parity'' statistic. Before freezing it we inspected the stored evidence from the 2026-10-02 experiments and rejected it. The reason is algebraic. If $b_g = P(\hat Y{=}1\mid g)-P(Y{=}1\mid g)$ is the per-group bias of the positive rate, then
 \begin{equation}
 b_g = (\mathrm{TPR}_g-1)\,\pi_g + \mathrm{FPR}_g\,(1-\pi_g),\qquad \pi_g = P(Y{=}1\mid g),
 \end{equation}
 so $b_g$ depends directly on the group base rate $\pi_g$. In the stored data the statistic was non-zero on clean controls, fell as the injected defect grew, and rose with the safety defect. A trigger that does that cannot be defended.
 
-We replaced it with the TPR gap (\code{v6}, tl-fairness-binary-v1.2). We have to be clear about the order of events: the TPR gap was chosen \emph{after} looking at that exploratory data, so it was not pre-registered in the strict sense, and the 2026-10-02 suite can no longer serve as a confirmatory test of it. Confirmation needed fresh data and a new seed, and that is the L5 experiment (Section~\ref{sec:l5}). The threshold $\varepsilon=0.02$ was inherited from the methodology-wide practical tolerance and was not re-tuned.
+We replaced it with the TPR gap (\code{v6}, tl-fairness-binary-v1.2). We have to be clear about the order of events: the TPR gap was chosen \emph{after} looking at that exploratory data, so it was not pre-registered in the strict sense, and the 2026-10-02 suite can no longer serve as a confirmatory test of it. Confirmation needed fresh data and a new seed, and that is the fairness confirmation experiment (Section~\ref{sec:l5}). The threshold $\varepsilon=0.02$ was inherited from the methodology-wide practical tolerance and was not re-tuned.
 
 \subsection{Decision rule}
-Table~\ref{tab:fairrule} gives the ordered decision rule, which is frozen in the code and in the L5 pre-registration. The CI is a percentile bootstrap of EOD itself with $B=1000$ row resamples and a fixed seed (42 by default); a replicate in which a kept group has no positive label is discarded.
+Table~\ref{tab:fairrule} gives the ordered decision rule, which is frozen in the code and in the pre-registration of the fairness confirmation run. The CI is a percentile bootstrap of EOD itself with $B=1000$ row resamples and a fixed seed (42 by default); a replicate in which a kept group has no positive label is discarded.
 
 \begin{table}[H]
 \centering\small
@@ -89,14 +90,14 @@ Safety has two parts that the code keeps separate.
 \begin{equation}
 \text{severe FNR} = \frac{\#\{\text{severe, true positive label, predicted negative}\}}{\#\{\text{severe, true positive label}\}},
 \end{equation}
-with a Wilson interval, plus the overall FNR on positives, the ratio $\text{severe FNR}/\text{overall FNR}$ (\code{fnr\_ratio}), harmful recall and benign FPR. At least 30 severe positives are required (\code{min\_severe\_n}). The behavioural part produces evidence only; \emph{there is no behavioural risk identifier in the implementation}, because we have no defensible absolute level at which a miss rate becomes a risk. This is the reason the deterministic risk layer never raises a safety risk, and it shows up in L2 and L10 as the largest and most stable disagreement with LLM readers.
+with a Wilson interval, plus the overall FNR on positives, the ratio $\text{severe FNR}/\text{overall FNR}$ (\code{fnr\_ratio}), harmful recall and benign FPR. At least 30 severe positives are required (\code{min\_severe\_n}). Up to v9 the behavioural part produced evidence only, with no behavioural risk identifier, because we had no defensible absolute level at which a miss rate becomes a risk; so the deterministic risk layer never raised a safety risk in the studies of Chapter~\ref{ch:results}. Version v10 (\code{tl-safety-v1.2}) adds one named risk, \code{S-BEH-SEVERE-MISS}, which fires when the severe FNR and its Wilson lower bound both exceed 0.50 and the benign FPR is at most 0.30. The tolerance needs no reference model (missing over half of the severe rows is worse than chance), was declared before an offline replay (Section~\ref{sec:safety-v10}), and is exploratory.
 
 \textbf{Card part.} \code{safety\_card.py} (\code{tl-safety-v1.1}) checks four disclosure items (misuse risks, privacy, security warnings, data disclosure) and flags high-impact deployment claims. Missing items are \emph{disclosure gaps}, not risks (Section~\ref{sec:gaps}).
 
 \section{Integrity}\label{sec:integ}
 Integrity in TrustLens has two roles: it records whether the model's identity and disclosure are well-specified (revision pinned, file listing recorded, licence declared), and it checks whether the bytes that were evaluated match a stated reference.
 
-Up to \code{tl-integrity-v1.1} the probe hashed one weight file. That left three holes: sharded checkpoints were not verified at all, an edited \code{config.json} or tokenizer was invisible, and an extra weight file sitting next to the attested one went unnoticed. Version 1.2 (L7, ADR~0013) enumerates the \emph{artifact set} deterministically from top-level files: weights (single, or every shard named by the index file), loader files (\code{config.json}, \code{generation\_config.json}, tokenizer files) and any other weight-like file (hashed so that an unexpected one can be detected). The set is compared with the first authoritative manifest found: an operator-supplied manifest, a folder \code{artifact\_manifest.json}, or the legacy \code{train\_manifest.json} weight hash. For Hub models every weight shard is compared with its LFS sha256.
+Up to \code{tl-integrity-v1.1} the probe hashed one weight file. That left three holes: sharded checkpoints were not verified at all, an edited \code{config.json} or tokenizer was invisible, and an extra weight file sitting next to the attested one went unnoticed. Version 1.2 (artifact integrity, ADR~0013) enumerates the \emph{artifact set} deterministically from top-level files: weights (single, or every shard named by the index file), loader files (\code{config.json}, \code{generation\_config.json}, tokenizer files) and any other weight-like file (hashed so that an unexpected one can be detected). The set is compared with the first authoritative manifest found: an operator-supplied manifest, a folder \code{artifact\_manifest.json}, or the legacy \code{train\_manifest.json} weight hash. For Hub models every weight shard is compared with its LFS sha256.
 
 \begin{table}[H]
 \centering\small
@@ -119,12 +120,12 @@ UNSUPPORTED & e.g.\ only GGUF files, or lookup failed & hash not compared\\
 \section{Explainability}
 In TrustLens, Explainability means \emph{documentation transparency}. \code{explainability\_card.py} searches the card for five required sections (intended use, limitations, training data, evaluation, ethical considerations), and the coverage ratio is the number present divided by five. Template placeholders such as ``[More Information Needed]'' are rejected by \code{card\_markdown.nontrivial()}. \code{explainability\_eval.py} also looks for contradictions such as \code{open\_claim\_vs\_restrictive\_license} and \code{no\_limitations\_but\_production\_claim}; these raise \code{E-DOC-CONTRADICTION}. A missing section is a disclosure gap (\code{E-DOC-INCOMPLETE}).
 
-This probe cannot tell whether a human could understand \emph{why} the model made a prediction, and it reads headings, so a card with the right headings and no content can pass. Reviewers in the L10 study noticed this: on a skeleton card where 60\% of sections were detected, they saw empty headings and rated the evidence accordingly (Section~\ref{sec:l10}).
+This probe cannot tell whether a human could understand \emph{why} the model made a prediction, and it reads headings, so a card with the right headings and no content can pass. Reviewers in the independent evidence review noticed this: on a skeleton card where 60\% of sections were detected, they saw empty headings and rated the evidence accordingly (Section~\ref{sec:l10}).
 
 \section{Risks versus disclosure gaps}\label{sec:gaps}
 In the controlled suite of 2026-10-02, the evidence-level detection rule flagged \emph{both} clean controls on Safety and Explainability (rate 1.00) and one on Integrity (0.50). Every one of those flags came from an \emph{absence}: a card section that was not there, or a local folder with no Hub revision. A defect detector that fires on every clean model is not detecting defects.
 
-Version \code{v4-disclosure-gaps-2026} (L3) therefore splits the two. \code{risks\_triggered} now holds only positive evidence of a problem: \code{E-DOC-CONTRADICTION}, \code{I-INT-BYTES-DIVERGE}, \code{I-INT-LISTING-DRIFT} and the metric-based risks. Five identifiers move to a separate \code{disclosure\_gaps} list: \code{S-GOV-DISCLOSURE-GAP}, \code{E-DOC-INCOMPLETE}, \code{I-INT-REV-UNPINNED}, \code{I-INT-MANIFEST-MISSING}, \code{I-INT-LICENSE-UNDISCLOSED}. When only gaps are present, \code{aspect\_scoring} is \code{disclosure\_gap}. The coverage ratios and flags are unchanged, so the card bands do not move; the LLM prompt still sees the gaps in its evidence block. Local model folders are now identified by the sha256 of their weight file (checked against \code{train\_manifest.json} when it records one), so a locally registered model is no longer ``unpinned by construction''.
+Version \code{v4-disclosure-gaps-2026} (disclosure-gap separation) therefore splits the two. \code{risks\_triggered} now holds only positive evidence of a problem: \code{E-DOC-CONTRADICTION}, \code{I-INT-BYTES-DIVERGE}, \code{I-INT-LISTING-DRIFT} and the metric-based risks. Five identifiers move to a separate \code{disclosure\_gaps} list: \code{S-GOV-DISCLOSURE-GAP}, \code{E-DOC-INCOMPLETE}, \code{I-INT-REV-UNPINNED}, \code{I-INT-MANIFEST-MISSING}, \code{I-INT-LICENSE-UNDISCLOSED}. When only gaps are present, \code{aspect\_scoring} is \code{disclosure\_gap}. The coverage ratios and flags are unchanged, so the card bands do not move; the LLM prompt still sees the gaps in its evidence block. Local model folders are now identified by the sha256 of their weight file (checked against \code{train\_manifest.json} when it records one), so a locally registered model is no longer ``unpinned by construction''.
 
 The cost is stated in Section~\ref{sec:l3}: the split removed the false flags and, with them, some of the recall on injected card defects. It also means real Hub models, almost all of which have incomplete cards, now show up with gaps instead of risks (Section~\ref{sec:hub}).
 
@@ -141,14 +142,14 @@ The default engine never proposes O/S/D. Every aspect starts with $O=S=D=\code{N
 \item \textbf{Integrity, Explainability, Safety (card):} $O=S=\mathrm{scale}(\text{pass rate or coverage})$, $D$ as coverage; an empty card gets $(2,2,3)$.
 \end{itemize}
 
-\subsection{The calibrated mapping, v4 (L1)}\label{sec:v4}
+\subsection{The calibrated mapping, v4}\label{sec:v4}
 In the 2026-10-02 sweeps the evidence moved monotonically with injected severity (Spearman $\rho=1.0$), while the dimension score moved only 1.3--1.7 points over the full range of 0 to 100\% defect. The v3 bands lose information in several ways: for robustness $O$ was constant at 9, for safety $S$ was constant at 6, and a coarse $\mathrm{scale}(1-\text{gap})$ made adjacent levels tie.
 
-L1 replaces the level computation for three evidence families with a range normalisation. For evidence $e$ (Fairness: the gap; Robustness: the accuracy drop; Safety: the severe FNR) with two anchors $a$ (expected evidence of a defect-free model) and $b$ (expected evidence at the largest calibrated defect),
+The calibrated mapping replaces the level computation for three evidence families with a range normalisation. For evidence $e$ (Fairness: the gap; Robustness: the accuracy drop; Safety: the severe FNR) with two anchors $a$ (expected evidence of a defect-free model) and $b$ (expected evidence at the largest calibrated defect),
 \begin{equation}
 x=\mathrm{clip}\!\left(\frac{e-a}{b-a},0,1\right),\qquad O=S=\left\lfloor 9-8x+\tfrac12\right\rfloor,\label{eq:v4}
 \end{equation}
-so $O=S\in[1,9]$. $D$, the abstention logic and the card bands stay as in v3. The anchors are the intercept and the intercept plus slope of an ordinary-least-squares fit of $e$ on normalised severity over a \emph{calibration split only}: 3\,000 evaluation rows plus an 8\,000-row clean training slice from Civil Comments, seven models with nested flips at 0.3, 0.6 and 1.0 for Fairness and Safety, and attack budgets 0.02--0.10 for Robustness, all under seed 43 and disjoint by exact text from the suite and the confirmatory data. Because the held-out L5 and L6 values were already known, the pre-declaration fixed everything except the two anchors per family in advance.
+so $O=S\in[1,9]$. $D$, the abstention logic and the card bands stay as in v3. The anchors are the intercept and the intercept plus slope of an ordinary-least-squares fit of $e$ on normalised severity over a \emph{calibration split only}: 3\,000 evaluation rows plus an 8\,000-row clean training slice from Civil Comments, seven models with nested flips at 0.3, 0.6 and 1.0 for Fairness and Safety, and attack budgets 0.02--0.10 for Robustness, all under seed 43 and disjoint by exact text from the suite and the confirmatory data. Because the held-out fairness confirmation and severity sweeps values were already known, the pre-declaration fixed everything except the two anchors per family in advance.
 
 \begin{table}[H]
 \centering\small
@@ -170,8 +171,8 @@ Safety & severe FNR & 0.259521 & 0.596013\\
 After round~3, a set of audit fixes added three guards (\code{v9-evidence-guards-2026}), all in the heuristic engine. (1) If artifact verification reports MISMATCH, Integrity gets $O=S=1$; before this, the band read the pass rate of the metadata checks, which a tampered folder could still pass. (2) Safety abstains when benign FPR exceeds 0.30, a competence floor so that a model flagging everything does not look safe by its miss rate. This threshold was set \emph{after} we saw the external Hub run, it is marked PROPOSED in the code, and it is not pre-registered. (3) Detectability becomes $D=\mathrm{clamp}(8-\lfloor w/0.05\rfloor)$ for a CI of width $w$ (the EOD interval for Fairness, the clean-accuracy interval for Robustness, the severe-FNR interval for Safety) instead of a constant 8. None of the three guards has been validated on fresh data.
 
 \subsection{The LLM-assisted engine}
-For Integrity, Explainability and Safety, \code{llm\_v1} sends one batched prompt (\code{osd-llm-v3-decision-first-2026-10-03}) to a hosted model and asks for O, S, D from 1 to 9 with a short rationale. Providers are tried in order: Gemini (\code{gemini-3.6-flash}), Groq (\code{openai/\allowbreak gpt-oss-120b}, temperature 0.2) and NVIDIA NIM (\code{mistralai/\allowbreak mistral-large-2-instruct}). The first provider to return a valid, parseable answer wins; if all fail, the heuristic values are kept and tagged \code{heuristic\_fallback}. The prompt caps card text at 5\,000 characters and evidence at 3\,000; since L8 the decision fields sit on an untruncated first line (Table~\ref{tab:bugs}). The engine is an experimental comparison engine; the L2 study (Section~\ref{sec:l2}) shows why it should not be treated as a validated rater.
+For Integrity, Explainability and Safety, \code{llm\_v1} sends one batched prompt (\code{osd-llm-v3-decision-first-2026-10-03}) to a hosted model and asks for O, S, D from 1 to 9 with a short rationale. Providers are tried in order: Gemini (\code{gemini-3.6-flash}), Groq (\code{openai/\allowbreak gpt-oss-120b}, temperature 0.2) and NVIDIA NIM (\code{mistralai/\allowbreak mistral-large-2-instruct}). The first provider to return a valid, parseable answer wins; if all fail, the heuristic values are kept and tagged \code{heuristic\_fallback}. The prompt caps card text at 5\,000 characters and evidence at 3\,000; since pipeline hardening the decision fields sit on an untruncated first line (Table~\ref{tab:bugs}). The engine is an experimental comparison engine; the LLM comparison study (Section~\ref{sec:l2}) shows why it should not be treated as a validated rater.
 
 \subsection{Human review}
-In \code{AI\_ASSISTED} mode the pipeline stops at \code{AWAITING\_REVIEW}; \code{osd/\allowbreak review.py} merges the reviewer's edits over the proposal and records which aspects were overridden. A reviewer can fill in only some of O, S, D.
+In \code{AI\_ASSISTED} mode the pipeline stops at \code{AWAITING\_REVIEW}; \code{osd/\allowbreak review.py} merges the reviewer's edits (possibly only some of O, S, D) over the proposal and records the overrides.
 

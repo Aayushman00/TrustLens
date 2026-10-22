@@ -1,18 +1,18 @@
-\chapter{Experimental Methodology}\label{ch:method}
+\chapter{Experimental Design}\label{ch:method}
 
 \section{Working principles}
 The experiments in this chapter were designed under a few rules that we set after the first round of results embarrassed us a little. We wrote them in the instructions for the second round and held to them for the rest of the project.
 \begin{itemize}
-\item \textbf{Result folders are frozen.} A new run goes into a new folder. Earlier folders (\code{eval\_results*}, \code{final\_20261002\_*}, \code{sweep\_20261002\_*}, \code{hub\_final\_*}, and the v8 L10 and Hub folders) are never edited. When the methodology changed to v9 we re-ran into new \code{v9} and \code{v9r} folders.
-\item \textbf{Declare before running.} For L1, L2, L5, L6 and L10 the plan document in \code{docs/\allowbreak superpowers/\allowbreak plans/\allowbreak } states the hypotheses or comparison rules and says it was written before the run (for L5 the freeze is the commit \code{8f009fb}). Deviations are recorded in the same document with a note saying when they were decided.
+\item \textbf{Result folders are frozen.} A new run goes into a new folder. Earlier folders (\code{eval\_results*}, \code{final\_20261002\_*}, \code{sweep\_20261002\_*}, \code{hub\_final\_*}, and the v8 independent review and Hub folders) are never edited. When the methodology changed to v9 we re-ran into new \code{v9} and \code{v9r} folders.
+\item \textbf{Declare before running.} For score calibration, LLM comparison, fairness confirmation, severity sweeps and independent review the plan document in \code{docs/\allowbreak superpowers/\allowbreak plans/\allowbreak } states the hypotheses or comparison rules and says it was written before the run (for fairness confirmation the freeze is the commit \code{8f009fb}). Deviations are recorded in the same document with a note saying when they were decided.
 \item \textbf{No tuning on the data that exposed a problem.} Any change that alters a score, band, flag or prompt bumps \code{CURRENT\_METHODOLOGY\_VERSION} or \code{PROMPT\_VERSION}. A mapping change must be fitted on separate data and then evaluated on the frozen suite.
 \item \textbf{Negative results are results.} A failed hypothesis is reported as failed. If a rule should change, it becomes a new version with new data.
 \item \textbf{Evidence reviewers are not ground truth.} Humans and LLMs that read evidence packets are called \emph{evidence reviewers}. Disagreement with TrustLens is described and categorised, not adjudicated.
-\item \textbf{Keep Claude results separate.} Where we used Claude as an additional independent LLM evaluator, its answers live in separate supplementary folders and are never merged into the official L2 or L10 results.
+\item \textbf{Keep Claude results separate.} Where we used Claude as an additional independent LLM evaluator, its answers live in separate supplementary folders and are never merged into the official LLM comparison or independent review results.
 \end{itemize}
 
 \section{Common setup}
-\textbf{Task and data.} All behavioural experiments use binary toxicity classification on English comments. The evaluation set is a 3\,000-row sample of the Civil Comments \code{test} split \cite{borkan2019}, pinned to dataset revision \code{f2970eb3\ldots}, with a 20\% positive rate (toxicity $\ge$0.5). The sensitive attribute \code{identity\_ref} is 1 when the row has \code{identity\_attack}$>0.0001$; the \code{severe} marker is 1 when \code{severe\_toxicity}$>0.0001$. The suite eval set has 282 severe toxic rows and a label-rate gap of 0.505 between the identity groups, a fact that matters for fairness (Section~\ref{sec:l4}). A fresh eval set under data seed 20261003 (L5) has 260 severe toxic rows and group sizes 2\,500 and 500.
+\textbf{Task and data.} All behavioural experiments use binary toxicity classification on English comments. The evaluation set is a 3\,000-row sample of the Civil Comments \code{test} split \cite{borkan2019}, pinned to dataset revision \code{f2970eb3\ldots}, with a 20\% positive rate (toxicity $\ge$0.5). The sensitive attribute \code{identity\_ref} is 1 when the row has \code{identity\_attack}$>0.0001$; the \code{severe} marker is 1 when \code{severe\_toxicity}$>0.0001$. The suite eval set has 282 severe toxic rows and a label-rate gap of 0.505 between the identity groups, a fact that matters for fairness (Section~\ref{sec:l4}). A fresh eval set under data seed 20261003 (fairness confirmation) has 260 severe toxic rows and group sizes 2\,500 and 500.
 
 \textbf{Models.} Controlled models are fine-tuned from \code{bert-base-uncased} \cite{devlin2019}: three epochs, learning rate $2\times10^{-5}$, batch 16, weight decay 0.01, maximum length 128, seed 42 unless noted. Each fine-tuning took about 160 seconds on the RTX 4060 laptop GPU (the manifests record 160.4--178.3\,s). Each checkpoint is a float32 BERT-base model.
 
@@ -46,7 +46,7 @@ V6 compound & Fairness, Safety, Explainability, Integrity & V1 flip and V5 relab
 
 \noindent The suite cards disclose the injected flaw in prose (the card title carries a ``research artifact'' label); we kept that prose when packets were later built for reviewers, with the model names redacted. Three of the nine models (V3, V4, V4b) are essentially \emph{documentation} flaws wrapped around weights that behave like an ordinary fine-tuned BERT, and V4 is behaviourally identical to V1. That limits what ``detection'' can mean for them. The \code{ground\_truth.json} still carries the original mechanism string for V2; the weights evaluated are the redesigned ones (the old checkpoint is stored separately as \code{variant2\_robustness\_old}).
 
-\subsection{Severity sweeps}
+\subsection{Defect severity levels}
 To test whether TrustLens responds in proportion to severity (RQ2), we trained six more models on the same clean slice with the same hyperparameters, changing only the flip rate, with nested flips (a lower rate is a subset of a higher one). Fairness levels were 0 (V3 weights), 0.2, 0.4 (V1), 0.7, 1.0; Safety levels 0 (V3), 0.25, 0.5 (V5), 0.75, 1.0.
 
 \subsection{Detection rules (frozen before the runs)}
@@ -57,15 +57,15 @@ To test whether TrustLens responds in proportion to severity (RQ2), we trained s
 \end{description}
 Detection means the injected dimension is flagged; a false positive is a flagged dimension that was not injected. Controls are excluded from the counts and reported through a \emph{control flag rate}. The \code{controls} field was added to the file after the runs, from existing role entries, and we say so wherever the numbers are used.
 
-\subsection{Repeats and LLM freeze}
+\subsection{Repeat runs and the frozen LLM prompt}
 The main suite was run five times per model (nine models), the sweep three times per level. The LLM configuration was frozen in \code{llm\_freeze.json}: Groq \code{openai/\allowbreak gpt-oss-120b}, temperature 0.2, prompt \code{llm\_v1}; other providers were blanked by \code{docker-compose.experiment.yml}. Methodology version for this suite: \code{v3-hardening-2026}. The suite ran on the image built at experiment start, before the engineering fixes in Table~\ref{tab:bugs}; the git commit is recorded in each run folder.
 
-\section{L5: confirmatory fairness run}\label{sec:l5m}
+\section{Fairness confirmation run (pre-registered)}\label{sec:l5m}
 Because the TPR-gap rule was chosen after inspecting the exploratory suite, a fresh test was pre-registered. The pre-registration was frozen at commit \code{8f009fb}, before any data existed for it.
 
 \begin{table}[H]
 \centering\small
-\caption{Setup of the L5 confirmatory experiment.}
+\caption{Setup of the fairness confirmation run.}
 \begin{tabularx}{\textwidth}{@{}p{3.4cm}L@{}}
 \toprule
 Rule under test & \code{v6-eod-fairness-risk-2026} / \code{tl-fairness-binary-v1.2}, unchanged: $\varepsilon=0.02$, wide-CI gate 0.15, $B=1000$, seed 42.\\
@@ -79,8 +79,8 @@ Driver & Production \code{FairnessProbe} in-process with the real \code{LocalHFB
 
 \noindent Hypotheses and decision criteria were fixed in advance: \textbf{H1}, no control is flagged (neither control flagged in a majority of runs); \textbf{H2}, the flip models at rates $\ge0.4$ are all flagged; \textbf{H3}, Spearman $\rho(\text{rate},\text{EOD})>0$ over the five levels; \textbf{H4}, gate behaviour reported descriptively. If a hypothesis failed, the rule would stay as it was and the failure would be reported.
 
-\section{L6: defect severity design}\label{sec:l6m}
-The L6 driver runs the production \code{RobustnessProbe} and \code{SafetyProbe} in-process on the L5 eval set, with no LLM and no API. The design and the monotonicity definitions were written before the run.
+\section{Severity-sweep experiment}\label{sec:l6m}
+The severity-sweep driver runs the production \code{RobustnessProbe} and \code{SafetyProbe} in-process on the fairness confirmation eval set, with no LLM and no API. The design and the monotonicity definitions were written before the run.
 \begin{itemize}
 \item \textbf{Robustness sweep:} one knob, \code{attack\_budget}, which sets the number of swaps as $\mathrm{clamp}(\mathrm{round}(100\cdot\text{budget}),1,8)$; levels 0.01, 0.03, 0.05, 0.08, i.e.\ 1, 3, 5, 8 swaps, on the clean V3 weights, seed 42.
 \item \textbf{Safety sweep:} the existing nested weights at rates 0, 0.25, 0.5, 0.75, 1.0, plus the 2-label reference as control; behaviour measured on the severe-marker column with at least 30 severe positives required.
@@ -88,31 +88,31 @@ The L6 driver runs the production \code{RobustnessProbe} and \code{SafetyProbe} 
 \item \textbf{Repeatability:} each level run twice.
 \end{itemize}
 
-\section{L1: calibration and held-out evaluation}
-The calibration design is described with the mapping (Section~\ref{sec:v4}). Held-out evidence is the L5 and L6 evidence, re-mapped with the frozen anchors and not re-measured. The check \code{check\_frozen} refuses to run the held-out evaluation if the anchors in code differ from the frozen file (frozen 22:58:31\,UTC, held-out evaluated 22:58:44\,UTC on 2026-10-02). The held-out values were known before the mapping was written, so the check is constrained by the pre-declaration but not blind.
+\section{Score calibration and held-out evaluation}
+The calibration design is described with the mapping (Section~\ref{sec:v4}). Held-out evidence is the fairness confirmation and severity sweeps evidence, re-mapped with the frozen anchors and not re-measured. The check \code{check\_frozen} refuses to run the held-out evaluation if the anchors in code differ from the frozen file (frozen 22:58:31\,UTC, held-out evaluated 22:58:44\,UTC on 2026-10-02). The held-out values were known before the mapping was written, so the check is constrained by the pre-declaration but not blind.
 
-\section{L2: deterministic versus LLM interpretation}\label{sec:l2m}
-Twelve evidence packets (schema \code{l2-evidence-packet-v1}) were built from the controlled models: the 2-label reference, V1, a tampered copy of V1, V2, V3, V4, V4b, V5, V6 and the Safety sweep levels 0.25, 0.75, 1.0, labelled P01 to P12 in that order. A packet holds the card text (model name replaced by the packet id), the artifact verification and, where one exists, the frozen L6 behavioural measurement. Never included: FRIES score, O/S/D, risks, \code{aspect\_scoring}, gates, status, claim verdicts, flags, folder names or defect labels.
+\section{Deterministic versus LLM interpretation}\label{sec:l2m}
+Twelve evidence packets (schema \code{l2-evidence-packet-v1}) were built from the controlled models: the 2-label reference, V1, a tampered copy of V1, V2, V3, V4, V4b, V5, V6 and the Safety sweep levels 0.25, 0.75, 1.0, labelled P01 to P12 in that order. A packet holds the card text (model name replaced by the packet id), the artifact verification and, where one exists, the frozen severity sweeps behavioural measurement. Never included: FRIES score, O/S/D, risks, \code{aspect\_scoring}, gates, status, claim verdicts, flags, folder names or defect labels.
 
 The deterministic evaluator recomputes current evidence with the production pure functions and the v3 bands. The LLM evaluator is the production \code{HybridOSDAgent} on a context built from the packet, five independent runs per packet (60 planned). Both record the packet sha256 and the analysis asserts that they match. Derived fields are fixed in advance: LLM ``risk present'' means $O\le5$ (the prompt's own definition); the frozen prompt has no abstain option, so the LLM cannot answer UNCERTAIN. Fairness and Robustness are out of scope because they never reach an LLM. Disagreements are classified into pre-registered categories (insufficient evidence, localisation, evidence interpretation, severity, truncation/fallback). Both outputs are preserved verbatim.
 
-\section{L10: independent evidence validation}\label{sec:l10m}
+\section{Independent evidence review}\label{sec:l10m}
 Twelve single-dimension packets were declared before any packet was built (Table~\ref{tab:l10pk}): a clear defect, a control, a borderline case or an insufficient-evidence case for each of the five dimensions. Packets are shown to evaluators with a whitelist of measured fields only, with plain-English explanations of each measure that say what a number \emph{is} and never what it \emph{means}. Packet hashes are computed before any evaluation. The first leakage test run caught source-file paths (which contain model names) in the packets; we moved them to the reference file before freezing.
 
 \begin{table}[H]
 \centering\footnotesize
-\caption{L10 packets. Source evidence is frozen and read-only.}\label{tab:l10pk}
+\caption{Packets for the independent evidence review. Source evidence is frozen and read-only.}\label{tab:l10pk}
 \begin{tabularx}{\textwidth}{@{}p{1.1cm}p{2.5cm}p{3.6cm}L@{}}
 \toprule
 \textbf{Packet} & \textbf{Dimension} & \textbf{Source} & \textbf{Role}\\
 \midrule
-01 & Fairness & L5 flip 0.7 & clear injected disparity\\
-02 & Fairness & L5 clean control & control; TrustLens abstains (CI wide)\\
-03 & Fairness & L5 2-label reference & external control TrustLens flags; borderline\\
-04 & Robustness & L6-A2, 8 swaps & largest drop, no risk\\
-05 & Robustness & L6 without A2 & insufficient evidence (one row not perturbable)\\
-06 & Safety & L6 safety rate 1.0 & strongest severe-harm miss\\
-07 & Safety & L6 clean (rate 0) & control\\
+01 & Fairness & Fairness run, flip rate 0.7 & clear injected disparity\\
+02 & Fairness & Fairness run, clean control & control; TrustLens abstains (CI wide)\\
+03 & Fairness & Fairness run, 2-label reference & external control TrustLens flags; borderline\\
+04 & Robustness & Sweep with deviation A2, 8 swaps & largest drop, no risk\\
+05 & Robustness & Robustness sweep without deviation A2 & insufficient evidence (one row not perturbable)\\
+06 & Safety & Safety sweep, rate 1.0 & strongest severe-harm miss\\
+07 & Safety & Safety sweep, clean (rate 0) & control\\
 08 & Integrity & tampered V1 vs manifest & weight mismatch\\
 09 & Integrity & V1 vs its own manifest & verified control\\
 10 & Explainability & V3 skeleton card & auto-generated skeleton\\
@@ -129,10 +129,10 @@ Twelve single-dimension packets were declared before any packet was built (Table
 \textbf{Comparison.} Per pair: risk agreement, dimension agreement, severity exact and within one (when both give one), sufficiency agreement, Cohen's or Fleiss' $\kappa$ only with at least eight common packets. A disagreement is assigned the first applicable category: provider infrastructure, parser format, abstention mismatch (exactly one side UNCERTAIN on risk), insufficient evidence, localisation, evidence interpretation, severity ($|\Delta S|\ge2$), agree. For the human analysis severity counts as a judgment only when the reviewer answered Q2 = YES, because the form did not enforce N/A.
 
 \section{External Hugging Face validation}\label{sec:extm}
-Seven real text-classification models were selected deliberately so that architecture, size, head type, training data, label scope, documentation and language scope vary. The selection (\code{selection.json}) was written before any evaluation, and each model is pinned to an immutable revision SHA that was re-resolved against the Hub. This is not a sample of the Hub and not a ranking. The contract is identical to the controlled suite (same 3\,000-row eval set, Fairness, Robustness and Safety contracts, \code{AI\_AUTONOMOUS}, \code{llm\_v1}); multi-label models use the toxicity head as target. Models ran sequentially. Per-model verification records the final status, that the evaluated revision equals the pin, and that all five probes ran. We report the 2026-10-03 \code{v9r} rerun on the methodology v9 stack (git head \code{0103344}) as the main result; the earlier v8 folder is left untouched.
+Seven real text-classification models were selected deliberately so that architecture, size, head type, training data, label scope, documentation and language scope vary. The selection (\code{selection.json}) was written before any evaluation, and each model is pinned to an immutable revision SHA that was re-resolved against the Hub. The contract is identical to the controlled suite (same 3\,000-row eval set, Fairness, Robustness and Safety contracts, \code{AI\_AUTONOMOUS}, \code{llm\_v1}); multi-label models use the toxicity head as target. Per-model verification records the final status, that the evaluated revision equals the pin, and that all five probes ran. We report the 2026-10-03 \code{v9r} rerun on the methodology v9 stack (git head \code{0103344}) as the main result; the earlier v8 folder is left untouched.
 
 \section{Earlier work: pilot and benchmark}\label{sec:pilotm}
-Two earlier efforts shaped the questions but are not the basis of any claim: the September pilot (Section~\ref{sec:pilot}), and a Phase~25/26 benchmark of six small Hub models whose fairness probe used a logistic-regression proxy on the Adult dataset and whose manual ratings came from one provisional rater.
+Two earlier efforts shaped the questions but support no claim: the September pilot (Section~\ref{sec:pilot}) and a Phase~25/26 benchmark of six small Hub models.
 
 \section{Statistical treatment}
-The study is descriptive. We report counts, pairwise agreement, kappa and alpha with bootstrap intervals where it helps, and Spearman $\rho$ over four or five levels. We run no significance tests, because 12 packets, five severity levels and seven models do not support them. Percentile bootstrap with $B=1000$ is used for model-level CIs (inside the probes) and $B=5000$ over packets for the human agreement intervals.
+The study is descriptive: counts, pairwise agreement, kappa and alpha with bootstrap intervals, and Spearman $\rho$ over four or five levels. We run no significance tests: 12 packets, five severity levels and seven models do not support them. Percentile bootstrap CIs use $B=1000$ inside the probes and $B=5000$ over packets for human agreement.

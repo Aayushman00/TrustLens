@@ -1,7 +1,7 @@
-\chapter{Implementation Details}\label{ch:impl}
+\chapter{Implementation}\label{ch:impl}
 
 \section{Technology stack}
-Table~\ref{tab:stack} lists what the code imports. Libraries that appear only in dependency files are left out.
+Table~\ref{tab:stack} lists what the code imports.
 
 \begin{table}[H]
 \centering\small
@@ -14,8 +14,7 @@ Python $\ge$3.11 & Backend, worker, probes, experiment scripts.\\
 FastAPI, Pydantic v2 & REST API under \code{/\allowbreak v1}; Pydantic models define the evaluation contract, probe output and report schemas.\\
 SQLAlchemy 2, Alembic, PostgreSQL & Persistence; 16 migration files track the schema (dataset content, draft state, methodology version, \ldots).\\
 Celery, Redis & Asynchronous execution of the evaluation pipeline in a worker process.\\
-Hugging Face \code{transformers} \cite{wolf2020}, PyTorch & Local inference in \code{LocalHFBackend}; \code{AutoConfig} for cheap model inspection.\\
-\code{huggingface\_hub} & Metadata import (card, tags, licence, file list, LFS hashes).\\
+Hugging Face \code{transformers} \cite{wolf2020}, PyTorch & Local inference in \code{LocalHFBackend}; \code{huggingface\_hub} imports metadata (card, tags, licence, file list, LFS hashes).\\
 \code{google-genai}, \code{httpx} & LLM calls to Gemini, Groq and NVIDIA NIM for \code{llm\_v1}.\\
 Jinja2, WeasyPrint & HTML report template rendered to PDF.\\
 React 19, Vite, TypeScript & Dashboard: model import, draft wizard, evaluation timeline, review and report pages.\\
@@ -24,7 +23,12 @@ Docker Compose & Five services (postgres, redis, api, worker, frontend); separat
 \bottomrule
 \end{tabularx}
 \end{table}
-The reference machine is a laptop with an NVIDIA RTX 4060 GPU (8~GB VRAM). The experiment logs confirm CUDA execution; the worker image reports PyTorch 2.14.1 with CUDA~13.0.
+The reference machine is a laptop with an NVIDIA RTX 4060 GPU (8~GB VRAM). Experiment logs confirm CUDA execution.
+
+\begin{figure}[H]
+\centering\includegraphics[width=0.76\textwidth]{ui_results.png}
+\caption{Evaluation page of the dashboard for a real Hub model (\code{martin-ha/toxic-comment-model}): a banner states that the result is not human-reviewed, followed by the aggregate FRIES value and the five dimension scores.}\label{fig:ui}
+\end{figure}
 
 \section{Evidence, reproducibility and error handling}
 Source files per component are listed in Table~\ref{tab:impl-status}.
@@ -33,19 +37,19 @@ Source files per component are listed in Table~\ref{tab:impl-status}.
 
 \paragraph{Error handling.} Probe outputs that violate the contract raise \code{ProbeError} and fail the evaluation instead of being stored. A probe that cannot run records a status (\code{INSUFFICIENT\_EVIDENCE}, \code{SKIPPED}, \code{NOT\_APPLICABLE}, \code{FAILED}, \code{PROXY}). LLM failures never fail the evaluation: the heuristic numbers are kept and each aspect stores \code{llm\_fallback\_reason}, \code{llm\_attempts} and \code{llm\_prompt\_version}. Those three fields exist because in the first final suite we had 11 fallbacks out of 45 runs and could not tell afterwards why; the information was only in container logs.
 
-\section{Reliability fixes found by running experiments}\label{sec:l8}
+\section{Bugs found while running the experiments}\label{sec:l8}
 Running a few hundred evaluations flushed out defects that unit tests had not. Table~\ref{tab:bugs} lists them. Every one got a regression test, and none changed a score formula.
 
 \begin{table}[H]
 \centering\footnotesize
-\caption{Engineering issues found while running the experiments (2026-10-02 and L8).}\label{tab:bugs}
+\caption{Engineering issues found while running the experiments (2026-10-02 and pipeline hardening).}\label{tab:bugs}
 \begin{tabularx}{\textwidth}{@{}p{4.1cm}p{3.3cm}L@{}}
 \toprule
 \textbf{Issue} & \textbf{Effect} & \textbf{Fix}\\
 \midrule
 \code{str(engine.url)} masks the password, so the API built a new connection pool per request & Postgres ``too many clients''; runs failed & Compare the raw URL; dispose the old engine.\\
 FastAPI 0.121+ commits yield-dependencies after the response is sent & Client saw ``not validated'' right after a 200 & \code{Depends(get\_db, scope="function")}.\\
-Celery task enqueued before the API committed & Evaluation stuck in \code{PENDING} & Worker retry on \code{EvaluationNotVisibleError} (backstop); L8: commit before enqueue at all call sites.\\
+Celery task enqueued before the API committed & Evaluation stuck in \code{PENDING} & Worker retry on \code{EvaluationNotVisibleError} (backstop); pipeline hardening: commit before enqueue at all call sites.\\
 LLM prompt about 7.3k tokens for long cards & Well-documented models never LLM-assessed & Compact prompt v2 with capped card and evidence.\\
 LLM fallback reason only in logs & Fallbacks not traceable & Reason, attempts and prompt version stored per aspect; quota-aware retry.\\
 Post-start transient error silently retried & Evaluation left in \code{RUNNING} forever & Re-raise as \code{PipelineInterruptedError}; failure handler also rescues \code{PROBES\_COMPLETED} and \code{AGENT\_COMPLETED}.\\
@@ -67,11 +71,11 @@ Each experiment in Chapter~\ref{ch:results} is a script under \code{backend/\all
 \code{prepare\_flawed\_suite\_data}, \code{train\_flawed\_suite}, \code{make\_severity\_sweep} & Build eval and train slices, inject defects, fine-tune variants and sweep levels.\\
 \code{run\_flawed\_suite\_eval}, \code{repeat\_eval}, \code{extra\_models\_eval} & Evaluate models through the API; repeat runs; evaluate Hub models.\\
 \code{compare\_ground\_truth} & Apply the frozen detection rules to a result folder.\\
-\code{replay\_l3\_disclosure\_gaps} & Offline before/after replay of the L3 change on stored inputs.\\
-\code{run\_fairness\_confirm} & L5: confirmatory fairness run, in-process.\\
-\code{run\_defect\_severity} & L6: robustness and safety sweeps, in-process.\\
-\code{run\_osd\_calibration} & L1: fit and freeze the v4 anchors, evaluate on held-out sweeps.\\
-\code{run\_l2\_interpretation}, \code{run\_l10\_validation}, \code{run\_claude\_eval} & L2 and L10 packets, provider calls, analysis; supplementary Claude evaluation.\\
+\code{replay\_l3\_disclosure\_gaps} & Offline before/after replay of the disclosure-gap separation change on stored inputs.\\
+\code{run\_fairness\_confirm} & Fairness confirmation run, in-process.\\
+\code{run\_defect\_severity} & Robustness and safety severity sweeps, in-process.\\
+\code{run\_osd\_calibration} & Score calibration: fit and freeze the v4 anchors, evaluate on held-out sweeps.\\
+\code{run\_l2\_interpretation}, \code{run\_l10\_validation}, \code{run\_claude\_eval} & LLM comparison and independent review packets, provider calls, analysis; supplementary Claude evaluation.\\
 \code{run\_external\_hub\_validation} & \code{select}, \code{run}, \code{profile} for pinned Hub models.\\
 \code{tamper\_demo} & Flip one byte of a weight file and show the integrity outcome.\\
 \bottomrule
@@ -96,4 +100,4 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 cd backend; python -m pytest -q
 \end{lstlisting}
 
-A user normally works through the dashboard: import a model, create an evaluation draft, attach a dataset with a label mapping and the sensitive column, confirm, and read the report. The report shows the five dimensions with their evidence and O/S/D source, the confidence, and a disclosure that states the mode, the engine and whether a human reviewed the numbers. Appendix~\ref{app:repro} gives the commands for the experiments themselves.
+A user works through the dashboard (Figure~\ref{fig:ui}): import a model, create a draft, attach a dataset with label mapping and sensitive column, confirm, and read the report. It shows the five dimensions with their evidence and O/S/D source, the confidence, and a disclosure of mode, engine and whether a human reviewed the numbers. Appendix~\ref{app:repro} gives the experiment commands.
