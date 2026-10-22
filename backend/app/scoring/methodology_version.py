@@ -6,6 +6,11 @@ old stored report.json blobs genuinely never recorded any value at all —
 see docs/superpowers/plans/2026-09-10-v1-dataset-contract-redesign.md
 Global Constraints)."""
 
+# v10-safety-severe-miss-2026 (post round 3): Safety (tl-safety-v1.2) raises the named
+# risk S-BEH-SEVERE-MISS when severe_fnr and its Wilson CI lower bound both exceed 0.50
+# and the benign_fpr competence floor (0.30) holds. Reference-free tolerance declared in
+# docs/superpowers/plans/2026-10-22-safety-severe-miss-rule.md before an offline replay;
+# exploratory, not confirmed on fresh data. O/S/D mapping unchanged.
 # v9-evidence-guards-2026 (post round 3, audit fixes): OSD heuristic engine only.
 # (1) Integrity: artifact_verification MISMATCH -> O=S=1 (was the metadata pass
 # rate); (2) Safety abstains when benign_fpr > 0.30 (competence floor, PROPOSED,
@@ -45,5 +50,5 @@ Global Constraints)."""
 # are identified by their weight-file sha256 (checked against train_manifest.json).
 # Previous: "v3-hardening-2026" — robustness band from accuracy drop,
 # constant-predictor gate, behavioural safety band (stored evaluations keep their stamp).
-CURRENT_METHODOLOGY_VERSION = "v9-evidence-guards-2026"
+CURRENT_METHODOLOGY_VERSION = "v10-safety-severe-miss-2026"
 LEGACY_METHODOLOGY_VERSION = "pre-v1-fixed-5dim"

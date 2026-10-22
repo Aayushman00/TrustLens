@@ -8,6 +8,7 @@ export function modeLabel(mode: "AI_ASSISTED" | "AI_AUTONOMOUS"): string {
 
 export function engineLabel(engine: string | null | undefined): string {
   if (engine === "legacy_heuristic") return "legacy heuristic";
+  if (engine === "llm_v1") return "LLM-assisted";
   return "deterministic";
 }
 

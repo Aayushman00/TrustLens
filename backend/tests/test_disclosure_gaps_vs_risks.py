@@ -185,6 +185,6 @@ def test_local_folder_without_weights_keeps_identity_gaps(tmp_path: Path) -> Non
 
 def test_methodology_versions_bumped_for_new_risk_semantics() -> None:
     assert CURRENT_METHODOLOGY_VERSION != "v3-hardening-2026"  # L3 introduced v4; later rounds bump further
-    assert SAFETY_VERSION == "tl-safety-v1.1"
+    assert SAFETY_VERSION == "tl-safety-v1.2"
     assert EXPLAINABILITY_VERSION == "tl-explainability-v1.1"
     assert INTEGRITY_VERSION == "tl-integrity-v1.2"  # bumped by round 3 L7 (artifact-set identity)

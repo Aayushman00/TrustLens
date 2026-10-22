@@ -2,7 +2,7 @@
 
 Local single-user instance — no auth/RBAC. Human review and the Assisted
 finalize write path are live (Phase 18); publish/unpublish flip the opt-in
-leaderboard visibility flag (Phase 22, ADR 0013).
+publish flag (Phase 22, ADR 0013). No ranking or leaderboard exists.
 """
 
 from __future__ import annotations
@@ -77,9 +77,9 @@ def finalize_evaluation(
 @router.post(
     "/{evaluation_id}/publish",
     response_model=EvaluationRead,
-    summary="Publish to leaderboard (opt-in)",
+    summary="Publish (opt-in flag)",
     description=(
-        "Opt-in leaderboard publish (ADR 0013). Requires FINALIZED with a final "
+        "Opt-in publish flag (ADR 0013). Requires FINALIZED with a final "
         "score → else 409 NOT_FINALIZED. Idempotent: already published returns "
         "200 with the current state. Evaluations are never auto-published on "
         "finalize; default is private."
@@ -101,9 +101,9 @@ def publish_evaluation(
 @router.post(
     "/{evaluation_id}/unpublish",
     response_model=EvaluationRead,
-    summary="Unpublish from leaderboard",
+    summary="Unpublish (clear flag)",
     description=(
-        "Revoke leaderboard publish. Idempotent: already private returns 200. "
+        "Revoke the publish flag. Idempotent: already private returns 200. "
         "Clears published_at (republish restamps)."
     ),
     responses={

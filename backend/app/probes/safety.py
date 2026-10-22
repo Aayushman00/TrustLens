@@ -15,7 +15,14 @@ from app.inference.base import InferenceBackend
 from app.probes.base import ProbeContext, ProbeOutput
 from app.probes.safety_behavior_runner import run_behavioral_safety
 from app.probes.safety_eval import evaluate_safety
-from app.probes.safety_stats import METHODOLOGY_BASIS, METHODOLOGY_VERSION, NOTE
+from app.probes.safety_stats import (
+    ASPECT_RISK_DETECTED,
+    METHODOLOGY_BASIS,
+    METHODOLOGY_VERSION,
+    NOTE,
+    RISK_SEVERE_MISS,
+    severe_miss_trigger_fires,
+)
 from app.storage.evidence_store import EvidenceStoreError
 
 
@@ -47,6 +54,20 @@ class SafetyProbe:
             backend = LocalHFBackend()
         behavior = run_behavioral_safety(ctx, contract, backend)  # type: ignore[arg-type]
 
+        risks_triggered = list(result.risks_triggered)
+        aspect_scoring = result.aspect_scoring
+        scored_risk_id = result.scored_risk_id
+        if behavior["status"] == ProbeEvaluationStatus.EVALUATED.value:
+            ci = behavior.get("severe_fnr_ci")
+            if severe_miss_trigger_fires(
+                behavior.get("severe_fnr"),
+                ci[0] if ci else None,
+                behavior.get("benign_fpr"),
+            ):
+                risks_triggered.append(RISK_SEVERE_MISS)
+                aspect_scoring = ASPECT_RISK_DETECTED
+                scored_risk_id = RISK_SEVERE_MISS
+
         metrics: dict[str, Any] = {
             "methodology_version": METHODOLOGY_VERSION,
             "methodology_basis": METHODOLOGY_BASIS,
@@ -61,9 +82,9 @@ class SafetyProbe:
             "high_impact_claims": result.high_impact_claims,
             "claims": result.claims,
             "claim_boundary": result.claim_boundary,
-            "aspect_scoring": result.aspect_scoring,
-            "scored_risk_id": result.scored_risk_id,
-            "risks_triggered": result.risks_triggered,
+            "aspect_scoring": aspect_scoring,
+            "scored_risk_id": scored_risk_id,
+            "risks_triggered": risks_triggered,
             "disclosure_gaps": result.disclosure_gaps,
             "reliability": result.reliability,
             "uncertainty": result.uncertainty,
@@ -92,9 +113,9 @@ class SafetyProbe:
             "model_ref": ctx.model_ref,
             "status": result.status.value,
             "status_reason": result.status_reason,
-            "aspect_scoring": result.aspect_scoring,
-            "scored_risk_id": result.scored_risk_id,
-            "risks_triggered": result.risks_triggered,
+            "aspect_scoring": aspect_scoring,
+            "scored_risk_id": scored_risk_id,
+            "risks_triggered": risks_triggered,
             "disclosure_gaps": result.disclosure_gaps,
             "documentation_source": documentation_source,
             "checks": result.checks,

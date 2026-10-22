@@ -647,12 +647,12 @@ class EvaluationService:
         return row
 
     def publish(self, evaluation: Evaluation) -> Evaluation:
-        """Opt-in leaderboard publish (Phase 22, ADR 0013).
+        """Opt-in publish flag (Phase 22, ADR 0013).
 
         Requires ``FINALIZED`` + a ``final_scores`` row; idempotent — an already
         published evaluation keeps its original ``published_at``.
-        Pure DB flip: no report generation is triggered (report URIs attach on
-        the leaderboard when reports exist). Finalize never auto-publishes.
+        Pure DB flip: no report generation is triggered. Finalize never
+        auto-publishes.
         """
         if (
             evaluation.status != EvaluationStatus.FINALIZED
@@ -678,7 +678,7 @@ class EvaluationService:
         return evaluation
 
     def unpublish(self, evaluation: Evaluation) -> Evaluation:
-        """Revoke leaderboard publish — idempotent; clears the publish stamp.
+        """Revoke the publish flag — idempotent; clears the publish stamp.
 
         ``published_at`` is cleared rather than kept as history (documented
         choice); republishing restamps it.

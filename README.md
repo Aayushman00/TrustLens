@@ -116,7 +116,7 @@ Default evaluations **do not invent O/S/D**. FRIES is **withheld** (status still
   - `AI_ASSISTED` — stops at `AWAITING_REVIEW`; a reviewer records or edits O/S/D, then finalize.
 - **Original FRIES scorer** — cube-root risk scores, veto, aspect mean, weighted total; frozen vectors in `shared/scoring/fixtures/fries_test_vectors.json`. Runs only when complete numeric O/S/D exist (legacy engine or human-supplied complete triples).
 - **Reports** — canonical `report_v1` JSON in artifact storage when FRIES was scored; PDF is a projection. Append-only versions. Finalized + withheld FRIES returns 409 (not “not finalized yet”).
-- **Publish flag** — private by default; publish only after FINALIZED **and** a FRIES score exists. No leaderboard endpoint; not a universal trust ranking.
+- **Publish flag** — private by default; publish only after FINALIZED **and** a FRIES score exists. There is no ranking or leaderboard; scores are not a universal trust measure.
 - **Evidence store** — SHA-256 artifacts on the local filesystem (`STORAGE_DIR`), evaluation-scoped.
 
 ### Open methodology questions (recorded, not solved in this freeze)
@@ -220,7 +220,7 @@ Work is ordered to match the specification’s implementation phases. Items alre
 | 12 | Reports/UI: evidence, statuses, limitations, calculation breakdown | **Partial** (reports + UI exist; not limitation-complete) |
 | 13 | Regression suite covering statuses, proxy, mapping, partial FRIES | **Partial** (strong probe/API/lifecycle tests; status enum untested because absent) |
 
-Also remaining (product, not FRIES math): attack-simulation phases, anonymous public leaderboard, cryptographic report signing, SHAP/LIME as optional explainability extensions, calibrated O/S/D science, OAuth/SSO.
+Also remaining (product, not FRIES math): attack-simulation phases, cryptographic report signing, SHAP/LIME as optional explainability extensions, calibrated O/S/D science, OAuth/SSO.
 
 **Non-goals:** do not add an ML model that predicts trustworthiness or classifies risk. Do not treat proxy evaluation as direct evaluation. Do not present heuristic thresholds as empirically validated.
 
@@ -296,7 +296,7 @@ CI (`.github/workflows/ci.yml`) runs ruff + pytest (Postgres service) and the fr
 - Robustness numbers describe **character-swap** degradation on supported text classifiers only.
 - `llm_v1` and `legacy_heuristic` O/S/D are proposals for comparison and review, not validated ratings.
 - Integrity uses Layer A Hub identity/disclosure evidence. Named risks use `aspect_scoring=risk_detected` — **not** an Integrity FRIES score.
-- Leaderboard entries are comparable only with shared task/dataset/config/revision context.
+- Scores are comparable only with a shared task, dataset, configuration and model revision; TrustLens does not rank models.
 
 ## License and research
 

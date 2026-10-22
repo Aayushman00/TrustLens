@@ -16,8 +16,8 @@ evidence_refs (JSONB) is a list of immutable refs per ADR 0004, e.g.::
     [{"evidence_id": "...", "uri": "s3://...", "hash": "sha256:...",
       "content_type": "application/json", "probe_name": "robustness"}]
 
-Leaderboard visibility uses evaluations.is_published + published_at (ADR 0013);
-there is no separate leaderboard_publications table.
+The opt-in publish flag uses evaluations.is_published + published_at (ADR 0013);
+there is no separate publications table.
 """
 
 from __future__ import annotations

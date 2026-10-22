@@ -46,7 +46,7 @@ def patch_evaluated_robustness(monkeypatch: object) -> None:
 
     Default pipeline evaluations carry no EvaluationContractV2.robustness, so
     robustness is NOT_APPLICABLE and Autonomous FRIES is withheld. Suites
-    that still need a complete five-aspect FRIES (reports, leaderboard,
+    that still need a complete five-aspect FRIES (reports,
     review) opt into this synthetic model-faithful evidence — mirrors
     ``patch_evaluated_fairness``'s ``.run``-level patch, bypassing contract
     dispatch entirely rather than depending on internal V2 plumbing.

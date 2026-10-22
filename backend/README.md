@@ -584,8 +584,8 @@ auto-publishes. `POST /v1/evaluations/{id}/publish` requires `FINALIZED` + a
 `final_scores` row (else 409 `NOT_FINALIZED`), stamps `published_at`, and is
 idempotent — republishing keeps the original stamp. `unpublish` clears it
 (republish restamps). Publish is a pure DB flip — no report generation is
-triggered. There is no leaderboard endpoint; FRIES scores are not a universal
-cross-task trust ranking.
+triggered. There is no ranking or leaderboard; FRIES scores are not a universal
+cross-task trust measure.
 
 ## Run
 
@@ -609,8 +609,7 @@ Full local setup (venv, `.env`, Docker Postgres, migrations): `scripts/setup-loc
 ## Out of scope
 
 Vision/ART FGSM robustness, FRIES2 caps, NLP card-quality / risk extraction,
-public evidence download API, attack simulation (20–21, post-MVP), frontend
-leaderboard page / demo UI (23), anonymous public leaderboard access / CDN,
+public evidence download API, attack simulation (20–21, post-MVP), demo UI (23), public evidence access / CDN,
 auto-publish on finalize, cryptographic report signing.
 Treating DP/EO/F1, card `coverage_ratio`, safety checklist coverage,
 `integrity_score_0_10`, or robustness accuracies as product FRIES / O/S/D.
