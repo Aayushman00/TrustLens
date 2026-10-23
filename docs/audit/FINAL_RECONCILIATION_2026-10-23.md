@@ -33,3 +33,19 @@ Citation keys: 24 cited, 24 defined. Bibliographic content: the six 2024-25 trus
 AAAI 2024]; Kemmerzell ACM CSUR 2025; Mattioli AI and Ethics 4(1):15-25, DOI resolves to that title) and match. The other
 eighteen (Hardt, Borkan, Mehrabi, HotFlip, CheckList, BadNets, Jiang, BERT, Transformers, Efron, Wilson, Spearman, Cohen,
 Fleiss, Krippendorff, Mitchell, Gebru, NIST AI RMF) were checked against background knowledge only, not looked up.
+
+## Clean-checkout PDF build
+
+* Source: detached worktree at commit `6f44479` (outside the repository, removed afterwards).
+* Command: `bash scripts/audit/build_report.sh` (Docker `texlive/texlive:latest-medium`, 4 `pdflatex` passes).
+* Result: 65 pages (limit 65), 0 LaTeX errors, 0 undefined references; two overfull boxes of about 2 pt (Table 4.3, Table 7.13),
+  nothing clipped.
+* Text of the built PDF contains: 5/18, 7/24, 11/36, "5 + 7", 913 test items, 911 passed, the v11 version-table row,
+  `G-ROB-CI-WIDE`, "Conditions of the review", "near-uniform YES", and the dataset-revision caveat.
+* Pages rendered and read in this pass: human-study discussion (p. 38), limitations 10.4 (p. 51), bibliography (p. 54);
+  earlier pass: abstract, equations, version table, artifact table, L2 table, hub tables. Cosmetic only: the bibliography
+  page heading renders as "Bibliography" while the table of contents says "References"; Table 7.10 row labels
+  repeat Q1-Q3 with a hyphenated "suffi-cient".
+* Not rendered page by page: the remaining ~50 pages (text-scanned for control characters and stray `\command` strings only).
+* Fresh runs on the tree before this commit: backend pytest 911 passed, 2 skipped (exit 0), 913 collected; ruff clean.
+  Worker and frontend suites were not source-changed since the previous gate run and were not re-run in this pass.
