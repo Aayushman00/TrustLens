@@ -12,6 +12,12 @@ vi.mock("../api/client", async () => {
   return { ...actual, apiFetch: vi.fn() };
 });
 
+// Queued mockResolvedValueOnce values must never leak between tests: one
+// failed test would otherwise feed its leftovers to every test after it.
+beforeEach(() => {
+  vi.mocked(apiFetch).mockReset();
+});
+
 function renderPage(initialPath = "/evaluations/new") {
   return render(
     <MemoryRouter initialEntries={[initialPath]}>
