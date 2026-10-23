@@ -3,13 +3,11 @@
 \section{Background and problem statement}
 Most people who need a toxicity classifier or a sentiment model today do not train one. They search the Hugging Face Hub, skim the first lines of a model card, glance at the download count and call \code{from\_pretrained}. That workflow is quick, and it is also the point where trust gets decided almost by accident. The Hub holds a very large number of checkpoints uploaded by anyone with an account, and an empirical study of the registry found that metadata and documentation are often incomplete or inconsistent \cite{jiang2023reuse}. A model card can be an untouched template. A licence field can be empty, or can contradict the card text. A card can call a model ``production ready, no known biases'' while the model's behaviour on identity-related text says something different.
 
-The question this project works on is therefore a narrow one: \emph{given a model reference and a small labelled dataset, can a tool collect evidence about the model in a reproducible, inspectable way, and show a reviewer where the risks are and where the evidence is too thin to say?} We are not asking whether a model is ``trustworthy'' in an absolute sense. Probes built in one academic year cannot answer that; this report is about what they can and cannot see.
+The question this project works on is therefore a narrow one: \emph{given a model reference and a small labelled dataset, can a tool collect evidence about the model in a reproducible, inspectable way, and show a reviewer where the risks are and where the evidence is too thin to say?} We are not asking whether a model is ``trustworthy'' in an absolute sense. This report describes what the probes can see.
 
 \begin{center}
-\fbox{\parbox{0.92\textwidth}{\small\textbf{Central framing.} TrustLens is an evidence-driven, FRIES-aligned model auditing framework. The five-dimensional audit profile is the primary output; the aggregate FRIES score is only a secondary heuristic summary and must not be presented as a universally validated measure of trustworthiness.}}
+\fbox{\parbox{0.92\textwidth}{\small\textbf{Central framing.} TrustLens is an evidence-driven, FRIES-aligned model auditing framework. The five-dimensional audit profile is the primary output; the aggregate FRIES score is a secondary heuristic summary. TrustLens supports human review and does not certify or rank models.}}
 \end{center}
-
-
 
 \section{Motivation}
 \begin{enumerate}
@@ -34,27 +32,30 @@ The question this project works on is therefore a narrow one: \emph{given a mode
 \item[RQ5] Do independent evidence reviewers agree with each other, and with TrustLens?
 \item[RQ6] What does an audit profile look like for real Hub models, and what happens when the evidence is insufficient?
 \end{description}
-None asks whether TrustLens can tell a trustworthy model from an untrustworthy one in general; our data could not answer that.
+
+
+\section{Reading guide}
+Chapters~\ref{ch:lit}--\ref{ch:impl} describe the system: related work, architecture (Figure~\ref{fig:pipeline} shows the workflow at a glance), the FRIES methodology and the implementation (Figures~\ref{fig:ui}--\ref{fig:ui-report} show the dashboard). Chapters~\ref{ch:method}--\ref{ch:discussion} describe the experiments, the results and their discussion. Chapter~\ref{ch:testing} covers testing and reproducibility, Chapter~\ref{ch:limits} the limitations and ethics, and Chapter~\ref{ch:conclusion} the conclusions, with a table mapping objectives to results.
 
 \section{The ten validation studies}\label{sec:l1l10}
-After the first end-to-end experiments (Section~\ref{sec:pilot}), we listed the ten limitations the results had exposed and worked through them in order, each with a plan document in \code{docs/\allowbreak superpowers/\allowbreak plans/\allowbreak }; for the score calibration, LLM comparison, fairness confirmation, severity sweeps and independent review that document was written before the run. This report uses descriptive names; the repository labels them L1 to L10 (Table~\ref{tab:l1l10}).
+After the first end-to-end experiments (Section~\ref{sec:pilot}), we listed the ten shortcomings the results had exposed and worked through them in order (this third round of work is called ``round 3'' in later chapters), each with a plan document in \code{docs/\allowbreak superpowers/\allowbreak plans/\allowbreak }; for the score calibration, LLM comparison, fairness confirmation, severity sweeps and independent review that document was written before the run. This report uses descriptive names; the repository labels (L1 to L10) are mapped in Appendix~\ref{app:support}. Table~\ref{tab:l1l10} summarises the studies.
 
 \begin{table}[!htbp]
-\centering\footnotesize
-\caption{The ten limitations that structure the validation work, with a one-line outcome for each.}\label{tab:l1l10}
+\centering\scriptsize
+\caption{The ten validation studies, with a one-line outcome for each.}\label{tab:l1l10}
 \begin{tabularx}{\textwidth}{@{}p{2.5cm}p{3.1cm}L@{}}
 \toprule
-\textbf{Study (repo label)} & \textbf{Limitation found} & \textbf{What we did and how it came out}\\
+\textbf{Study} & \textbf{Problem found} & \textbf{What we did and how it came out}\\
 \midrule
-Score calibration (L1) & O/S/D bands compress severity & Calibrated O/S/D mapping (v4) fitted on a separate split; held-out score range grew from 0.68--1.18 to 4.60--6.65 points, on a scale relative to the injected defects.\\
-LLM comparison (L2) & LLM-rated dimensions are noisy and quota-bound & Deterministic versus LLM interpretation of 12 frozen packets. 60 of 60 runs completed (22 provider, 38 supplemental LLM); low agreement with the deterministic engine.\\
-Disclosure-gap separation (L3) & Card-based risk flags fire on clean controls & Disclosure gaps separated from risks. Control flag rate fell from 1.00/1.00/0.50 to 0/0/0 (Safety/Explainability/Integrity), and recall on injected card defects fell with it.\\
-Fairness-rule redesign (L4, L4.1) & Binary fairness evidence can never raise a risk & Excess-DPD candidate rejected; replaced by a bootstrap-gated equal-opportunity rule, chosen after seeing exploratory data.\\
-Fairness confirmation (L5) & Rule needs confirmation on untouched data & Pre-registered run with a new seed and disjoint data. Three of four hypotheses held; H1 failed because the clean reference model was flagged.\\
-Severity sweeps (L6) & One severity level; coarse scoring & Robustness and safety sweeps: evidence monotone ($\rho=1$), scores monotone with ties; robustness needed a post-hoc deviation.\\
-Artifact integrity (L7) & Integrity hashed one file only & Whole artifact-set verification (sharded weights, tokenizer, config) against a manifest; ADR~0013 states what this does not prove.\\
-Pipeline hardening (L8, L9) & Pipeline races and clean-up & Commit-before-enqueue, stuck-run rescue, decision-first LLM evidence block; minor script fixes.\\
-Independent review (L10) & No independent check of TrustLens's judgments & Twelve blinded packets; seven human submissions, one official LLM answer, twelve separate supplemental LLM answers. Agreement high on dimension and sufficiency, lower on risk.\\
+Score calibration & O/S/D bands compress severity & Calibrated O/S/D mapping (v4) fitted on a separate split; held-out score range grew from 0.68--1.18 to 4.60--6.65 points, on a scale relative to the injected defects.\\
+LLM comparison & LLM-rated dimensions are noisy and quota-bound & Deterministic versus LLM interpretation of 12 frozen packets. 60 of 60 runs completed (22 provider, 38 supplemental LLM); low agreement with the deterministic engine.\\
+Disclosure-gap separation & Card-based risk flags fire on clean controls & Disclosure gaps separated from risks. Control flag rate fell from 1.00/1.00/0.50 to 0/0/0 (Safety/Explainability/Integrity), and recall on injected card defects fell with it.\\
+Fairness-rule redesign & Binary fairness evidence can never raise a risk & Excess-DPD candidate rejected; replaced by a bootstrap-gated equal-opportunity rule, chosen after seeing exploratory data.\\
+Fairness confirmation & Rule needs confirmation on untouched data & Pre-registered run with a new seed and disjoint data. Three of four hypotheses held; H1 failed because the clean reference model was flagged.\\
+Severity sweeps & One severity level; coarse scoring & Robustness and safety sweeps: evidence monotone ($\rho=1$), scores monotone with ties; robustness needed a post-hoc deviation.\\
+Artifact integrity & Integrity hashed one file only & Whole artifact-set verification (sharded weights, tokenizer, config) against a manifest; ADR~0013 states what this does not prove.\\
+Pipeline hardening & Pipeline races and clean-up & Commit-before-enqueue, stuck-run rescue, decision-first LLM evidence block; minor script fixes.\\
+Independent review & No independent check of TrustLens's judgments & Twelve blinded packets; seven human submissions, one official LLM answer, twelve separate supplemental LLM answers. Agreement high on dimension and sufficiency, lower on risk.\\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -65,6 +66,3 @@ Independent review (L10) & No independent check of TrustLens's judgments & Twelv
 \item[Methodological.] Separate evidence, risk and score layers; explicit abstention; risks split from \emph{disclosure gaps}; an equal-opportunity fairness rule with a bootstrap gate; artifact-set integrity; a range-normalised O/S/D mapping; blinded evidence packets.
 \item[Empirical.] Controlled flawed-model suites with severity sweeps, a pre-registered confirmatory fairness run, a deterministic-versus-LLM comparison, a human evidence-review study and an audit of seven real Hub models.
 \end{description}
-
-\section{Claims we do not make}
-TrustLens does not certify, approve or rank any model; the seven Hub models have descriptive profiles only. The FRIES score is not validated against human trust judgments, and the O/S/D mapping is a proposal. The reviewer study is not a validation (reviewers are evidence readers; the sample is small). Results cover one task (English toxicity), one dataset family (Civil Comments) and mostly BERT-family models.

@@ -30,6 +30,16 @@ The reference machine is a laptop with an NVIDIA RTX 4060 GPU (8~GB VRAM). Exper
 \caption{Evaluation page of the dashboard for a real Hub model (\code{martin-ha/toxic-comment-model}): a banner states that the result is not human-reviewed, followed by the aggregate FRIES value and the five dimension scores.}\label{fig:ui}
 \end{figure}
 
+\begin{figure}[!htbp]
+\centering\includegraphics[width=0.8\textwidth]{ui_review.jpg}
+\caption{Review page of an \code{AI\_ASSISTED} evaluation awaiting human review. The deterministic engine proposes no O/S/D values; the machine-measured evidence is read-only and the reviewer enters the ratings.}\label{fig:ui-review}
+\end{figure}
+
+\begin{figure}[!htbp]
+\centering\includegraphics[width=0.8\textwidth]{ui_report.jpg}
+\caption{Report page for a documentation-only evaluation of \code{gravitee-io/bert-tiny-toxicity}. FRIES is withheld because the O/S/D ratings are incomplete, and the banner states that the result is not human-reviewed.}\label{fig:ui-report}
+\end{figure}
+
 \section{Evidence, reproducibility and error handling}
 Source files per component are listed in Table~\ref{tab:impl-status}.
 

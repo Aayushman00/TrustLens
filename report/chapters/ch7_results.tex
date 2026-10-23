@@ -2,16 +2,32 @@
 
 Every number in this chapter is read from a file in the repository; the relevant result folder is named in each section. Results are reported per dimension first and the aggregate FRIES score last, in line with the central framing. We separate three layers wherever the data allow: the \emph{evidence} (what the probe measured), the \emph{risk decision} (whether TrustLens raised a risk, a gap, or abstained) and the \emph{score}. Much of what we learned lives in the differences between those layers.
 
+\begin{table}[!htbp]
+\centering\small
+\caption{Headline results of the chapter.}\label{tab:headline}
+\begin{tabularx}{\textwidth}{@{}p{4.3cm}L@{}}
+\toprule
+\textbf{Question} & \textbf{Result}\\
+\midrule
+Is the evidence reproducible? & Deterministic probes: standard deviation 0.000 over five runs.\\
+Does evidence track severity? & Yes: Spearman $\rho=1.0$ in every sweep.\\
+Does the score track severity? & Score range over the injected defects widened from 0.68--1.18 to 4.60--6.65 points after calibration, on a scale relative to the injected defects (Section~\ref{sec:l1}).\\
+Are clean controls flagged? & Control flag rate fell from 1.00/1.00/0.50 to 0/0/0 once disclosure gaps were separated from risks, at the cost of recall on injected card defects (Section~\ref{sec:l3}).\\
+Is fairness detected? & Every injected defect at flip rate $\ge0.4$ on fresh data; the clean reference model was also flagged (Section~\ref{sec:l5}).\\
+Is integrity checked? & A one-byte change to the weights of a controlled model is detected against a manifest, and 15 of 15 and 7 of 7 Hub models verify against the Hub's hashes (Section~\ref{sec:l7}).\\
+Do reviewers agree? & With TrustLens on risk for 6 of 12 packets and on sufficiency for 9 of 12 (Section~\ref{sec:l10}).\\
+Real models? & Seven pinned Hub models profiled; two receive no FRIES score because of abstentions (Section~\ref{sec:hub}).\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
 \section{Pilot: first end-to-end experiment}\label{sec:pilot}
-The first experiment (14--15 September 2026, \code{results/\allowbreak flawed\_model\_suite/\allowbreak eval\_results*}) evaluated \code{unitary/\allowbreak toxic-bert} and six forged variants twice, with the first probe set, in which Safety and Explainability read the model card only. We use it here for what it taught us, not for its numbers.
-
-\paragraph{The reference model was a constant predictor.} The first evaluation of the Hub import of \code{toxic-bert} returned a demographic-parity difference, equalized-odds difference and F1 spread of exactly zero, with clean accuracy 0.7987. The stored per-group statistics show a positive-prediction rate of 0.0 in \emph{both} groups: the model never predicted ``toxic''. Since 20\% of the sample is toxic, always answering ``not toxic'' scores 0.80, and the model scored 0.799. The cause was the label mapping. \code{toxic-bert} has six sigmoid outputs; our contract sent dataset value~1 to output index~1, which is \code{severe\_toxic}, and a classifier that fires on severe toxicity only will say ``no'' to almost everything. The evaluation contract had stored the snapshot of the six labels, which is how we found the problem after the fact. TrustLens had scored this model as nicely fair and nicely robust, which is what a degenerate classifier looks like to a probe that checks only stability. That is why the prediction-collapse gate (threshold 0.98) exists, and why the 2-label reference was built.
-
-\paragraph{After the correction.} With the 2-label reference (accuracy 0.868, DPD 0.283 with 95\% CI [0.243, 0.324], EOD 0.174) the targeted-dimension comparison held for five of six variants in the pilot, but the Safety variant V5 scored 3.98 on Safety against the reference's 3.91, because the probe at that time only read the card. The overall FRIES score of the corrected reference was 6.16, and three variants scored higher than that.
-
-\paragraph{The LLM-rated dimensions moved.} Run~1 and Run~2 differed only in Integrity, Explainability and Safety. The original reference's overall score fell from 6.79 to 5.44 between runs while its card and metadata were identical; the other six models moved by 0.05--0.49 (\code{report/\allowbreak figures/\allowbreak numbers.txt}).
-
-Three consequences carried into the rest of the project: a constant-predictor gate, a behavioural Safety probe, and repeated runs with a frozen LLM configuration.
+The first experiment (September 2026, \code{results/\allowbreak flawed\_model\_suite/\allowbreak eval\_results*}) evaluated \code{unitary/\allowbreak toxic-bert} and six forged variants twice. It exposed three problems that shaped the rest of the project.
+\begin{itemize}
+\item \textbf{The reference was a constant predictor.} \code{toxic-bert} has six sigmoid outputs, and our label contract sent dataset value~1 to output~1 (\code{severe\_toxic}). The model never predicted ``toxic'' (accuracy 0.799 on a 20\% toxic sample), yet looked perfectly fair and robust. This is why the prediction-collapse gate (threshold 0.98) exists and why a 2-label reference (accuracy 0.868, EOD 0.174) was built.
+\item \textbf{Safety read only the card}, so the Safety variant scored 3.98 against the reference's 3.91, which led to the behavioural Safety probe.
+\item \textbf{LLM-rated dimensions moved between identical runs:} one model's overall score fell from 6.79 to 5.44, which led to repeated runs with a frozen LLM configuration.
+\end{itemize}
 
 \section{Controlled suite: repeatability}\label{sec:repeat}
 The main suite (nine models, five runs each, \code{results/\allowbreak flawed\_model\_suite/\allowbreak final\_20261002\_*}, methodology \code{v3-hardening-2026}) first answers RQ1.
@@ -44,37 +60,7 @@ Evidence level & suite + sweep & 10 & 20 & 7 & 28 & 0.33 & 0.59\\
 
 The evidence-level recall looks respectable and should not be believed. Safety and Explainability card-based risks fired on \textbf{100\%} of the clean controls (Integrity: 50\%), and binary Fairness evidence could not raise a risk at all at that time. Per dimension, in the suite plus sweep: Fairness evidence recall 0/6 and score recall 0/6; Integrity evidence recall 3/3 but control flag rate 0.50; Explainability 2/2 with control rate 1.00; Safety 5/5 with control rate 1.00. These perfect recalls come from documentation absences and were later removed by disclosure-gap separation (Section~\ref{sec:l3}).
 
-Defect by defect:
-\begin{itemize}
-\item \textbf{Robustness (V2): detected} at score level (accuracy drop 0.041; score 7.56 against 8.65), although \code{R-ROB-PERT} did not fire because the drop was below $\varepsilon_{drop}=0.05$.
-\item \textbf{Fairness (V1): not detected} by any rule. EOD was 0.164 against the control's 0.174, and the excess demographic parity was 0.000, because the dataset's own group gap is 0.505. This is a negative result, and it motivated the fairness-rule redesign and fairness confirmation.
-\item \textbf{Safety (V5): measured but not separated.} The severe-harm FNR was 0.44 (CI [0.38, 0.50]) against the control's 0.355, but both received Safety 6.60.
-\item \textbf{Explainability and Integrity card defects:} the LLM-rated scores were lower (V3 Explainability 4.0; V4 and V4b Integrity 2.3--2.4) than the control (5.2$\pm$1.2 and 4.5$\pm$1.8), but the control's LLM noise kept them under the pre-registered threshold.
-\item \textbf{Spillover:} the overfit V2 was also less fair (EOD 0.370). Its Fairness flag counts as a false positive under the pre-registered rule although the effect is real.
-\end{itemize}
-
-Table~\ref{tab:dimscores} gives the dimension profiles of the main suite, as the five-dimensional profile is the primary output.
-
-\begin{table}[!htbp]
-\centering\small
-\caption{Mean dimension scores $\pm$ standard deviation over five runs (suite, \code{v3-hardening-2026}, \code{llm\_v1}). Injected dimension in the model's description.}\label{tab:dimscores}
-\begin{tabularx}{\textwidth}{@{}p{3.3cm}RRRRR@{}}
-\toprule
-\textbf{Model} & \textbf{Fair.} & \textbf{Rob.} & \textbf{Integ.} & \textbf{Expl.} & \textbf{Safety}\\
-\midrule
-reference\_hub & 8.00 & 8.65 & 8.65 & 6.00 & 6.60\\
-reference 2-label & 8.00 & 8.65 & 4.54$\pm$1.80 & 5.20$\pm$1.20 & 6.60\\
-V1 fairness & 8.00 & 8.65 & 2.41$\pm$0.27 & 8.13$\pm$0.18 & 7.27\\
-V2 robustness & 6.60 & 7.56 & 3.22$\pm$0.80 & 8.66$\pm$0.34 & 7.56\\
-V3 explainability & 8.65 & 8.65 & 2.44$\pm$0.50 & 4.02$\pm$0.53 & 6.95\\
-V4 integrity (+fair.) & 8.00 & 8.65 & 2.30$\pm$0.22 & 3.82$\pm$1.05 & 7.27\\
-V4b integrity (clean) & 8.65 & 8.65 & 2.43$\pm$0.13 & 3.78$\pm$0.60 & 6.95\\
-V5 safety & 8.65 & 8.65 & 2.81$\pm$0.45 & 8.59$\pm$0.44 & 6.60\\
-V6 compound & 8.00 & 8.65 & 4.23$\pm$2.23 & 1.52$\pm$0.73 & 6.95\\
-\bottomrule
-\end{tabularx}
-\end{table}
-\noindent Fairness, Robustness and Safety have zero spread; Integrity and Explainability inherit the LLM's. The Integrity entries show why this layer was hard to read: the 2-label reference (4.54$\pm$1.80) and the compound model (4.23$\pm$2.23) overlap with the ranges of several flawed models, which is the visible cost of LLM-rated noise on a control. The Hub import of the same weights scored 8.65$\pm$0.00. We did not isolate the cause; the import differs from the local copy in having a pinned revision and a Hub file listing, which the v3 Integrity band counted and the local folder lacked (Section~\ref{sec:gaps}).
+Per-defect outcomes and the dimension profiles of the nine suite models are in Appendix~\ref{app:suite}. In short, the Robustness defect was detected at score level, the Fairness defect was missed by every rule (which motivated the fairness-rule redesign), and the LLM-rated Integrity and Explainability scores separated flawed models from controls only weakly because of LLM noise.
 
 \section{Evidence against injected severity}
 The sweeps keep the clean slice and hyperparameters fixed and change only the flip rate (\code{final\_20261002\_analysis\_with\_sweep}).

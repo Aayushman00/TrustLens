@@ -1,6 +1,67 @@
 \appendix
 \chapter{Supporting Material}\label{app:support}
 
+\section{Main suite: per-defect outcomes and dimension profiles}\label{app:suite}
+Outcome of each injected defect in the main suite:
+\begingroup\sloppy
+\begin{itemize}
+\item \textbf{Robustness (V2): detected} at score level (accuracy drop 0.041; score 7.56 against 8.65), although \code{R-ROB-PERT} did not fire because the drop was below $\varepsilon_{drop}=0.05$.
+\item \textbf{Fairness (V1): not detected} by any rule. EOD was 0.164 against the control's 0.174, and the excess demographic parity was 0.000, because the dataset's own group gap is 0.505. This is a negative result, and it motivated the fairness-rule redesign and fairness confirmation.
+\item \textbf{Safety (V5): measured but not separated.} The severe-harm FNR was 0.44 (CI [0.38, 0.50]) against the control's 0.355, but both received Safety 6.60.
+\item \textbf{Explainability and Integrity card defects:} the LLM-rated scores were lower (V3 Explainability 4.0; V4 and V4b Integrity 2.3--2.4) than the control (5.2$\pm$1.2 and 4.5$\pm$1.8), but the control's LLM noise kept them under the pre-registered threshold.
+\item \textbf{Spillover:} the overfit V2 was also less fair (EOD 0.370). Its Fairness flag counts as a false positive under the pre-registered rule although the effect is real.
+\end{itemize}
+\endgroup
+
+Table~\ref{tab:dimscores} gives the dimension profiles of the main suite, as the five-dimensional profile is the primary output.
+
+\begin{table}[!htbp]
+\centering\small
+\caption{Mean dimension scores $\pm$ standard deviation over five runs (suite, \code{v3-hardening-2026}, \code{llm\_v1}). Injected dimension in the model's description.}\label{tab:dimscores}
+\begin{tabularx}{\textwidth}{@{}p{3.3cm}RRRRR@{}}
+\toprule
+\textbf{Model} & \textbf{Fair.} & \textbf{Rob.} & \textbf{Integ.} & \textbf{Expl.} & \textbf{Safety}\\
+\midrule
+reference\_hub & 8.00 & 8.65 & 8.65 & 6.00 & 6.60\\
+reference 2-label & 8.00 & 8.65 & 4.54$\pm$1.80 & 5.20$\pm$1.20 & 6.60\\
+V1 fairness & 8.00 & 8.65 & 2.41$\pm$0.27 & 8.13$\pm$0.18 & 7.27\\
+V2 robustness & 6.60 & 7.56 & 3.22$\pm$0.80 & 8.66$\pm$0.34 & 7.56\\
+V3 explainability & 8.65 & 8.65 & 2.44$\pm$0.50 & 4.02$\pm$0.53 & 6.95\\
+V4 integrity (+fair.) & 8.00 & 8.65 & 2.30$\pm$0.22 & 3.82$\pm$1.05 & 7.27\\
+V4b integrity (clean) & 8.65 & 8.65 & 2.43$\pm$0.13 & 3.78$\pm$0.60 & 6.95\\
+V5 safety & 8.65 & 8.65 & 2.81$\pm$0.45 & 8.59$\pm$0.44 & 6.60\\
+V6 compound & 8.00 & 8.65 & 4.23$\pm$2.23 & 1.52$\pm$0.73 & 6.95\\
+\bottomrule
+\end{tabularx}
+\end{table}
+\noindent Fairness, Robustness and Safety have zero spread; Integrity and Explainability inherit the LLM's. The Integrity entries show why this layer was hard to read: the 2-label reference (4.54$\pm$1.80) and the compound model (4.23$\pm$2.23) overlap with the ranges of several flawed models, which is the visible cost of LLM-rated noise on a control. The Hub import of the same weights scored 8.65$\pm$0.00. We did not isolate the cause; the import differs from the local copy in having a pinned revision and a Hub file listing, which the v3 Integrity band counted and the local folder lacked (Section~\ref{sec:gaps}).
+
+
+
+\section{Repository labels and version names}
+\begin{table}[!htbp]
+\centering\footnotesize
+\caption{Names used in the repository and their descriptive names in this report.}
+\begin{tabularx}{\textwidth}{@{}p{3.0cm}L@{}}
+\toprule
+\textbf{Label} & \textbf{Meaning}\\
+\midrule
+L1 & Score calibration (O/S/D mapping v4)\\
+L2 & Deterministic versus LLM comparison\\
+L3 & Disclosure-gap separation\\
+L4, L4.1 & Fairness-rule redesign (TPR-gap rule)\\
+L5 & Fairness confirmation (pre-registered)\\
+L6 & Severity sweeps\\
+L7 & Artifact-set integrity\\
+L8, L9 & Pipeline hardening\\
+L10 & Independent evidence review\\
+v3, v4, v9, v10 & O/S/D heuristic bands, calibrated mapping, evidence guards, exploratory safety rule\\
+H1--H4 & Hypotheses of the fairness confirmation run\\
+P01--P12, R0--R6 & Review packets and reviewer codes\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
 \section{Result folders used in this report}
 \begin{table}[!htbp]
 \centering\footnotesize

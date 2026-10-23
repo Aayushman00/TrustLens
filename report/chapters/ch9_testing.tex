@@ -1,4 +1,4 @@
-\chapter{Testing, Reproducibility and Performance}\label{ch:testing}
+\chapter[Testing, Reproducibility and Performance]{Testing, Reproducibility and\linebreak Performance}\label{ch:testing}
 
 \section{Testing strategy}
 The backend has 111 test modules in \code{backend/\allowbreak tests} (913 test items collected by \code{pytest}, 843 \code{def test\_} functions by a plain text count; parametrised tests account for the difference). The worker package has nine tests and the frontend has 29 test files. Continuous integration (\code{.github/\allowbreak workflows/\allowbreak ci.yml}) runs on pushes to \code{Main} and on pull requests: backend \code{ruff} and \code{pytest} against a Postgres service container, worker \code{ruff} and \code{pytest} with a slim install, and the frontend tests, type-check and build. We did not generate a coverage report for this thesis, so we give no coverage percentage.
@@ -19,9 +19,9 @@ Frontend \code{vitest} & 29 files, 275 tests passed.\\
 \end{tabularx}
 \end{table}
 
-The tests are grouped by area: the FRIES scorer against frozen vectors in \code{shared/\allowbreak scoring/\allowbreak fixtures}; fairness statistics and the decision order of Table~\ref{tab:fairrule}; robustness, safety and the prediction gate; artifact integrity, the tamper demonstration and the disclosure-gap separation split; the O/S/D engines, including the frozen v4 anchors (\code{check\_frozen}) and the LLM fallback; the LLM comparison and independent review harnesses (packet building, leakage checks, hash matching, parsing, agreement categories); and the pipeline and API lifecycle.
+\paragraph{Test areas.} The tests are grouped by area: the FRIES scorer against frozen vectors in \code{shared/\allowbreak scoring/\allowbreak fixtures}; fairness statistics and the decision order of Table~\ref{tab:fairrule}; robustness, safety and the prediction gate; artifact integrity, the tamper demonstration and the disclosure-gap separation split; the O/S/D engines, including the frozen v4 anchors (\code{check\_frozen}) and the LLM fallback; the LLM comparison and independent review harnesses (packet building, leakage checks, hash matching, parsing, agreement categories); and the pipeline and API lifecycle.
 
-\paragraph{Test-driven where it counted.} For the round-3 changes we wrote the failing test first, watched it fail, implemented, and ran the whole suite. Some tests found real mistakes in our own designs before any experiment: the leakage test caught model names in packet source paths, and a unit test caught a risk-present rule that returned UNCERTAIN for a triggered integrity risk whenever an unrelated gate had also failed (a correction made before any packet was built, and recorded in the LLM comparison pre-registration). The engineering issues in Table~\ref{tab:bugs} each have a regression test.
+\paragraph{Test-driven where it counted.} For the round-3 changes we wrote the failing test first, watched it fail, implemented, and ran the whole suite. Some tests found real mistakes in our own designs before any experiment: the leakage test caught model names in packet source paths, and a unit test caught a risk-present rule that returned UNCERTAIN for a triggered integrity risk whenever an unrelated gate had also failed. The engineering issues in Table~\ref{tab:bugs} each have a regression test.
 
 \paragraph{What the tests do not cover.} Most probe tests use injected fake backends, so they check logic and contracts, not behaviour on real checkpoints. The controlled experiments are the real-weight tests, and they found problems the unit tests could not (the label-mapping failure of Section~\ref{sec:pilot}).
 
@@ -38,7 +38,7 @@ Appendix~\ref{app:repro} lists the commands.
 \section{Performance and resource use}
 \begin{table}[!htbp]
 \centering\small
-\caption{Measured cost on the reference laptop (RTX 4060, 8\,GB, CUDA, float32, batch size 8).}
+\caption{Measured cost on the reference laptop (RTX 4060, 8\,GB, CUDA, float32, batch size 8).}\label{tab:perf}
 \begin{tabularx}{\textwidth}{@{}p{5.6cm}L@{}}
 \toprule
 \textbf{Item} & \textbf{Measurement}\\
@@ -47,7 +47,6 @@ Fine-tuning one BERT-base variant (8\,000 rows, 3 epochs) & 160.4--178.3\,s (rec
 One full evaluation of a real Hub model through the API (3\,000 rows, five probes, LLM call or fallback) & 23.2--110.5\,s over the seven v9 audit runs\\
 One deterministic interpretation of a packet & about 2\,ms\\
 One LLM call, successful & mean 19.8\,s, including in-run back-off before falling through to the next provider\\
-Evaluation of a small model in the early benchmark (warm) & 5--15\,s wall-clock\\
 Checkpoint size of BERT-base float32 & about 438\,MB\\
 \bottomrule
 \end{tabularx}
