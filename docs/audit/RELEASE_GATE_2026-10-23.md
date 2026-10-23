@@ -78,4 +78,11 @@ corrected: pooling changes no overlap outcome. Test counts after the addendum: 9
 
 ## 7. Gated commit
 
-Gated commit: `9e8e5ee` (all section 1 results were produced on exactly this tree; the only later commit adds this hash).
+Provenance of the figures above (corrected; an earlier version of this line wrongly said only a hash commit followed):
+
+* Section 1 was produced on the tree of `9e8e5ee` (2026-10-23): backend 910 passed / 912 collected, worker 9, frontend 275.
+* Later commits: `6957561` (hash note), `6f44479` (L2 overlap fix, Ch1/Ch7/Ch9 text, +1 backend test), `8ff87f2` (docs only).
+* Backend was re-run fresh on the `6f44479` content: 911 passed, 2 skipped, 913 collected. Worker and frontend were **not**
+  re-run after `9e8e5ee`; `git diff 9e8e5ee HEAD -- worker frontend` is empty, so their results stand by unchanged source,
+  not by a fresh run.
+* PDF: built from `6f44479`; sha256 `3ac990f9373910e5f5197b8dcbd96efa2277f400cee26b3b6bc6a60143b1daa6`; no report source changed afterwards.
