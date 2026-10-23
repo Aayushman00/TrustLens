@@ -1,0 +1,30 @@
+/* Import-model page. Legacy cream/green tokens only. */
+
+.im-form {
+  max-width: 40rem;
+}
+
+.im-form input,
+.im-actions .btn {
+  min-height: 44px;
+}
+
+.im-form input {
+  overflow-wrap: anywhere;
+}
+
+.im-result h2:focus {
+  outline: none; /* programmatic focus target after a successful import */
+  overflow-wrap: anywhere;
+}
+
+.im-result .kv dd {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 480px) {
+  .im-actions .btn {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+}
