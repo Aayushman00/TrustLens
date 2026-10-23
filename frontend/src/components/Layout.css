@@ -1,0 +1,224 @@
+/* App shell chrome. Uses only --tl-* tokens (see ds/tokens.css); the page area
+   keeps the legacy tokens until each page is migrated. */
+.tl-shell {
+  --tl-shell-w: 232px;
+  width: var(--tl-shell-w);
+  flex: 0 0 var(--tl-shell-w);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--tl-s-4);
+  padding: var(--tl-s-4) var(--tl-s-3);
+  background: var(--tl-ink-1);
+  border-right: 1px solid var(--tl-line-1);
+}
+
+.tl-shell p,
+.tl-shell ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tl-shell-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--tl-s-3);
+}
+
+.tl .tl-shell-brand,
+.tl-shell-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tl-s-2);
+  min-height: 44px;
+  padding: 0 var(--tl-s-2);
+  border-radius: var(--tl-r-card);
+  color: var(--tl-text-1);
+  font-size: var(--tl-fs-20);
+  text-decoration: none;
+}
+
+.tl-shell-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--tl-line-2);
+  border-radius: var(--tl-r-slip);
+  font-family: var(--tl-font-mono);
+  font-size: var(--tl-fs-12);
+  font-weight: 500;
+}
+
+/* Hidden on desktop; shown below 900px. */
+.tl .tl-shell-menu {
+  display: none;
+  align-items: center;
+  gap: var(--tl-s-2);
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 var(--tl-s-3);
+  font-size: var(--tl-fs-14);
+}
+
+.tl-shell-panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--tl-s-4);
+  min-height: 0;
+}
+
+.tl-shell-engine {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tl-s-2);
+  align-self: flex-start;
+  margin-left: var(--tl-s-2);
+  padding: var(--tl-s-1) var(--tl-s-3);
+  border: 1px solid var(--tl-line-1);
+  border-radius: var(--tl-r-chip);
+  color: var(--tl-text-2);
+  font-size: var(--tl-fs-12);
+}
+
+.tl-shell-engine-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--tl-text-2);
+}
+
+.tl-shell-group + .tl-shell-group {
+  margin-top: var(--tl-s-4);
+}
+
+.tl-shell-label {
+  padding: var(--tl-s-2) var(--tl-s-2) var(--tl-s-1);
+  color: var(--tl-text-3);
+  font-size: var(--tl-fs-12);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.tl .tl-shell nav a,
+.tl-shell nav a {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--tl-s-3);
+  min-height: 44px;
+  padding: 0 var(--tl-s-3);
+  border-radius: var(--tl-r-card);
+  color: var(--tl-text-2);
+  font-size: var(--tl-fs-14);
+  font-weight: 500;
+  text-decoration: none;
+  transition: background-color var(--tl-dur-micro) var(--tl-ease-micro),
+    color var(--tl-dur-micro) var(--tl-ease-micro);
+}
+
+.tl-shell nav a:hover {
+  background: var(--tl-ink-2);
+  color: var(--tl-text-1);
+  text-decoration: none;
+}
+
+/* Current page: bar + weight + fill, so it never relies on colour alone. */
+.tl-shell nav a[aria-current="page"] {
+  background: var(--tl-ink-2);
+  color: var(--tl-text-1);
+  font-weight: 600;
+  box-shadow: inset 3px 0 0 var(--tl-uv);
+}
+
+.tl-shell nav a:focus-visible,
+.tl-shell-brand:focus-visible {
+  outline-offset: -2px;
+}
+
+.tl-shell-icon {
+  flex: none;
+}
+
+.tl-shell-health {
+  display: flex;
+  align-items: center;
+  gap: var(--tl-s-2);
+  margin-top: auto;
+  padding: var(--tl-s-3) var(--tl-s-2) 0;
+  border-top: 1px solid var(--tl-line-1);
+  color: var(--tl-text-2);
+  font-size: var(--tl-fs-12);
+}
+
+/* Status = shape + words, never a hue: filled dot (ok), triangle (down), dashed ring (checking). */
+.tl-shell-health-mark {
+  flex: none;
+  width: 10px;
+  height: 10px;
+}
+
+[data-health="ok"] > .tl-shell-health-mark {
+  border-radius: 50%;
+  background: var(--tl-text-2);
+}
+
+[data-health="down"] > .tl-shell-health-mark {
+  background: var(--tl-fail);
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+
+[data-health="checking"] > .tl-shell-health-mark {
+  border-radius: 50%;
+  border: 1.5px dashed var(--tl-text-3);
+}
+
+.tl.tl-shell-skip {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  padding: var(--tl-s-2) var(--tl-s-4);
+  border: 1px solid var(--tl-uv);
+  border-radius: 0 0 var(--tl-r-card) 0;
+  color: var(--tl-text-1);
+  text-decoration: none;
+}
+
+.tl.tl-shell-skip:focus {
+  left: 0;
+}
+
+@media (max-width: 900px) {
+  .tl-shell {
+    position: static;
+    width: 100%;
+    flex: none;
+    height: auto;
+    overflow: visible;
+    gap: 0;
+    padding: var(--tl-s-2) var(--tl-s-4);
+    border-right: none;
+    border-bottom: 1px solid var(--tl-line-1);
+  }
+
+  .tl .tl-shell-menu {
+    display: inline-flex;
+  }
+
+  .tl-shell-panel {
+    display: none;
+    padding: var(--tl-s-3) 0 var(--tl-s-2);
+  }
+
+  .tl-shell-panel[data-open="true"] {
+    display: flex;
+  }
+}

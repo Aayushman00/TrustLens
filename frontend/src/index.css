@@ -38,9 +38,6 @@
   --on-accent: #fff;
   --danger-solid: #a23527;
   --danger-solid-strong: #7f291e;
-  --health-ok: #2c9c5e;
-  --health-down: #c8442c;
-  --health-checking: #c9c4b6;
   --amber-bg: #fdf3e1;
   --amber-text: #8a5a0b;
   --amber-border: #eed9ae;
@@ -68,7 +65,7 @@
   --radius-md: 10px;
   --radius-pill: 999px;
 
-  --font-display: "Source Serif 4", Georgia, serif;
+  --font-display: "Fraunces Variable", Georgia, serif;
   --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", Consolas, "Courier New", monospace;
 
@@ -129,162 +126,20 @@ code {
   word-break: break-all;
 }
 
-/* ---- shell (sidebar layout) ---- */
+/* ---- shell: layout only; nav chrome lives in components/Layout.css (.tl-shell) ---- */
 
 .app-shell {
   min-height: 100vh;
   display: flex;
 }
 
-.sidebar {
-  width: var(--sidebar-w);
-  flex: 0 0 var(--sidebar-w);
-  background: var(--surface);
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  padding: 1.1rem 0.9rem;
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  overflow-y: auto;
-}
-
-.brand {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 1.15rem;
-  color: var(--text);
-  letter-spacing: -0.01em;
-  padding: 0.3rem 0.5rem 0.2rem;
-  display: block;
-}
-
-.brand:hover {
-  text-decoration: none;
-}
-
-.brand-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: var(--radius-sm);
-  background: var(--ink-accent-solid);
-  color: var(--on-accent);
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  font-weight: 600;
-  margin-right: 0.45rem;
-}
-
-.local-engine-tag {
-  margin: 0.1rem 0.5rem 1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: var(--accent-strong);
-  background: var(--accent-soft);
-  border-radius: var(--radius-pill);
-  padding: 0.25rem 0.6rem;
-  width: fit-content;
-}
-
-.local-engine-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--accent);
-  flex: none;
-}
-
-.nav-section-label {
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--gray-text);
-  padding: 0.9rem 0.6rem 0.35rem;
-}
-
-.nav-links {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-}
-
-.nav-links a {
-  color: var(--muted);
-  font-weight: 600;
-  font-size: 0.92rem;
-  padding: 0.5rem 0.6rem;
-  border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-}
-
-.nav-links a:hover {
-  color: var(--text);
-  background: var(--surface-sunken);
-  text-decoration: none;
-}
-
-.nav-links a.active {
-  color: var(--ink-accent-strong);
-  background: var(--ink-accent-soft);
-}
-
-.nav-icon {
-  width: 16px;
-  text-align: center;
-  flex: none;
-  opacity: 0.85;
-}
-
-.sidebar-footer {
-  margin-top: auto;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.health-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  display: inline-block;
-}
-
-.health-ok {
-  background: var(--health-ok);
-}
-
-.health-down {
-  background: var(--health-down);
-}
-
-.health-checking {
-  background: var(--health-checking);
-}
-
-.health-row {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.75rem;
-  color: var(--muted);
-  padding: 0.2rem 0.6rem;
-}
-
 .app-main {
   flex: 1;
   min-width: 0;
+}
+
+.app-main:focus {
+  outline: none; /* programmatic route-change focus target, not a control */
 }
 
 .container {
@@ -293,39 +148,9 @@ code {
   padding: 1.75rem 2rem 4rem;
 }
 
-@media (max-width: 900px) and (min-width: 601px) {
-  .container {
-    padding: 1.5rem 1.25rem 3.5rem;
-  }
-}
-
 @media (max-width: 900px) {
   .app-shell {
     flex-direction: column;
-  }
-  .sidebar {
-    width: 100%;
-    flex: none;
-    position: static;
-    height: auto;
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-  }
-  .sidebar-footer {
-    margin-top: 0;
-    margin-left: auto;
-    border-top: none;
-    flex-direction: row;
-  }
-  .nav-links {
-    flex-direction: row;
-    flex-wrap: wrap;
-  }
-  .nav-section-label {
-    display: none;
   }
   .container {
     padding: 1.25rem 1rem 3rem;
