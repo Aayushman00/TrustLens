@@ -1,0 +1,61 @@
+/* Model detail page. Legacy cream/green tokens only; shared .tab/.kv/.card
+   rules in index.css are untouched (scoped md-* overrides below). */
+
+.md-actions .btn,
+.md-btn,
+.md-tab {
+  min-height: 44px;
+}
+
+.md-tab {
+  display: inline-flex;
+  align-items: center;
+}
+
+.md-repo {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.md-scope {
+  margin: 0 0 0.6rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.md-kv dd {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.md-table td {
+  white-space: nowrap;
+}
+
+.md-card-text-h {
+  margin-top: 1.2rem;
+}
+
+.md-card-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 480px) {
+  .md-kv {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.1rem;
+  }
+
+  .md-kv dd {
+    margin-bottom: 0.5rem;
+  }
+}
+
+/* links that act as stand-alone targets (table ids, repo link) get the 44px floor */
+.md-table td a,
+.md-repo a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
