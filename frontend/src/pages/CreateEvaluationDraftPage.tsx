@@ -16,7 +16,7 @@
  * /evaluations/new) falls back to picking a model from the full list.
  */
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import { apiFetch } from "../api/client";
 import type {
@@ -34,6 +34,7 @@ import DocumentationSourceForm from "../components/DocumentationSourceForm";
 import ErrorNotice from "../components/ErrorNotice";
 import Spinner from "../components/Spinner";
 import { shortRevision } from "../lib/contract";
+import "./CreateEvaluationDraftPage.css";
 
 type Dimension = "FAIRNESS" | "ROBUSTNESS" | "SAFETY";
 
@@ -57,6 +58,19 @@ function initialDimensionState(): DimensionState {
   };
 }
 
+const MODEL_PICKER_LIMIT = 100;
+const STEPS = ["Model", "Datasets & documentation", "Review"];
+
+/** Plain-language state of one dimension, derived only from local flow state. */
+function dimensionStatus(state: DimensionState): string {
+  if (!state.enabled) return "Not configured";
+  if (state.confirmed) return "Confirmed";
+  if (state.validation?.ok) return "Validated, confirm to include";
+  if (state.validation && !state.validation.ok) return "Validation failed";
+  if (state.content) return "Dataset loaded, map columns";
+  return "Dataset needed";
+}
+
 const DIMENSION_LABEL: Record<Dimension, string> = {
   FAIRNESS: "Fairness",
   ROBUSTNESS: "Robustness",
@@ -72,6 +86,7 @@ export default function CreateEvaluationDraftPage() {
 
   const [modelId, setModelId] = useState<number | null>(null);
   const [models, setModels] = useState<ModelRead[] | null>(null);
+  const [modelsTruncated, setModelsTruncated] = useState(false);
   const [model, setModel] = useState<ModelRead | null>(null);
   const [modelError, setModelError] = useState<unknown>(null);
   const [loadingPreselected, setLoadingPreselected] = useState(preselectedModelId != null);
@@ -102,9 +117,11 @@ export default function CreateEvaluationDraftPage() {
   useEffect(() => {
     if (preselectedModelId != null || modelId != null) return;
     let cancelled = false;
-    apiFetch<ModelList>("/v1/models?limit=100")
+    apiFetch<ModelList>(`/v1/models?limit=${MODEL_PICKER_LIMIT}`)
       .then((page) => {
-        if (!cancelled) setModels(page.items);
+        if (cancelled) return;
+        setModels(page.items);
+        setModelsTruncated(page.next_cursor != null);
       })
       .catch((err) => {
         if (!cancelled) setModelError(err);
@@ -254,6 +271,8 @@ export default function CreateEvaluationDraftPage() {
     }
   }
 
+  const activeStep = !draft ? 0 : readyToContinue ? 2 : 1;
+
   function renderDimension(dim: Dimension) {
     const state = stateFor(dim);
     const inputId = `configure-${dim.toLowerCase()}`;
@@ -262,6 +281,9 @@ export default function CreateEvaluationDraftPage() {
         <div className="dimension-config-head">
           <div>
             <h2>{DIMENSION_LABEL[dim]}</h2>
+            <p className="cd-dim-status" data-state={state.confirmed ? "confirmed" : "other"}>
+              {dimensionStatus(state)}
+            </p>
             <p className="section-desc">
               Optional. Provide a labeled dataset to evaluate {DIMENSION_LABEL[dim].toLowerCase()}.
             </p>
@@ -296,7 +318,7 @@ export default function CreateEvaluationDraftPage() {
             ) : null}
 
             {state.validation && !state.validation.ok ? (
-              <div className="dimension-limitations">
+              <div className="dimension-limitations" role="alert">
                 <p>Validation failed:</p>
                 <ul>
                   {state.validation.errors.map((e) => (
@@ -336,13 +358,32 @@ export default function CreateEvaluationDraftPage() {
           <h1>New evaluation</h1>
           <p className="muted">
             {model
-              ? "Configure Fairness, Robustness, and documentation for this model."
-              : "Choose a model, then configure Fairness, Robustness, and documentation."}
+              ? "Configure Fairness, Robustness, Behavioural safety, and documentation for this model."
+              : "Choose a model, then configure Fairness, Robustness, Behavioural safety, and documentation."}
           </p>
         </div>
       </div>
 
+      <ol className="cd-steps" aria-label="Progress">
+        {STEPS.map((label, i) => (
+          <li key={label} aria-current={i === activeStep ? "step" : undefined} data-done={i < activeStep}>
+            <span className="cd-step-n" aria-hidden="true">
+              {i < activeStep ? "\u2713" : i + 1}
+            </span>
+            {label}
+            {i < activeStep ? <span className="tl-sr-only"> (done)</span> : null}
+          </li>
+        ))}
+      </ol>
+
       <ErrorNotice error={modelError} />
+      {modelError != null && preselectedModelId != null ? (
+        <p>
+          <Link to="/models" className="btn btn-secondary cd-btn">
+            Back to models
+          </Link>
+        </p>
+      ) : null}
 
       {loadingPreselected ? <Spinner label="Loading model…" /> : null}
 
@@ -354,12 +395,12 @@ export default function CreateEvaluationDraftPage() {
             <p className="empty">No models yet — import one first.</p>
           ) : null}
           {models != null && models.length > 0 ? (
-            <div className="contract-card-grid">
+            <ul className="contract-card-grid cd-picker">
               {models.map((m) => (
+                <li key={m.id}>
                 <button
-                  key={m.id}
                   type="button"
-                  className="contract-card"
+                  className="contract-card cd-pick"
                   onClick={() => {
                     setModelId(m.id);
                     setModel(m);
@@ -369,9 +410,19 @@ export default function CreateEvaluationDraftPage() {
                   <span className="contract-card-sub mono">
                     Revision: {shortRevision(m.revision)}
                   </span>
+                  {!m.revision ? (
+                    <span className="chip">Not reproducible, cannot be evaluated</span>
+                  ) : null}
                 </button>
+                </li>
               ))}
-            </div>
+            </ul>
+          ) : null}
+          {modelsTruncated ? (
+            <p className="muted">
+              Showing the first {MODEL_PICKER_LIMIT} models. Open an older model from{" "}
+              <Link to="/models">Models</Link> to evaluate it.
+            </p>
           ) : null}
         </div>
       ) : null}
@@ -382,6 +433,14 @@ export default function CreateEvaluationDraftPage() {
           <div className="notice notice-error">
             This model has no pinned revision, so an evaluation of it could not be reproduced
             later. Re-import it with an explicit revision before evaluating.
+          </div>
+          <div className="btn-row cd-actions">
+            <Link to="/models/import" className="btn">
+              Import with a revision
+            </Link>
+            <Link to="/models" className="btn btn-secondary">
+              Back to models
+            </Link>
           </div>
         </div>
       ) : null}
@@ -443,12 +502,13 @@ export default function CreateEvaluationDraftPage() {
                 type="button"
                 className="btn btn-lg"
                 disabled={!readyToContinue || creatingEvaluation}
+                aria-describedby={continueHint ? "continue-hint" : undefined}
                 onClick={() => void continueToReview()}
               >
                 {creatingEvaluation ? "Creating…" : "Continue to review"}
               </button>
               {continueHint ? (
-                <p className="muted continue-hint" role="status">
+                <p id="continue-hint" className="muted continue-hint" role="status">
                   {continueHint}
                 </p>
               ) : null}

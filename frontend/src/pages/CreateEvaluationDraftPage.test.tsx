@@ -340,3 +340,64 @@ test("a failed evaluation-creation request surfaces via ErrorNotice, not a silen
   expect(screen.queryByTestId("evaluation-detail-stub")).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: /continue to review/i })).not.toBeDisabled();
 });
+
+// ---- migration regressions: progress, status, recovery paths ----
+
+function currentStep() {
+  const li = screen.getByRole("list", { name: "Progress" }).querySelector('[aria-current="step"]');
+  return li?.textContent ?? "";
+}
+
+test("progress steps follow the real flow state and Continue explains why it is disabled", async () => {
+  vi.mocked(apiFetch).mockResolvedValueOnce(MODELS_PAGE);
+  renderPage();
+  await screen.findByText("org/model");
+  expect(currentStep()).toMatch(/^1Model$/);
+
+  fireEvent.click(screen.getByText("org/model"));
+  vi.mocked(apiFetch).mockResolvedValueOnce(DRAFT_INCOMPLETE);
+  vi.mocked(apiFetch).mockResolvedValueOnce(DRAFT_WITH_SNAPSHOT);
+  vi.mocked(apiFetch).mockResolvedValueOnce(DOCS_EMPTY);
+  fireEvent.click(screen.getByRole("button", { name: /start evaluation/i }));
+  await screen.findByLabelText(/configure fairness/i);
+  expect(currentStep()).toMatch(/^2Datasets/);
+  const continueButton = screen.getByRole("button", { name: /continue to review/i });
+  expect(continueButton).toHaveAccessibleDescription(/at least one is required/i);
+
+  await fillAndConfirmFairness();
+  await waitFor(() => expect(currentStep()).toMatch(/^3Review$/));
+  expect(continueButton).not.toHaveAttribute("aria-describedby");
+});
+
+test("each dimension shows a plain-language status that resets when unchecked", async () => {
+  await selectModelAndCreateDraft();
+  const card = screen.getByLabelText(/configure fairness/i).closest(".card") as HTMLElement;
+  expect(within(card).getByText("Not configured")).toBeInTheDocument();
+  await fillAndConfirmFairness();
+  expect(within(card).getByText("Confirmed")).toBeInTheDocument();
+  fireEvent.click(screen.getByLabelText(/configure fairness/i));
+  expect(within(card).getByText("Not configured")).toBeInTheDocument();
+});
+
+test("an unpinned model offers a way forward: import with a revision, or go back", async () => {
+  vi.mocked(apiFetch).mockResolvedValueOnce(UNPINNED_MODEL);
+  renderPage("/evaluations/new?modelId=2");
+  await screen.findByText(/no pinned revision/i);
+  expect(screen.getByRole("link", { name: "Import with a revision" })).toHaveAttribute("href", "/models/import");
+  expect(screen.getByRole("link", { name: "Back to models" })).toHaveAttribute("href", "/models");
+});
+
+test("picker marks unpinned models and discloses when the list is truncated", async () => {
+  vi.mocked(apiFetch).mockResolvedValueOnce({ items: [MODEL, UNPINNED_MODEL], next_cursor: "more" });
+  renderPage();
+  await screen.findByText("org/unpinned-model");
+  expect(screen.getByText(/cannot be evaluated/i)).toBeInTheDocument();
+  expect(screen.getByText(/Showing the first 100 models/)).toBeInTheDocument();
+  expect(screen.getAllByRole("listitem").length).toBeGreaterThanOrEqual(2);
+});
+
+test("a failed preselected-model load offers a way back to the models list", async () => {
+  vi.mocked(apiFetch).mockRejectedValueOnce(new Error("boom"));
+  renderPage("/evaluations/new?modelId=1");
+  expect(await screen.findByRole("link", { name: "Back to models" })).toHaveAttribute("href", "/models");
+});

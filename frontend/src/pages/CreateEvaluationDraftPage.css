@@ -1,0 +1,95 @@
+/* New-evaluation wizard. Legacy cream/green tokens only. The shared
+   .contract-card / .card rules stay untouched (used elsewhere). */
+
+.cd-steps {
+  list-style: none;
+  margin: 0 0 1.1rem;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.2rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.cd-steps li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.cd-steps li[aria-current="step"] {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.cd-step-n {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.cd-steps li[aria-current="step"] .cd-step-n {
+  background: var(--accent-solid);
+  border-color: var(--accent-solid);
+  color: var(--on-accent);
+}
+
+.cd-steps li[data-done="true"] .cd-step-n {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+.cd-dim-status {
+  margin: 0.15rem 0 0.3rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.cd-dim-status[data-state="confirmed"] {
+  color: var(--accent-strong);
+}
+
+.cd-picker {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.cd-picker > li {
+  display: flex;
+  min-width: 0;
+}
+
+.cd-pick {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  overflow-wrap: anywhere;
+}
+
+.cd-btn,
+.cd-actions .btn {
+  min-height: 44px;
+}
+
+@media (max-width: 480px) {
+  .cd-picker {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Page-scoped touch-target floor. Applies only inside this wizard, so the
+   shared form components keep their own styles everywhere else. */
+.eval-page .btn,
+.eval-page select,
+.eval-page input:not([type="checkbox"], [type="radio"]) {
+  min-height: 44px;
+}
