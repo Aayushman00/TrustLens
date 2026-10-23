@@ -1,0 +1,85 @@
+/* Review page. Legacy cream/green tokens only; shared .review-grid / .card /
+   .notice rules in index.css are untouched (scoped rv-* overrides below). */
+
+.rv-id {
+  overflow-wrap: anywhere;
+}
+
+.rv-actions .btn,
+.rv-accept input + span {
+  min-height: 44px;
+}
+
+.rv-actions .btn {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* .form label (index.css) stacks label children vertically; specificity bump
+   keeps this checkbox beside its text. */
+.form .rv-accept {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 44px;
+}
+
+/* global input { width: 100% } would stretch the checkbox across the row */
+.rv-accept input {
+  width: auto;
+  flex: none;
+  margin-top: 0;
+}
+
+.rv-triple span {
+  white-space: nowrap;
+}
+
+/* aspect names are row headers now; keep them reading as plain cell text */
+.rv-aspect {
+  min-width: 10rem;
+  text-align: left;
+  font-weight: 600;
+  text-transform: capitalize;
+  vertical-align: top;
+}
+
+.rv-aspect .field-hint {
+  text-transform: none;
+  font-weight: 400;
+}
+
+.rv-evidence {
+  font-size: 0.82rem;
+  min-width: 9rem;
+}
+
+.review-grid .rv-table input {
+  width: 5rem;
+  min-height: 44px;
+}
+
+.rv-err {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.75rem;
+  color: var(--red-text);
+}
+
+input[aria-invalid="true"] {
+  border-color: var(--red-text);
+}
+
+.rv-progress {
+  margin: 0.6rem 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.rv-finalized-h:focus {
+  outline: none; /* programmatic focus target after finalize */
+}
+
+.rv-finalized-h {
+  margin-top: 0;
+}

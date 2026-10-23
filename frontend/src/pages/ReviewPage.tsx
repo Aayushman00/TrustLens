@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import { apiFetch } from "../api/client";
@@ -14,8 +14,19 @@ import ErrorNotice from "../components/ErrorNotice";
 import ModeDisclosureBanner from "../components/ModeDisclosure";
 import Spinner from "../components/Spinner";
 import { fmtNumber, fmtOsd, parseOsdInput } from "../lib/format";
+import "./ReviewPage.css";
 
-type OsdDraft = Record<FriesDimension, { O: number | null; S: number | null; D: number | null }>;
+// Raw field text, not parsed numbers: a value like "11" or "2.5" must stay
+// visible (and be flagged) rather than silently collapsing to "missing".
+type OsdDraft = Record<FriesDimension, { O: string; S: string; D: string }>;
+
+const KEYS = ["O", "S", "D"] as const;
+type OsdKey = (typeof KEYS)[number];
+
+/** Non-empty text that is not a whole number 0-10. Empty is legitimately "missing". */
+function isInvalidOsd(raw: string): boolean {
+  return raw.trim() !== "" && parseOsdInput(raw) === null;
+}
 
 function isDeterministicSuggestion(
   suggestion: EvaluationRead["osd_agent"] | null | undefined,
@@ -27,8 +38,21 @@ function isDeterministicSuggestion(
   );
 }
 
-function formatAgentTriple(aspect: OsdAspectSuggestion): string {
-  return `${fmtOsd(aspect.O)} / ${fmtOsd(aspect.S)} / ${fmtOsd(aspect.D)}`;
+/** "O / S / D" with each value an unbreakable unit, so a narrow column wraps
+ * between values instead of stranding a lone slash. Null stays "Unavailable". */
+function AgentTriple({ aspect }: { aspect: OsdAspectSuggestion }) {
+  const values = [fmtOsd(aspect.O), fmtOsd(aspect.S), fmtOsd(aspect.D)];
+  return (
+    <span className="rv-triple">
+      {values.map((v, i) => (
+        <span key={i}>
+          {i > 0 ? " / " : ""}
+          {v}
+          {i < values.length - 1 ? " " : ""}
+        </span>
+      ))}
+    </span>
+  );
 }
 
 /** A short summary of the MACHINE-MEASURED evidence behind this aspect —
@@ -59,6 +83,7 @@ export default function ReviewPage() {
   const { id } = useParams();
   const [evaluation, setEvaluation] = useState<EvaluationRead | null>(null);
   const [error, setError] = useState<unknown>(null);
+  const [attempt, setAttempt] = useState(0);
 
   const [acceptAll, setAcceptAll] = useState(true);
   const [draft, setDraft] = useState<OsdDraft | null>(null);
@@ -67,9 +92,24 @@ export default function ReviewPage() {
   const [phase, setPhase] = useState<"idle" | "review" | "finalize">("idle");
   const [submitError, setSubmitError] = useState<unknown>(null);
   const [finalized, setFinalized] = useState<EvaluationRead | null>(null);
+  // The human-review POST can succeed while finalize fails. Remember that, so
+  // a retry only repeats finalize instead of submitting a second review.
+  const [reviewSaved, setReviewSaved] = useState(false);
+  const [showInvalid, setShowInvalid] = useState(false);
+  const finalizedHeadingRef = useRef<HTMLHeadingElement>(null);
+  const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   useEffect(() => {
     let cancelled = false;
+    // A new route id (or a retry) starts clean: nothing from a previous
+    // evaluation may linger under the new URL.
+    setEvaluation(null);
+    setError(null);
+    setDraft(null);
+    setFinalized(null);
+    setReviewSaved(false);
+    setSubmitError(null);
+    setShowInvalid(false);
     async function load() {
       try {
         const row = await apiFetch<EvaluationRead>(`/v1/evaluations/${id}`);
@@ -80,7 +120,11 @@ export default function ReviewPage() {
           Object.fromEntries(
             aspects.map((a) => [
               a.aspect,
-              { O: a.O ?? null, S: a.S ?? null, D: a.D ?? null },
+              {
+                O: a.O == null ? "" : String(a.O),
+                S: a.S == null ? "" : String(a.S),
+                D: a.D == null ? "" : String(a.D),
+              },
             ]),
           ) as OsdDraft,
         );
@@ -92,7 +136,11 @@ export default function ReviewPage() {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, attempt]);
+
+  useEffect(() => {
+    if (finalized?.status === "FINALIZED") finalizedHeadingRef.current?.focus();
+  }, [finalized]);
 
   const aspects = useMemo(
     () => evaluation?.osd_agent?.ai_suggestion.aspects ?? [],
@@ -103,16 +151,20 @@ export default function ReviewPage() {
     [evaluation],
   );
 
-  function setValue(
-    aspect: FriesDimension,
-    key: "O" | "S" | "D",
-    raw: string,
-  ) {
+  function setValue(aspect: FriesDimension, key: OsdKey, raw: string) {
     // O, S, and D are each independently human-enterable — no field is ever
     // locked, on either the deterministic or legacy-heuristic path.
-    const value = parseOsdInput(raw);
     setDraft((prev) =>
-      prev ? { ...prev, [aspect]: { ...prev[aspect], [key]: value } } : prev,
+      prev ? { ...prev, [aspect]: { ...prev[aspect], [key]: raw } } : prev,
+    );
+  }
+
+  async function finalizeOnly() {
+    setPhase("finalize");
+    setFinalized(
+      await apiFetch<EvaluationRead>(`/v1/evaluations/${id}/finalize`, {
+        method: "POST",
+      }),
     );
   }
 
@@ -120,8 +172,49 @@ export default function ReviewPage() {
     event.preventDefault();
     if (!draft) return;
     setSubmitError(null);
+
+    if (reviewSaved) {
+      // Review already recorded — only finalize remains.
+      try {
+        await finalizeOnly();
+      } catch (err) {
+        setSubmitError(err);
+      } finally {
+        setPhase("idle");
+      }
+      return;
+    }
+
+    // Invalid text is never silently dropped or coerced: block and point at it.
+    if (!acceptAll) {
+      const bad: string[] = [];
+      for (const [aspect, values] of Object.entries(draft) as [
+        FriesDimension,
+        OsdDraft[FriesDimension],
+      ][]) {
+        for (const key of KEYS) {
+          if (isInvalidOsd(values[key])) bad.push(`${aspect.toLowerCase()} ${key}`);
+        }
+      }
+      if (bad.length > 0) {
+        setShowInvalid(true);
+        setSubmitError(
+          new Error(
+            `O, S and D must be whole numbers from 0 to 10. Fix: ${bad.join(", ")}.`,
+          ),
+        );
+        const first = Object.entries(draft)
+          .flatMap(([aspect, values]) =>
+            KEYS.filter((k) => isInvalidOsd(values[k])).map((k) => `${aspect}-${k}`),
+          )[0];
+        inputRefs.current[first]?.focus();
+        return;
+      }
+    }
+
     setPhase("review");
     let body: HumanReviewRequest;
+    const parsed = (raw: string) => parseOsdInput(raw);
     if (acceptAll) {
       body = { accept_all: true };
     } else if (deterministic) {
@@ -130,15 +223,13 @@ export default function ReviewPage() {
         FriesDimension,
         OsdDraft[FriesDimension],
       ][]) {
+        const O = parsed(values.O);
+        const S = parsed(values.S);
+        const D = parsed(values.D);
         // O, S, D are each independently optional — an aspect with none of
         // the three entered is simply omitted (not sent as an empty edit).
-        if (values.O === null && values.S === null && values.D === null) continue;
-        edits.push({
-          aspect,
-          O: values.O ?? undefined,
-          S: values.S ?? undefined,
-          D: values.D ?? undefined,
-        });
+        if (O === null && S === null && D === null) continue;
+        edits.push({ aspect, O: O ?? undefined, S: S ?? undefined, D: D ?? undefined });
       }
       if (edits.length === 0) {
         setSubmitError(new Error("Provide at least one O, S, or D value, or use accept all."));
@@ -151,12 +242,14 @@ export default function ReviewPage() {
         accept_all: false,
         aspects: (
           Object.entries(draft) as [FriesDimension, OsdDraft[FriesDimension]][]
-        ).map(([aspect, values]): AspectOSDEdit => ({
-          aspect,
-          O: values.O ?? undefined,
-          S: values.S ?? undefined,
-          D: values.D ?? undefined,
-        })),
+        ).map(
+          ([aspect, values]): AspectOSDEdit => ({
+            aspect,
+            O: parsed(values.O) ?? undefined,
+            S: parsed(values.S) ?? undefined,
+            D: parsed(values.D) ?? undefined,
+          }),
+        ),
       };
     }
     if (notes.trim()) body.notes = notes.trim();
@@ -166,12 +259,8 @@ export default function ReviewPage() {
         method: "POST",
         body,
       });
-      setPhase("finalize");
-      setFinalized(
-        await apiFetch<EvaluationRead>(`/v1/evaluations/${id}/finalize`, {
-          method: "POST",
-        }),
-      );
+      setReviewSaved(true);
+      await finalizeOnly();
     } catch (err) {
       setSubmitError(err);
     } finally {
@@ -179,14 +268,32 @@ export default function ReviewPage() {
     }
   }
 
-  if (error != null) return <ErrorNotice error={error} />;
+  if (error != null) {
+    return (
+      <>
+        <div role="alert">
+          <ErrorNotice error={error} />
+        </div>
+        <div className="btn-row rv-actions">
+          <button type="button" className="btn" onClick={() => setAttempt((n) => n + 1)}>
+            Retry
+          </button>
+          <Link to={`/evaluations/${id}`} className="btn btn-secondary">
+            Back to the evaluation
+          </Link>
+        </div>
+      </>
+    );
+  }
   if (evaluation == null || draft == null) return <Spinner label="Loading review…" />;
 
   if (finalized?.status === "FINALIZED") {
     const withheld = finalized.final_score == null;
     return (
       <div className="card">
-        <h2>Finalized</h2>
+        <h2 ref={finalizedHeadingRef} tabIndex={-1} className="rv-finalized-h">
+          Finalized
+        </h2>
         {finalized.mode_disclosure ? (
           <ModeDisclosureBanner disclosure={finalized.mode_disclosure} />
         ) : null}
@@ -203,7 +310,7 @@ export default function ReviewPage() {
             <span className="fries-label">original FRIES from your approved O/S/D</span>
           </div>
         )}
-        <div className="btn-row" style={{ marginTop: "1rem" }}>
+        <div className="btn-row rv-actions" style={{ marginTop: "1rem" }}>
           <Link to={`/evaluations/${id}`} className="btn">
             Back to evaluation
           </Link>
@@ -236,17 +343,23 @@ export default function ReviewPage() {
   if (aspects.length === 0) {
     return (
       <div className="notice notice-error">
-        No O/S/D representation found for this evaluation.
+        No O/S/D representation found for this evaluation.{" "}
+        <Link to={`/evaluations/${id}`}>Back to the evaluation</Link>.
       </div>
     );
   }
+
+  const completeTriples = aspects.filter((a) =>
+    KEYS.every((k) => parseOsdInput(draft[a.aspect][k]) !== null),
+  ).length;
+  const locked = acceptAll || reviewSaved;
 
   return (
     <>
       <div className="page-header">
         <div>
           <h1>Review probe evidence</h1>
-          <p className="muted mono">Evaluation {evaluation.id}</p>
+          <p className="muted mono rv-id">Evaluation {evaluation.id}</p>
         </div>
       </div>
       {evaluation.mode_disclosure ? (
@@ -270,11 +383,14 @@ export default function ReviewPage() {
             </>
           )}
         </div>
-        <form className="form" onSubmit={handleSubmit}>
-          <label className="radio-row">
+        {/* noValidate: native min/max/step bubbles are unreliable for assistive tech
+            and unstyled; handleSubmit validates O/S/D itself and names the fields. */}
+        <form className="form" onSubmit={handleSubmit} aria-busy={phase !== "idle"} noValidate>
+          <label className="radio-row rv-accept">
             <input
               type="checkbox"
               checked={acceptAll}
+              disabled={reviewSaved}
               onChange={(e) => setAcceptAll(e.target.checked)}
             />
             <span>
@@ -290,22 +406,29 @@ export default function ReviewPage() {
             source&nbsp;=&nbsp;"human", never generated by a probe.
           </p>
           <div className="table-wrap review-grid">
-            <table>
+            <table className="rv-table">
+              <caption className="tl-sr-only">
+                Probe evidence and human O/S/D entry per aspect
+              </caption>
               <thead>
                 <tr>
-                  <th>Aspect</th>
-                  <th>Machine-measured evidence</th>
-                  <th className="num">Recorded O/S/D</th>
-                  <th className="num">Confidence</th>
-                  <th>O (human)</th>
-                  <th>S (human)</th>
-                  <th>D (human)</th>
+                  <th scope="col">Aspect</th>
+                  <th scope="col">Machine-measured evidence</th>
+                  <th scope="col" className="num">
+                    Recorded O/S/D
+                  </th>
+                  <th scope="col" className="num">
+                    Confidence
+                  </th>
+                  <th scope="col">O (human)</th>
+                  <th scope="col">S (human)</th>
+                  <th scope="col">D (human)</th>
                 </tr>
               </thead>
               <tbody>
                 {aspects.map((aspect) => (
                   <tr key={aspect.aspect}>
-                    <td>
+                    <th scope="row" className="rv-aspect">
                       {aspect.aspect.toLowerCase()}
                       {aspect.rationale ? (
                         <div className="field-hint">{aspect.rationale}</div>
@@ -315,28 +438,41 @@ export default function ReviewPage() {
                           Named risk: {String(aspect.osd_metadata.scored_risk_id)}
                         </div>
                       ) : null}
-                    </td>
-                    <td className="muted" style={{ fontSize: "0.82rem" }}>
+                    </th>
+                    <td className="muted rv-evidence">
                       {evidenceSummary(aspect.osd_metadata) ?? "No measured evidence recorded"}
                     </td>
-                    <td className="num muted">{formatAgentTriple(aspect)}</td>
+                    <td className="num muted">
+                      <AgentTriple aspect={aspect} />
+                    </td>
                     <td className="num muted">{fmtNumber(aspect.confidence)}</td>
-                    {(["O", "S", "D"] as const).map((key) => {
-                      const value = draft[aspect.aspect][key];
+                    {KEYS.map((key) => {
+                      const raw = draft[aspect.aspect][key];
+                      const invalid = showInvalid && !acceptAll && isInvalidOsd(raw);
+                      const errId = `rv-err-${aspect.aspect}-${key}`;
                       return (
                         <td key={key}>
                           <input
+                            ref={(el) => {
+                              inputRefs.current[`${aspect.aspect}-${key}`] = el;
+                            }}
                             type="number"
                             min={0}
                             max={10}
                             step={1}
-                            value={value ?? ""}
+                            value={raw}
                             placeholder="optional"
-                            disabled={acceptAll}
-                            onChange={(e) =>
-                              setValue(aspect.aspect, key, e.target.value)
-                            }
+                            disabled={locked}
+                            aria-label={`${aspect.aspect.toLowerCase()} ${key} (human, 0 to 10, optional)`}
+                            aria-invalid={invalid || undefined}
+                            aria-describedby={invalid ? errId : undefined}
+                            onChange={(e) => setValue(aspect.aspect, key, e.target.value)}
                           />
+                          {invalid ? (
+                            <span id={errId} className="rv-err">
+                              Whole number 0–10
+                            </span>
+                          ) : null}
                         </td>
                       );
                     })}
@@ -345,6 +481,12 @@ export default function ReviewPage() {
               </tbody>
             </table>
           </div>
+          {!acceptAll ? (
+            <p className="rv-progress">
+              Complete O/S/D triples entered: {completeTriples} of {aspects.length} listed
+              aspects.
+            </p>
+          ) : null}
           <p className="field-hint">
             Leaving a field blank keeps it missing — TrustLens never assigns a default O,
             S, or D value. An aspect stays incomplete (and FRIES stays withheld) until all
@@ -352,20 +494,40 @@ export default function ReviewPage() {
           </p>
           <label>
             Notes (optional)
-            <input value={notes} onChange={(e) => setNotes(e.target.value)} />
+            <textarea
+              rows={2}
+              value={notes}
+              disabled={reviewSaved}
+              onChange={(e) => setNotes(e.target.value)}
+            />
           </label>
           <label>
             Review rationale (optional)
-            <input value={rationale} onChange={(e) => setRationale(e.target.value)} />
+            <textarea
+              rows={3}
+              value={rationale}
+              disabled={reviewSaved}
+              onChange={(e) => setRationale(e.target.value)}
+            />
           </label>
-          <ErrorNotice error={submitError} />
-          <div className="btn-row">
+          {reviewSaved ? (
+            <div className="notice notice-info" role="status">
+              Your review was recorded, but finalizing did not complete. Retry finalize — your
+              review will not be submitted again.
+            </div>
+          ) : null}
+          <div role="alert">
+            <ErrorNotice error={submitError} />
+          </div>
+          <div className="btn-row rv-actions">
             <button type="submit" className="btn" disabled={phase !== "idle"}>
               {phase === "review"
                 ? "Submitting review…"
                 : phase === "finalize"
                   ? "Finalizing…"
-                  : "Submit review + finalize"}
+                  : reviewSaved
+                    ? "Retry finalize"
+                    : "Submit review + finalize"}
             </button>
             <Link to={`/evaluations/${id}`} className="btn btn-secondary">
               Cancel
