@@ -39,7 +39,7 @@ None asks whether TrustLens can tell a trustworthy model from an untrustworthy o
 \section{The ten validation studies}\label{sec:l1l10}
 After the first end-to-end experiments (Section~\ref{sec:pilot}), we listed the ten limitations the results had exposed and worked through them in order, each with a plan document in \code{docs/\allowbreak superpowers/\allowbreak plans/\allowbreak }; for the score calibration, LLM comparison, fairness confirmation, severity sweeps and independent review that document was written before the run. This report uses descriptive names; the repository labels them L1 to L10 (Table~\ref{tab:l1l10}).
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering\footnotesize
 \caption{The ten limitations that structure the validation work, with a one-line outcome for each.}\label{tab:l1l10}
 \begin{tabularx}{\textwidth}{@{}p{2.5cm}p{3.1cm}L@{}}
@@ -47,21 +47,21 @@ After the first end-to-end experiments (Section~\ref{sec:pilot}), we listed the 
 \textbf{Study (repo label)} & \textbf{Limitation found} & \textbf{What we did and how it came out}\\
 \midrule
 Score calibration (L1) & O/S/D bands compress severity & Calibrated O/S/D mapping (v4) fitted on a separate split; held-out score range grew from 0.68--1.18 to 4.60--6.65 points, on a scale relative to the injected defects.\\
-LLM comparison (L2) & LLM-rated dimensions are noisy and quota-bound & Deterministic versus LLM interpretation of 12 frozen packets. 60 of 60 runs completed (22 Gemini/Groq, 38 supplemental Claude); low agreement with the deterministic engine.\\
+LLM comparison (L2) & LLM-rated dimensions are noisy and quota-bound & Deterministic versus LLM interpretation of 12 frozen packets. 60 of 60 runs completed (22 provider, 38 supplemental LLM); low agreement with the deterministic engine.\\
 Disclosure-gap separation (L3) & Card-based risk flags fire on clean controls & Disclosure gaps separated from risks. Control flag rate fell from 1.00/1.00/0.50 to 0/0/0 (Safety/Explainability/Integrity), and recall on injected card defects fell with it.\\
 Fairness-rule redesign (L4, L4.1) & Binary fairness evidence can never raise a risk & Excess-DPD candidate rejected; replaced by a bootstrap-gated equal-opportunity rule, chosen after seeing exploratory data.\\
 Fairness confirmation (L5) & Rule needs confirmation on untouched data & Pre-registered run with a new seed and disjoint data. Three of four hypotheses held; H1 failed because the clean reference model was flagged.\\
 Severity sweeps (L6) & One severity level; coarse scoring & Robustness and safety sweeps: evidence monotone ($\rho=1$), scores monotone with ties; robustness needed a post-hoc deviation.\\
 Artifact integrity (L7) & Integrity hashed one file only & Whole artifact-set verification (sharded weights, tokenizer, config) against a manifest; ADR~0013 states what this does not prove.\\
 Pipeline hardening (L8, L9) & Pipeline races and clean-up & Commit-before-enqueue, stuck-run rescue, decision-first LLM evidence block; minor script fixes.\\
-Independent review (L10) & No independent check of TrustLens's judgments & Twelve blinded packets; seven human submissions, one official LLM answer, twelve separate Claude answers. Agreement high on dimension and sufficiency, lower on risk.\\
+Independent review (L10) & No independent check of TrustLens's judgments & Twelve blinded packets; seven human submissions, one official LLM answer, twelve separate supplemental LLM answers. Agreement high on dimension and sufficiency, lower on risk.\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
 \section{Contributions}
 \begin{description}[leftmargin=2.2em,style=nextline]
-\item[Engineering.] A FastAPI, Celery and React system with local inference, a content-addressed evidence store, versioned reports, and a backend test suite of 895 collected tests (Chapter~\ref{ch:testing}).
+\item[Engineering.] A FastAPI, Celery and React system with local inference, a content-addressed evidence store, versioned reports, and a backend test suite of 912 collected tests (Chapter~\ref{ch:testing}).
 \item[Methodological.] Separate evidence, risk and score layers; explicit abstention; risks split from \emph{disclosure gaps}; an equal-opportunity fairness rule with a bootstrap gate; artifact-set integrity; a range-normalised O/S/D mapping; blinded evidence packets.
 \item[Empirical.] Controlled flawed-model suites with severity sweeps, a pre-registered confirmatory fairness run, a deterministic-versus-LLM comparison, a human evidence-review study and an audit of seven real Hub models.
 \end{description}

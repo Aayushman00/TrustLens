@@ -1,17 +1,17 @@
 \chapter{Testing, Reproducibility and Performance}\label{ch:testing}
 
 \section{Testing strategy}
-The backend has 110 test modules in \code{backend/\allowbreak tests} (895 test items collected by \code{pytest}, 830 \code{def test\_} functions by a plain text count; parametrised tests account for the difference). The worker package has nine tests and the frontend has 29 test files. Continuous integration (\code{.github/\allowbreak workflows/\allowbreak ci.yml}) runs on pushes to \code{Main} and on pull requests: backend \code{ruff} and \code{pytest} against a Postgres service container, worker \code{ruff} and \code{pytest} with a slim install, and the frontend tests, type-check and build. We did not generate a coverage report for this thesis, so we give no coverage percentage.
+The backend has 111 test modules in \code{backend/\allowbreak tests} (912 test items collected by \code{pytest}, 842 \code{def test\_} functions by a plain text count; parametrised tests account for the difference). The worker package has nine tests and the frontend has 29 test files. Continuous integration (\code{.github/\allowbreak workflows/\allowbreak ci.yml}) runs on pushes to \code{Main} and on pull requests: backend \code{ruff} and \code{pytest} against a Postgres service container, worker \code{ruff} and \code{pytest} with a slim install, and the frontend tests, type-check and build. We did not generate a coverage report for this thesis, so we give no coverage percentage.
 
 \paragraph{Latest full run on the reference machine.}
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering\small
-\caption{Latest test runs (2026-10-22, branch \code{docs/\allowbreak report-final}).}
+\caption{Latest test runs (2026-10-23, branch \code{docs/\allowbreak report-final}).}
 \begin{tabularx}{\textwidth}{@{}p{3.0cm}L@{}}
 \toprule
 \textbf{Suite} & \textbf{Result}\\
 \midrule
-Backend \code{pytest} & 893 passed, 2 skipped, 1 warning (268\,s), run with the Postgres container up. The two skips need WeasyPrint system libraries and a live Hub import (\code{TRUSTLENS\_LIVE\_TESTS=1}).\\
+Backend \code{pytest} & 910 passed, 2 skipped, 1 warning (156\,s; other runs on this machine took 130--326\,s), run with the Postgres container up. The two skips need WeasyPrint system libraries and a live Hub import (\code{TRUSTLENS\_LIVE\_TESTS=1}).\\
 Worker \code{pytest} & 9 passed.\\
 Frontend \code{vitest} & 29 files, 275 tests passed.\\
 \code{ruff} (backend) & No findings (rules E4, E7, E9, F). The baseline at the start of round~3 was 31.\\
@@ -27,7 +27,7 @@ The tests are grouped by area: the FRIES scorer against frozen vectors in \code{
 
 \section{Reproducibility}
 \begin{itemize}
-\item \textbf{Pinned inputs.} Civil Comments is pinned to a dataset revision; Hub models in the external audit are pinned to immutable revision SHAs that were re-resolved against the Hub before use; the selection file was written before any run; weight sha256 values are recorded.
+\item \textbf{Pinned inputs.} Civil Comments is pinned to a dataset revision in the data-preparation script, but only since 2026-10-03: the frozen 2026-10-02 evaluation-set manifest and the stored result manifests do not record it, so the dataset revision of the earlier runs is unrecorded; Hub models in the external audit are pinned to immutable revision SHAs that were re-resolved against the Hub before use; the selection file was written before any run; weight sha256 values are recorded.
 \item \textbf{Seeds and determinism.} Probes take a seed; Fairness, Robustness and behavioural Safety evidence was identical across repeated runs in every experiment (zero standard deviation over five runs; the fairness confirmation run and severity sweeps identical on repeats). A second data preparation with the same seed (fairness confirmation) is byte-identical, including \code{ground\_truth.json}.
 \item \textbf{Frozen, hashed results.} Result folders are never edited after the fact; the external audit folders carry a \code{SHA256SUMS} file; deviations are recorded with their timing (Table~\ref{tab:posthoc}).
 \item \textbf{Replayable analyses.} LLM comparison recomputes all numbers from stored provider responses with \code{--replay}; disclosure-gap separation replays offline from stored inputs; the human analysis script regenerates its report byte for byte from the raw export.
@@ -36,7 +36,7 @@ The tests are grouped by area: the FRIES scorer against frozen vectors in \code{
 Appendix~\ref{app:repro} lists the commands.
 
 \section{Performance and resource use}
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering\small
 \caption{Measured cost on the reference laptop (RTX 4060, 8\,GB, CUDA, float32, batch size 8).}
 \begin{tabularx}{\textwidth}{@{}p{5.6cm}L@{}}

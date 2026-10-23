@@ -151,7 +151,6 @@ def score_from_finalized_osd(finalized_osd: dict[str, Any]) -> FriesResult:
     aspects = finalized_osd.get("aspects")
     if not isinstance(aspects, list) or not aspects:
         raise ValueError("finalized_osd.aspects must be a non-empty list")
-
     dimension_scores: dict[str, float] = {}
     per_risk: list[dict[str, Any]] = []
     for entry in aspects:
@@ -174,6 +173,12 @@ def score_from_finalized_osd(finalized_osd: dict[str, Any]) -> FriesResult:
             }
             for t in triples
         )
+
+    # Defense in depth: callers withhold FRIES unless all five aspects are complete; the
+    # equal-weight default is 1/len(aspects), so a partial input would silently re-weight.
+    names = set(dimension_scores)
+    if names != set(FRIES_DIMENSIONS):
+        raise ValueError(f"finalized_osd must cover exactly {sorted(FRIES_DIMENSIONS)}, got {sorted(names)}")
 
     weights = finalized_osd.get("weights")
     total = fries_total(dimension_scores, weights)

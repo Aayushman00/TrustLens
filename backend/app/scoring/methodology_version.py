@@ -6,6 +6,9 @@ old stored report.json blobs genuinely never recorded any value at all —
 see docs/superpowers/plans/2026-09-10-v1-dataset-contract-redesign.md
 Global Constraints)."""
 
+# v11-empty-card-abstain-2026 (post v10): OSD heuristic engine only. An empty model card
+# (Explainability, and Safety when no behavioural evidence) now abstains (None) instead of
+# a fixed (2, 2, 3) band, so FRIES scoring is withheld rather than invented. No probe change.
 # v10-safety-severe-miss-2026 (post round 3): Safety (tl-safety-v1.2) raises the named
 # risk S-BEH-SEVERE-MISS when severe_fnr and its Wilson CI lower bound both exceed 0.50
 # and the benign_fpr competence floor (0.30) holds. Reference-free tolerance declared in
@@ -50,5 +53,5 @@ Global Constraints)."""
 # are identified by their weight-file sha256 (checked against train_manifest.json).
 # Previous: "v3-hardening-2026" — robustness band from accuracy drop,
 # constant-predictor gate, behavioural safety band (stored evaluations keep their stamp).
-CURRENT_METHODOLOGY_VERSION = "v10-safety-severe-miss-2026"
+CURRENT_METHODOLOGY_VERSION = "v11-empty-card-abstain-2026"
 LEGACY_METHODOLOGY_VERSION = "pre-v1-fixed-5dim"

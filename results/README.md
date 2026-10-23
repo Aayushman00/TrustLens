@@ -16,5 +16,6 @@ and several folders embed their own path/hash manifests.
 | `external_hub_validation_*` | External Hub audit (`_v9r` = latest) |
 | `l10_*` | L10 independent validation; `l10_human_*` = human reviewer form and analysis |
 | `safety_severe_miss_replay_*` | Offline replay of the v10 Safety severe-miss rule on stored evidence (exploratory) |
+| `l2_stratified_audit_*` | Read-only audit recomputation of L2 per evaluator stratum (`_baseline_v3` = 2026-10-03 deterministic file, `_baseline_v9` = 2026-10-22 file), from `scripts/audit/l2_stratified.py` |
 
 Suffixes: `YYYYMMDD` run date; `vN`/`rN` = rerun of a frozen folder (earlier versions untouched).

@@ -3,7 +3,7 @@
 \section{Implemented system versus target design}
 The repository README contains a long target architecture: a model analyzer, a dataset analyzer, a resource checker, a benchmark-first runtime estimate, user confirmation and then the FRIES evaluation. When we read the source we found that part of that diagram runs and part does not. This chapter describes the \emph{implemented} flow and lists the differences in Table~\ref{tab:impl-status}, because a report that drew the target diagram as if it ran would misdescribe the project.
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering\small
 \caption{Status of architectural components, checked against the source code at the time of writing.}\label{tab:impl-status}
 \begin{tabularx}{\textwidth}{@{}p{3.6cm}p{2.1cm}L@{}}
@@ -34,7 +34,7 @@ Attack simulation & Not implemented & Planned in the roadmap, not run.\\
 \section{High-level architecture}
 TrustLens is a conventional web application with an asynchronous worker. Figure~\ref{fig:arch} shows the deployment view, which matches \code{docker-compose.yml} (services \code{postgres}, \code{redis}, \code{api}, \code{worker}, \code{frontend}).
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
 \centering
 \begin{tikzpicture}[font=\small,
   box/.style={draw=tlblue,fill=tlgrey,rounded corners=3pt,minimum height=0.95cm,minimum width=2.6cm,align=center,thick},
@@ -47,7 +47,7 @@ TrustLens is a conventional web application with an asynchronous worker. Figure~
   \node[store,below=1.4cm of wk] (fs) {Evidence store\\(SHA-256 files)};
   \node[store,below=1.4cm of ui] (rd) {Redis\\task queue};
   \node[box,above=1.2cm of wk] (hf) {Hugging Face Hub\\metadata and weights};
-  \node[box,above=1.2cm of api] (llm) {LLM providers\\Gemini / Groq / NIM};
+  \node[box,above=1.2cm of api] (llm) {LLM providers\\(hosted APIs)};
   \draw[arr] (ui) -- (api);
   \draw[arr] (api) -- (wk) node[midway,above,font=\scriptsize]{enqueue};
   \draw[arr] (api) -- (pg);
@@ -67,7 +67,7 @@ The API process validates requests, stores model records and evaluation drafts, 
 \section{Execution flow of an audit}
 Figure~\ref{fig:seq} shows the sequence of one evaluation as the code performs it. The probe order in the runner is Fairness, Robustness, Integrity, Explainability, Safety.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
 \centering
 \begin{tikzpicture}[font=\scriptsize,x=2.25cm,y=-0.48cm,
   life/.style={dashed,color=black!40},
@@ -96,7 +96,7 @@ If the worker dies mid-pipeline, a failure handler moves evaluations stuck in \c
 \section{Data flow and evaluation contract}
 Each evaluation carries an \emph{evaluation contract} (schema \code{v2} in \code{schemas/\allowbreak evaluation\_contract\_v2.py}) that makes the evaluation explicit. For Fairness and Robustness it records the content-addressed dataset, the text and target columns, the sensitive-attribute column, a \code{label\_mapping} from dataset values to model label indices, \code{min\_group\_n} and the \code{positive\_label\_index} that the fairness metrics treat as the favourable outcome. It also freezes a snapshot of the model's \code{id2label} and the resolved model revision. The contract turned out to matter: in our first experiment it made a label-mapping mistake visible after the fact (Section~\ref{sec:pilot}).
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
 \centering
 \begin{tikzpicture}[font=\small,node distance=0.55cm,
   p/.style={draw=tlblue,fill=tlgrey,rounded corners=3pt,minimum height=0.9cm,minimum width=1.75cm,align=center,thick,font=\footnotesize},

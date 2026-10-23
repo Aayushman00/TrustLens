@@ -3,7 +3,7 @@
 \section{Technology stack}
 Table~\ref{tab:stack} lists what the code imports.
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering\small
 \caption{Technology stack and role of each component.}\label{tab:stack}
 \begin{tabularx}{\textwidth}{@{}p{3.4cm}L@{}}
@@ -15,7 +15,7 @@ FastAPI, Pydantic v2 & REST API under \code{/\allowbreak v1}; Pydantic models de
 SQLAlchemy 2, Alembic, PostgreSQL & Persistence; 16 migration files track the schema (dataset content, draft state, methodology version, \ldots).\\
 Celery, Redis & Asynchronous execution of the evaluation pipeline in a worker process.\\
 Hugging Face \code{transformers} \cite{wolf2020}, PyTorch & Local inference in \code{LocalHFBackend}; \code{huggingface\_hub} imports metadata (card, tags, licence, file list, LFS hashes).\\
-\code{google-genai}, \code{httpx} & LLM calls to Gemini, Groq and NVIDIA NIM for \code{llm\_v1}.\\
+\code{httpx} & LLM calls to hosted providers for \code{llm\_v1}.\\
 Jinja2, WeasyPrint & HTML report template rendered to PDF.\\
 React 19, Vite, TypeScript & Dashboard: model import, draft wizard, evaluation timeline, review and report pages.\\
 pytest, Vitest, ruff & Backend tests, frontend tests, linting (also run in GitHub Actions).\\
@@ -25,7 +25,7 @@ Docker Compose & Five services (postgres, redis, api, worker, frontend); separat
 \end{table}
 The reference machine is a laptop with an NVIDIA RTX 4060 GPU (8~GB VRAM). Experiment logs confirm CUDA execution.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
 \centering\includegraphics[width=0.76\textwidth]{ui_results.png}
 \caption{Evaluation page of the dashboard for a real Hub model (\code{martin-ha/toxic-comment-model}): a banner states that the result is not human-reviewed, followed by the aggregate FRIES value and the five dimension scores.}\label{fig:ui}
 \end{figure}
@@ -40,7 +40,7 @@ Source files per component are listed in Table~\ref{tab:impl-status}.
 \section{Bugs found while running the experiments}\label{sec:l8}
 Running a few hundred evaluations flushed out defects that unit tests had not. Table~\ref{tab:bugs} lists them. Every one got a regression test, and none changed a score formula.
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering\footnotesize
 \caption{Engineering issues found while running the experiments (2026-10-02 and pipeline hardening).}\label{tab:bugs}
 \begin{tabularx}{\textwidth}{@{}p{4.1cm}p{3.3cm}L@{}}
@@ -61,7 +61,7 @@ Decision fields emitted last by probes, cut by the evidence cap & LLM could not 
 \section{Experiment drivers}
 Each experiment in Chapter~\ref{ch:results} is a script under \code{backend/\allowbreak app/\allowbreak scripts}, so that a result folder can be regenerated from a command and a seed. Table~\ref{tab:scripts} maps them.
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering\footnotesize
 \caption{Experiment scripts and what they produce.}\label{tab:scripts}
 \begin{tabularx}{\textwidth}{@{}p{5.2cm}L@{}}
@@ -75,7 +75,7 @@ Each experiment in Chapter~\ref{ch:results} is a script under \code{backend/\all
 \code{run\_fairness\_confirm} & Fairness confirmation run, in-process.\\
 \code{run\_defect\_severity} & Robustness and safety severity sweeps, in-process.\\
 \code{run\_osd\_calibration} & Score calibration: fit and freeze the v4 anchors, evaluate on held-out sweeps.\\
-\code{run\_l2\_interpretation}, \code{run\_l10\_validation}, \code{run\_claude\_eval} & LLM comparison and independent review packets, provider calls, analysis; supplementary Claude evaluation.\\
+\code{run\_l2\_interpretation}, \code{run\_l10\_validation} & LLM comparison and independent review packets, provider calls, analysis; supplementary LLM evaluation.\\
 \code{run\_external\_hub\_validation} & \code{select}, \code{run}, \code{profile} for pinned Hub models.\\
 \code{tamper\_demo} & Flip one byte of a weight file and show the integrity outcome.\\
 \bottomrule

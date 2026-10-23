@@ -8,7 +8,7 @@ The experiments in this chapter were designed under a few rules that we set afte
 \item \textbf{No tuning on the data that exposed a problem.} Any change that alters a score, band, flag or prompt bumps \code{CURRENT\_METHODOLOGY\_VERSION} or \code{PROMPT\_VERSION}. A mapping change must be fitted on separate data and then evaluated on the frozen suite.
 \item \textbf{Negative results are results.} A failed hypothesis is reported as failed. If a rule should change, it becomes a new version with new data.
 \item \textbf{Evidence reviewers are not ground truth.} Humans and LLMs that read evidence packets are called \emph{evidence reviewers}. Disagreement with TrustLens is described and categorised, not adjudicated.
-\item \textbf{Keep Claude results separate.} Where we used Claude as an additional independent LLM evaluator, its answers live in separate supplementary folders and are never merged into the official LLM comparison or independent review results.
+\item \textbf{Keep supplementary LLM results separate.} Where we used an LLM as an additional independent LLM evaluator, its answers live in separate supplementary folders and are never merged into the official LLM comparison or independent review results.
 \end{itemize}
 
 \section{Common setup}
@@ -24,7 +24,7 @@ The experiments in this chapter were designed under a few rules that we set afte
 \subsection{Models and injected defects}
 We could not obtain a real malicious model, so we built defects ourselves. Each carries a flaw chosen to target one FRIES dimension, and the injection logic is recorded in a manifest next to the weights. Table~\ref{tab:suite} lists the nine models of the main suite.
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering\footnotesize
 \caption{Main controlled suite. ``Defects'' is the ground truth written before the runs (\code{ground\_truth.json}).}\label{tab:suite}
 \begin{tabularx}{\textwidth}{@{}p{2.5cm}p{2.0cm}L@{}}
@@ -58,12 +58,12 @@ To test whether TrustLens responds in proportion to severity (RQ2), we trained s
 Detection means the injected dimension is flagged; a false positive is a flagged dimension that was not injected. Controls are excluded from the counts and reported through a \emph{control flag rate}. The \code{controls} field was added to the file after the runs, from existing role entries, and we say so wherever the numbers are used.
 
 \subsection{Repeat runs and the frozen LLM prompt}
-The main suite was run five times per model (nine models), the sweep three times per level. The LLM configuration was frozen in \code{llm\_freeze.json}: Groq \code{openai/\allowbreak gpt-oss-120b}, temperature 0.2, prompt \code{llm\_v1}; other providers were blanked by \code{docker-compose.experiment.yml}. Methodology version for this suite: \code{v3-hardening-2026}. The suite ran on the image built at experiment start, before the engineering fixes in Table~\ref{tab:bugs}; the git commit is recorded in each run folder.
+The main suite was run five times per model (nine models), the sweep three times per level. The LLM configuration was frozen in \code{llm\_freeze.json}: provider B, temperature 0.2, prompt \code{llm\_v1}; other providers were blanked by \code{docker-compose.experiment.yml}. Methodology version for this suite: \code{v3-hardening-2026}. The suite ran on the image built at experiment start, before the engineering fixes in Table~\ref{tab:bugs}; the git commit is recorded in each run folder.
 
 \section{Fairness confirmation run (pre-registered)}\label{sec:l5m}
 Because the TPR-gap rule was chosen after inspecting the exploratory suite, a fresh test was pre-registered. The pre-registration was frozen at commit \code{8f009fb}, before any data existed for it.
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering\small
 \caption{Setup of the fairness confirmation run.}
 \begin{tabularx}{\textwidth}{@{}p{3.4cm}L@{}}
@@ -99,7 +99,7 @@ The deterministic evaluator recomputes current evidence with the production pure
 \section{Independent evidence review}\label{sec:l10m}
 Twelve single-dimension packets were declared before any packet was built (Table~\ref{tab:l10pk}): a clear defect, a control, a borderline case or an insufficient-evidence case for each of the five dimensions. Packets are shown to evaluators with a whitelist of measured fields only, with plain-English explanations of each measure that say what a number \emph{is} and never what it \emph{means}. Packet hashes are computed before any evaluation. The first leakage test run caught source-file paths (which contain model names) in the packets; we moved them to the reference file before freezing.
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering\footnotesize
 \caption{Packets for the independent evidence review. Source evidence is frozen and read-only.}\label{tab:l10pk}
 \begin{tabularx}{\textwidth}{@{}p{1.1cm}p{2.5cm}p{3.6cm}L@{}}
@@ -122,9 +122,9 @@ Twelve single-dimension packets were declared before any packet was built (Table
 \end{tabularx}
 \end{table}
 
-\noindent Each reviewer answers five questions per packet: \textbf{Q1} is the evidence sufficient (YES/\allowbreak NO/\allowbreak UNCERTAIN); \textbf{Q2} is there evidence of a meaningful risk; \textbf{Q3} which FRIES dimension; \textbf{Q4} severity from 1 (catastrophic) to 9 (negligible), or N/A; \textbf{Q5} a short rationale. Reviewers were told to work alone, to use only the form, and to enter only an assigned code. The \emph{TrustLens reference answer} for a packet is produced from the same frozen evidence under the current methodology: risk YES iff a risk id was raised or \code{aspect\_scoring} says so, NO when evidence is sufficient and no risk, UNCERTAIN when the evidence is insufficient; severity is $S$. The human study used the v9 reference; the earlier official LLM attempt and the Claude supplement were compared against the v8 reference that existed then.
+\noindent Each reviewer answers five questions per packet: \textbf{Q1} is the evidence sufficient (YES/\allowbreak NO/\allowbreak UNCERTAIN); \textbf{Q2} is there evidence of a meaningful risk; \textbf{Q3} which FRIES dimension; \textbf{Q4} severity from 1 (catastrophic) to 9 (negligible), or N/A; \textbf{Q5} a short rationale. Reviewers were told to work alone, to use only the form, and to enter only an assigned code. The \emph{TrustLens reference answer} for a packet is produced from the same frozen evidence under the current methodology: risk YES iff a risk id was raised or \code{aspect\_scoring} says so, NO when evidence is sufficient and no risk, UNCERTAIN when the evidence is insufficient; severity is $S$. The human study used the v9 reference; the earlier official LLM attempt and the supplementary LLM answers were compared against the v8 reference that existed then.
 
-\textbf{Three evaluator groups, kept separate.} (i) Humans: a Google Form, 12 packets per submission; the analysis script reads the raw export, which is never modified. (ii) The official independent LLM review: separate prompt \code{l10-review-v1-2026-10-03}, providers in order Gemini, Groq, NVIDIA, one attempt each. (iii) A supplementary evaluation in which \emph{Claude} (\code{claude-opus-5-5}) answered the same frozen prompts; hashes were checked against the official run, the answers came from a fresh-context subagent told to read only the exported prompt files (an instruction, not technically enforced), and the orchestrating session wrote none of the answers. Claude is not a human reviewer and its results are never merged with groups (i) or (ii).
+\textbf{Three evaluator groups, kept separate.} (i) Humans: a Google Form, 12 packets per submission; the analysis script reads the raw export, which is never modified. (ii) The official independent LLM review: separate prompt \code{l10-review-v1-2026-10-03}, providers A, B, C in order, one attempt each. (iii) A supplementary evaluation in which an additional LLM evaluator answered the same frozen prompts; hashes were checked against the official run, the answers came from a fresh-context subagent told to read only the exported prompt files (an instruction, not technically enforced), and the orchestrating session wrote none of the answers. The supplementary LLM is not a human reviewer and its results are never merged with groups (i) or (ii).
 
 \textbf{Comparison.} Per pair: risk agreement, dimension agreement, severity exact and within one (when both give one), sufficiency agreement, Cohen's or Fleiss' $\kappa$ only with at least eight common packets. A disagreement is assigned the first applicable category: provider infrastructure, parser format, abstention mismatch (exactly one side UNCERTAIN on risk), insufficient evidence, localisation, evidence interpretation, severity ($|\Delta S|\ge2$), agree. For the human analysis severity counts as a judgment only when the reviewer answered Q2 = YES, because the form did not enforce N/A.
 

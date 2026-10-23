@@ -1,0 +1,78 @@
+{
+  "providers_only(gemini+groq)": {
+    "llm_answered_pairs": 18,
+    "exact_status_agreement": 0.2778,
+    "risk_present_agreement_definite": 0.3846,
+    "n_definite_pairs": 13,
+    "severity_exact": 0.2222,
+    "severity_mae": 1.7778,
+    "osd_exact_triple": 0.1667,
+    "O_mae": 2.1667,
+    "S_mae": 1.7778,
+    "D_mae": 2.2222,
+    "llm_runs": 60,
+    "llm_fallbacks": 38,
+    "llm_repeatability_pairs": 12,
+    "llm_risk_repeatable_pairs": 9,
+    "llm_osd_repeatable_pairs": 0,
+    "llm_mean_risk_agreement": 0.9167,
+    "valid_runs": 22,
+    "categories": {
+      "insufficient_evidence": 5,
+      "evidence_interpretation": 8,
+      "agree": 3,
+      "severity": 2,
+      "truncation_fallback": 18
+    }
+  },
+  "claude_supplement_only": {
+    "llm_answered_pairs": 24,
+    "exact_status_agreement": 0.2917,
+    "risk_present_agreement_definite": 0.4375,
+    "n_definite_pairs": 16,
+    "severity_exact": 0.0,
+    "severity_mae": 2.5417,
+    "osd_exact_triple": 0.0,
+    "O_mae": 2.0833,
+    "S_mae": 2.5417,
+    "D_mae": 3.0417,
+    "llm_runs": 60,
+    "llm_fallbacks": 22,
+    "llm_repeatability_pairs": 24,
+    "llm_risk_repeatable_pairs": 21,
+    "llm_osd_repeatable_pairs": 3,
+    "llm_mean_risk_agreement": 0.95,
+    "valid_runs": 38,
+    "categories": {
+      "truncation_fallback": 12,
+      "insufficient_evidence": 8,
+      "evidence_interpretation": 9,
+      "severity": 7
+    }
+  },
+  "combined(heterogeneous)": {
+    "llm_answered_pairs": 36,
+    "exact_status_agreement": 0.3056,
+    "risk_present_agreement_definite": 0.44,
+    "n_definite_pairs": 25,
+    "severity_exact": 0.1111,
+    "severity_mae": 2.25,
+    "osd_exact_triple": 0.0833,
+    "O_mae": 1.9722,
+    "S_mae": 2.25,
+    "D_mae": 2.6389,
+    "llm_runs": 60,
+    "llm_fallbacks": 0,
+    "llm_repeatability_pairs": 36,
+    "llm_risk_repeatable_pairs": 30,
+    "llm_osd_repeatable_pairs": 0,
+    "llm_mean_risk_agreement": 0.9389,
+    "valid_runs": 60,
+    "categories": {
+      "insufficient_evidence": 11,
+      "evidence_interpretation": 14,
+      "agree": 3,
+      "severity": 8
+    }
+  }
+}

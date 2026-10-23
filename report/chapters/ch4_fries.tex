@@ -17,7 +17,7 @@ The geometric mean has a consequence worth stating. One low component pulls $\Pi
 
 \paragraph{Profile first, score second.} A report lists, for each dimension, the probe status, the measured evidence, any risk or disclosure gap, the O/S/D triple with its source (heuristic, LLM, human, or abstained) and only then the dimension score. The aggregate FRIES figure is placed last and is \emph{withheld} when any dimension has no complete O/S/D triple. TrustLens keeps (A) measured evidence, (B) risk assessment and (C) the score apart (Figure~\ref{fig:pipeline}); the heuristic engine comes close to blurring A and C, because each of its bands is a function of one metric (Section~\ref{sec:osd}).
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering\small
 \caption{Methodology versions stamped on evaluations during this work (from \code{scoring/\allowbreak methodology\_version.py}).}\label{tab:versions}
 \begin{tabularx}{\textwidth}{@{}p{4.6cm}L@{}}
@@ -32,6 +32,7 @@ The geometric mean has a consequence worth stating. One low component pulls $\Pi
 \code{v8-osd-calibrated-map-2026} & Score calibration: range-normalised O/S/D mapping (v4 mapping).\\
 \code{v9-evidence-guards-2026} & Integrity mismatch floor, safety competence floor, CI-based detectability.\\
 \code{v10-safety-severe-miss-2026} & Safety risk \code{S-BEH-SEVERE-MISS} (exploratory).\\
+\code{v11-empty-card-abstain-2026} & Heuristic engine only: an empty card abstains instead of receiving a fixed $(2,2,3)$ band (code only; every experiment in this report predates it).\\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -58,7 +59,7 @@ We replaced it with the TPR gap (\code{v6}, tl-fairness-binary-v1.2). We have to
 \subsection{Decision rule}
 Table~\ref{tab:fairrule} gives the ordered decision rule, which is frozen in the code and in the pre-registration of the fairness confirmation run. The CI is a percentile bootstrap of EOD itself with $B=1000$ row resamples and a fixed seed (42 by default); a replicate in which a kept group has no positive label is discarded.
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering\small
 \caption{Decision rule of the binary fairness probe (\code{tl-fairness-binary-v1.2}). The first matching row applies.}\label{tab:fairrule}
 \begin{tabularx}{\textwidth}{@{}p{0.7cm}Lp{3.0cm}p{2.2cm}@{}}
@@ -77,7 +78,7 @@ Table~\ref{tab:fairrule} gives the ordered decision rule, which is frozen in the
 \noindent Two properties of this rule matter later. First, it is a \emph{disparity} rule, not a defect detector: a model with no injected defect but a real TPR gap will be flagged, and the status text says the flag is ``evidence for review, not a finding that the model is unfair''. Second, the width gate decides outcomes whenever the CI width is close to 0.15, which it was for most models in our data. We report that effect instead of re-tuning the gate. Base rates are kept in the evidence (\code{label\_rate\_gap}), because a large gap between groups' positive-label rates is the main reason that raw parity differences cannot be read as bias. For multiclass heads the probe uses a worst-group accuracy gap rule (\code{F-FAIR-PERF}, \code{tl-methodology-v1.0}); our experiments are all binary.
 
 \section{Robustness}
-\code{robustness\_nlp.py} replaces up to \code{max\_changes} alphanumeric characters per text (default 3, from an attack budget of 0.03) with random characters, using a seeded generator, and runs clean and perturbed text through the model. Evidence: clean accuracy, robust accuracy, paired accuracy drop with a bootstrap CI, attack success rate, perturbation coverage. The risk \code{R-ROB-PERT} is raised when the drop exceeds $\varepsilon_{drop}=0.05$ \emph{and} the CI lower bound does too. Gates stop the probe from scoring when fewer than 100 samples were evaluated, when too few labels are compatible with the model, when clean accuracy is below 0.20, or when perturbation coverage is below 1.0 (\code{G-ROB-PERT-COVERAGE}). The coverage gate caused the abstention that opened our severity sweep (Section~\ref{sec:l6}): a single row containing only the characters \code{:(} cannot be perturbed.
+\code{robustness\_nlp.py} replaces up to \code{max\_changes} alphanumeric characters per text (default 3, from an attack budget of 0.03) with random characters, using a seeded generator, and runs clean and perturbed text through the model. Evidence: clean accuracy, robust accuracy, paired accuracy drop with a bootstrap CI, attack success rate, perturbation coverage. The risk \code{R-ROB-PERT} is raised when the drop exceeds $\varepsilon_{drop}=0.05$ \emph{and} the CI lower bound does too. Gates stop the probe from scoring when fewer than 100 samples were evaluated, when too few labels are compatible with the model, when clean accuracy is below 0.20, when perturbation coverage is below 1.0 (\code{G-ROB-PERT-COVERAGE}), or when the CI of the accuracy drop is wider than 0.20 (\code{G-ROB-CI-WIDE}). The coverage gate caused the abstention that opened our severity sweep (Section~\ref{sec:l6}): a single row containing only the characters \code{:(} cannot be perturbed.
 
 \paragraph{Constant predictors.} A model that answers one class for nearly every row is trivially stable and trivially fair, and scoring it would reward a broken evaluation. \code{prediction\_gate.py} flags a collapse when one class takes at least 98\% of predictions, and the fairness and robustness probes then refuse to score. The gate exists because our first experiment contained exactly such a model (Section~\ref{sec:pilot}).
 
@@ -99,7 +100,7 @@ Integrity in TrustLens has two roles: it records whether the model's identity an
 
 Up to \code{tl-integrity-v1.1} the probe hashed one weight file. That left three holes: sharded checkpoints were not verified at all, an edited \code{config.json} or tokenizer was invisible, and an extra weight file sitting next to the attested one went unnoticed. Version 1.2 (artifact integrity, ADR~0013) enumerates the \emph{artifact set} deterministically from top-level files: weights (single, or every shard named by the index file), loader files (\code{config.json}, \code{generation\_config.json}, tokenizer files) and any other weight-like file (hashed so that an unexpected one can be detected). The set is compared with the first authoritative manifest found: an operator-supplied manifest, a folder \code{artifact\_manifest.json}, or the legacy \code{train\_manifest.json} weight hash. For Hub models every weight shard is compared with its LFS sha256.
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering\small
 \caption{Artifact verification statuses (ADR~0013).}\label{tab:artstatus}
 \begin{tabularx}{\textwidth}{@{}p{2.6cm}Lp{3.4cm}@{}}
@@ -139,7 +140,7 @@ The default engine never proposes O/S/D. Every aspect starts with $O=S=D=\code{N
 \item \textbf{Fairness:} the gap is the larger of the parity term and the absolute equalized-odds difference; $O=S=\mathrm{scale}(1-\mathrm{gap})$, one less on thin slices; $D=8$.
 \item \textbf{Robustness:} $O=\mathrm{scale}(\min(\text{robust}/\text{clean},1))$, $S=\mathrm{scale}(1-\min(\text{drop}/0.10,1))$, $D=8$.
 \item \textbf{Safety (behavioural):} $O=\mathrm{scale}(1-\text{severe FNR})$, $S=3$ if $\text{fnr\_ratio}>1.5$ else $6$, $D=8$.
-\item \textbf{Integrity, Explainability, Safety (card):} $O=S=\mathrm{scale}(\text{pass rate or coverage})$, $D$ as coverage; an empty card gets $(2,2,3)$.
+\item \textbf{Integrity, Explainability, Safety (card):} $O=S=\mathrm{scale}(\text{pass rate or coverage})$, $D$ as coverage; through v10 an empty card got $(2,2,3)$, and from v11 it abstains.
 \end{itemize}
 
 \subsection{The calibrated mapping, v4}\label{sec:v4}
@@ -151,7 +152,7 @@ x=\mathrm{clip}\!\left(\frac{e-a}{b-a},0,1\right),\qquad O=S=\left\lfloor 9-8x+\
 \end{equation}
 so $O=S\in[1,9]$. $D$, the abstention logic and the card bands stay as in v3. The anchors are the intercept and the intercept plus slope of an ordinary-least-squares fit of $e$ on normalised severity over a \emph{calibration split only}: 3\,000 evaluation rows plus an 8\,000-row clean training slice from Civil Comments, seven models with nested flips at 0.3, 0.6 and 1.0 for Fairness and Safety, and attack budgets 0.02--0.10 for Robustness, all under seed 43 and disjoint by exact text from the suite and the confirmatory data. Because the held-out fairness confirmation and severity sweeps values were already known, the pre-declaration fixed everything except the two anchors per family in advance.
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering\small
 \caption{Frozen anchors of the v4 mapping (\code{osd-map-v4-calibrated-2026-10-03}), calibration sha256 \code{88ca2538\ldots}.}\label{tab:anchors}
 \begin{tabular}{@{}lccc@{}}
@@ -171,7 +172,7 @@ Safety & severe FNR & 0.259521 & 0.596013\\
 After round~3, a set of audit fixes added three guards (\code{v9-evidence-guards-2026}), all in the heuristic engine. (1) If artifact verification reports MISMATCH, Integrity gets $O=S=1$; before this, the band read the pass rate of the metadata checks, which a tampered folder could still pass. (2) Safety abstains when benign FPR exceeds 0.30, a competence floor so that a model flagging everything does not look safe by its miss rate. This threshold was set \emph{after} we saw the external Hub run, it is marked PROPOSED in the code, and it is not pre-registered. (3) Detectability becomes $D=\mathrm{clamp}(8-\lfloor w/0.05\rfloor)$ for a CI of width $w$ (the EOD interval for Fairness, the clean-accuracy interval for Robustness, the severe-FNR interval for Safety) instead of a constant 8. None of the three guards has been validated on fresh data.
 
 \subsection{The LLM-assisted engine}
-For Integrity, Explainability and Safety, \code{llm\_v1} sends one batched prompt (\code{osd-llm-v3-decision-first-2026-10-03}) to a hosted model and asks for O, S, D from 1 to 9 with a short rationale. Providers are tried in order: Gemini (\code{gemini-3.6-flash}), Groq (\code{openai/\allowbreak gpt-oss-120b}, temperature 0.2) and NVIDIA NIM (\code{mistralai/\allowbreak mistral-large-2-instruct}). The first provider to return a valid, parseable answer wins; if all fail, the heuristic values are kept and tagged \code{heuristic\_fallback}. The prompt caps card text at 5\,000 characters and evidence at 3\,000; since pipeline hardening the decision fields sit on an untruncated first line (Table~\ref{tab:bugs}). The engine is an experimental comparison engine; the LLM comparison study (Section~\ref{sec:l2}) shows why it should not be treated as a validated rater.
+For Integrity, Explainability and Safety, \code{llm\_v1} sends one batched prompt (\code{osd-llm-v3-decision-first-2026-10-03}) to a hosted model and asks for O, S, D from 1 to 9 with a short rationale. Three hosted providers (A, B, C) are tried in order, with temperature 0.2. The first provider to return a valid, parseable answer wins; if all fail, the heuristic values are kept and tagged \code{heuristic\_fallback}. The prompt caps card text at 5\,000 characters and evidence at 3\,000; since pipeline hardening the decision fields sit on an untruncated first line (Table~\ref{tab:bugs}). The engine is an experimental comparison engine; the LLM comparison study (Section~\ref{sec:l2}) shows why it should not be treated as a validated rater.
 
 \subsection{Human review}
 In \code{AI\_ASSISTED} mode the pipeline stops at \code{AWAITING\_REVIEW}; \code{osd/\allowbreak review.py} merges the reviewer's edits (possibly only some of O, S, D) over the proposal and records the overrides.

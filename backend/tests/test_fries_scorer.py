@@ -175,3 +175,64 @@ def test_score_from_finalized_osd_rejects_bad_input() -> None:
                 ]
             }
         )
+
+
+# --- audit 2026-10-23: edge cases beyond the frozen fixtures -------------------------------
+
+
+def _doc(per_dim: dict[str, list[tuple[int, int, int]]], weights: dict[str, float] | None = None) -> dict[str, Any]:
+    doc: dict[str, Any] = {
+        "aspects": [
+            {"aspect": d, "risks": [{"O": o, "S": s, "D": dd} for o, s, dd in rs]} for d, rs in per_dim.items()
+        ]
+    }
+    if weights:
+        doc["weights"] = weights
+    return doc
+
+
+def test_partial_dimension_set_is_rejected_not_reweighted() -> None:
+    # fries_total alone would give 4 aspects weight 0.25 each; the document scorer must refuse.
+    four = {d: [(5, 5, 5)] for d in _DIMS[:4]}
+    with pytest.raises(ValueError, match="must cover exactly"):
+        score_from_finalized_osd(_doc(four))
+
+
+def test_empty_risk_list_is_an_error_not_a_zero() -> None:
+    doc = _doc({d: [(5, 5, 5)] for d in _DIMS})
+    doc["aspects"][0]["risks"] = []
+    with pytest.raises(ValueError, match="non-empty"):
+        score_from_finalized_osd(doc)
+
+
+def test_vetoed_risk_drags_the_dimension_mean_but_is_not_a_missing_value() -> None:
+    # (0,9,9) -> Pi 0 ; (9,9,9) -> Pi 9 ; mean 4.5. A veto is a numerical zero inside the mean.
+    doc = _doc({**{d: [(5, 5, 5)] for d in _DIMS}, "SAFETY": [(0, 9, 9), (9, 9, 9)]})
+    result = score_from_finalized_osd(doc)
+    assert result.dimension_scores["SAFETY"] == pytest.approx(4.5)
+    assert result.fries_score == pytest.approx(0.2 * (4 * 5.0 + 4.5), abs=1e-4)
+
+
+def test_multi_risk_custom_weights_and_rounding_are_stable() -> None:
+    w = {"FAIRNESS": 0.1, "ROBUSTNESS": 0.2, "INTEGRITY": 0.3, "EXPLAINABILITY": 0.15, "SAFETY": 0.25}
+    doc = _doc({d: [(4, 4, 8), (7, 4, 5)] for d in _DIMS}, w)
+    r = score_from_finalized_osd(doc)
+    expected = (4 * 4 * 8) ** (1 / 3) / 2 + (7 * 4 * 5) ** (1 / 3) / 2
+    assert r.fries_score == pytest.approx(expected, abs=1e-4)  # weights sum to 1 -> same for any split
+    assert r.fries_score == round(r.fries_score, 4)
+    assert all(v == round(v, 4) for v in r.dimension_scores.values())
+
+
+def test_dimension_order_and_case_do_not_change_the_score() -> None:
+    base = {d: [(3, 6, 9)] for d in _DIMS}
+    a = score_from_finalized_osd(_doc(base))
+    shuffled = {d.lower(): base[d] for d in reversed(_DIMS)}
+    assert score_from_finalized_osd(_doc(shuffled)).fries_score == a.fries_score
+
+
+@pytest.mark.parametrize("bad", [-1, 11, 4.0, True, None, "5"])
+def test_invalid_components_raise(bad: Any) -> None:
+    doc = _doc({d: [(5, 5, 5)] for d in _DIMS})
+    doc["aspects"][1]["risks"][0]["D"] = bad
+    with pytest.raises((TypeError, ValueError)):
+        score_from_finalized_osd(doc)

@@ -156,23 +156,20 @@ def test_skipped_probes_abstain_from_osd() -> None:
     assert by_aspect[FriesDimension.ROBUSTNESS].status.value == "NOT_APPLICABLE"
     for dim in (FriesDimension.EXPLAINABILITY, FriesDimension.SAFETY):
         empty = by_aspect[dim]
-        assert (empty.O, empty.S, empty.D) == (2, 2, 3)
+        assert empty.O is None and empty.S is None and empty.D is None
+        assert "model card is empty" in empty.rationale
 
     suggestion = to_ai_suggestion(result)
     assert suggestion["scoring_withheld"] is True
     assert suggestion["scoring_complete"] is False
-    assert suggestion["complete_aspect_count"] == 3
+    assert suggestion["complete_aspect_count"] == 1
     fairness_payload = next(a for a in suggestion["aspects"] if a["aspect"] == "FAIRNESS")
     assert fairness_payload["O"] is None
     assert fairness_payload["status"] == "SKIPPED"
 
     finalized = to_finalized_osd(result)
     assert finalized["scoring_withheld"] is True
-    assert {a["aspect"] for a in finalized["aspects"]} == {
-        "INTEGRITY",
-        "EXPLAINABILITY",
-        "SAFETY",
-    }
+    assert {a["aspect"] for a in finalized["aspects"]} == {"INTEGRITY"}
     assert all(a["O"] is not None for a in finalized["aspects"])
 
 

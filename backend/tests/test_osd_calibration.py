@@ -69,7 +69,7 @@ def test_check_frozen_refuses_drift() -> None:
 
 
 def test_versions_bumped() -> None:
-    assert CURRENT_METHODOLOGY_VERSION == "v10-safety-severe-miss-2026"
+    assert CURRENT_METHODOLOGY_VERSION == "v11-empty-card-abstain-2026"
     assert agent.OSD_MAP_V4["version"] == "osd-map-v4-calibrated-2026-10-03"
 
 

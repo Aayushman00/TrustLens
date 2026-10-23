@@ -140,10 +140,10 @@ Default evaluations **do not invent O/S/D**. FRIES is **withheld** (status still
 These are the main deviations from the target architecture:
 
 1. **One O/S/D triple per dimension**, not a catalog of 1–3 selected FRIES risks with structured mapping traces (`rule_id`, band, rationale, methodology version).
-2. **Explainability and Safety still fall back to a fixed empty-card band `(2, 2, 3)`** when there is no card evidence, instead of abstaining. Fairness, Robustness, and Integrity now abstain (`None`) on missing evidence rather than inventing a number.
+2. ~~Explainability and Safety fall back to a fixed empty-card band~~ — fixed in `v11-empty-card-abstain-2026`: an empty card now abstains, like Fairness, Robustness and Integrity.
 3. **Fairness depends on user-supplied labelled data with group columns.** Without it the probe cannot score; the old Adult-Census logistic-regression proxy is no longer the default path.
 4. **Coverage ratios and integrity pass rates are still easy to confuse with aspect scores.** The scorer uses O/S/D, but the agent bands those O/S/D values directly from coverage / pass rate / disparity — closer to “metric → dimension rating” than “evidence → named risk → O/S/D”.
-5. **Overall FRIES always assumes five aspects.** Missing dimensions are not withheld or reweighted; empty risk lists currently score as `0`. (The separate confidence-engine `overall` figure already excludes `NOT_APPLICABLE` dimensions under `methodology_version="v2-per-dimension-2026"` — this gap is about the FRIES score itself, not confidence.)
+5. ~~Overall FRIES always assumes five aspects~~ — already fixed: autonomous and assisted finalization withhold the FRIES score unless all five aspects have complete O/S/D (`scoring_withheld`). `score_from_finalized_osd` itself now also rejects any input that does not cover exactly the five dimensions, and rejects an empty `risks` list (only the pure `aspect_score([])` returns `0`).
 6. **No resource checker, compatibility states, or benchmark-first runtime estimate** before download. HF import never downloads weights; probes may download a sequence-classification model at run time with no VRAM/RAM/disk gate.
 7. **Inference backend is local Transformers only** (sequence classification/regression via `LocalHFBackend`); no hosted or other-task backends.
 8. **Integrity** records named risks (`I-INT-*`) and verifies artifact-set hashes; it does not claim tampering, true lineage, or a generic integrity score.
@@ -206,7 +206,7 @@ Work is ordered to match the specification’s implementation phases. Items alre
 
 | Phase | Intent | Status |
 | ----- | ------ | ------ |
-| 1 | Probe evaluation statuses, nullable O/S/D, status-aware runner | **Partial** (`ProbeEvaluationStatus` + methodology-version-gated confidence exclusion exist; Explainability/Safety still band a fixed empty-card default instead of abstaining) |
+| 1 | Probe evaluation statuses, nullable O/S/D, status-aware runner | **Partial** (`ProbeEvaluationStatus` + methodology-version-gated confidence exclusion exist; empty-card default removed in v11) |
 | 2 | Model analyzer + disk/RAM/VRAM compatibility (`SUPPORTED` / `CONSTRAINED` / `UNSUPPORTED` / `UNKNOWN`) | **Absent** |
 | 3 | `InferenceBackend` / `LocalInferenceBackend`; evaluation separated from execution | **Mostly done** (`LocalHFBackend` used by fairness/robustness/safety) |
 | 4 | Short benchmark, throughput, runtime estimate, optional cache | **Absent** |
