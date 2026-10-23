@@ -253,7 +253,7 @@ Section~\ref{sec:integ} lists what artifact integrity does not prove.
 
 \begin{table}[!htbp]
 \centering\footnotesize
-\caption{L2 by evaluator stratum. ``Risk-ident.'' and ``triple-ident.'' count pairs whose valid runs all gave the same risk answer, respectively the same $(O,S,D)$.}\label{tab:l2strat}
+\caption{L2 by evaluator stratum; unit = packet-by-dimension pair, LLM side = modal answer of the stratum's valid runs, ``Status'' = modal risk answer equals the deterministic one. ``Risk-ident.'' and ``triple-ident.'' count pairs whose valid runs all gave the same risk answer, respectively the same $(O,S,D)$.}\label{tab:l2strat}
 \begin{tabular}{@{}lrrrrrrr@{}}
 \toprule
 Stratum & Runs & Pairs & Status & Definite & $S$ exact & Risk-ident. & Triple-ident.\\
@@ -265,7 +265,7 @@ Pooled & 60 & 36 & 11/36 & 11/25 & 0.111 & 30/36 & 0/36\\
 \end{tabular}
 \end{table}
 
-First, ``the triple never repeats'' holds for the providers (0/12) but not for the supplementary evaluator alone (3/24), so the pooled 0/36 is partly a mixture effect. Pooled 11/36 is not 5 + 7 (P05 and P09 are in both strata) because pooling changes their modal answer. Second, the 2026-10-22 folder's deterministic baseline was regenerated under the v9 agent and differs from the 2026-10-03 file in seven cells (P03 Integrity $O/S$ 7/7 to 1/1; Safety $D$ 8 to 6 for six packets), so $O/S/D$ errors are not comparable between folders; against the 2026-10-03 baseline the provider stratum reproduces the official figures (severity MAE 1.78). The folder's \code{analysis.md} header still says ``v3 HeuristicOSDAgent''; that label is stale.
+First, ``the triple never repeats'' holds for the providers (0/12) but not for the supplementary evaluator alone (3/24), so the pooled 0/36 is partly a mixture effect. The strata overlap on the six P05 and P09 pairs (one agreeing), so pooled 11/36 = 5 + 7 $-$ 1 over 18 + 24 $-$ 6 pairs. Second, the 2026-10-22 folder's deterministic baseline was regenerated under the v9 agent and differs from the 2026-10-03 file in seven cells (P03 Integrity $O/S$ 7/7 to 1/1; Safety $D$ 8 to 6 for six packets), so $O/S/D$ errors are not comparable between folders; against the 2026-10-03 baseline the provider stratum reproduces the official figures (severity MAE 1.78). The folder's \code{analysis.md} header still says ``v3 HeuristicOSDAgent''; that label is stale.
 
 \section{Independent evidence review}\label{sec:l10}
 \subsection{Human evidence review}

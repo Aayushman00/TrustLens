@@ -78,3 +78,32 @@ def test_human_study_counts() -> None:
     assert set(agree) >= {"all7", "R0_only"}
     ch7 = _tex("ch7_results.tex")
     assert "Seven submissions" in ch7 and "Six submissions carry the shared code" in ch7
+
+
+def test_l2_strata_reconcile_by_overlap() -> None:
+    """11/36 pooled = 5/18 providers + 7/24 supplementary - overlap (P05, P09: 6 pairs, 1 agreeing)."""
+    from app.scripts.run_l2_interpretation import compare
+
+    src = RES / "l2_det_vs_llm_20261022_r4"
+    det, runs = _json(src.name, "deterministic.json"), _json(src.name, "llm_runs.json")
+
+    def agree(keep):
+        sub = {
+            p: [r if keep(r) else {**r, "fallback": True, "dimensions": None, "provider": None, "parse_failures": 0,
+                                   "output_truncated": False, "provider_unavailable": False,
+                                   "superseded_attempt_records": 0, "replayed": False} for r in rs]
+            for p, rs in runs.items()
+        }
+        rows = [r for r in compare(det, sub)["rows"] if r["llm"]["risk_present"] is not None]
+        return {(r["packet_id"], r["dimension"]): r["deterministic"]["risk_present"] == r["llm"]["risk_present"]
+                for r in rows}
+
+    prov = agree(lambda r: r["provider"] in {"gemini", "groq"})
+    claude = agree(lambda r: r["provider"] == "claude")
+    pooled = agree(lambda r: True)
+    overlap = prov.keys() & claude.keys()
+    assert (len(prov), len(claude), len(pooled), len(overlap)) == (18, 24, 36, 6)
+    assert prov.keys() | claude.keys() == pooled.keys()
+    assert sum(prov.values()) == 5 and sum(claude.values()) == 7 and sum(pooled.values()) == 11
+    assert sum(pooled[k] for k in overlap) == 1
+    assert all(pooled[k] == prov[k] == claude[k] for k in overlap)  # pooling changes no overlap outcome

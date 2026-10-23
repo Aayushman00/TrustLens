@@ -1,7 +1,7 @@
 \chapter{Testing, Reproducibility and Performance}\label{ch:testing}
 
 \section{Testing strategy}
-The backend has 111 test modules in \code{backend/\allowbreak tests} (912 test items collected by \code{pytest}, 842 \code{def test\_} functions by a plain text count; parametrised tests account for the difference). The worker package has nine tests and the frontend has 29 test files. Continuous integration (\code{.github/\allowbreak workflows/\allowbreak ci.yml}) runs on pushes to \code{Main} and on pull requests: backend \code{ruff} and \code{pytest} against a Postgres service container, worker \code{ruff} and \code{pytest} with a slim install, and the frontend tests, type-check and build. We did not generate a coverage report for this thesis, so we give no coverage percentage.
+The backend has 111 test modules in \code{backend/\allowbreak tests} (913 test items collected by \code{pytest}, 843 \code{def test\_} functions by a plain text count; parametrised tests account for the difference). The worker package has nine tests and the frontend has 29 test files. Continuous integration (\code{.github/\allowbreak workflows/\allowbreak ci.yml}) runs on pushes to \code{Main} and on pull requests: backend \code{ruff} and \code{pytest} against a Postgres service container, worker \code{ruff} and \code{pytest} with a slim install, and the frontend tests, type-check and build. We did not generate a coverage report for this thesis, so we give no coverage percentage.
 
 \paragraph{Latest full run on the reference machine.}
 \begin{table}[!htbp]
@@ -11,7 +11,7 @@ The backend has 111 test modules in \code{backend/\allowbreak tests} (912 test i
 \toprule
 \textbf{Suite} & \textbf{Result}\\
 \midrule
-Backend \code{pytest} & 910 passed, 2 skipped, 1 warning (156\,s; other runs on this machine took 130--326\,s), run with the Postgres container up. The two skips need WeasyPrint system libraries and a live Hub import (\code{TRUSTLENS\_LIVE\_TESTS=1}).\\
+Backend \code{pytest} & 911 passed, 2 skipped, 1 warning (266\,s; other runs on this machine took 130--326\,s), run with the Postgres container up. The two skips need WeasyPrint system libraries and a live Hub import (\code{TRUSTLENS\_LIVE\_TESTS=1}).\\
 Worker \code{pytest} & 9 passed.\\
 Frontend \code{vitest} & 29 files, 275 tests passed.\\
 \code{ruff} (backend) & No findings (rules E4, E7, E9, F). The baseline at the start of round~3 was 31.\\

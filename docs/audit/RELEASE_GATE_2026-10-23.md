@@ -71,6 +71,11 @@ The PDF was built after the last source edit (ch9 timing sentence) and its page 
 That does not establish scientific validity: the FRIES score is an unvalidated heuristic summary, the thresholds were
 partly chosen after seeing data and are not shown to generalise, and the human and LLM comparisons are descriptive.
 
-## 6. Gated commit
+## 6. Addendum (final reconciliation, see `FINAL_RECONCILIATION_2026-10-23.md`)
+
+A sentence in Ch7 (and in the first audit write-up) saying pooling "changes the modal answer" on P05/P09 was wrong and was
+corrected: pooling changes no overlap outcome. Test counts after the addendum: 913 collected, 911 passed, 2 skipped.
+
+## 7. Gated commit
 
 Gated commit: `9e8e5ee` (all section 1 results were produced on exactly this tree; the only later commit adds this hash).
