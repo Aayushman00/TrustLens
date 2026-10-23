@@ -73,4 +73,4 @@ partly chosen after seeing data and are not shown to generalise, and the human a
 
 ## 6. Gated commit
 
-Recorded in the commit that follows the gated commit (see `git log`).
+Gated commit: `9e8e5ee` (all section 1 results were produced on exactly this tree; the only later commit adds this hash).
