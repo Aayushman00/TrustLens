@@ -1,0 +1,75 @@
+/* Models page. Legacy cream/green tokens only. Scoped overrides: the shared
+   .contract-card rules (also used by the new-evaluation wizard) stay untouched. */
+
+.mp-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.mp-card {
+  min-width: 0;
+}
+
+.mp-title {
+  margin: 0;
+  font-family: var(--font-body);
+  overflow-wrap: anywhere;
+}
+
+.mp-repo {
+  overflow-wrap: anywhere;
+}
+
+.mp-actions {
+  margin-top: auto;
+  padding-top: 0.4rem;
+}
+
+.mp-actions .btn,
+.mp-btn {
+  min-height: 44px;
+}
+
+.mp-summary {
+  margin: 0 0 0.8rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.mp-filter {
+  margin-bottom: 0.8rem;
+}
+
+.mp-filter label {
+  width: min(100%, 22rem);
+}
+
+.mp-more {
+  margin-top: 1rem;
+}
+
+.mp-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--ink-accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.mp-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 480px) {
+  .mp-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.mp-filter input {
+  min-height: 44px;
+}
