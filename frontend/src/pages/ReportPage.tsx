@@ -23,6 +23,7 @@ import ScoreBars from "../components/ScoreBars";
 import Spinner from "../components/Spinner";
 import { traceabilityEntryToProbeEvidence } from "../lib/report";
 import { fmtDateTime, fmtOsd } from "../lib/format";
+import "./ReportPage.css";
 
 const DIMENSION_LABEL: Record<FriesDimension, string> = {
   FAIRNESS: "Fairness",
@@ -37,9 +38,16 @@ export default function ReportPage() {
   const [report, setReport] = useState<ReportRead | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [regenerating, setRegenerating] = useState(false);
+  const [regenerated, setRegenerated] = useState<number | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
+    // A new route id (or a retry) starts clean, so a previous evaluation's
+    // report or error never lingers under the new URL.
+    setReport(null);
+    setError(null);
+    setRegenerated(null);
     async function load() {
       try {
         const row = await apiFetch<ReportRead>(`/v1/reports/${evaluationId}`);
@@ -52,7 +60,7 @@ export default function ReportPage() {
     return () => {
       cancelled = true;
     };
-  }, [evaluationId]);
+  }, [evaluationId, attempt]);
 
   function downloadJson() {
     if (!report) return;
@@ -64,18 +72,19 @@ export default function ReportPage() {
     link.href = url;
     link.download = `trustlens-report-${report.evaluation_id.slice(0, 8)}-v${report.version}.json`;
     link.click();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 0);
   }
 
   async function regenerate() {
     setRegenerating(true);
     setError(null);
+    setRegenerated(null);
     try {
-      setReport(
-        await apiFetch<ReportRead>(`/v1/reports/${evaluationId}/generate`, {
-          method: "POST",
-        }),
-      );
+      const fresh = await apiFetch<ReportRead>(`/v1/reports/${evaluationId}/generate`, {
+        method: "POST",
+      });
+      setReport(fresh);
+      setRegenerated(fresh.version);
     } catch (err) {
       setError(err);
     } finally {
@@ -92,7 +101,21 @@ export default function ReportPage() {
         </div>
       );
     }
-    return <ErrorNotice error={error} />;
+    return (
+      <>
+        <div role="alert">
+          <ErrorNotice error={error} />
+        </div>
+        <div className="btn-row rp-actions">
+          <button type="button" className="btn" onClick={() => setAttempt((n) => n + 1)}>
+            Retry
+          </button>
+          <Link to={`/evaluations/${evaluationId}`} className="btn btn-secondary">
+            Back to the evaluation
+          </Link>
+        </div>
+      </>
+    );
   }
   if (report == null) {
     return <Spinner label="Fetching report (generates on first request)…" />;
@@ -107,6 +130,9 @@ export default function ReportPage() {
     | { aspect: string; O: number | null; S: number | null; D: number | null; O_source?: string | null; S_source?: string | null; D_source?: string | null }[]
     | undefined) ?? [];
   const exec = doc.execution_environment;
+  // The basis of a score is stated from the disclosure the backend persisted,
+  // never assumed: only human_reviewed === true may say "human-reviewed".
+  const humanReviewed = report.mode_disclosure.human_reviewed === true;
 
   return (
     <>
@@ -120,7 +146,7 @@ export default function ReportPage() {
             · generated {fmtDateTime(report.generated_at)}
           </p>
         </div>
-        <div className="btn-row">
+        <div className="btn-row rp-actions">
           <button type="button" className="btn" onClick={downloadJson}>
             Download JSON
           </button>
@@ -135,15 +161,24 @@ export default function ReportPage() {
         </div>
       </div>
 
+      <p className="tl-sr-only" role="status">
+        {regenerating
+          ? "Regenerating report…"
+          : regenerated != null
+            ? `Report regenerated as version ${regenerated}.`
+            : ""}
+      </p>
       <ModeDisclosureBanner disclosure={report.mode_disclosure} />
-      <ErrorNotice error={error} />
+      <div role="alert">
+        <ErrorNotice error={error} />
+      </div>
 
       {/* 1. Executive Assessment */}
       <div className="card">
         <h2>Executive Assessment</h2>
         {withheld ? (
           <div className="notice notice-info">
-            <strong>FRIES withheld.</strong> {doc.executive_summary.headline}
+            <strong>FRIES withheld.</strong>
             <p className="field-hint" style={{ marginTop: "0.4rem" }}>
               {score.note}
             </p>
@@ -154,10 +189,13 @@ export default function ReportPage() {
               <span className="fries-value">{score.fries_score!.toFixed(2)}</span>
               <span className="fries-label">original FRIES (0–10)</span>
             </div>
+            <p className="rp-basis">
+              Basis: {humanReviewed ? "human-reviewed O/S/D" : "O/S/D that were not human-reviewed"}.
+            </p>
             <p className="muted">{score.note}</p>
           </>
         )}
-        <p style={{ marginTop: withheld ? 0 : "0.6rem" }}>{doc.executive_summary.headline}</p>
+        <p style={{ marginTop: "0.6rem" }}>{doc.executive_summary.headline}</p>
         {doc.executive_summary.bullets.length > 0 ? (
           <ul>
             {doc.executive_summary.bullets.map((bullet) => (
@@ -170,7 +208,7 @@ export default function ReportPage() {
       {/* 2. Evaluation Contract */}
       <div className="card">
         <h2>Evaluation Contract</h2>
-        <dl className="kv">
+        <dl className="kv rp-kv">
           <dt>Contract kind</dt>
           <dd>{String(doc.reproducibility.contract_kind ?? "documentation_only")}</dd>
           <dt>Task</dt>
@@ -187,7 +225,7 @@ export default function ReportPage() {
       {/* 3. Model Identity */}
       <div className="card">
         <h2>Model Identity</h2>
-        <dl className="kv">
+        <dl className="kv rp-kv">
           <dt>Model reference</dt>
           <dd>
             <Link to={`/models/${doc.evaluation.model_id}`}>{doc.evaluation.model_ref}</Link>
@@ -200,7 +238,7 @@ export default function ReportPage() {
       {/* 4. Dataset Identity */}
       <div className="card">
         <h2>Dataset Identity</h2>
-        <dl className="kv">
+        <dl className="kv rp-kv">
           <dt>Dataset key</dt>
           <dd>{String(doc.reproducibility.dataset_key ?? "—")}</dd>
           <dt>Dataset revision</dt>
@@ -216,7 +254,7 @@ export default function ReportPage() {
       <div className="card">
         <h2>Local Execution Environment</h2>
         {exec ? (
-          <dl className="kv">
+          <dl className="kv rp-kv">
             <dt>Execution device</dt>
             <dd>
               {exec.execution_device === "cuda"
@@ -238,7 +276,7 @@ export default function ReportPage() {
 
       {/* 6-10. Fairness / Robustness / Integrity / Explainability / Safety Evidence */}
       <h2>Dimension Evidence</h2>
-      <div className="dimension-grid">
+      <div className="dimension-grid rp-dims">
         {FRIES_DIMENSIONS.map((dim) => {
           const entry = traceabilityByDim.get(dim);
           const probe = probesByDim.get(dim);
@@ -249,7 +287,10 @@ export default function ReportPage() {
               probe={entry ? traceabilityEntryToProbeEvidence(entry, probe) : undefined}
               onViewEvidence={() => {
                 document.getElementById(`report-trace-${dim}`)?.setAttribute("open", "true");
-                document.getElementById(`report-trace-${dim}`)?.scrollIntoView({ behavior: "smooth" });
+                const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+                document
+                  .getElementById(`report-trace-${dim}`)
+                  ?.scrollIntoView({ behavior: reduce ? "auto" : "smooth" });
               }}
             />
           );
@@ -287,13 +328,14 @@ export default function ReportPage() {
         {finalizedAspects.length > 0 ? (
           <div className="table-wrap">
             <table>
+              <caption className="tl-sr-only">Finalized human O/S/D per aspect</caption>
               <thead>
                 <tr>
-                  <th>Aspect</th>
-                  <th className="num">O</th>
-                  <th className="num">S</th>
-                  <th className="num">D</th>
-                  <th>Source</th>
+                  <th scope="col">Aspect</th>
+                  <th scope="col" className="num">O</th>
+                  <th scope="col" className="num">S</th>
+                  <th scope="col" className="num">D</th>
+                  <th scope="col">Source</th>
                 </tr>
               </thead>
               <tbody>
@@ -329,14 +371,16 @@ export default function ReportPage() {
             complete human O/S/D triple. See Human O/S/D Assessment above for what is missing.
           </div>
         ) : (
-          <ScoreBars scores={score.dimension_scores} />
+          <div role="group" aria-label="FRIES dimension scores, each on a 0 to 10 scale">
+            <ScoreBars scores={score.dimension_scores} />
+          </div>
         )}
       </div>
 
       {/* 14. Reproducibility Information */}
       <div className="card">
         <h2>Reproducibility Information</h2>
-        <dl className="kv">
+        <dl className="kv rp-kv">
           <dt>Model reference</dt>
           <dd className="mono">{String(doc.reproducibility.model_ref ?? "—")}</dd>
           <dt>Model revision</dt>
@@ -373,14 +417,15 @@ export default function ReportPage() {
         {doc.documentation_sources.length > 0 ? (
           <div className="table-wrap">
             <table>
+              <caption className="tl-sr-only">Documentation sources used by the probes</caption>
               <thead>
                 <tr>
-                  <th>Source</th>
-                  <th>Type</th>
-                  <th>URL</th>
-                  <th>Revision</th>
-                  <th>Hash</th>
-                  <th>Retrieval</th>
+                  <th scope="col">Source</th>
+                  <th scope="col">Type</th>
+                  <th scope="col">URL</th>
+                  <th scope="col">Revision</th>
+                  <th scope="col">Hash</th>
+                  <th scope="col">Retrieval</th>
                 </tr>
               </thead>
               <tbody>
@@ -392,6 +437,7 @@ export default function ReportPage() {
                       {s.url ? (
                         <a href={s.url} target="_blank" rel="noreferrer">
                           {s.url}
+                          <span className="tl-sr-only"> (opens in a new tab)</span>
                         </a>
                       ) : (
                         "—"
@@ -412,7 +458,7 @@ export default function ReportPage() {
 
       <div className="card">
         <h2>Artifacts</h2>
-        <dl className="kv">
+        <dl className="kv rp-kv">
           <dt>JSON</dt>
           <dd className="mono">{report.json_uri}</dd>
           <dt>JSON hash</dt>
@@ -434,7 +480,7 @@ export default function ReportPage() {
 
       <div className="card">
         <h2>Full report JSON</h2>
-        <details>
+        <details className="rp-json">
           <summary>Show report_v1 payload</summary>
           <pre className="json-view">{JSON.stringify(report.report_json, null, 2)}</pre>
         </details>
