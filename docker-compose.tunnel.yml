@@ -1,0 +1,15 @@
+# Cloudflare quick-tunnel overlay. URLs change per `cloudflared tunnel` run; pass them via env:
+#   API_URL=https://<api>.trycloudflare.com WEB_URL=https://<web>.trycloudflare.com \
+#     docker compose -f docker-compose.yml -f docker-compose.override.yml -f docker-compose.tunnel.yml up -d --build api frontend
+# Frontend is the nginx production build (still published on host :5173, so the tunnel target is unchanged).
+services:
+  api:
+    environment:
+      CORS_ORIGINS: http://localhost:5173,${WEB_URL:?set WEB_URL}
+  frontend:
+    build:
+      target: prod
+      args:
+        VITE_API_BASE_URL: ${API_URL:?set API_URL}
+    ports: !override
+      - "${FRONTEND_PORT:-5173}:80"

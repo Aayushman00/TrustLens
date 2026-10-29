@@ -1,13 +1,21 @@
-# Optional frontend image for Compose (Vite dev server)
-FROM node:20-alpine
-
+# Frontend image. Default target = dev (Vite server, compose default); `--target prod` = nginx serving the built bundle.
+FROM node:20-alpine AS deps
 WORKDIR /app
-
 COPY frontend/package.json frontend/package-lock.json* ./
 RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
-
 COPY frontend/ ./
 
-EXPOSE 5173
+FROM deps AS build
+# Vite inlines this at build time, so the API URL is a build arg, not a runtime env.
+ARG VITE_API_BASE_URL
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+RUN npm run build
 
+FROM nginx:1.27-alpine AS prod
+COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/dist /usr/share/nginx/html
+EXPOSE 80
+
+FROM deps AS dev
+EXPOSE 5173
 CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
