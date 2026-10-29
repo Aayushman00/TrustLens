@@ -102,6 +102,11 @@ Each got a regression test; none changed a score formula.
   system libraries; live Hub import, `TRUSTLENS_LIVE_TESTS=1`), 1 warning, 266 s (other runs 130-326 s);
   worker 9 passed; frontend 29 files / 275 tests passed; `ruff` (rules E4, E7, E9, F) no findings
   (31 at the start of round 3).
+* Re-check 2026-10-30 (branch `feat/ui-shell`, no Postgres available, so the 220 DB-backed tests
+  skipped): backend 692 passed, 220 skipped (after fixing five `test_report_claims.py` assertions
+  that pinned pre-restructure report prose); worker 9 passed; frontend 34 files / 340 tests passed
+  (UI work added after the 2026-10-23 run); `ruff` clean for backend and worker. The 911 figure above
+  is the full run with Postgres and was not reproduced.
 * Tests found real mistakes before experiments: the leakage test caught model names in packet source
   paths; a unit test caught a risk-present rule that returned UNCERTAIN for a triggered integrity
   risk whenever an unrelated rule had also failed. Most probe tests use injected fake backends.

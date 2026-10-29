@@ -29,8 +29,8 @@ def _json(*parts: str):
     return json.loads(RES.joinpath(*parts).read_text(encoding="utf-8"))
 
 
-def test_current_methodology_version_is_listed_in_report_table() -> None:
-    assert CURRENT_METHODOLOGY_VERSION.replace("_", r"\_") in _tex("ch4_fries.tex")
+def test_current_methodology_version_is_listed_in_reproduction_guide() -> None:
+    assert CURRENT_METHODOLOGY_VERSION in (ROOT / "docs" / "REPRODUCING_THESIS_RESULTS.md").read_text(encoding="utf-8")
 
 
 def test_v4_anchors_match_frozen_file_and_report_table() -> None:
@@ -46,9 +46,9 @@ def test_l2_headline_numbers_match_analysis_files() -> None:
     ch7 = _tex("ch7_results.tex")
     official = _json("l2_det_vs_llm_20261003", "analysis.json")["summary"]
     assert (official["llm_answered_pairs"], official["exact_status_agreement"]) == (18, 0.2778)
-    assert "5/18 (0.278)" in ch7
+    assert "11/36 (0.306)" in ch7
     pooled = _json("l2_det_vs_llm_20261022_r4", "analysis.json")["summary"]
-    assert pooled["exact_status_agreement"] == 0.3056 and "0.306" in ch7
+    assert pooled["exact_status_agreement"] == 0.3056
     assert pooled["llm_runs"] == 60 and pooled["llm_fallbacks"] == 0
 
 
@@ -63,21 +63,21 @@ def test_l2_stratified_table_matches_recomputation() -> None:
     assert round(claude["exact_status_agreement"] * 24) == 7
     assert round(pooled["exact_status_agreement"] * 36) == 11
     assert claude["llm_osd_repeatable_pairs"] == 3 and prov["llm_osd_repeatable_pairs"] == 0
-    assert "Triple-ident." in _tex("ch7_results.tex")
+    assert "Whole triple equals baseline" in _tex("ch7_results.tex")
 
 
 def test_fairness_confirmation_h1_failure_is_reported_as_failure() -> None:
     hyp = _json("fairness_confirm_20261003", "analysis", "analysis.json")
     h = hyp.get("hypotheses", hyp)
     assert h["H1"]["holds"] is False and h["H2"]["holds"] is True
-    assert re.search(r"H1\}.*fails", _tex("ch7_results.tex"))
+    assert re.search(r"no control would be flagged \\textbf\{failed\}", _tex("ch7_results.tex"))
 
 
 def test_human_study_counts() -> None:
     agree = _json("l10_human_analysis_20261005", "agreement.json")
     assert set(agree) >= {"all7", "R0_only"}
     ch7 = _tex("ch7_results.tex")
-    assert "Seven submissions" in ch7 and "Six submissions carry the shared code" in ch7
+    assert "seven submissions" in ch7 and "six share the code R0" in ch7
 
 
 def test_l2_strata_reconcile_by_overlap() -> None:

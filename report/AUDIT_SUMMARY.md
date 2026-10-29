@@ -21,7 +21,7 @@ Build: `scripts/audit/build_report.sh` (Docker texlive, 4 passes) -> **67 pages,
 | Hub table (drop, TPR gap CI, FNR, FPR, widths, ratings) | `tables_generated.tex` from `external_hub_validation_20261003_v9r`; SHA256SUMS OK | Supported |
 | Formulas: cbrt+veto, eps 0.02, widths 0.15/0.20, FPR ceiling 0.30, anchors, D rule | `scoring/fries.py`, `probes/*`, `osd/agent.py` | Supported (edit 3) |
 | Suite repeatability, detection tables, severity sweeps, fairness confirmation, human-review stats | Not recomputed this session (stored-file spot checks only) | **Unverified by me** |
-| Test counts (911/9/275, ruff) | Not rerun | **Unverified** |
+| Test counts (911/9/275, ruff) | Rerun 2026-10-30 without Postgres: backend 692 pass + 220 DB tests skipped, worker 9, frontend 340, ruff clean; 911 not reproduced (see `docs/ENGINEERING_NOTES.md` section 6) | Partly verified |
 
 ## Citations
 All `\cite` keys resolve; no uncited bib entries; all `\ref` resolve. Online checked: HELM maintenance mode (1 Jun 2026, policy text matches), Fairlearn `MetricFrame` `n_boot`/`ci_quantiles` (0.16.0.dev0 docs), lm-eval README ("over 60 benchmarks", transformers + vLLM). DOIs for Rutinowski, Manzano, Mattioli resolve (HTTP 200); HF pickle page, model-transparency, arXiv 2402.05160 / 1810.01943 resolve. Zenodo DOI returned 403 to curl (bot block) — not verified. Page numbers/venues of older papers not checked against publishers.
