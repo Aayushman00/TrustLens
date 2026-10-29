@@ -34,10 +34,10 @@ Figure~\ref{fig:arch} shows the deployment: a conventional web application with 
   arr/.style={-{Stealth[length=2.4mm]},thick,color=black!70}]
   \node[box] (ui) {React dashboard};
   \node[box,right=1.4cm of ui] (api) {FastAPI\\drafts, reports};
-  \node[box,right=1.4cm of api] (wk) {Celery worker\\probe pipeline};
+  \node[box,right=1.4cm of api] (wk) {Background worker\\probe pipeline};
   \node[store,below=1.0cm of api] (pg) {PostgreSQL};
   \node[store,below=1.0cm of wk] (fs) {Evidence store\\(SHA-256 files)};
-  \node[store,below=1.0cm of ui] (rd) {Redis queue};
+  \node[store,below=1.0cm of ui] (rd) {Job queue};
   \node[box,above=0.9cm of wk] (hf) {Hugging Face Hub};
   \node[box,above=0.9cm of api] (llm) {LLM providers\\(optional)};
   \draw[arr] (ui) -- (api); \draw[arr] (api) -- (wk); \draw[arr] (api) -- (pg);
@@ -56,7 +56,7 @@ Figure~\ref{fig:arch} shows the deployment: a conventional web application with 
 \midrule
 React dashboard & The reviewer's view: import a model, configure and confirm each dimension, follow progress, read the five-dimension profile and the report, with the mode, engine and review status shown and the aggregate last.\\
 FastAPI service & Validates requests, owns the draft and evaluation records, and records the exact inputs and settings of each evaluation. It never runs a probe, and it saves the evaluation record before it queues the work.\\
-Celery worker and Redis queue & Runs the pipeline for one evaluation at a time: loads the model, runs the probes, stores evidence, asks the assessment engine for ratings and, in automatic mode, scores them.\\
+Background worker (Celery) and job queue (Redis) & Runs the pipeline for one evaluation at a time: loads the model, runs the probes, stores evidence, asks the assessment engine for ratings and, in automatic mode, scores them.\\
 PostgreSQL & Holds models, datasets (by content hash), drafts, evaluations, probe results, rating proposals, reviews, scores, reports and a per-evaluation event log. Raw probe output is saved as JSON files named by their SHA-256 hash in the evidence store; the database keeps the reference (location and hash).\\
 Model import and inference & Import reads the card, tags, licence and file list from the Hub without weights and fixes the revision. Batched \code{transformers} inference \cite{wolf2020} runs on the worker only.\\
 Assessment engines & \emph{Deterministic} (default; proposes no ratings), \emph{rule-based} (heuristic O/S/D proposals) and \emph{LLM-assisted} (rule-based ratings plus an LLM re-rating of the card-based dimensions).\\
@@ -65,53 +65,23 @@ Optional LLM providers & Reached only by the LLM-assisted engine; a provider fai
 \end{tabularx}
 \end{table}
 
-\section{Data model}\label{sec:datamodel}
-The database is organised so that one evaluation row can be traced to everything that produced it. Figure~\ref{fig:er} shows the principal entities and their relationships; Table~\ref{tab:entities} lists the fields that matter for provenance.
+\section{What the reviewer sees}
+The dashboard puts the five-dimension profile first and the aggregate score last. Above the profile it shows three badges: the mode (automatic or human-review), whether a person reviewed the numbers, and which engine proposed them. Figure~ef{fig:uiprofile} shows that layout. Figure~ef{fig:uireport} shows the report page for an audit in which the aggregate was withheld because one dimension had no rating. The banner says so in words, and it says the ratings are proposals and not ground truth.
 
-\begin{figure}[!htbp]
+egin{figure}[!htbp]
 \centering
-\begin{tikzpicture}[font=\scriptsize,
-  e/.style={draw=tlblue,fill=tlgrey,rounded corners=2pt,minimum width=2.8cm,align=left,inner sep=3pt,thick},
-  line/.style={thick,color=black!65},
-  card/.style={font=\tiny\bfseries,color=tlorange}]
-  \node[e] (model) at (1.5,5.25) {\textbf{Model}\\hf\_repo\_id\\revision, checksum\\card metadata};
-  \node[e] (draft) at (7.6,5.25) {\textbf{EvaluationDraft}\\exact model version\\+ per-dimension settings\\(columns, label map)};
-  \node[e] (data) at (13.7,5.25) {\textbf{DatasetContent}\\content\_hash\\row\_count, columns};
-  \node[e] (doc) at (1.5,2.95) {\textbf{DocumentationSource}\\doc.\ revision\\content hash};
-  \node[e] (eval) at (7.6,2.95) {\textbf{Evaluation}\\progress, mode\\model version\\scoring-method version\\settings used};
-  \node[e] (pr) at (1.5,0.41) {\textbf{ProbeResult}\\dimension\\metric values\\evidence refs (hash)};
-  \node[e] (osd) at (4.65,0.41) {\textbf{OsdAgentOutput}\\proposal O/S/D\\rationale};
-  \node[e] (hr) at (7.8,0.41) {\textbf{HumanReview}\\overrides\\notes};
-  \node[e] (fs) at (10.95,0.41) {\textbf{FinalScore}\\dimension scores\\finalized O/S/D};
-  \node[e] (rep) at (14.1,0.41) {\textbf{Report}\\JSON, PDF\\version};
-  \draw[line] (model) -- (draft);
-  \draw[line,dashed] (data) -- (draft);
-  \draw[line] (model) -- (doc);
-  \draw[line] (model.south) -- ++(0,-0.35) -| (eval.west);
-  \draw[line,dashed] (data.south) |- (eval.east);
-  \draw[line] (draft.south) -- (eval.north);
-  \foreach \c in {pr,osd,hr,fs,rep} \draw[line] (eval.south) -- ++(0,-0.45) -| (\c.north);
-\end{tikzpicture}
-\caption{Principal entities. Solid lines are foreign keys, dashed lines are references stored with the evaluation's recorded settings. An evaluation has many probe results, proposals and reports, at most one final score, and the latest human review is used.}\label{fig:er}
+\includegraphics[width=0.95	extwidth]{ui_results_profile.png}
+\caption{Five-dimension profile with the mode, review and engine badges. The values come from one dashboard session and are not results reported in this report.}\label{fig:uiprofile}
 \end{figure}
 
-\begin{table}[!htbp]
-\centering\small
-\caption{How an evaluation references what produced it.}\label{tab:entities}
-\begin{tabularx}{\textwidth}{@{}p{3.3cm}L@{}}
-\toprule
-\textbf{Question} & \textbf{Where the answer is stored}\\
-\midrule
-Which model, at which revision? & The evaluation row holds the model reference and the revision fixed when the draft was created; the model row holds a registry copy, which can be re-imported later. The worker uses the fixed revision, never the live row.\\
-Which dataset? & The evaluation's recorded settings name a dataset record per dimension; that record stores the file's content hash, row count and columns, so the same name with different bytes is a different dataset.\\
-How were columns and labels interpreted? & The recorded settings: text and target columns, sensitive-attribute column, label mapping, favourable label, minimum group size, severe-subset column.\\
-Which method, and what report? & A version of the scoring method on the evaluation and a version string per probe; a versioned report row with the JSON and PDF locations.\\
-What was measured? & One probe result per dimension (metrics, status, decision fields), each pointing to an evidence file by hash.\\
-What risk was found? & The decision fields inside the probe result: risk list, disclosure-gap list, failed gates.\\
-Which ratings, from whom? & The assessment-engine proposal (with the source of each O, S and D), the reviewer's overrides when present, and the finalised triples with the dimension scores.\\
-\bottomrule
-\end{tabularx}
-\end{table}
+egin{figure}[!htbp]
+\centering
+\includegraphics[width=0.62	extwidth]{ui_report.jpg}
+\caption{Report page for \code{gravitee-io/bert-tiny-toxicity}: the aggregate FRIES score is withheld and the banner states that the result is not human-reviewed.}\label{fig:uireport}
+\end{figure}
+
+\section{Data model}\label{sec:datamodel}
+Each evaluation can be traced to everything that produced it: the model revision, the dataset by content hash, the settings, the probe results, the proposals, any human review, the scores and the report. The entity diagram and the table of provenance fields are in Appendix~\ref{app:datamodel}.
 
 Three separations are explicit. Evidence, risk decision and proposed rating are different fields written at different times, so an experiment can recompute one layer from the stored values of another (the replays of Chapter~\ref{ch:results} rely on this). A proposal and a reviewer's override are separate rows, so a human change never overwrites the proposal it changed. And data are referenced by content hash, so a dataset edited later cannot silently stand behind an old result.
 

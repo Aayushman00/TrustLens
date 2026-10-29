@@ -116,7 +116,7 @@ Two readings of this pattern are possible, and the data do not decide between th
 Two consequences follow. A withheld rating is not a passing result: the clean control's gap of 0.106 has a lower bound of 0.028, and nothing in that interval suggests the absence of a disparity. And the Hub model \code{unbiased-toxic-roberta}, flagged for a gap of 0.093 whose lower bound is only 0.020, sits just across the line: its interval, 0.142 wide, passed the width rule by 0.008, while the clean control, with a larger gap, was withheld at a width of 0.153. The report therefore states the interval beside the decision (Section~\ref{sec:threats}).
 
 \section{Robustness and safety sweeps}\label{sec:l6}
-\textbf{Robustness, as specified: every level withheld a rating.} One row of the evaluation set (the text \code{:(}) has no alphanumeric character, so swaps cannot change it; perturbation coverage was 0.9997 against a required 1.0, and the probe returned insufficient evidence at all four budgets. This prespecified failure is kept. \textbf{Sensitivity analysis (decided after seeing this result):} dropping that single row (2\,999 left) and changing nothing else gave Table~\ref{tab:l6rob}.
+\textbf{Robustness, as specified: every level withheld a rating.} One row of the evaluation set (the text ``:('', a sad face) has no alphanumeric character, so swaps cannot change it; perturbation coverage was 0.9997 against a required 1.0, and the probe returned insufficient evidence at all four budgets. This prespecified failure is kept. \textbf{Sensitivity analysis (decided after seeing this result):} dropping that single row (2\,999 left) and changing nothing else gave Table~\ref{tab:l6rob}.
 
 \begin{table}[!htbp]
 \centering\small

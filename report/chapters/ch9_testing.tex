@@ -4,15 +4,15 @@
 
 \begin{table}[!htbp]
 \centering\small
-\caption{Latest test runs on the reference machine (2026-10-23).}\label{tab:tests}
+\caption{Latest full test runs on the reference machine (2026-10-23). A partial re-check on 2026-10-30 without a database is recorded in \code{docs/ENGINEERING\_NOTES.md}.}\label{tab:tests}
 \begin{tabularx}{\textwidth}{@{}p{3.2cm}L@{}}
 \toprule
 \textbf{Suite} & \textbf{Result}\\
 \midrule
-Backend \code{pytest} & 911 passed, 2 skipped (WeasyPrint system libraries; live Hub import), 1 warning.\\
+Backend \code{pytest} (Python test runner) & 911 passed, 2 skipped (PDF-library dependencies not installed; live Hub import), 1 warning.\\
 Worker \code{pytest} & 9 passed.\\
-Frontend \code{vitest} & 29 files, 275 tests passed.\\
-\code{ruff} (backend) & No findings.\\
+Frontend \code{vitest} (dashboard test runner) & 29 files, 275 tests passed.\\
+\code{ruff} (code-style checker, backend) & No findings.\\
 \bottomrule
 \end{tabularx}
 \end{table}

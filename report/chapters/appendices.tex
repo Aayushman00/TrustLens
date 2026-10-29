@@ -105,6 +105,55 @@ Methodology versions & Original bands (suite, first sweeps), range-scaled mappin
 \end{tabularx}
 \end{table}
 
+\section{Data model}\label{app:datamodel}
+The database is organised so that one evaluation row can be traced to everything that produced it. Figure~\ref{fig:er} shows the principal entities and their relationships; Table~\ref{tab:entities} lists the fields that matter for provenance.
+
+\begin{figure}[!htbp]
+\centering
+\begin{tikzpicture}[font=\scriptsize,
+  e/.style={draw=tlblue,fill=tlgrey,rounded corners=2pt,minimum width=2.8cm,align=left,inner sep=3pt,thick},
+  line/.style={thick,color=black!65},
+  card/.style={font=\tiny\bfseries,color=tlorange}]
+  \node[e] (model) at (1.5,5.25) {\textbf{Model}\\hf\_repo\_id\\revision, checksum\\card metadata};
+  \node[e] (draft) at (7.6,5.25) {\textbf{EvaluationDraft}\\exact model version\\+ per-dimension settings\\(columns, label map)};
+  \node[e] (data) at (13.7,5.25) {\textbf{DatasetContent}\\content\_hash\\row\_count, columns};
+  \node[e] (doc) at (1.5,2.95) {\textbf{DocumentationSource}\\doc.\ revision\\content hash};
+  \node[e] (eval) at (7.6,2.95) {\textbf{Evaluation}\\progress, mode\\model version\\scoring-method version\\settings used};
+  \node[e] (pr) at (1.5,0.41) {\textbf{ProbeResult}\\dimension\\metric values\\evidence refs (hash)};
+  \node[e] (osd) at (4.65,0.41) {\textbf{OsdAgentOutput}\\proposal O/S/D\\rationale};
+  \node[e] (hr) at (7.8,0.41) {\textbf{HumanReview}\\overrides\\notes};
+  \node[e] (fs) at (10.95,0.41) {\textbf{FinalScore}\\dimension scores\\finalized O/S/D};
+  \node[e] (rep) at (14.1,0.41) {\textbf{Report}\\JSON, PDF\\version};
+  \draw[line] (model) -- (draft);
+  \draw[line,dashed] (data) -- (draft);
+  \draw[line] (model) -- (doc);
+  \draw[line] (model.south) -- ++(0,-0.35) -| (eval.west);
+  \draw[line,dashed] (data.south) |- (eval.east);
+  \draw[line] (draft.south) -- (eval.north);
+  \foreach \c in {pr,osd,hr,fs,rep} \draw[line] (eval.south) -- ++(0,-0.45) -| (\c.north);
+\end{tikzpicture}
+\caption{Principal entities. Solid lines are foreign keys, dashed lines are references stored with the evaluation's recorded settings. An evaluation has many probe results, proposals and reports, at most one final score, and the latest human review is used.}\label{fig:er}
+\end{figure}
+
+\begin{table}[!htbp]
+\centering\small
+\caption{How an evaluation references what produced it.}\label{tab:entities}
+\begin{tabularx}{\textwidth}{@{}p{3.3cm}L@{}}
+\toprule
+\textbf{Question} & \textbf{Where the answer is stored}\\
+\midrule
+Which model, at which revision? & The evaluation row holds the model reference and the revision fixed when the draft was created; the model row holds a registry copy, which can be re-imported later. The worker uses the fixed revision, never the live row.\\
+Which dataset? & The evaluation's recorded settings name a dataset record per dimension; that record stores the file's content hash, row count and columns, so the same name with different bytes is a different dataset.\\
+How were columns and labels interpreted? & The recorded settings: text and target columns, sensitive-attribute column, label mapping, favourable label, minimum group size, severe-subset column.\\
+Which method, and what report? & A version of the scoring method on the evaluation and a version string per probe; a versioned report row with the JSON and PDF locations.\\
+What was measured? & One probe result per dimension (metrics, status, decision fields), each pointing to an evidence file by hash.\\
+What risk was found? & The decision fields inside the probe result: risk list, disclosure-gap list, failed gates.\\
+Which ratings, from whom? & The assessment-engine proposal (with the source of each O, S and D), the reviewer's overrides when present, and the finalised triples with the dimension scores.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
 \section{Reported study versus the current repository}\label{app:trace}
 The experiments in this report were run on the research version of the code between 2 and 28 October 2026. The repository has continued to change since, and three of its documents describe different moments. The reproduction guide and this appendix describe the study. The pre-experiment state of the project, in which the default fairness probe fitted a tabular logistic-regression proxy on an Adult Census subset and the Safety probe had no behavioural test, ended before the study: the proxy code was deleted on 10 September 2026, and in the code used here the fairness probe predicts with the imported model through the inference backend and the Safety probe measures the severe false-negative rate on a labelled dataset. The \code{README.md} on the public default branch was not updated to match and still describes the earlier state, so \emph{it should not be used to judge the reported experiments}. The same gap affects reproduction. As checked on 28 October 2026, the default branch holds the experiment scripts and the results of the first runs (up to 3 October) but not the later folders the report uses (the final external-audit rerun, the pooled LLM comparison, the human-review analysis, the severe-miss replay), which are on the project's feature branch \code{feat/ui-shell}. The history of the fairness and Safety probes was read from the repository's commit log and source files, not from the README. Conversely, nothing here should be read as a claim about the current default product behaviour: the default assessment engine proposes no O/S/D ratings, behavioural probes need a user-supplied labelled dataset with a group or severe-subset column, and the heuristic and LLM-assisted engines that produced the reported ratings are opt-in. The reported scoring methods are versions of an experimental prototype, and later code changes (an empty card now abstains from a rating) postdate every experiment.
 
