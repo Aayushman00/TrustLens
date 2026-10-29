@@ -66,15 +66,17 @@ Optional LLM providers & Reached only by the LLM-assisted engine; a provider fai
 \end{table}
 
 \section{What the reviewer sees}
-The dashboard puts the five-dimension profile first and the aggregate score last. Above the profile it shows three badges: the mode (automatic or human-review), whether a person reviewed the numbers, and which engine proposed them. Figure~ef{fig:uiprofile} shows that layout. Figure~ef{fig:uireport} shows the report page for an audit in which the aggregate was withheld because one dimension had no rating. The banner says so in words, and it says the ratings are proposals and not ground truth.
+The dashboard puts the five-dimension profile first and the aggregate score last. Above the profile it shows three badges: the mode (automatic or human-review), whether a person reviewed the numbers, and which engine proposed them. Figure~
+ef{fig:uiprofile} shows that layout. Figure~
+ef{fig:uireport} shows the report page for an audit in which the aggregate was withheld because one dimension had no rating. The banner says so in words, and it says the ratings are proposals and not ground truth.
 
-egin{figure}[!htbp]
+\begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.95	extwidth]{ui_results_profile.png}
 \caption{Five-dimension profile with the mode, review and engine badges. The values come from one dashboard session and are not results reported in this report.}\label{fig:uiprofile}
 \end{figure}
 
-egin{figure}[!htbp]
+\begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.62	extwidth]{ui_report.jpg}
 \caption{Report page for \code{gravitee-io/bert-tiny-toxicity}: the aggregate FRIES score is withheld and the banner states that the result is not human-reviewed.}\label{fig:uireport}
