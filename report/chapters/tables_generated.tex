@@ -1,0 +1,38 @@
+\begin{table}[!htbp]\centering\footnotesize\setlength{\tabcolsep}{3pt}
+\caption{External audit, measured evidence per model (3\,000 evaluation rows, 282 severe positives; all intervals 95\%). Drop is clean minus perturbed accuracy; Sev.\ FNR is the share of severe toxic comments missed (Wilson interval); EOD is the gap in true-positive rates (bootstrap interval); its width is in Table~\ref{tab:appfair}.}\label{tab:appbehav}
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}Xrlllr@{}}\toprule
+Model & Clean acc. & Drop [CI] & Sev.\ FNR [CI] & EOD [CI] & Benign FPR \\\midrule
+\code{toxic-bert} & 0.868 & 0.010 [0.003, 0.017] & 0.355 [0.301, 0.412] & 0.174 [0.098, 0.252] & 0.021 \\
+\code{unbiased} & 0.915 & 0.012 [0.005, 0.019] & 0.145 [0.109, 0.191] & 0.093 [0.020, 0.162] & 0.040 \\
+\code{s-nlp} & 0.927 & 0.022 [0.016, 0.030] & 0.089 [0.061, 0.128] & 0.019 [0.001, 0.091] & 0.033 \\
+\code{martin-ha} & 0.890 & 0.012 [0.005, 0.019] & 0.298 [0.248, 0.354] & 0.063 [0.005, 0.144] & 0.018 \\
+\code{textdetox} & 0.805 & 0.054 [0.043, 0.065] & 0.156 [0.118, 0.203] & 0.074 [0.009, 0.138] & 0.188 \\
+\code{facebook} & 0.783 & 0.072 [0.058, 0.087] & 0.837 [0.789, 0.875] & 0.130 [0.075, 0.181] & 0.059 \\
+\code{gravitee} & 0.664 & 0.056 [0.041, 0.069] & 0.113 [0.082, 0.156] & 0.051 [0.004, 0.122] & 0.367 \\
+\bottomrule\end{tabularx}\end{table}
+
+\begin{table}[!htbp]\centering\footnotesize\setlength{\tabcolsep}{3pt}
+\caption{External audit, group-level rates. Group 0 has 2\,461 rows and group 1 (annotator-reported identity-attack signal above zero) 539 rows; the label-rate gap is 0.505 for every model because the data are the same.}\label{tab:appfair}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{3.3cm}rrrrrrl@{}}\toprule
+Model & TPR$_0$ & TPR$_1$ & FPR$_0$ & FPR$_1$ & FPR gap & EOD CI width & Fairness outcome \\\midrule
+\code{toxic-bert} & 0.327 & 0.502 & 0.017 & 0.067 & 0.050 & 0.154 & withheld \\
+\code{unbiased} & 0.784 & 0.692 & 0.034 & 0.106 & 0.072 & 0.142 & risk \\
+\code{s-nlp} & 0.755 & 0.773 & 0.025 & 0.111 & 0.085 & 0.090 & none \\
+\code{martin-ha} & 0.487 & 0.550 & 0.013 & 0.067 & 0.055 & 0.139 & disparity \\
+\code{textdetox} & 0.736 & 0.810 & 0.167 & 0.409 & 0.242 & 0.129 & disparity \\
+\code{facebook} & 0.082 & 0.211 & 0.045 & 0.212 & 0.167 & 0.107 & risk \\
+\code{gravitee} & 0.762 & 0.813 & 0.350 & 0.553 & 0.203 & 0.117 & disparity \\
+\bottomrule\end{tabular}\end{table}
+
+\begin{table}[!htbp]\centering\footnotesize\setlength{\tabcolsep}{3pt}
+\caption{External audit, proposed O/S/D ratings as stored (a dash: withheld). Integrity and Explainability ratings came from an LLM or from the rule-based fallback, so rows are not comparable and the table does not rank models.}\label{tab:appratings}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{3.3cm}llllll@{}}\toprule
+Model & Fairness & Robustness & Safety & Integrity & Explainability & Source (I, E) \\\midrule
+\code{toxic-bert} & -- & 9/9/8 & 7/7/6 & 9/9/9 & 6/7/7 & LLM \\
+\code{unbiased} & 8/8/6 & 8/8/8 & 9/9/7 & 9/9/9 & 3/4/3 & LLM \\
+\code{s-nlp} & 8/8/7 & 4/4/8 & 9/9/7 & 9/9/9 & 2/4/3 & LLM \\
+\code{martin-ha} & 9/9/6 & 8/8/8 & 8/8/6 & 8/8/8 & 6/6/6 & fallback \\
+\code{textdetox} & 4/4/6 & 1/1/8 & 9/9/7 & 9/9/8 & 4/4/4 & fallback \\
+\code{facebook} & 6/6/6 & 1/1/8 & 1/1/7 & 7/7/8 & 1/1/1 & fallback \\
+\code{gravitee} & 5/5/6 & 1/1/8 & -- & 9/9/8 & 2/2/2 & fallback \\
+\bottomrule\end{tabular}\end{table}

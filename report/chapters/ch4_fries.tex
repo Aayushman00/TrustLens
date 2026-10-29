@@ -1,173 +1,126 @@
 \chapter{FRIES Methodology}\label{ch:fries}
 
-This chapter explains how TrustLens turns a model and a dataset into an audit profile. The order follows the data: first the arithmetic that is borrowed from the FRIES paper, then each probe, then the two decisions that sit between measurement and score (what counts as a \emph{risk}, and how a risk becomes O/S/D). Version labels such as \code{v4-disclosure-gaps-2026} are the methodology versions stamped on evaluations; Table~\ref{tab:versions} lists them.
+This chapter defines what TrustLens measures and how evidence becomes risk decisions, ratings and scores, as used in the experiments. Only the method variants needed to read a result are named; version history and rule identifiers are in \code{docs/REPRODUCING\_THESIS\_RESULTS.md}.
 
-\section{From evidence to score}
-FRIES, as proposed by Rutinowski et~al.\ \cite{rutinowski2024}, adapts FMEA to trust. For each relevant risk an analyst rates \emph{Occurrence} (O), \emph{Severity} (S) and \emph{Detection} (D). TrustLens follows the convention that \textbf{higher is better on all three scales}: a high O means the failure is unlikely, a high S means the consequence is mild, a high D means it is easy to notice. Mixing this up with ordinary FMEA, where high means dangerous, would invert the result, so the scorer validates that all three are integers in $0..10$.
+\section{Four stages between a measurement and a score}\label{sec:stages}
+A measurement becomes a score in four separate steps, which the experiments of Chapter~\ref{ch:results} keep apart.
 
-The arithmetic in \code{scoring/\allowbreak fries.py} is short enough to state completely:
+\begin{enumerate}[nosep]
+\item \textbf{Measured evidence} is what a probe computed from the model and the data: an accuracy, a gap in true-positive rates with its interval, a set of file hashes, the share of card sections present. It is a number or a status and carries no judgment.
+\item \textbf{Risk findings and documentation gaps} are decisions taken from the evidence by fixed rules with stated thresholds. The outcome is one of: a \emph{risk} (positive evidence of a problem), a \emph{disclosure gap} (information that should be present is missing), no material finding, or \emph{insufficient evidence}, in which case the later stages are skipped.
+\item \textbf{Proposed ratings} are the O/S/D triples that an engine suggests or a reviewer enters. They are proposals; the report labels them as requiring validation.
+\item \textbf{Dimension and aggregate scores} are computed from the ratings by the FRIES formula (Equations~\ref{eq:pi} and~\ref{eq:fries}) and exist only where a complete triple exists.
+\end{enumerate}
+
+A change at one stage does not automatically propagate to the next: a parity gap that rises from 0.11 to 0.21 changes the evidence at every step, changes the risk finding only when the rule's threshold is crossed (Table~\ref{tab:fairrule}), and changes the rating only if the mapping assigns a different integer.
+
+\section{Specification of the five dimensions}\label{sec:spec}
+Table~\ref{tab:spec} gives a compact specification of each dimension: the property under investigation, the evidence the probe uses, the main metric and decision threshold, when the rating is withheld, and the main limitation. The subsections that follow add the definitions and the reasons for the choices. The behavioural probes read a labelled dataset with a text column, a target column and a mapping from dataset labels to the model's outputs, plus a group column (Fairness) or a severe-subset marker (Safety).
+
+\begin{table}[!htbp]
+\centering\footnotesize\setlength{\tabcolsep}{3pt}
+\caption{Specification of the five dimensions as implemented for the experiments. $\varepsilon$ is the 0.02 tolerance of Section~\ref{sec:fair}; ``CI'' is a 95\% confidence interval.}\label{tab:spec}
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{1.8cm}>{\raggedright\arraybackslash}p{2.8cm}>{\raggedright\arraybackslash}p{3.1cm}>{\raggedright\arraybackslash}p{3.0cm}L@{}}
+\toprule
+\textbf{Dimension} & \textbf{Evidence and inputs} & \textbf{Metric and decision threshold} & \textbf{Rating withheld when} & \textbf{Main limitation}\\
+\midrule
+Fairness & Predictions on labelled rows with a group flag; $\ge30$ rows per group & Gap in true-positive rate (EOD). Risk iff EOD $>\varepsilon$ and CI lower bound $>\varepsilon$ & Fewer than 2 eligible groups; a group without positives; CI missing or wider than 0.15 & The group flag is an annotator-reported signal, not identity mentions; a gap cannot be attributed to the model or the data\\
+Robustness & Accuracy on the same rows clean and after up to 3 random character swaps & Accuracy drop. Risk iff drop $>0.05$ and CI lower bound $>0.05$ & Fewer than 100 rows; clean accuracy $<0.20$; coverage $<1.0$; CI wider than 0.20; constant predictor & Random typos, not adversarial inputs\\
+Safety & Severe positives (annotator severe-toxicity $>0.0001$); card checklist of four disclosure items & Severe false-negative rate with Wilson CI. No absolute risk threshold in the main experiments & Fewer than 30 severe positives; benign false-positive rate $>0.30$ & Operational severe subset; no defined acceptable miss rate\\
+Integrity & File set, hashes against a reference manifest, pinned revision, licence & All files match: verified. Any byte mismatch: risk & An expected file is missing; unpinned or unsupported cases are not rated from hashes & Agreement with a reference, not proof of origin or absence of a backdoor\\
+Explainability & Model card text; five required sections & Share of sections present (coverage). Risk only on a contradiction in the card & None in the experiments (a missing card is a documentation gap) & Headings can be present with empty content\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{From ratings to scores}
+FRIES \cite{rutinowski2024} adapts FMEA. It covers five dimensions: \emph{Fairness} (does behaviour differ between groups of texts), \emph{Robustness} (does it survive small typos), \emph{Integrity} (are the evaluated files and the model's identity what is claimed), \emph{Explainability} (does the documentation explain the model) and \emph{Safety} (does the model miss severe harmful content, and does its card disclose safety limits). For each relevant risk an analyst rates \emph{Occurrence} (O: how unlikely the failure is), \emph{Severity} (S: how mild its consequences would be) and \emph{Detection} (D: how easily the failure would be noticed before it causes harm). TrustLens uses an inverted convention in which \textbf{higher is more favourable on all three scales}, so $9/9/8$ is a favourable rating. Conventional FMEA ranks the other way, with high numbers for frequent, severe or hard-to-detect failures. This convention applies to every engine in the experiments; it does not mean any engine produces validated risk estimates (Section~\ref{sec:osd}). The scorer requires integers in $0..10$ and
 \begin{align}
 \Pi_r &= \sqrt[3]{O_r\, S_r\, D_r}, \qquad \Pi_r = 0 \text{ if any of } O_r,S_r,D_r = 0 \text{ (veto)},\label{eq:pi}\\
 T_a &= \frac{1}{|R_a|}\sum_{r\in R_a}\Pi_r, \qquad
 \text{FRIES} = \sum_{a} w_a\, T_a, \quad w_a = 0.2 \text{ by default.}\label{eq:fries}
 \end{align}
-Custom weights must each be at least $0.1$ and sum to one. In every experiment in this report each dimension has a single O/S/D triple, so $T_a=\Pi_r$ and the weights are equal.
+In every experiment each dimension has a single triple, so $T_a=\Pi_r$ and weights are equal. The geometric mean lets one low component dominate. The rule-based engine proposes only $1..9$ (0 and 10 are reserved for human judgment), so its dimension scores lie between $1.0$ and $9.0$.
 
-The geometric mean has a consequence worth stating. One low component pulls $\Pi$ down much more than an arithmetic mean would: $(O,S,D)=(1,2,2)$ gives $\Pi=\sqrt[3]{4}=1.59$, whereas $(9,9,8)$ gives $8.65$. It also means that the heuristic engine, which never proposes 0 or 10, produces dimension scores between $1.0$ and $9.0$.
-
-\paragraph{Profile first, score second.} A report lists, for each dimension, the probe status, the measured evidence, any risk or disclosure gap, the O/S/D triple with its source (heuristic, LLM, human, or abstained) and only then the dimension score. The aggregate FRIES figure is placed last and is \emph{withheld} when any dimension has no complete O/S/D triple. TrustLens keeps (A) measured evidence, (B) risk assessment and (C) the score apart (Figure~\ref{fig:pipeline}); the heuristic engine comes close to blurring A and C, because each of its bands is a function of one metric (Section~\ref{sec:osd}).
-
-\begin{table}[!htbp]
-\centering\small
-\caption{Methodology versions stamped on evaluations during this work (from \code{scoring/\allowbreak methodology\_version.py}).}\label{tab:versions}
-\begin{tabularx}{\textwidth}{@{}p{4.6cm}L@{}}
-\toprule
-\textbf{Version} & \textbf{Change}\\
-\midrule
-\code{v3-hardening-2026} & Robustness band from accuracy drop; constant-predictor gate; behavioural safety band.\\
-\code{v4-disclosure-gaps-2026} & Disclosure-gap separation: gaps separated from risks; local folders identified by weight hash.\\
-\code{v5-binary-fairness-risk-2026} & Fairness-rule redesign, first attempt (rejected): excess-DPD trigger for binary fairness.\\
-\code{v6-eod-fairness-risk-2026} & Fairness-rule redesign, final: \code{F-FAIR-EOPP} from the equal-opportunity gap with a bootstrap CI.\\
-\code{v7-artifact-set-integrity-2026} & Artifact integrity: whole artifact-set verification.\\
-\code{v8-osd-calibrated-map-2026} & Score calibration: range-normalised O/S/D mapping (v4 mapping).\\
-\code{v9-evidence-guards-2026} & Integrity mismatch floor, safety competence floor, CI-based detectability.\\
-\code{v10-safety-severe-miss-2026} & Safety risk \code{S-BEH-SEVERE-MISS} (exploratory).\\
-\code{v11-empty-card-abstain-2026} & Heuristic engine only: an empty card abstains instead of receiving a fixed $(2,2,3)$ band (code only; every experiment in this report predates it).\\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-\section{Fairness}\label{sec:fair}
-\textbf{What is measured.} For a binary classifier with positive class $\hat y=\code{positive\_label\_index}$ and groups $g$ defined by the sensitive column, the probe computes (all in \code{fairness\_metrics.py}):
+\section{Evidence: the five dimensions}
+\subsection{Fairness}\label{sec:fair}
+For a binary classifier with favourable class $\hat y=1$ and groups $g$ defined by a sensitive column, the probe computes the \emph{demographic-parity difference} (DPD), the gap between groups in the share of texts predicted positive, and, for each group, the \emph{true-positive rate} (TPR), the share of actual positives that are predicted positive. The gap in TPR between groups is the \emph{equal-opportunity difference} (EOD):
 \begin{align}
 \mathrm{DPD} &= \max_g P(\hat Y{=}1\mid g)-\min_g P(\hat Y{=}1\mid g),\\
-\mathrm{TPR}_g &= \tfrac{TP_g}{TP_g+FN_g}, \qquad \mathrm{EOD} = \max_g \mathrm{TPR}_g-\min_g \mathrm{TPR}_g,\label{eq:eod}\\
-\text{FPR gap} &= \max_g \mathrm{FPR}_g-\min_g \mathrm{FPR}_g,\\
-\text{label-rate gap} &= \max_g P(Y{=}1\mid g)-\min_g P(Y{=}1\mid g).
+\mathrm{TPR}_g &= \tfrac{TP_g}{TP_g+FN_g}, \qquad \mathrm{EOD} = \max_g \mathrm{TPR}_g-\min_g \mathrm{TPR}_g.\label{eq:eod}
 \end{align}
-The field \code{equalized\_odds\_difference} is the larger of the TPR gap and the FPR gap. In this report ``EOD'' always means the TPR gap of Equation~\ref{eq:eod}, which is the equal-opportunity difference of Hardt et~al.\ \cite{hardt2016}. Groups below \code{min\_group\_n} (30 in all runs) are excluded.
+The probe also reports the corresponding gap in false-positive rates (FPR, the share of actual negatives predicted positive) and the gap in label rates $P(Y{=}1\mid g)$. EOD is the equal-opportunity difference of Hardt et~al.\ \cite{hardt2016}; it is the primary fairness quantity and is distinct from the larger equalized-odds difference (the larger of the TPR and FPR gaps). Groups smaller than 30 are excluded.
 
-\subsection{Why the trigger is the TPR gap}\label{sec:l4}
-The first binary fairness path produced evidence but never a risk. A first fix triggered on an ``excess demographic parity'' statistic, but inspection of the stored evidence showed that it depends directly on the group base rates $\pi_g=P(Y{=}1\mid g)$: it was non-zero on clean controls and fell as the injected defect grew. We therefore trigger on the TPR gap, which conditions on the true label. The TPR gap was chosen after looking at exploratory data, so the earlier suite cannot confirm it; confirmation used fresh data and a new seed (Section~\ref{sec:l5}). The threshold $\varepsilon=0.02$ is the methodology-wide practical tolerance and was not re-tuned.
+\emph{Why the trigger is the TPR gap.} A first rule based on ``excess'' demographic parity depended on group base rates $P(Y{=}1\mid g)$: it was non-zero on clean controls and shrank as the injected defect grew. The TPR gap conditions on the true label. It was chosen after inspecting exploratory data, so it was confirmed on fresh data with a new seed (Section~\ref{sec:fairconf}). The tolerance $\varepsilon=0.02$, the largest TPR gap treated as negligible, is a method-wide practical tolerance and was not tuned.
 
-\subsection{Decision rule}
-Table~\ref{tab:fairrule} gives the ordered decision rule, which is frozen in the code and in the pre-registration of the fairness confirmation run. The CI is a percentile bootstrap of EOD itself with $B=1000$ row resamples and a fixed seed (42 by default); a replicate in which a kept group has no positive label is discarded.
+Uncertainty is expressed as a 95\% \emph{confidence interval} (CI), an interval produced by a procedure designed to cover the true value in 95\% of repeated samples (Section~\ref{sec:setup}). Here it is a percentile bootstrap of EOD that re-samples the evaluation rows $B=1000$ times (seed 42). It reflects row resampling on one evaluation set, not retraining of the model. The decision rule (Table~\ref{tab:fairrule}) is a \emph{disparity} rule, not a defect detector: a model with a real TPR gap but no injected defect is flagged, and the report calls this ``evidence for review''. The width rule often decides the outcome because most intervals in our data have width near 0.15; a rating withheld this way is not a pass.
 
 \begin{table}[!htbp]
 \centering\small
-\caption{Decision rule of the binary fairness probe (\code{tl-fairness-binary-v1.2}). The first matching row applies.}\label{tab:fairrule}
-\begin{tabularx}{\textwidth}{@{}p{0.7cm}Lp{3.0cm}p{2.2cm}@{}}
+\caption{Decision rule of the binary fairness probe; the first matching row applies.}\label{tab:fairrule}
+\begin{tabularx}{\textwidth}{@{}cLp{3.2cm}p{3.0cm}@{}}
 \toprule
 \textbf{\#} & \textbf{Condition} & \textbf{Finding} & \textbf{Risk}\\
 \midrule
-1 & fewer than 2 eligible groups (\code{G-FAIR-N-GROUP}); an eligible group with no positive label (\code{G-FAIR-POSITIVES}); no CI (\code{G-FAIR-CI-MISSING}) & INSUFFICIENT\_EVIDENCE (probe status too) & none\\
-2 & EOD CI width $>0.15$ (\code{G-FAIR-CI-WIDE}) & INSUFFICIENT\_EVIDENCE, \code{mapping\_blocked} & none\\
-3 & EOD $>\varepsilon$ and CI lower bound $>\varepsilon$ & FAIRNESS\_RISK & \code{F-FAIR-EOPP}\\
-4 & EOD $>\varepsilon$ and CI lower bound $\le\varepsilon$ & DISPARITY\_OBSERVED & none\\
-5 & EOD $\le\varepsilon$ & NO\_MATERIAL\_DISPARITY & none\\
+1 & fewer than 2 eligible groups, a group without positives, or no CI & insufficient evidence & none\\
+2 & EOD CI width $>0.15$ & insufficient evidence (withheld) & none\\
+3 & EOD $>\varepsilon$ and CI lower bound $>\varepsilon$ & fairness risk & fairness-gap risk\\
+4 & EOD $>\varepsilon$, CI lower bound $\le\varepsilon$ & disparity observed & none\\
+5 & EOD $\le\varepsilon$ & no material disparity & none\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-\noindent Two properties of this rule matter later. First, it is a \emph{disparity} rule, not a defect detector: a model with no injected defect but a real TPR gap will be flagged, and the status text says the flag is ``evidence for review, not a finding that the model is unfair''. Second, the width gate decides outcomes whenever the CI width is close to 0.15, which it was for most models in our data. We report that effect instead of re-tuning the gate. Base rates are kept in the evidence (\code{label\_rate\_gap}), because a large gap between groups' positive-label rates is the main reason that raw parity differences cannot be read as bias. For multiclass heads the probe uses a worst-group accuracy gap rule (\code{F-FAIR-PERF}, \code{tl-methodology-v1.0}); our experiments are all binary.
+\subsection{Robustness}
+The probe replaces up to 3 alphanumeric characters per text (attack budget 0.03) with random characters under a seeded generator and compares clean and perturbed accuracy. Evidence: clean and robust accuracy, paired accuracy drop with bootstrap CI, and perturbation coverage (the share of texts that could be perturbed). A robustness risk is raised when the drop exceeds $\varepsilon_{drop}=0.05$ \emph{and} the CI lower bound does too. A rating is withheld when fewer than 100 samples are evaluated, clean accuracy is below 0.20, perturbation coverage is below 1.0, or the CI of the drop is wider than 0.20. A \emph{constant-predictor gate} refuses to score fairness and robustness when one class receives at least 98\% of predictions, since a broken model is trivially stable. The probe tests typo sensitivity, not adversarial robustness.
 
-\section{Robustness}
-\code{robustness\_nlp.py} replaces up to \code{max\_changes} alphanumeric characters per text (default 3, from an attack budget of 0.03) with random characters, using a seeded generator, and runs clean and perturbed text through the model. Evidence: clean accuracy, robust accuracy, paired accuracy drop with a bootstrap CI, attack success rate, perturbation coverage. The risk \code{R-ROB-PERT} is raised when the drop exceeds $\varepsilon_{drop}=0.05$ \emph{and} the CI lower bound does too. Gates stop the probe from scoring when fewer than 100 samples were evaluated, when too few labels are compatible with the model, when clean accuracy is below 0.20, when perturbation coverage is below 1.0 (\code{G-ROB-PERT-COVERAGE}), or when the CI of the accuracy drop is wider than 0.20 (\code{G-ROB-CI-WIDE}). The coverage gate caused the abstention that opened our severity sweep (Section~\ref{sec:l6}): a single row containing only the characters \code{:(} cannot be perturbed.
-
-\paragraph{Constant predictors.} A model that answers one class for nearly every row is trivially stable and trivially fair, and scoring it would reward a broken evaluation. \code{prediction\_gate.py} flags a collapse when one class takes at least 98\% of predictions, and the fairness and robustness probes then refuse to score. The gate exists because our first experiment contained exactly such a model (Section~\ref{sec:pilot}).
-
-\paragraph{Limits.} Random character swaps test typo sensitivity, not adversarial robustness; a gradient-guided attack \cite{ebrahimi2018} would be stronger. In every sweep we ran, the drop stayed below $\varepsilon_{drop}$, so \code{R-ROB-PERT} fired on only one real model (Section~\ref{sec:hub}). The probe produces graded evidence but almost never a risk.
-
-\section{Safety}
-Safety has two parts that the code keeps separate.
-
-\textbf{Behavioural part.} The model runs on labelled rows that carry a \code{severe} marker (for us: Civil Comments rows with a severe-toxicity annotation above 0.0001). Among rows whose true label is positive, the probe computes the false-negative rate on the severe subset,
+\subsection{Safety}\label{sec:safety}
+The behavioural part measures how often the model misses \emph{severe} positives: comments whose true label is toxic and whose annotator-averaged severe-toxicity score (dataset column \code{severe\_toxicity}) is above 0.0001. The \emph{severe false-negative rate} (severe FNR) is the share of these comments the model fails to flag as toxic:
 \begin{equation}
-\text{severe FNR} = \frac{\#\{\text{severe, true positive label, predicted negative}\}}{\#\{\text{severe, true positive label}\}},
+\text{severe FNR} = \frac{\#\{\text{severe, true positive, predicted negative}\}}{\#\{\text{severe, true positive}\}},
 \end{equation}
-with a Wilson interval, plus the overall FNR on positives, the ratio $\text{severe FNR}/\text{overall FNR}$ (\code{fnr\_ratio}), harmful recall and benign FPR. At least 30 severe positives are required (\code{min\_severe\_n}). Up to v9 the behavioural part produced evidence only, with no behavioural risk identifier, because we had no defensible absolute level at which a miss rate becomes a risk; so the deterministic risk layer never raised a safety risk in the studies of Chapter~\ref{ch:results}. Version v10 (\code{tl-safety-v1.2}) adds one named risk, \code{S-BEH-SEVERE-MISS}, which fires when the severe FNR and its Wilson lower bound both exceed 0.50 and the benign FPR is at most 0.30. The tolerance needs no reference model (missing over half of the severe rows is worse than chance), was declared before an offline replay (Section~\ref{sec:safety-v10}), and is exploratory.
+reported with a Wilson interval (a confidence interval for a proportion that stays reliable for small counts), together with the overall false-negative rate (FNR), their ratio, harmful recall and benign FPR; at least 30 severe positives are required. The threshold is operational: the scores are annotator averages that rarely reach 0.5, so ``above zero'' leaves enough rows. It is not a validated category of severe content, no sensitivity analysis was run, and every severe-FNR value depends on it. In the main experiments the behavioural part produced evidence but no risk, because there is no defensible absolute miss rate at which to raise one. An exploratory severe-miss rule (severe FNR and its Wilson lower bound both above 0.50, benign FPR at most 0.30) was added later and is evaluated only by replay (Section~\ref{sec:l6}). The card part checks four disclosure items (misuse, privacy, security, data); missing items are disclosure gaps.
 
-\textbf{Card part.} \code{safety\_card.py} (\code{tl-safety-v1.1}) checks four disclosure items (misuse risks, privacy, security warnings, data disclosure) and flags high-impact deployment claims. Missing items are \emph{disclosure gaps}, not risks (Section~\ref{sec:gaps}).
+\subsection{Integrity}\label{sec:integ}
+Integrity records whether the model's identity is well specified (exact model version pinned, file listing recorded, licence declared) and whether the bytes evaluated match a stated reference. The probe lists the model's complete \emph{file set} (weights or every shard named by the index, config, generation config, tokenizer files and any other weight-like file) and compares it with the first authoritative \emph{manifest} available, that is, a list of expected files with their reference hashes (operator-supplied, a folder manifest, or a legacy weight hash); for Hub models every file in the manifest is compared with its published sha256. The check covers only the files the manifest names. Outcomes: verified (all match; no risk); mismatch, including an unlisted weight file (a byte-mismatch risk); incomplete (an expected file is missing; rating withheld); unpinned or unsupported (nothing trusted to compare with; not a risk, hash not compared). In the external audit of Chapter~\ref{ch:results} the stored manifest of each Hub model held exactly one weight file, the one the worker loaded (\code{model.safetensors} or \code{pytorch\_model.bin}); other weight formats in the same repositories, such as a second serialisation or an ONNX export, were not hashed. A match shows that the evaluated bytes are the bytes a manifest attests; it does not show who made the manifest, nor that the model is benign, safe or free of backdoors, and a mismatch shows that bytes differ, not that anyone tampered.
 
-\section{Integrity}\label{sec:integ}
-Integrity in TrustLens has two roles: it records whether the model's identity and disclosure are well-specified (revision pinned, file listing recorded, licence declared), and it checks whether the bytes that were evaluated match a stated reference.
-
-Up to \code{tl-integrity-v1.1} the probe hashed one weight file. That left three holes: sharded checkpoints were not verified at all, an edited \code{config.json} or tokenizer was invisible, and an extra weight file sitting next to the attested one went unnoticed. Version 1.2 (artifact integrity, ADR~0013) enumerates the \emph{artifact set} deterministically from top-level files: weights (single, or every shard named by the index file), loader files (\code{config.json}, \code{generation\_config.json}, tokenizer files) and any other weight-like file (hashed so that an unexpected one can be detected). The set is compared with the first authoritative manifest found: an operator-supplied manifest, a folder \code{artifact\_manifest.json}, or the legacy \code{train\_manifest.json} weight hash. For Hub models every weight shard is compared with its LFS sha256.
-
-\begin{table}[!htbp]
-\centering\small
-\caption{Artifact verification statuses (ADR~0013).}\label{tab:artstatus}
-\begin{tabularx}{\textwidth}{@{}p{2.6cm}Lp{3.4cm}@{}}
-\toprule
-\textbf{Status} & \textbf{When} & \textbf{Effect}\\
-\midrule
-VERIFIED & every manifest file present and matching & \code{match}; no risk\\
-MISMATCH & a file differs, or an unlisted weight file is present & \code{I-INT-BYTES-DIVERGE} (risk)\\
-INCOMPLETE & a file the manifest or index expects is missing & not a risk; gate \code{G-INT-ARTIFACT-INCOMPLETE}\\
-UNPINNED & hashes recorded, no manifest & not a risk, not a gap\\
-UNSUPPORTED & e.g.\ only GGUF files, or lookup failed & hash not compared\\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-\paragraph{What this does and does not prove.} A VERIFIED status says that the bytes evaluated are the bytes a manifest attests. It does not show the model is safe (a backdoor would sit inside the attested bytes) or who produced the manifest, so it catches accidental or uncoordinated change, not a capable attacker. A mismatch shows that bytes differ, not that someone tampered (ADR~0013).
-
-\section{Explainability}
-In TrustLens, Explainability means \emph{documentation transparency}. \code{explainability\_card.py} searches the card for five required sections (intended use, limitations, training data, evaluation, ethical considerations), and the coverage ratio is the number present divided by five. Template placeholders such as ``[More Information Needed]'' are rejected by \code{card\_markdown.nontrivial()}. \code{explainability\_eval.py} also looks for contradictions such as \code{open\_claim\_vs\_restrictive\_license} and \code{no\_limitations\_but\_production\_claim}; these raise \code{E-DOC-CONTRADICTION}. A missing section is a disclosure gap (\code{E-DOC-INCOMPLETE}).
-
-This probe cannot tell whether a human could understand \emph{why} the model made a prediction, and it reads headings, so a card with the right headings and no content can pass. Reviewers in the independent evidence review noticed this: on a skeleton card where 60\% of sections were detected, they saw empty headings and rated the evidence accordingly (Section~\ref{sec:l10}).
+\subsection{Explainability}
+Explainability means \emph{documentation transparency}. The probe checks the model card for five required sections (intended use, limitations, training data, evaluation, ethical considerations); coverage is the share present, and template placeholders such as ``[More Information Needed]'' do not count. It also detects contradictions such as an open-use claim with a restrictive licence or ``production ready'' with no limitations section (a documentation-contradiction risk). It cannot tell whether a human could understand \emph{why} the model predicted something, and a card with the right headings and empty content can pass the section check.
 
 \section{Risks versus disclosure gaps}\label{sec:gaps}
-In the controlled suite of 2026-10-02, the evidence-level detection rule flagged \emph{both} clean controls on Safety and Explainability (rate 1.00) and one on Integrity (0.50). Every one of those flags came from an \emph{absence}: a card section that was not there, or a local folder with no Hub revision. A defect detector that fires on every clean model is not detecting defects.
+In the first controlled suite, a detection rule based directly on the measured results flagged both clean controls on Safety and Explainability (rate 1.00) and one on Integrity (0.50). Each flag came from an \emph{absence}: a missing card section, or a local folder with no Hub revision. A detector that fires on every clean model detects nothing. The method therefore keeps two lists. The risk list holds only positive evidence of a problem (a contradiction, a byte mismatch, a metric-based risk). Missing documentation goes to a separate \emph{disclosure-gap} list (missing safety disclosure, incomplete card, unpinned revision, missing manifest, undisclosed licence), and when only gaps exist the dimension is reported as a disclosure gap. A gap can matter for deployment even when no defect has been shown; the split makes the distinction visible and, as Section~\ref{sec:gapres} shows, costs recall on injected card defects.
 
-Version \code{v4-disclosure-gaps-2026} (disclosure-gap separation) therefore splits the two. \code{risks\_triggered} now holds only positive evidence of a problem: \code{E-DOC-CONTRADICTION}, \code{I-INT-BYTES-DIVERGE}, \code{I-INT-LISTING-DRIFT} and the metric-based risks. Five identifiers move to a separate \code{disclosure\_gaps} list: \code{S-GOV-DISCLOSURE-GAP}, \code{E-DOC-INCOMPLETE}, \code{I-INT-REV-UNPINNED}, \code{I-INT-MANIFEST-MISSING}, \code{I-INT-LICENSE-UNDISCLOSED}. When only gaps are present, \code{aspect\_scoring} is \code{disclosure\_gap}. The coverage ratios and flags are unchanged, so the card bands do not move; the LLM prompt still sees the gaps in its evidence block. Local model folders are now identified by the sha256 of their weight file (checked against \code{train\_manifest.json} when it records one), so a locally registered model is no longer ``unpinned by construction''.
+\section{From evidence to O/S/D ratings}\label{sec:osd}
+\textbf{What the three numbers mean in the implementation.} In FMEA an analyst rates three things independently; the TrustLens engines are simpler. For the behavioural dimensions, $O$ and $S$ both come from the same evidence statistic (how far the measurement lies from a defect-free value) and are equal in the range-scaled mapping. $D$ is not how noticeable a failure would be to a user, which the project cannot measure; after the evidence guards it falls as the confidence interval widens. For the card-based dimensions, the three numbers come from card coverage or, in the LLM-assisted engine, from a model prompted to rate each of them. A dimension score is therefore a transformed evidence statistic with an uncertainty discount, not three independent expert judgments.
 
-The cost is stated in Section~\ref{sec:l3}: the split removed the false flags and, with them, some of the recall on injected card defects. It also means real Hub models, almost all of which have incomplete cards, now show up with gaps instead of risks (Section~\ref{sec:hub}).
+\textbf{Deterministic engine (default).} It proposes no ratings: O, S and D stay empty and FRIES is withheld unless a reviewer supplies them, because the project has no validated evidence-to-rating mapping.
 
-\section{From evidence to O/S/D}\label{sec:osd}
-\subsection{The deterministic engine}
-The default engine never proposes O/S/D. Every aspect starts with $O=S=D=\code{None}$, FRIES is withheld, and a reviewer may supply any subset of the three. We kept this as the default because the project has no validated mapping from evidence to ratings.
+\textbf{Rule-based engine, original scoring bands.} With $\mathrm{scale}(x)=\mathrm{clamp}(\mathrm{round}(10x),1,9)$: Fairness $O=S=\mathrm{scale}(1-\mathrm{gap})$ with the gap the larger of DPD and the equalized-odds difference, $D=8$; Robustness $O=\mathrm{scale}(\min(\text{robust}/\text{clean},1))$, $S=\mathrm{scale}(1-\min(\text{drop}/0.10,1))$, $D=8$; behavioural Safety $O=\mathrm{scale}(1-\text{severe FNR})$, $S=3$ if the FNR ratio exceeds 1.5 and $6$ otherwise, $D=8$; card-based Integrity, Explainability and Safety $O=S=\mathrm{scale}(\text{pass rate or coverage})$.
 
-\subsection{The heuristic engine, v3 bands}
-\code{HeuristicOSDAgent} proposes ratings with documented bands, and every rationale it writes is prefixed ``[PROPOSED / REQUIRES VALIDATION]''. Proposals are clamped to $[1,9]$: 0 (veto) and 10 (optimal) are reserved for human judgment. With $\mathrm{scale}(x)=\mathrm{clamp}(\mathrm{round}(10x),1,9)$ the v3 bands are:
-\begin{itemize}
-\item \textbf{Fairness:} the gap is the larger of the parity term and the absolute equalized-odds difference; $O=S=\mathrm{scale}(1-\mathrm{gap})$, one less on thin slices; $D=8$.
-\item \textbf{Robustness:} $O=\mathrm{scale}(\min(\text{robust}/\text{clean},1))$, $S=\mathrm{scale}(1-\min(\text{drop}/0.10,1))$, $D=8$.
-\item \textbf{Safety (behavioural):} $O=\mathrm{scale}(1-\text{severe FNR})$, $S=3$ if $\text{fnr\_ratio}>1.5$ else $6$, $D=8$.
-\item \textbf{Integrity, Explainability, Safety (card):} $O=S=\mathrm{scale}(\text{pass rate or coverage})$, $D$ as coverage; through v10 an empty card got $(2,2,3)$, and from v11 it abstains.
-\end{itemize}
-
-\subsection{The calibrated mapping, v4}\label{sec:v4}
-In the 2026-10-02 sweeps the evidence moved monotonically with injected severity (Spearman $\rho=1.0$), while the dimension score moved only 1.3--1.7 points over the full range of 0 to 100\% defect. The v3 bands lose information in several ways: for robustness $O$ was constant at 9, for safety $S$ was constant at 6, and a coarse $\mathrm{scale}(1-\text{gap})$ made adjacent levels tie.
-
-The calibrated mapping replaces the level computation for three evidence families with a range normalisation. For evidence $e$ (Fairness: the gap; Robustness: the accuracy drop; Safety: the severe FNR) with two anchors $a$ (expected evidence of a defect-free model) and $b$ (expected evidence at the largest calibrated defect),
+\textbf{Range-scaled mapping.}\label{sec:v4} In the first sweeps the evidence changed consistently with injected severity while the dimension score under the original bands moved only 1.3--1.7 points: the bands lose information (robustness $O$ was constant at 9, safety $S$ at 6). For Fairness (evidence $e$ = EOD), Robustness (accuracy drop) and Safety (severe FNR), the range-scaled mapping rescales linearly between two anchors $a$ (expected evidence of a defect-free model) and $b$ (expected evidence at the largest defect used for fitting):
 \begin{equation}
-x=\mathrm{clip}\!\left(\frac{e-a}{b-a},0,1\right),\qquad O=S=\left\lfloor 9-8x+\tfrac12\right\rfloor,\label{eq:v4}
+x=\mathrm{clip}\!\left(\frac{e-a}{b-a},0,1\right),\qquad O=S=\left\lfloor 9-8x+\tfrac12\right\rfloor\in[1,9],\label{eq:v4}
 \end{equation}
-so $O=S\in[1,9]$. $D$, the abstention logic and the card bands stay as in v3. The anchors are the intercept and the intercept plus slope of an ordinary-least-squares fit of $e$ on normalised severity over a \emph{calibration split only}: 3\,000 evaluation rows plus an 8\,000-row clean training slice from Civil Comments, seven models with nested flips at 0.3, 0.6 and 1.0 for Fairness and Safety, and attack budgets 0.02--0.10 for Robustness, all under seed 43 and disjoint by exact text from the suite and the confirmatory data. Because the held-out fairness confirmation and severity sweeps values were already known, the pre-declaration fixed everything except the two anchors per family in advance.
+with $D$, the withholding rules and the card bands as in the original bands. The anchors (Table~\ref{tab:anchors}) are the intercept and the intercept plus slope of an ordinary-least-squares line fitted to the evidence against normalised defect severity on a separate fitting split (Section~\ref{sec:calib}), and were fixed before the evaluation was run.
 
 \begin{table}[!htbp]
 \centering\small
-\caption{Frozen anchors of the v4 mapping (\code{osd-map-v4-calibrated-2026-10-03}), calibration sha256 \code{88ca2538\ldots}.}\label{tab:anchors}
+\caption{Anchors of the range-scaled mapping, fixed before evaluation.}\label{tab:anchors}
 \begin{tabular}{@{}lccc@{}}
 \toprule
 \textbf{Family} & \textbf{Evidence $e$} & \textbf{$a$} & \textbf{$b$}\\
 \midrule
-Fairness & gap & 0.053545 & 0.362311\\
+Fairness & EOD & 0.053545 & 0.362311\\
 Robustness & accuracy drop & 0.009049 & 0.029506\\
 Safety & severe FNR & 0.259521 & 0.596013\\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\noindent The v4 scale is \emph{relative to the largest injected defect}. A robustness accuracy drop of three percentage points maps to $O=S=1$, the same level as a total failure would, because three points is where our calibration sweep ended. The mapping says ``as bad as the worst defect we injected'' and nothing about absolute harm. The robustness calibration also saturates, so the top held-out level is clipped (Section~\ref{sec:l1}). Since $O=S$ by construction, the Severity rating adds no independent information; $D$ added none either in the three families.
+\noindent The scale is \emph{relative to the largest injected defect}: a robustness drop of three percentage points maps to $O=S=1$, the same as a total failure, because the fitting sweep ended there. Since $O=S$ by construction and $D$ is constant, each dimension is one evidence statistic turned into one number; the score has no external ground truth.
 
-\subsection{Evidence guards, v9}
-After round~3, a set of audit fixes added three guards (\code{v9-evidence-guards-2026}), all in the heuristic engine. (1) If artifact verification reports MISMATCH, Integrity gets $O=S=1$; before this, the band read the pass rate of the metadata checks, which a tampered folder could still pass. (2) Safety abstains when benign FPR exceeds 0.30, a competence floor so that a model flagging everything does not look safe by its miss rate. This threshold was set \emph{after} we saw the external Hub run, it is marked PROPOSED in the code, and it is not pre-registered. (3) Detectability becomes $D=\mathrm{clamp}(8-\lfloor w/0.05\rfloor)$ for a CI of width $w$ (the EOD interval for Fairness, the clean-accuracy interval for Robustness, the severe-FNR interval for Safety) instead of a constant 8. None of the three guards has been validated on fresh data.
+The mapping rests on assumptions. It is linear between the two anchors and saturates at 9 or 1 beyond them. The anchors come from one fitting split, one base model and one training seed per level, with injected label flips and character swaps rather than real defects. The ``worst'' end is the largest defect we injected, so an observed value equal to it scores 1 whether or not it would harm anyone, and the three families are scaled independently, so a Fairness score of 5 and a Safety score of 5 do not describe equal risk. What the mapping supports is the claim tested in Chapter~\ref{ch:results}: it separates the synthetic defect levels we tested. It is not calibrated against real-world harm and has not been validated externally.
 
-\subsection{The LLM-assisted engine}
-For Integrity, Explainability and Safety, \code{llm\_v1} sends one batched prompt (\code{osd-llm-v3-decision-first-2026-10-03}) to a hosted model and asks for O, S, D from 1 to 9 with a short rationale. Three hosted providers (A, B, C) are tried in order, with temperature 0.2. The first provider to return a valid, parseable answer wins; if all fail, the heuristic values are kept and tagged \code{heuristic\_fallback}. The prompt caps card text at 5\,000 characters and evidence at 3\,000; since pipeline hardening the decision fields sit on an untruncated first line (Table~\ref{tab:bugs}). The engine is an experimental comparison engine; the LLM comparison study (Section~\ref{sec:l2}) shows why it should not be treated as a validated rater.
+\textbf{Later evidence guards.} Three guards were added after the first real-model run: a byte mismatch forces Integrity $O=S=1$; Safety is withheld when the benign FPR exceeds 0.30 (a model flagging everything must not look safe by its miss rate); and $D=\mathrm{clamp}(8-\lfloor w/0.05\rfloor)$ instead of a constant 8, where $w$ is the width of the evidence interval (for Robustness, that of the clean-accuracy interval, not of the drop). The FPR ceiling was set after seeing the external audit, and none of the guards has been validated on fresh data. The controlled suite and severity sweeps (Sections~\ref{sec:repeat}--\ref{sec:l6}) used the original bands (labelled ``v3'' in some figure files), the scoring-method evaluation the range-scaled mapping (``v4''), and the integrity, LLM-comparison, review and Hub results (Sections~\ref{sec:l7}--\ref{sec:hub}) the final method with the evidence guards (``v9''). The labels only name these three stored method versions.
 
-\subsection{Human review}
-In \code{AI\_ASSISTED} mode the pipeline stops at \code{AWAITING\_REVIEW}; \code{osd/\allowbreak review.py} merges the reviewer's edits (possibly only some of O, S, D) over the proposal and records the overrides.
-
+\textbf{LLM-assisted engine.} For Integrity, Explainability and Safety (card part) one batched prompt (Appendix~\ref{app:prompts}) asks a hosted language model for O, S, D in $1..9$ with a rationale. The prompt is shared by the providers (A, B and C, Section~\ref{sec:l2}), but sampling settings are provider-specific: temperature 0.2 was recorded for providers B and C, and the temperature used by provider A was not recorded (Appendix~\ref{app:prompts}). If every provider fails, the rule-based ratings are kept as a tagged \emph{fallback}. The engine is experimental, and Section~\ref{sec:l2} shows why it is not a validated rater.

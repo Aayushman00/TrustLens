@@ -1,145 +1,154 @@
 \appendix
-\chapter{Supporting Material}\label{app:support}
+\chapter{Detailed Experimental Results}\label{app:results}
 
-\section{Main suite: per-defect outcomes and dimension profiles}\label{app:suite}
-Outcome of each injected defect in the main suite:
-\begingroup\sloppy
-\begin{itemize}
-\item \textbf{Robustness (V2): detected} at score level (accuracy drop 0.041; score 7.56 against 8.65), although \code{R-ROB-PERT} did not fire because the drop was below $\varepsilon_{drop}=0.05$.
-\item \textbf{Fairness (V1): not detected} by any rule. EOD was 0.164 against the control's 0.174, and the excess demographic parity was 0.000, because the dataset's own group gap is 0.505. This is a negative result, and it motivated the fairness-rule redesign and fairness confirmation.
-\item \textbf{Safety (V5): measured but not separated.} The severe-harm FNR was 0.44 (CI [0.38, 0.50]) against the control's 0.355, but both received Safety 6.60.
-\item \textbf{Explainability and Integrity card defects:} the LLM-rated scores were lower (V3 Explainability 4.0; V4 and V4b Integrity 2.3--2.4) than the control (5.2$\pm$1.2 and 4.5$\pm$1.8), but the control's LLM noise kept them under the pre-registered threshold.
-\item \textbf{Spillover:} the overfit V2 was also less fair (EOD 0.370). Its Fairness flag counts as a false positive under the pre-registered rule although the effect is real.
-\end{itemize}
-\endgroup
+This appendix gives results that Chapters~\ref{ch:results} and~\ref{ch:cases} summarise or show in part. Tables~\ref{tab:appbehav}--\ref{tab:appratings} are generated from the stored external-audit files by \code{report/make\_tables.py}; Table~\ref{tab:appsuite} is copied from the suite analysis named in the reproduction guide.
 
-Table~\ref{tab:dimscores} gives the dimension profiles of the main suite, as the five-dimensional profile is the primary output.
+\section{Controlled suite: dimension scores}
+Table~\ref{tab:appsuite} lists the mean dimension score over five runs for the nine suite models under the original scoring bands. Fairness, Robustness and Safety have no spread; Integrity and Explainability, rated by an LLM, show spread that includes runs that fell back to rule-based ratings.
 
 \begin{table}[!htbp]
 \centering\small
-\caption{Mean dimension scores $\pm$ standard deviation over five runs (suite, \code{v3-hardening-2026}, \code{llm\_v1}). Injected dimension in the model's description.}\label{tab:dimscores}
-\begin{tabularx}{\textwidth}{@{}p{3.3cm}RRRRR@{}}
+\caption{Mean dimension score $\pm$ standard deviation over five runs, original scoring bands (no spread shown means zero).}\label{tab:appsuite}
+\begin{tabularx}{\textwidth}{@{}p{3.6cm}rrrrr@{}}
 \toprule
-\textbf{Model} & \textbf{Fair.} & \textbf{Rob.} & \textbf{Integ.} & \textbf{Expl.} & \textbf{Safety}\\
+\textbf{Model} & \textbf{Fairness} & \textbf{Robustness} & \textbf{Integrity} & \textbf{Explainability} & \textbf{Safety}\\
 \midrule
-reference\_hub & 8.00 & 8.65 & 8.65 & 6.00 & 6.60\\
-reference 2-label & 8.00 & 8.65 & 4.54$\pm$1.80 & 5.20$\pm$1.20 & 6.60\\
-V1 fairness & 8.00 & 8.65 & 2.41$\pm$0.27 & 8.13$\pm$0.18 & 7.27\\
-V2 robustness & 6.60 & 7.56 & 3.22$\pm$0.80 & 8.66$\pm$0.34 & 7.56\\
-V3 explainability & 8.65 & 8.65 & 2.44$\pm$0.50 & 4.02$\pm$0.53 & 6.95\\
-V4 integrity (+fair.) & 8.00 & 8.65 & 2.30$\pm$0.22 & 3.82$\pm$1.05 & 7.27\\
-V4b integrity (clean) & 8.65 & 8.65 & 2.43$\pm$0.13 & 3.78$\pm$0.60 & 6.95\\
-V5 safety & 8.65 & 8.65 & 2.81$\pm$0.45 & 8.59$\pm$0.44 & 6.60\\
-V6 compound & 8.00 & 8.65 & 4.23$\pm$2.23 & 1.52$\pm$0.73 & 6.95\\
+Reference (native) & 8.00 & 8.65 & 8.65 & 6.00 & 6.60\\
+Reference (2-label) & 8.00 & 8.65 & 4.54 $\pm$ 1.80 & 5.20 $\pm$ 1.20 & 6.60\\
+V1 fairness & 8.00 & 8.65 & 2.41 $\pm$ 0.27 & 8.13 $\pm$ 0.18 & 7.27\\
+V2 robustness & 6.60 & 7.56 & 3.22 $\pm$ 0.80 & 8.66 $\pm$ 0.34 & 7.56\\
+V3 explainability & 8.65 & 8.65 & 2.44 $\pm$ 0.50 & 4.02 $\pm$ 0.53 & 6.95\\
+V4 integrity (V1 weights) & 8.00 & 8.65 & 2.30 $\pm$ 0.22 & 3.82 $\pm$ 1.05 & 7.27\\
+V4b integrity (clean) & 8.65 & 8.65 & 2.43 $\pm$ 0.13 & 3.78 $\pm$ 0.60 & 6.95\\
+V5 safety & 8.65 & 8.65 & 2.81 $\pm$ 0.45 & 8.59 $\pm$ 0.44 & 6.60\\
+V6 compound & 8.00 & 8.65 & 4.23 $\pm$ 2.23 & 1.52 $\pm$ 0.73 & 6.95\\
 \bottomrule
 \end{tabularx}
 \end{table}
-\noindent Fairness, Robustness and Safety have zero spread; Integrity and Explainability inherit the LLM's. The Integrity entries show why this layer was hard to read: the 2-label reference (4.54$\pm$1.80) and the compound model (4.23$\pm$2.23) overlap with the ranges of several flawed models, which is the visible cost of LLM-rated noise on a control. The Hub import of the same weights scored 8.65$\pm$0.00. We did not isolate the cause; the import differs from the local copy in having a pinned revision and a Hub file listing, which the v3 Integrity band counted and the local folder lacked (Section~\ref{sec:gaps}).
+
+The Explainability scores respond as one would hope to the card defects: 3.8--4.0 for the skeleton and overclaiming cards (V3, V4, V4b) against 8.1--8.7 for V1, V2 and V5. The Integrity scores do not: the models without an Integrity defect (V1, V3, V5) scored 2.4--2.8, no higher than those with one (V4, V4b: 2.3--2.4), and the 2-label control's spread of 1.8 is as large as any gap. The native reference's 8.65 reflects a Hub import with a pinned revision and file listing, which the original band counted; the cause of its difference from the 2-label copy was not isolated.
+
+\section{External audit: per-model evidence and ratings}
+Tables~\ref{tab:appbehav}--\ref{tab:appratings} hold the per-model values behind Table~\ref{tab:hubev}, in selection order; they are not a ranking. Short names are those of Figure~\ref{fig:hubprofiles}: \code{unbiased} is \code{unbiased-toxic-roberta}, \code{s-nlp} is \code{roberta\_toxicity\_classifier}, \code{martin-ha} is \code{toxic-comment-model}, \code{textdetox} is \code{xlmr-large-toxicity-classifier}, \code{facebook} is \code{roberta-hate-speech-dynabench-r4} and \code{gravitee} is \code{bert-tiny-toxicity}. Table~\ref{tab:appratings} lets every stored rating be checked, but ratings from different sources cannot be compared across rows (Section~\ref{sec:hub}).
+
+\input{chapters/tables_generated}
+
+\chapter{LLM Prompt and Reviewer Protocol}\label{app:prompts}
+
+Three readings of an evidence packet stay separate. (1) The \emph{LLM comparison} (Section~\ref{sec:l2}) used the production rating prompt on twelve packets, five runs each, through the provider chain fixed in the code: provider A is Gemini (\code{gemini-3.6-flash}, no temperature recorded, provider default), provider B is Groq (\code{openai/gpt-oss-120b}, temperature 0.2) and provider C is NVIDIA NIM (\code{nvidia/nemotron-3-super-120b-a12b} as recorded in the run records, temperature 0.2). The first sessions on 2 October 2026 returned 22 valid answers (A 9, B 13) because of rate limits, daily token limits and a missing endpoint for C. The other 38 planned calls were resolved by resuming the same script with the same prompt and packets (A 6, B 28, C 4 valid answers); the log timestamps put the A and B answers on 28 October 2026 and the four C answers on 3 October 2026. All 60 records are in \code{results/l2\_det\_vs\_llm\_20261029\_r5}, whose log keeps every failed attempt; the earlier incomplete run is kept unchanged in \code{\_r3}. (2) An earlier version of this experiment filled the 38 missing calls with answers from a different model read by a fresh agent (folder \code{\_20261022\_r4}). That set was a different evaluation, is not part of the 60 reported here, and is kept only for audit. (3) The \emph{independent evidence review} (Section~\ref{sec:l10}) used the review prompt and the human form.
+
+\section{O/S/D rating prompt}\label{app:ratingprompt}
+The template of the LLM-assisted engine (version \code{osd-llm-v3-decision-first-2026-10-03}; provider-specific sampling settings are described above); \code{\{card\_text\}} is the card cut to 5\,000 characters and \code{\{evidence\_block\}} holds, per dimension, an uncut ``decision'' line (status, risk and gap fields) and ``details'' cut at 3\,000 characters. Only Integrity, Explainability and Safety (card part) are sent. The run records set \code{prompt\_truncated} for 5 of the 60 runs, all on packet P01 (provider B four, provider A one). The cuts are applied by TrustLens when it builds the prompt, before any provider is called; the records do not say which cut applied, but the P01 card has 11\,095 characters, above the 5\,000 limit. These five responses are valid under the output schema but were made on shortened evidence (Section~\ref{sec:l2}). The text is read from the source by \code{report/make\_tables.py}.
+
+\lstinputlisting[basicstyle=\ttfamily\scriptsize,breaklines=true,columns=fullflexible,aboveskip=2pt,belowskip=2pt]{prompts/osd_rating_prompt.txt}
+
+\section{Evidence-review prompt}\label{app:reviewprompt}
+The official LLM review (identifier \code{l10-review-v1-2026-10-03}) used a much shorter prompt, stored in full in \code{prompts/evidence\_review\_prompt.txt}. It tells the model to judge only the packet shown and that no automated verdict is included, and requires a single JSON object with five fields: \code{risk\_present} (YES, NO or UNCERTAIN), \code{dimension} (one of the five dimensions, NONE or UNCERTAIN), \code{severity} (an integer from 1, catastrophic, to 9, negligible, or null when no risk is present), \code{evidence\_sufficient} (YES, NO or UNCERTAIN) and \code{rationale} (two to four sentences citing the numbers or text that drove the answer). 
+
+\section{Reviewer protocol}\label{app:reviewer}
+Human reviewers answered the same five questions for every packet (Table~\ref{tab:appquestions}). They worked alone, used only the form page, entered only a reviewer code and could not edit answers. Each packet opened with a neutral note and explained each measure in words that said what a number \emph{is}, not what it \emph{means}; none stated an acceptable level for any metric.
+
+\begin{table}[!htbp]
+\centering\small
+\caption{Reviewer questions and severity scale.}\label{tab:appquestions}
+\begin{tabularx}{\textwidth}{@{}p{0.9cm}p{5.2cm}L@{}}
+\toprule
+\textbf{No.} & \textbf{Question} & \textbf{Answers}\\
+\midrule
+Q1 & Is the evidence sufficient to make your judgment? & yes, no, uncertain\\
+Q2 & Is there evidence of a meaningful risk? & yes, no, uncertain\\
+Q3 & Which FRIES dimension does the evidence concern? & Fairness, Robustness, Integrity, Explainability, Safety, uncertain\\
+Q4 & Severity: the consequence if the problem went unaddressed & 1 (catastrophic) to 9 (negligible), 5 = moderate; ``not applicable'' if no risk is identified\\
+Q5 & Brief rationale & One to three sentences citing the numbers or text that drove the answers\\
+\bottomrule
+\end{tabularx}
+\end{table}
 
 
+\chapter{Reproducibility Summary}\label{app:repro}
 
-\section{Repository labels and version names}
+Full instructions, commands, the result-folder map and the plan documents are in \code{docs/REPRODUCING\_THESIS\_RESULTS.md}; engineering detail is in \code{docs/ENGINEERING\_NOTES.md}; the layout of the stored results is in \code{results/README.md}. Tables~\ref{tab:appdata} and~\ref{tab:appconfig} list the settings that define the experiments.
+
 \begin{table}[!htbp]
 \centering\footnotesize
-\caption{Names used in the repository and their descriptive names in this report.}
-\begin{tabularx}{\textwidth}{@{}p{3.0cm}L@{}}
+\caption{Datasets, models and seeds.}\label{tab:appdata}
+\begin{tabularx}{\textwidth}{@{}p{3.6cm}L@{}}
 \toprule
-\textbf{Label} & \textbf{Meaning}\\
+\textbf{Item} & \textbf{Setting}\\
 \midrule
-L1 & Score calibration (O/S/D mapping v4)\\
-L2 & Deterministic versus LLM comparison\\
-L3 & Disclosure-gap separation\\
-L4, L4.1 & Fairness-rule redesign (TPR-gap rule)\\
-L5 & Fairness confirmation (pre-registered)\\
-L6 & Severity sweeps\\
-L7 & Artifact-set integrity\\
-L8, L9 & Pipeline hardening\\
-L10 & Independent evidence review\\
-v3, v4, v9, v10 & O/S/D heuristic bands, calibrated mapping, evidence guards, exploratory safety rule\\
-H1--H4 & Hypotheses of the fairness confirmation run\\
-P01--P12, R0--R6 & Review packets and reviewer codes\\
+Dataset & \code{google/civil\_comments}, revision \code{f2970eb3\ldots} (recorded from 2026-10-03; earlier runs do not record it)\\
+Suite data & Evaluation: 3\,000 test-split rows, seed 42; 20\% toxic; 282 severe positives; groups 2\,461 and 539; label-rate gap 0.505. Training: 8\,000 clean train-split rows, seed 42\\
+Fairness confirmation & Data seed 20261003; 3\,000 evaluation rows (260 severe positives; groups 2\,500 and 500; label rates 0.113 and 0.636); 8\,000 training rows; 11\,590 texts excluded for overlap; nested flips of 115, 230, 403 and 576 rows\\
+Controlled models & \code{bert-base-uncased}, 3 epochs, learning rate $2\times10^{-5}$, batch 16, weight decay 0.01, maximum length 128, seed 42; V2: 628 + 628 class-balanced rows, 4 epochs, $5\times10^{-5}$, no weight decay\\
+Reference model & \code{unitary/toxic-bert}, revision \code{4d6c22e74ba2\ldots}; 2-label conversion with a maximum probability difference of $9.5\times10^{-4}$ from the original on four test sentences\\
+Hub audit revisions & \code{toxic-bert} \code{4d6c22e74ba2}; \code{unbiased-toxic-roberta} \code{36295dd80b42}; \code{roberta\_toxicity\_classifier} \code{048c25bb1e19}; \code{toxic-comment-model} \code{9842c08b35a4}; \code{xlmr-large-toxicity-classifier} \code{b9c7c563427c}; \code{roberta-hate-speech-dynabench-r4-target} \code{391c99ab8b3f}; \code{bert-tiny-toxicity} \code{8377eb9a344d}\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-\section{Result folders used in this report}
 \begin{table}[!htbp]
 \centering\footnotesize
-\caption{Result folders (under \code{results/\allowbreak }) and the sections that use them.}
-\begin{tabularx}{\textwidth}{@{}p{6.2cm}L@{}}
+\caption{Thresholds, intervals and run counts that define the reported results.}\label{tab:appconfig}
+\begin{tabularx}{\textwidth}{@{}p{3.6cm}L@{}}
 \toprule
-\textbf{Folder} & \textbf{Content and use}\\
+\textbf{Item} & \textbf{Setting}\\
 \midrule
-\code{flawed\_model\_suite/\allowbreak eval\_results*} & Pilot runs 1--3 (Section~\ref{sec:pilot}).\\
-\code{flawed\_model\_suite/\allowbreak final\_20261002\_*} & Main controlled suite, five runs per model; analysis in \code{final\_20261002\_analysis*}.\\
-\code{flawed\_model\_suite/\allowbreak sweep\_20261002\_*} & Severity sweep models, three runs each.\\
-\code{flawed\_model\_suite/\allowbreak hub\_final\_*} & Earlier 15-model Hub run (v3 methodology).\\
-\code{flawed\_model\_suite/\allowbreak l3\_replay\_20261003} & Disclosure-gap separation offline replay.\\
-\code{flawed\_model\_suite/\allowbreak ground\_truth.json} & Detection rules and hidden labels, written before the runs.\\
-\code{osd\_calibration\_20261003} & Score calibration: fit, frozen mapping, held-out analysis.\\
-\code{fairness\_confirm\_20261003} & Fairness confirmation run (pre-registered).\\
-\code{defect\_severity\_20261003}, \code{\_a2} & Severity sweeps as specified, and with deviation A2.\\
-\code{l2\_det\_vs\_llm\_20261003} & LLM comparison: official results (22 of 60 answers).\\
-\code{l2\_det\_vs\_llm\_20261022\_r4} & LLM comparison: 60/60 run set (22 provider + 38 supplemental).\\
-supplementary run folder & LLM comparison: first supplementary LLM run (12 answers), separate.\\
-\code{l10\_independent\_validation\_20261003}, \code{\_v9} & Independent review: packets, official LLM review (v8), v9 TrustLens reference.\\
-supplementary review folder & Independent review: supplementary LLM run, separate.\\
-\code{l10\_human\_form}, \code{l10\_human\_analysis\_20261005} & Form material and the human-review analysis.\\
-\code{external\_hub\_validation\_20261003}, \code{\_v9r} & External audit, v8 (untouched) and v9 rerun (used).\\
+Fairness & $\varepsilon=0.02$; groups under 30 rows excluded; interval width limit 0.15; bootstrap $B=1000$, seed 42\\
+Robustness & Up to $\mathrm{clamp}(\mathrm{round}(100\times\text{budget}),1,8)$ character swaps, budget 0.03 by default; drop threshold 0.05; width limit 0.20; at least 100 rows; coverage 1.0\\
+Safety & Severe subset: annotator severe-toxicity $>0.0001$; at least 30 severe positives; Wilson 95\% interval; benign false-positive ceiling 0.30\\
+Scoring & FRIES weights 0.2; anchors of Table~\ref{tab:anchors}; $D=\mathrm{clamp}(8-\lfloor w/0.05\rfloor)$ for an interval of width $w$; constant-predictor gate at 98\% of predictions in one class\\
+Repetitions & Suite 5 runs per model; severity sweeps 2--3 per level; fairness confirmation 3 per model; Hub audit 1 per model; LLM comparison 5 runs per packet\\
+Agreement statistics & Bootstrap over packets, $B=5000$; $\kappa$ only with at least eight common packets\\
+LLM and hardware & LLM comparison: temperature 0.2 for providers B and C, provider default (not recorded) for A; laptop with an NVIDIA RTX 4060 (8\,GB), float32, batch size 8\\
+Methodology versions & Original bands (suite, first sweeps), range-scaled mapping (scoring-method evaluation), evidence guards (integrity, LLM, review and Hub results); full history in the reproduction guide\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-\section{Pre-declaration documents}
+\section{Reported study versus the current repository}\label{app:trace}
+The experiments in this report were run on the research version of the code between 2 and 28 October 2026. The repository has continued to change since, and three of its documents describe different moments. The reproduction guide and this appendix describe the study. The pre-experiment state of the project, in which the default fairness probe fitted a tabular logistic-regression proxy on an Adult Census subset and the Safety probe had no behavioural test, ended before the study: the proxy code was deleted on 10 September 2026, and in the code used here the fairness probe predicts with the imported model through the inference backend and the Safety probe measures the severe false-negative rate on a labelled dataset. The \code{README.md} on the public default branch was not updated to match and still describes the earlier state, so \emph{it should not be used to judge the reported experiments}. The same gap affects reproduction. As checked on 28 October 2026, the default branch holds the experiment scripts and the results of the first runs (up to 3 October) but not the later folders the report uses (the final external-audit rerun, the pooled LLM comparison, the human-review analysis, the severe-miss replay), which are on the project's feature branch \code{feat/ui-shell}. The history of the fairness and Safety probes was read from the repository's commit log and source files, not from the README. Conversely, nothing here should be read as a claim about the current default product behaviour: the default assessment engine proposes no O/S/D ratings, behavioural probes need a user-supplied labelled dataset with a group or severe-subset column, and the heuristic and LLM-assisted engines that produced the reported ratings are opt-in. The reported scoring methods are versions of an experimental prototype, and later code changes (an empty card now abstains from a rating) postdate every experiment.
+
+Table~\ref{tab:trace} links each experiment to its stored results, scripts and recorded version. Where the stored files do not record the code revision of a run, the table says so. The only runs whose results record a git revision are the two external audits (\code{run\_log.json}). For the others, the revision is the commit that first added the results, which is an upper bound on when they were produced and not a record of the code that produced them. Method labels (v3, v4, v9, v10) are those of the version history in the reproduction guide and the identifiers in the repository's \code{methodology\_version} module; the external-audit result files carry per-probe versions and a mapping identifier but not the evaluation-level label, so the attribution of the final audit to the v9 method rests on its recorded git revision.
+
 \begin{table}[!htbp]
-\centering\footnotesize
-\caption{Pre-declarations and protocols (under \code{docs/\allowbreak superpowers/\allowbreak plans/\allowbreak }, dated 2026-10-03 unless stated).}
-\begin{tabularx}{\textwidth}{@{}p{3.3cm}L@{}}
+\centering\scriptsize\setlength{\tabcolsep}{2.5pt}
+\caption{Traceability of the reported experiments. ``First commit'' = commit that first added the result folder. Folder names are under \code{results/}; scripts under \code{backend/app/scripts/} unless stated.}\label{tab:trace}
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{2.0cm}>{\raggedright\arraybackslash}p{3.6cm}>{\raggedright\arraybackslash}p{3.4cm}>{\raggedright\arraybackslash}L@{}}
 \toprule
-\textbf{Item} & \textbf{Document}\\
+\textbf{Section} & \textbf{Result folders} & \textbf{Scripts} & \textbf{Version and code snapshot}\\
 \midrule
-Score calibration & \code{round3-L1-osd-calibration.md}\\
-LLM comparison & \code{round3-L2-det-vs-llm.md}\\
-Disclosure-gap separation & \code{round3-L3-disclosure-gaps.md}\\
-Fairness-rule redesign & \code{round3-L4-binary-fairness-risk.md}, \code{round3-L4.1-eod-fairness-risk.md}\\
-Fairness confirmation (pre-registration and results) & \code{round3-L4.1-confirmatory-prereg.md}, \code{round3-L5-fairness-confirm-results.md}\\
-Severity sweeps & \code{round3-L6-defect-severity.md}\\
-Artifact integrity & \code{docs/\allowbreak adr/\allowbreak 0013-artifact-set-integrity.md}\\
-Independent review & \code{round3-L10-independent-validation.md}; reviewer instructions in \code{results/\allowbreak l10\_human\_form/\allowbreak }\\
+Controlled suite, detection rules & \code{flawed\_model\_suite/} (\code{final\_20261002\_*}, \code{ground\_truth.json}) & \code{prepare\_flawed\_suite\_data}, \code{train\_flawed\_suite}, \code{run\_flawed\_suite\_eval}, \code{repeat\_eval}, \code{compare\_ground\_truth} & v3 bands (\code{v3-hardening-2026}, 160 stored evaluations); LLM-assisted engine; first commit \code{e8db194}, 2 Oct; run revision not recorded\\
+Gap separation & \code{flawed\_model\_suite/l3\_replay\_20261003} & \code{replay\_l3\_disclosure\_gaps} & v4 disclosure-gap method; offline replay of suite inputs; run revision not recorded\\
+Scoring method & \code{osd\_calibration\_20261003} & \code{run\_osd\_calibration} & Range-scaled mapping \code{osd-map-v4-calibrated-2026-10-03}; first commit \code{e384363}\\
+Fairness confirmation & \code{fairness\_confirm\_20261003} & \code{prepare\_flawed\_suite\_data}, \code{train\_flawed\_suite}, \code{run\_fairness\_confirm} & Fairness probe \code{tl-fairness-binary-v1.2} (TPR-gap rule); plan frozen at commit \code{8f009fb} before the run; first commit \code{0d9b7d3}\\
+Severity sweeps & \code{defect\_severity\_20261003}, \code{\_a2}; \code{flawed\_model\_suite/sweep\_*} & \code{make\_severity\_sweep}, \code{run\_defect\_severity} & Probe evidence with original bands; range-scaled map for the scoring evaluation; first commit \code{67d9fc7}\\
+Integrity tamper demo & \code{flawed\_model\_suite/tamper\_demo.json} & \code{tamper\_demo} & Operator-supplied reference hash; first commit \code{ba39f3c}\\
+LLM comparison & \code{l2\_det\_vs\_llm\_20261029\_r5} (reported; copy of \code{\_20261003\_r3} plus re-attempts); superseded and kept for audit: \code{\_20261003}, \code{\_r3}, \code{\_20261022\_r4} and a superseded supplementary-evaluation folder & \code{run\_l2\_interpretation} (\code{--resume --retry-fallbacks}), \code{scripts/audit/l2\_completion\_audit} & Prompt \code{osd-llm-v3-decision-first-2026-10-03}; baseline regenerated under the final method (v9), the 3 Oct baseline kept beside it; re-attempts run on 28 Oct (the four provider C answers date from 3 Oct), not yet committed at the time of writing (earlier folders: \code{ba560cf}, \code{bd49c9d}, \code{daa576c})\\
+Independent review & \code{l10\_independent\_validation\_20261003} (\code{\_v9}, \code{\_v9r}), \code{l10\_human\_form}, \code{l10\_human\_analysis\_20261005} & \code{run\_l10\_validation}, \code{l10\_human\_form/analyze\_human\_responses}, \code{scripts/audit/l10\_recompute} & Human study used the v9 reference; LLM reviews were compared with the v8 reference; first commits \code{2b82418}, \code{d60890f}\\
+External audit (used) & \code{external\_hub\_validation\_20261003\_v9r} & \code{run\_external\_hub\_validation} & Git revision \code{0103344} recorded in \code{run\_log.json}; the repository's current method label at that revision is v9 (evidence guards); engine \code{llm\_v1}\\
+External audit (earlier run, kept) & \code{external\_hub\_validation\_20261003} & same & Git revision \code{4f58db9}, method label v8 at that revision; not used for reported tables\\
+Severe-miss rule (exploratory) & \code{safety\_severe\_miss\_replay\_20261022} & \code{replay\_safety\_severe\_miss} & v10; offline replay of stored evidence only\\
+Figures and tables & \code{report/figures/}, \code{report/chapters/tables\_generated.tex} & \code{report/make\_figures.py}, \code{make\_figures\_final.py}, \code{make\_tables.py} & Read from the frozen folders above\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-\section{Reproducing the experiments}\label{app:repro}
-Commands are run from \code{backend/\allowbreak } with the project virtual environment; training uses \code{USE\_TF=0}. The Docker stack must be running for the API-based runs (rebuild \code{api} and \code{worker} after backend changes). Seeds and output folders are those named in the corresponding plan.
-\begin{lstlisting}
-# controlled suite (data, training, evaluation through the API)
-python -m app.scripts.prepare_flawed_suite_data
-python -m app.scripts.train_flawed_suite --all
-python -m app.scripts.run_flawed_suite_eval
-python -m app.scripts.repeat_eval            # repeated runs
-python -m app.scripts.compare_ground_truth   # apply the frozen rules
+The superseded folders are retained for audit, are not part of the 60/60 LLM dataset and contribute no values to Table~\ref{tab:l2denom}. The date in the name of the reported folder, \code{l2\_det\_vs\_llm\_20261029\_r5}, is a label and not an execution date: the timestamps in its log are 2 and 3 October 2026 (22 and 4 answers) and 28 October 2026 (34 answers), and the folder name is kept unchanged to preserve the audit trail. The exact paths of the superseded folders, and the list of files that must accompany this report because they are not yet committed, are in the reproduction guide.
 
-# disclosure-gap separation: replay
-python -m app.scripts.replay_l3_disclosure_gaps <new_out_dir>
+The following facts were checked against the stored files while preparing this table. The external-audit manifests hold one weight file per model (Section~\ref{sec:integ}). The dataset revision was recorded only from 3 October, so the first controlled-suite runs do not record it. Fairness measurements in the suite, the confirmation and the Hub audit come from the predictions of the evaluated models (218 stored result files record the predictor as the inference backend, and none records a proxy), and the Safety severe-miss figures come from the behavioural probe on the labelled evaluation set, not from the card checks. Two limits remain. The suite and sweep results do not record the code revision that produced them. The trained weights of the controlled models are not committed, although the seeds and data are.
 
-# fairness confirmation run (fresh seed, fresh data)
-python -m app.scripts.prepare_flawed_suite_data --fairness-confirm \
-    --seed 20261003 --out ../results/fairness_confirm_20261003
-python -m app.scripts.train_flawed_suite --fairness-confirm \
-    ../results/fairness_confirm_20261003 --seed 20261003
-python -m app.scripts.run_fairness_confirm
+\chapter{Supplementary Figures}\label{app:figures}
 
-# severity sweeps
-python -m app.scripts.run_defect_severity --out ../results/defect_severity_20261003
+Two figures support interpretations in the main text but did not fit there.
 
-# independent review: human analysis (stdlib only, from the repository root)
-python results/l10_human_form/analyze_human_responses.py
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.7\textwidth]{fig_hub_tradeoff.pdf}
+\caption{Severe false-negative rate against benign false-positive rate for the seven Hub models. The only model beyond the benign false-positive ceiling (orange) also has one of the lowest miss rates: a low miss rate alone does not separate a good detector from one that flags nearly everything.}\label{fig:tradeoff}
+\end{figure}
 
-# external Hub audit
-for s in select run profile; do python -m app.scripts.run_external_hub_validation $s; done
-
-# figures and this report
-cd report && python make_figures.py && python make_figures_final.py
-pdflatex main.tex
-\end{lstlisting}
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.9\textwidth]{fig_hub_profiles.pdf}
+\caption{Dimension scores of the five scored Hub audits as reported, grouped by the source of the rating. Panels are not comparable with each other. Fairness, Robustness and Safety come from the evidence mapping; Integrity and Explainability from an LLM (middle) or the rule-based fallback (right). \code{toxic-bert} and \code{bert-tiny-toxicity} have no aggregate and are not shown.}\label{fig:hubprofiles}
+\end{figure}

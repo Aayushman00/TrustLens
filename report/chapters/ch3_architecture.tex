@@ -1,133 +1,163 @@
-\chapter{System Architecture}\label{ch:arch}
+\chapter{System Architecture and Implementation}\label{ch:arch}
 
-\section{Implemented system versus target design}
-The repository README contains a long target architecture: a model analyzer, a dataset analyzer, a resource checker, a benchmark-first runtime estimate, user confirmation and then the FRIES evaluation. When we read the source we found that part of that diagram runs and part does not. This chapter describes the \emph{implemented} flow and lists the differences in Table~\ref{tab:impl-status}, because a report that drew the target diagram as if it ran would misdescribe the project.
+This chapter explains the decisions that shape what an audit can and cannot claim: how the system is divided into parts, how an audit is recorded, how an audit moves from request to report, and what the provenance records establish. Endpoint specifications, source-file maps, configuration and deployment commands are in \code{docs/ENGINEERING\_NOTES.md}, not here. The chapter describes the experimental version of the prototype used in the reported study. Two behaviours differ from the repository's defaults: the reported ratings came from the opt-in rule-based and LLM-assisted engines, while the default engine proposes none, and the behavioural probes were run on the labelled datasets described in Chapter~\ref{ch:method}. Appendix~\ref{app:trace} separates the study from the current repository.
 
-\begin{table}[!htbp]
-\centering\small
-\caption{Status of architectural components, checked against the source code at the time of writing.}\label{tab:impl-status}
-\begin{tabularx}{\textwidth}{@{}p{3.6cm}p{2.1cm}L@{}}
-\toprule
-\textbf{Component} & \textbf{Status} & \textbf{Evidence in repository}\\
-\midrule
-Model import (metadata only) & Implemented & \code{adapters/\allowbreak hf\_hub.py}; the import reads card, tags, licence and file list, no weights. The revision is resolved and frozen at draft time.\\
-Local inference backend & Implemented & \code{inference/\allowbreak local\_hf.py}: batched \code{transformers} inference, CUDA or CPU, softmax over logits.\\
-Fairness probe & Implemented & \code{probes/\allowbreak fairness.py}; binary path \code{tl-fairness-binary-v1.2}, multiclass path \code{tl-methodology-v1.0}.\\
-Robustness probe & Implemented, narrow & Random character swaps on text classifiers only; other modalities skip.\\
-Safety probe & Implemented & Card disclosure checklist plus behavioural severe-harm miss rate (\code{safety\_behavior.py}); needs a labelled set with a \code{severe} marker.\\
-Integrity probe & Implemented & Metadata checks plus artifact-set hashing (\code{integrity\_artifact.py}, \code{tl-integrity-v1.2}).\\
-Explainability probe & Implemented, card only & Section coverage and contradiction flags (\code{tl-explainability-v1.1}); not SHAP or LIME.\\
-O/S/D engines & Implemented & \code{osd/\allowbreak deterministic.py} (abstains), \code{osd/\allowbreak agent.py} (heuristic, v3 and v4 mapping), \code{osd/\allowbreak hybrid.py} (LLM-assisted).\\
-FRIES scorer & Implemented & \code{scoring/\allowbreak fries.py}; frozen test vectors in \code{shared/\allowbreak scoring/\allowbreak fixtures}.\\
-Human review & Implemented & \code{osd/\allowbreak review.py}; \code{AI\_ASSISTED} mode stops at \code{AWAITING\_REVIEW}.\\
-Reports (JSON, PDF) & Implemented & \code{reports/\allowbreak builder.py}, \code{render.py}; PDF rendered with WeasyPrint.\\
-Evidence store & Implemented & SHA-256 addressed files on a local volume.\\
-Resource checker, compatibility states & Not implemented & README gap~6.\\
-Benchmark-first runtime estimate & Not implemented & README gap~6.\\
-Built-in unsafe-prompt suite & Not implemented & Safety behaviour needs user-supplied labelled data (README gap~9).\\
-SHAP / LIME explanations & Not implemented & Listed as a future extension.\\
-Attack simulation & Not implemented & Planned in the roadmap, not run.\\
-\bottomrule
-\end{tabularx}
-\end{table}
+\section{Conceptual flow}
+TrustLens turns a model and a labelled dataset into an audit report in three stages that are kept apart on purpose (Figure~\ref{fig:pipeline}). Five probes produce \emph{measured evidence}. A \emph{risk assessment} decides, from that evidence, whether a risk is present, whether only a documentation gap exists, or whether the evidence is too thin to decide. Only then are O/S/D \emph{ratings} proposed, or entered by a reviewer, and combined into dimension and aggregate scores. A probe or rating that lacks sufficient evidence is \emph{withheld}: the audit records that the evidence was insufficient and gives no rating.
 
-\section{High-level architecture}
-TrustLens is a conventional web application with an asynchronous worker. Figure~\ref{fig:arch} shows the deployment view, which matches \code{docker-compose.yml} (services \code{postgres}, \code{redis}, \code{api}, \code{worker}, \code{frontend}).
+\begin{figure}[!htbp]
+\centering
+\begin{tikzpicture}[font=\small,node distance=0.5cm,
+  p/.style={draw=tlblue,fill=tlgrey,rounded corners=3pt,minimum height=1.2cm,minimum width=3.0cm,align=center,thick},
+  l/.style={font=\scriptsize\bfseries,color=tlorange},
+  arr/.style={-{Stealth[length=2.4mm]},thick}]
+  \node[p] (a) {Model and\\dataset};
+  \node[p,right=of a] (b) {Measured evidence\\(five probes)};
+  \node[p,right=of b] (c) {Risk assessment\\(risk, gap, or withheld)};
+  \node[p,right=of c] (d) {Ratings and\\audit report};
+  \foreach \x/\y in {a/b,b/c,c/d} \draw[arr] (\x) -- (\y);
+  \node[l,below=0.15cm of b] {Layer A};
+  \node[l,below=0.15cm of c] {Layer B};
+  \node[l,below=0.15cm of d] {Layer C: O/S/D, FRIES};
+\end{tikzpicture}
+\caption{Conceptual flow of an audit. Layer B can withhold a rating; Layer C is computed only from ratings that exist.}\label{fig:pipeline}
+\end{figure}
+
+\section{Components and deployment}
+Figure~\ref{fig:arch} shows the deployment: a conventional web application with an asynchronous worker. The division follows one constraint. Importing a model's metadata takes seconds, but running five probes over 3\,000 rows on a GPU takes from tens of seconds to a couple of minutes (Chapter~\ref{ch:testing}), so the request that starts an audit cannot also perform it.
 
 \begin{figure}[!htbp]
 \centering
 \begin{tikzpicture}[font=\small,
-  box/.style={draw=tlblue,fill=tlgrey,rounded corners=3pt,minimum height=0.95cm,minimum width=2.6cm,align=center,thick},
-  store/.style={draw=tlorange,fill=white,rounded corners=3pt,minimum height=0.95cm,minimum width=2.6cm,align=center,thick},
+  box/.style={draw=tlblue,fill=tlgrey,rounded corners=3pt,minimum height=0.9cm,minimum width=2.6cm,align=center,thick},
+  store/.style={draw=tlorange,fill=white,rounded corners=3pt,minimum height=0.9cm,minimum width=2.6cm,align=center,thick},
   arr/.style={-{Stealth[length=2.4mm]},thick,color=black!70}]
-  \node[box] (ui) {React dashboard\\(Vite, TypeScript)};
-  \node[box,right=1.5cm of ui] (api) {FastAPI \code{/\allowbreak v1}\\drafts, evaluations, reports};
-  \node[box,right=1.5cm of api] (wk) {Celery worker\\probe pipeline};
-  \node[store,below=1.4cm of api] (pg) {PostgreSQL\\evaluations, probes, scores};
-  \node[store,below=1.4cm of wk] (fs) {Evidence store\\(SHA-256 files)};
-  \node[store,below=1.4cm of ui] (rd) {Redis\\task queue};
-  \node[box,above=1.2cm of wk] (hf) {Hugging Face Hub\\metadata and weights};
-  \node[box,above=1.2cm of api] (llm) {LLM providers\\(hosted APIs)};
-  \draw[arr] (ui) -- (api);
-  \draw[arr] (api) -- (wk) node[midway,above,font=\scriptsize]{enqueue};
-  \draw[arr] (api) -- (pg);
-  \draw[arr] (wk) -- (pg);
-  \draw[arr] (wk) -- (fs);
-  \draw[arr] (api) -- (rd);
-  \draw[arr] (rd) -- (wk);
-  \draw[arr] (hf) -- (wk);
-  \draw[arr] (hf) -- (api);
-  \draw[arr] (wk) -- (llm);
+  \node[box] (ui) {React dashboard};
+  \node[box,right=1.4cm of ui] (api) {FastAPI\\drafts, reports};
+  \node[box,right=1.4cm of api] (wk) {Celery worker\\probe pipeline};
+  \node[store,below=1.0cm of api] (pg) {PostgreSQL};
+  \node[store,below=1.0cm of wk] (fs) {Evidence store\\(SHA-256 files)};
+  \node[store,below=1.0cm of ui] (rd) {Redis queue};
+  \node[box,above=0.9cm of wk] (hf) {Hugging Face Hub};
+  \node[box,above=0.9cm of api] (llm) {LLM providers\\(optional)};
+  \draw[arr] (ui) -- (api); \draw[arr] (api) -- (wk); \draw[arr] (api) -- (pg);
+  \draw[arr] (wk) -- (pg); \draw[arr] (wk) -- (fs); \draw[arr] (api) -- (rd);
+  \draw[arr] (rd) -- (wk); \draw[arr] (hf) -- (wk); \draw[arr] (wk) -- (llm);
 \end{tikzpicture}
 \caption{Deployment architecture of TrustLens.}\label{fig:arch}
 \end{figure}
 
-The API process validates requests, stores model records and evaluation drafts, and enqueues a Celery task. The worker loads the model through the inference backend, runs the probes, stores raw evidence, asks the O/S/D engine for ratings, calls the scorer and writes everything back to PostgreSQL. The browser reads the finished evaluation and its report. Since round~3 (pipeline hardening) the API commits the request session \emph{before} it sends the Celery message. Earlier, the worker could pick up a task for an evaluation row that the API had not committed yet, and we had seen evaluations stay in \code{PENDING} for that reason.
+\begin{table}[!htbp]
+\centering\small
+\caption{Principal components and what each is responsible for.}\label{tab:comp}
+\begin{tabularx}{\textwidth}{@{}p{3.3cm}L@{}}
+\toprule
+\textbf{Component} & \textbf{Role}\\
+\midrule
+React dashboard & The reviewer's view: import a model, configure and confirm each dimension, follow progress, read the five-dimension profile and the report, with the mode, engine and review status shown and the aggregate last.\\
+FastAPI service & Validates requests, owns the draft and evaluation records, and records the exact inputs and settings of each evaluation. It never runs a probe, and it saves the evaluation record before it queues the work.\\
+Celery worker and Redis queue & Runs the pipeline for one evaluation at a time: loads the model, runs the probes, stores evidence, asks the assessment engine for ratings and, in automatic mode, scores them.\\
+PostgreSQL & Holds models, datasets (by content hash), drafts, evaluations, probe results, rating proposals, reviews, scores, reports and a per-evaluation event log. Raw probe output is saved as JSON files named by their SHA-256 hash in the evidence store; the database keeps the reference (location and hash).\\
+Model import and inference & Import reads the card, tags, licence and file list from the Hub without weights and fixes the revision. Batched \code{transformers} inference \cite{wolf2020} runs on the worker only.\\
+Assessment engines & \emph{Deterministic} (default; proposes no ratings), \emph{rule-based} (heuristic O/S/D proposals) and \emph{LLM-assisted} (rule-based ratings plus an LLM re-rating of the card-based dimensions).\\
+Optional LLM providers & Reached only by the LLM-assisted engine; a provider failure never fails an audit (rule-based fallback ratings are kept and tagged).\\
+\bottomrule
+\end{tabularx}
+\end{table}
 
-\section{Execution flow of an audit}
-Figure~\ref{fig:seq} shows the sequence of one evaluation as the code performs it. The probe order in the runner is Fairness, Robustness, Integrity, Explainability, Safety.
-
-\begin{figure}[!htbp]
-\centering
-\begin{tikzpicture}[font=\scriptsize,x=2.25cm,y=-0.48cm,
-  life/.style={dashed,color=black!40},
-  m/.style={-{Stealth[length=2mm]},thick}]
-  \foreach \i/\n in {0/User,1/API,2/Worker,3/Probes,4/{O/S/D engine},5/Scorer} {
-    \node[draw=tlblue,fill=tlgrey,rounded corners=2pt,minimum width=1.8cm,minimum height=0.6cm] (n\i) at (\i,0) {\n};
-    \draw[life] (\i,0.4) -- (\i,12.8);
-  }
-  \draw[m] (0,1.5) -- (1,1.5) node[midway,above]{create draft, confirm};
-  \draw[m] (1,2.5) -- (2,2.5) node[midway,above]{commit, then enqueue};
-  \draw[m] (2,3.5) -- (3,3.5) node[midway,above]{run probes};
-  \draw[m] (3,4.5) -- (2,4.5) node[midway,above]{metrics + evidence};
-  \draw[m] (2,5.5) -- (4,5.5) node[midway,above]{probe snapshots};
-  \draw[m] (4,6.5) -- (2,6.5) node[midway,above]{O/S/D proposals};
-  \draw[m] (2,7.5) -- (5,7.5) node[midway,above]{finalized O/S/D};
-  \draw[m] (5,8.5) -- (2,8.5) node[midway,above]{FRIES score, or withheld};
-  \draw[m] (2,9.5) -- (1,9.5) node[midway,above]{store, mark FINALIZED};
-  \draw[m] (1,10.5) -- (0,10.5) node[midway,above]{report (JSON, PDF)};
-  \draw[m,color=tlorange] (2,12.2) -- (0,12.2) node[midway,above,color=black]{\code{AI\_ASSISTED}: pause at \code{AWAITING\_REVIEW}, reviewer edits O/S/D};
-\end{tikzpicture}
-\caption{Sequence of a TrustLens evaluation.}\label{fig:seq}
-\end{figure}
-
-If the worker dies mid-pipeline, a failure handler moves evaluations stuck in \code{RUNNING}, \code{PROBES\_COMPLETED} or \code{AGENT\_COMPLETED} to \code{FAILED} and records the status they were in (a pipeline-hardening fix, Section~\ref{sec:l8}).
-
-\section{Data flow and evaluation contract}
-Each evaluation carries an \emph{evaluation contract} (schema \code{v2} in \code{schemas/\allowbreak evaluation\_contract\_v2.py}) that makes the evaluation explicit. For Fairness and Robustness it records the content-addressed dataset, the text and target columns, the sensitive-attribute column, a \code{label\_mapping} from dataset values to model label indices, \code{min\_group\_n} and the \code{positive\_label\_index} that the fairness metrics treat as the favourable outcome. It also freezes a snapshot of the model's \code{id2label} and the resolved model revision. The contract turned out to matter: in our first experiment it made a label-mapping mistake visible after the fact (Section~\ref{sec:pilot}).
+\section{Data model}\label{sec:datamodel}
+The database is organised so that one evaluation row can be traced to everything that produced it. Figure~\ref{fig:er} shows the principal entities and their relationships; Table~\ref{tab:entities} lists the fields that matter for provenance.
 
 \begin{figure}[!htbp]
 \centering
-\begin{tikzpicture}[font=\small,node distance=0.55cm,
-  p/.style={draw=tlblue,fill=tlgrey,rounded corners=3pt,minimum height=0.9cm,minimum width=1.75cm,align=center,thick,font=\footnotesize},
-  l/.style={font=\scriptsize\bfseries,color=tlorange},
-  arr/.style={-{Stealth[length=2.2mm]},thick}]
-  \node[p] (a) {Model\\import};
-  \node[p,right=of a] (b) {Local\\inference};
-  \node[p,right=of b] (c) {Five\\probes};
-  \node[p,right=of c] (d) {O/S/D\\engine};
-  \node[p,right=of d] (e) {FRIES\\scorer};
-  \node[p,right=of e] (f) {Report};
-  \foreach \x/\y in {a/b,b/c,c/d,d/e,e/f} \draw[arr] (\x) -- (\y);
-  \node[l,below=0.2cm of c,align=center] {Layer A:\\measured\\evidence};
-  \node[l,below=0.2cm of d,align=center] {Layer B:\\risk\\assessment};
-  \node[l,below=0.2cm of e,align=center] {Layer C:\\score};
+\begin{tikzpicture}[font=\scriptsize,
+  e/.style={draw=tlblue,fill=tlgrey,rounded corners=2pt,minimum width=2.8cm,align=left,inner sep=3pt,thick},
+  line/.style={thick,color=black!65},
+  card/.style={font=\tiny\bfseries,color=tlorange}]
+  \node[e] (model) at (1.5,5.25) {\textbf{Model}\\hf\_repo\_id\\revision, checksum\\card metadata};
+  \node[e] (draft) at (7.6,5.25) {\textbf{EvaluationDraft}\\exact model version\\+ per-dimension settings\\(columns, label map)};
+  \node[e] (data) at (13.7,5.25) {\textbf{DatasetContent}\\content\_hash\\row\_count, columns};
+  \node[e] (doc) at (1.5,2.95) {\textbf{DocumentationSource}\\doc.\ revision\\content hash};
+  \node[e] (eval) at (7.6,2.95) {\textbf{Evaluation}\\progress, mode\\model version\\scoring-method version\\settings used};
+  \node[e] (pr) at (1.5,0.41) {\textbf{ProbeResult}\\dimension\\metric values\\evidence refs (hash)};
+  \node[e] (osd) at (4.65,0.41) {\textbf{OsdAgentOutput}\\proposal O/S/D\\rationale};
+  \node[e] (hr) at (7.8,0.41) {\textbf{HumanReview}\\overrides\\notes};
+  \node[e] (fs) at (10.95,0.41) {\textbf{FinalScore}\\dimension scores\\finalized O/S/D};
+  \node[e] (rep) at (14.1,0.41) {\textbf{Report}\\JSON, PDF\\version};
+  \draw[line] (model) -- (draft);
+  \draw[line,dashed] (data) -- (draft);
+  \draw[line] (model) -- (doc);
+  \draw[line] (model.south) -- ++(0,-0.35) -| (eval.west);
+  \draw[line,dashed] (data.south) |- (eval.east);
+  \draw[line] (draft.south) -- (eval.north);
+  \foreach \c in {pr,osd,hr,fs,rep} \draw[line] (eval.south) -- ++(0,-0.45) -| (\c.north);
 \end{tikzpicture}
-\caption{Execution pipeline and the three layers. The O/S/D layer between evidence and score can abstain.}\label{fig:pipeline}
+\caption{Principal entities. Solid lines are foreign keys, dashed lines are references stored with the evaluation's recorded settings. An evaluation has many probe results, proposals and reports, at most one final score, and the latest human review is used.}\label{fig:er}
 \end{figure}
 
-\section{Evaluation modes and assessment engines}
-Two orthogonal switches control an evaluation.
+\begin{table}[!htbp]
+\centering\small
+\caption{How an evaluation references what produced it.}\label{tab:entities}
+\begin{tabularx}{\textwidth}{@{}p{3.3cm}L@{}}
+\toprule
+\textbf{Question} & \textbf{Where the answer is stored}\\
+\midrule
+Which model, at which revision? & The evaluation row holds the model reference and the revision fixed when the draft was created; the model row holds a registry copy, which can be re-imported later. The worker uses the fixed revision, never the live row.\\
+Which dataset? & The evaluation's recorded settings name a dataset record per dimension; that record stores the file's content hash, row count and columns, so the same name with different bytes is a different dataset.\\
+How were columns and labels interpreted? & The recorded settings: text and target columns, sensitive-attribute column, label mapping, favourable label, minimum group size, severe-subset column.\\
+Which method, and what report? & A version of the scoring method on the evaluation and a version string per probe; a versioned report row with the JSON and PDF locations.\\
+What was measured? & One probe result per dimension (metrics, status, decision fields), each pointing to an evidence file by hash.\\
+What risk was found? & The decision fields inside the probe result: risk list, disclosure-gap list, failed gates.\\
+Which ratings, from whom? & The assessment-engine proposal (with the source of each O, S and D), the reviewer's overrides when present, and the finalised triples with the dimension scores.\\
+\bottomrule
+\end{tabularx}
+\end{table}
 
-\textbf{Workflow mode.} \code{AI\_AUTONOMOUS} lets the pipeline finalise without a reviewer (the report is marked \code{human\_reviewed=false}); \code{AI\_ASSISTED} stops so that a reviewer can edit O/S/D before the score is computed. Despite the enum names, no language model is involved in the mode itself; the two are human-review gates.
+Three separations are explicit. Evidence, risk decision and proposed rating are different fields written at different times, so an experiment can recompute one layer from the stored values of another (the replays of Chapter~\ref{ch:results} rely on this). A proposal and a reviewer's override are separate rows, so a human change never overwrites the proposal it changed. And data are referenced by content hash, so a dataset edited later cannot silently stand behind an old result.
 
-\textbf{Assessment engine.} Three engines are implemented.
-\begin{description}[leftmargin=1.2em]
-\item[\code{deterministic}] (default) never proposes O/S/D; the FRIES score is withheld unless a human supplies the ratings.
-\item[\code{legacy\_heuristic}] maps probe metrics to O/S/D with documented rules (Section~\ref{sec:osd}).
-\item[\code{llm\_v1}] starts from the heuristic proposal and then asks an LLM to re-rate Integrity, Explainability and Safety. Fairness and Robustness always keep the heuristic ratings, and when behavioural Safety evidence exists the Safety band is also kept from the heuristic; the LLM judgment is stored as metadata.
-\end{description}
-The experiments in this report use \code{llm\_v1} in \code{AI\_AUTONOMOUS} mode unless a section says otherwise. That is why repeated runs can differ in the LLM-rated dimensions (Section~\ref{sec:repeat}).
+\section{Evaluation lifecycle}\label{sec:lifecycle}
+An audit moves through the steps in Figure~\ref{fig:seq}.
 
-\section{Evidence statuses and abstention}
-A probe does not always produce a number. The implemented statuses are \code{EVALUATED}, \code{PROXY}, \code{SKIPPED}, \code{NOT\_APPLICABLE}, \code{INSUFFICIENT\_EVIDENCE} and \code{FAILED}. On top of the status, each dimension records an \code{aspect\_scoring} outcome: \code{risk\_detected}, \code{no\_material\_risk}, \code{disparity\_observed}, \code{disclosure\_gap}, \code{mapping\_blocked} or \code{not\_scored}. The O/S/D engine abstains (returns \code{None}) wherever the status or \code{aspect\_scoring} says the evidence is not enough, and the report builder withholds the overall FRIES score when any dimension lacks a complete O/S/D triple. The API answers a report request for such an evaluation with HTTP~409 rather than pretending the report is merely not ready yet.
+\begin{figure}[!htbp]
+\centering
+\begin{tikzpicture}[font=\scriptsize,x=1cm,y=1cm,
+  life/.style={dashed,color=black!45},
+  act/.style={draw=tlblue,fill=tlgrey,rounded corners=2pt,minimum width=1.9cm,minimum height=0.55cm,align=center,font=\scriptsize\bfseries},
+  m/.style={-{Stealth[length=2mm]},thick,color=black!75},
+  t/.style={font=\scriptsize,align=center,fill=white,inner sep=1pt}]
+  \def\ytop{0}\def\ybot{-5.8}
+  \node[act] (u) at (1.1,0) {Dashboard};
+  \node[act] (a) at (4.1,0) {API};
+  \node[act] (w) at (7.1,0) {Worker};
+  \node[act] (d) at (10.1,0) {Database\\+ evidence};
+  \node[act,draw=tlorange] (l) at (13.4,0) {LLM\\(optional)};
+  \foreach \x in {1.1,4.1,7.1,10.1,13.4} \draw[life] (\x,-0.5) -- (\x,\ybot);
+  \draw[m] (1.1,-0.82) -- (4.1,-0.82) node[t,midway,above=-2pt] {1 draft, per-dimension validation, confirm};
+  \draw[m] (1.1,-1.48) -- (4.1,-1.48) node[t,midway,above=-2pt] {2 start evaluation};
+  \draw[m] (4.1,-1.89) -- (10.1,-1.89) node[t,midway,above=-2pt] {3 fix settings and model version; save record as waiting};
+  \draw[m] (4.1,-2.38) -- (7.1,-2.38) node[t,midway,above=-2pt] {4 enqueue task};
+  \draw[m] (7.1,-2.87) -- (10.1,-2.87) node[t,midway,above=-2pt] {5 mark as running (only if still waiting)};
+  \draw[m] (7.1,-3.36) -- (10.1,-3.36) node[t,midway,above=-2pt] {6 load model snapshot and dataset, run probes, store hashed evidence};
+  \draw[m] (7.1,-3.85) -- (10.1,-3.85) node[t,midway,above=-2pt] {7 probes finished};
+  \draw[m] (7.1,-4.35) -- (13.4,-4.35) node[t,midway,above=-2pt] {8 card dimensions rated (engine-dependent)};
+  \draw[m] (7.1,-4.84) -- (10.1,-4.84) node[t,midway,above=-2pt] {9 ratings proposed; finalise or await review};
+  \draw[m] (1.1,-5.33) -- (4.1,-5.33) node[t,midway,above=-2pt] {10 human review, finalize};
+  \draw[m] (4.1,-5.74) -- (10.1,-5.74) node[t,midway,above=-2pt] {11 scores and review stored};
+  \draw[m] (1.1,-6.23) -- (4.1,-6.23) node[t,midway,above=-2pt] {12 request report};
+\end{tikzpicture}
+\caption{Lifecycle of one audit. Steps 10--11 apply only in human-review mode. In automatic mode the worker scores in step 9 and the report is built when requested after finalisation.}\label{fig:seq}
+\end{figure}
+
+\textbf{Request and scheduling.} The reviewer builds a draft for a model and configures each dimension separately: dataset, text and target columns, sensitive attribute, the mapping from dataset labels to the model's output indices, and the favourable label. Each dimension is validated and confirmed before an evaluation can be created, and the recorded settings keep a snapshot of the model's own label set next to the mapping. That snapshot is what made the label-mapping error of our first experiment visible after the fact (Section~\ref{sec:setup}). Creating an evaluation fixes the draft's settings so they can no longer change, and saves the evaluation as waiting; only after it is saved is the work queued, so a worker cannot receive a task for a record it cannot see.
+
+\textbf{Evidence, assessment and scoring.} The worker marks the evaluation as running only if it is still waiting, so a duplicated task finds the state changed and stops. It loads the model at the fixed revision, checks that the loaded snapshot matches it, loads the dataset by content hash and runs the five probes, each writing its output to the evidence store. The assessment engine then reads the stored results and proposes ratings, or none. In automatic mode the worker scores them if all five dimensions have a complete triple and otherwise finalises with the score marked withheld, a normal outcome.
+
+\textbf{Review and report.} In human-review mode the pipeline stops before finalisation; the reviewer sees the evidence read-only and edits the O/S/D values, and finalisation merges the latest review with the proposal. A report can only be built from a finalised evaluation, and it states the mode, the engine and whether a person reviewed it.
+
+\section{Evidence provenance}\label{sec:provenance}
+Four records tie a result to its inputs. The \emph{model revision} is fixed when the draft is created (the commit hash of the repository), copied into the evaluation, and compared with the revision of the snapshot the worker actually loaded. The \emph{dataset reference} is the content hash of the stored file together with the column and label mapping of the recorded settings. The \emph{scoring-method version} is stamped on the evaluation, and the per-probe version is stored in each result. The \emph{evidence-file hashes} are the SHA-256 of each probe's raw output, so a stored file can be re-hashed and compared with the reference held in the database.
+
+These records establish that the evaluation used the revision, data and method it names, that the stored evidence has not changed since it was written, and that another reviewer can re-run the configuration and compare. They establish no more. A matching hash shows agreement with a reference, so it is only as trustworthy as the reference, and for Hub models that is the Hub's own published hash, with no independent signature. An evidence-file hash shows a file was not edited after the run, not that the probe was run honestly. None of these records says whether the model is safe.
+
+\section{Background execution and failure handling}\label{sec:api}
+Probes are slow and may fail for reasons unrelated to the request, so each evaluation runs as a background task that records its progress while the dashboard polls it. Every change of state is applied only if the evaluation is still in the state the worker expects, which makes a duplicated task harmless and stops a late failure message from overwriting a finished result. A probe whose output violates its specification, a missing evidence store or an assessment-engine error marks the evaluation as failed with a recorded reason; a connection error before work starts is retried up to three times. Errors from the optional LLM never fail an evaluation, because the rule-based ratings are kept as a tagged fallback. The endpoint list, the full state machine and the retry policy are in \code{docs/ENGINEERING\_NOTES.md}.

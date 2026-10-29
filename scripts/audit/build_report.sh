@@ -3,7 +3,7 @@
 # `multirow` is declared in main.tex but unused, and absent from the image, so the scratch copy drops it.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"; B="$(mktemp -d)"
-cp -r "$ROOT/report/main.tex" "$ROOT/report/chapters" "$ROOT/report/figures" "$B/"
+cp -r "$ROOT/report/main.tex" "$ROOT/report/chapters" "$ROOT/report/figures" "$ROOT/report/prompts" "$B/"
 sed -i 's/longtable,multirow}/longtable}/' "$B/main.tex"
 curl -sSL -o "$B/t.zip" https://mirrors.ctan.org/macros/latex/contrib/titlesec.zip
 (cd "$B" && unzip -oq t.zip && cp titlesec/*.sty .)

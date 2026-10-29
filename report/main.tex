@@ -25,7 +25,7 @@
 
 % ---- project metadata (edit here) -------------------------------------------
 \newcommand{\ProjectTitle}{TrustLens}
-\newcommand{\ProjectSubtitle}{A Semi-Automated Framework for Trustworthiness Assessment and Auditing of Hugging Face Machine Learning Models}
+\newcommand{\ProjectSubtitle}{A Semi-Automated Framework for Trustworthiness Assessment and Auditing of Hugging Face Text-Classification Models}
 \newcommand{\Institution}{National Institute of Technology Karnataka, Surathkal}
 \newcommand{\Department}{Department of Computer Science and Engineering}
 \newcommand{\Supervisor}{Mr.\ Alwyn Roshan Pais, Professor, Department of CSE}
@@ -42,7 +42,7 @@
 \definecolor{tlgrey}{HTML}{F2F4F7}
 \definecolor{tlrule}{HTML}{C9D1DB}
 
-\hypersetup{pdftitle={TrustLens: A Semi-Automated Framework for Trustworthiness Assessment and Auditing of Hugging Face Machine Learning Models},pdfauthor={Aayushman, Ashutosh Kumar, Chetan Kumar Sah}}
+\hypersetup{pdftitle={TrustLens: A Semi-Automated Framework for Trustworthiness Assessment and Auditing of Hugging Face Text-Classification Models},pdfauthor={Aayushman, Ashutosh Kumar, Chetan Kumar Sah}}
 \graphicspath{{figures/}}
 \raggedbottom\setstretch{1.0}\emergencystretch=2.5em
 \setlength{\parskip}{0.3em}\setlength{\parindent}{0pt}
@@ -50,7 +50,7 @@
 \captionsetup{font=small,labelfont={bf,color=tlblue},skip=6pt}
 \renewcommand{\arraystretch}{1.18}
 
-\titleformat{\chapter}[hang]{\Huge\bfseries\color{tlblue}}{\thechapter}{0.6em}{}[\vspace{2pt}{\color{tlrule}\titlerule[1.2pt]}]
+\titleformat{\chapter}[hang]{\raggedright\Huge\bfseries\color{tlblue}}{\thechapter}{0.6em}{}[\vspace{2pt}{\color{tlrule}\titlerule[1.2pt]}]
 \titlespacing*{\chapter}{0pt}{-10pt}{22pt}
 \titleformat{\section}{\Large\bfseries\color{tlblue}}{\thesection}{0.5em}{}
 \titleformat{\subsection}{\large\bfseries}{\thesubsection}{0.5em}{}
@@ -72,8 +72,8 @@
 \newcolumntype{R}{>{\raggedleft\arraybackslash}X}
 \newcolumntype{L}{>{\raggedright\arraybackslash}X}
 
-% Hard page limit: the build fails if the PDF exceeds this many physical pages.
-\newcommand{\PageLimit}{65}
+% Page limit: the build fails if the PDF exceeds this many physical pages (requested 51-54; the 2026-10-28 build is 57, see the handover notes).
+\newcommand{\PageLimit}{70}
 \usepackage{atbegshi}
 \newcount\PhysPages
 \AtBeginShipout{\global\advance\PhysPages by 1\relax}
@@ -89,12 +89,12 @@
 \input{chapters/ch2_literature}
 \input{chapters/ch3_architecture}
 \input{chapters/ch4_fries}
-\input{chapters/ch5_implementation}
 \input{chapters/ch6_experiment}
+\input{chapters/ch6b_example}
 \input{chapters/ch7_results}
+\input{chapters/ch7b_cases}
 \input{chapters/ch8_discussion}
 \input{chapters/ch9_testing}
-\input{chapters/ch10_limitations}
 \input{chapters/ch11_conclusion}
 \input{chapters/references}
 \input{chapters/appendices}

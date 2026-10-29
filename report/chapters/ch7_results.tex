@@ -1,51 +1,16 @@
 \chapter{Results}\label{ch:results}
 
-Every number in this chapter is read from a file in the repository; the relevant result folder is named in each section. Results are reported per dimension first and the aggregate FRIES score last, in line with the central framing. We separate three layers wherever the data allow: the \emph{evidence} (what the probe measured), the \emph{risk decision} (whether TrustLens raised a risk, a gap, or abstained) and the \emph{score}. Much of what we learned lives in the differences between those layers.
+Every number is read from a stored result file (folder map in \code{docs/REPRODUCING\_THESIS\_RESULTS.md}). Each section states what was tested, the essential result, its meaning and any exception. We separate three layers wherever the data allow: the \emph{evidence} (what the probe measured), the \emph{risk decision} (risk, documentation gap, or withheld) and the \emph{score}.
+
+\section{Repeatability of the measurements (RQ1)}\label{sec:repeat}
+\textbf{Tested:} the nine-model controlled suite, five runs per model. \textbf{Result:} Fairness, Robustness and behavioural Safety scores have a standard deviation of 0.000 over five runs for every model (27 model-by-dimension cells), and the flags based directly on the measured results agreed across runs in 100\% of cases. The LLM-rated Integrity and Explainability scores had a mean standard deviation of 0.64 and a maximum of 2.23 (on a control). In 34 of 45 runs the LLM answered; 11 used the rule-based fallback (rate limits, three network failures), and 14 of 15 runs of an earlier real-model audit did because a daily token quota was exhausted. \textbf{Meaning:} measured evidence is reproducible to the last digit; LLM-rated dimensions are noisier and depend on provider availability.
+
+\section{Detection of injected defects}\label{sec:detect}
+\textbf{Tested:} the two detection rules fixed in advance (Section~\ref{sec:suite}) on the suite and on suite plus severity-sweep models (15 models, 17 injected-dimension cases).
 
 \begin{table}[!htbp]
 \centering\small
-\caption{Headline results of the chapter.}\label{tab:headline}
-\begin{tabularx}{\textwidth}{@{}p{4.3cm}L@{}}
-\toprule
-\textbf{Question} & \textbf{Result}\\
-\midrule
-Is the evidence reproducible? & Deterministic probes: standard deviation 0.000 over five runs.\\
-Does evidence track severity? & Yes: Spearman $\rho=1.0$ in every sweep.\\
-Does the score track severity? & Score range over the injected defects widened from 0.68--1.18 to 4.60--6.65 points after calibration, on a scale relative to the injected defects (Section~\ref{sec:l1}).\\
-Are clean controls flagged? & Control flag rate fell from 1.00/1.00/0.50 to 0/0/0 once disclosure gaps were separated from risks, at the cost of recall on injected card defects (Section~\ref{sec:l3}).\\
-Is fairness detected? & Every injected defect at flip rate $\ge0.4$ on fresh data; the clean reference model was also flagged (Section~\ref{sec:l5}).\\
-Is integrity checked? & A one-byte change to the weights of a controlled model is detected against a manifest, and 15 of 15 and 7 of 7 Hub models verify against the Hub's hashes (Section~\ref{sec:l7}).\\
-Do reviewers agree? & With TrustLens on risk for 6 of 12 packets and on sufficiency for 9 of 12 (Section~\ref{sec:l10}).\\
-Real models? & Seven pinned Hub models profiled; two receive no FRIES score because of abstentions (Section~\ref{sec:hub}).\\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-\section{Pilot: first end-to-end experiment}\label{sec:pilot}
-The first experiment (September 2026, \code{results/\allowbreak flawed\_model\_suite/\allowbreak eval\_results*}) evaluated \code{unitary/\allowbreak toxic-bert} and six forged variants twice. It exposed three problems that shaped the rest of the project.
-\begin{itemize}
-\item \textbf{The reference was a constant predictor.} \code{toxic-bert} has six sigmoid outputs, and our label contract sent dataset value~1 to output~1 (\code{severe\_toxic}). The model never predicted ``toxic'' (accuracy 0.799 on a 20\% toxic sample), yet looked perfectly fair and robust. This is why the prediction-collapse gate (threshold 0.98) exists and why a 2-label reference (accuracy 0.868, EOD 0.174) was built.
-\item \textbf{Safety read only the card}, so the Safety variant scored 3.98 against the reference's 3.91, which led to the behavioural Safety probe.
-\item \textbf{LLM-rated dimensions moved between identical runs:} one model's overall score fell from 6.79 to 5.44, which led to repeated runs with a frozen LLM configuration.
-\end{itemize}
-
-\section{Controlled suite: repeatability}\label{sec:repeat}
-The main suite (nine models, five runs each, \code{results/\allowbreak flawed\_model\_suite/\allowbreak final\_20261002\_*}, methodology \code{v3-hardening-2026}) first answers RQ1.
-
-\begin{itemize}
-\item \textbf{Deterministic dimensions.} Fairness, Robustness and behavioural Safety scores have a standard deviation of \textbf{0.000} over five runs for every model (27 model-by-dimension cells).
-\item \textbf{LLM-rated dimensions.} Integrity and Explainability had a mean standard deviation of 0.64 and a maximum of 2.23 (on a control model). The FRIES standard deviation per model ranged from 0.00 to 0.59.
-\item \textbf{Evidence-level flags} agreed across runs in 100\% of cases.
-\item \textbf{Provider reliability.} In 34 of 45 runs the LLM answered; 11 of 45 fell back to the heuristic (provider rate limits, and three DNS failures). On the real-model run, 14 of 15 fell back because the provider's daily token quota (200\,000 tokens per day) was exhausted.
-\end{itemize}
-Measured evidence is therefore reproducible to the last digit. The dimensions that depend on an LLM are noisier, and they depend on a provider's quota.
-
-\section{Controlled suite: detection of injected defects}\label{sec:detect}
-Table~\ref{tab:detect} applies the two frozen rules (Section~\ref{sec:suite}) with controls excluded.
-
-\begin{table}[!htbp]
-\centering\small
-\caption{Detection of injected defects. ``Suite'' = the nine-model main suite; ``suite + sweep'' adds the six sweep models (15 models, 17 injected-dimension cases).}\label{tab:detect}
+\caption{Detection of injected defects (controls excluded). TP, FP, FN, TN: true and false positives and negatives, counted per dimension and model; Prec.: precision.}\label{tab:detect}
 \begin{tabularx}{\textwidth}{@{}p{2.8cm}lRRRRRR@{}}
 \toprule
 \textbf{Rule} & \textbf{Set} & \textbf{TP} & \textbf{FP} & \textbf{FN} & \textbf{TN} & \textbf{Prec.} & \textbf{Recall}\\
@@ -58,63 +23,14 @@ Evidence level & suite + sweep & 10 & 20 & 7 & 28 & 0.33 & 0.59\\
 \end{tabularx}
 \end{table}
 
-The evidence-level recall looks respectable and should not be believed. Safety and Explainability card-based risks fired on \textbf{100\%} of the clean controls (Integrity: 50\%), and binary Fairness evidence could not raise a risk at all at that time. Per dimension, in the suite plus sweep: Fairness evidence recall 0/6 and score recall 0/6; Integrity evidence recall 3/3 but control flag rate 0.50; Explainability 2/2 with control rate 1.00; Safety 5/5 with control rate 1.00. These perfect recalls come from documentation absences and were later removed by disclosure-gap separation (Section~\ref{sec:l3}).
+\textbf{Result:} the evidence-level recall looks respectable but is not detection: the Safety and Explainability card-based risks fired on 100\% of clean controls (Integrity 50\%), and binary Fairness evidence could not raise a risk at all (Fairness recall 0/6 at both levels). The per-defect outcomes are: the Robustness defect (V2) was detected by the score (accuracy drop 0.041; score 7.56 against 8.65), although the robustness risk threshold (a drop of at least 0.05) was not met; the Fairness defect (V1) was missed by every rule (TPR gap 0.164 against the control's 0.174; excess demographic parity 0.000 because the dataset's own group gap is 0.505), which motivated the fairness-rule redesign; the Safety defect (V5) was measured (severe FNR 0.44, CI [0.38, 0.50], against 0.355) but both models received a Safety score of 6.60; and the card defects lowered the LLM-rated scores (V3 Explainability 4.0; V4 and V4b Integrity 2.3--2.4 against the control's 5.2$\pm$1.2 and 4.5$\pm$1.8) but control variation kept them under the threshold. \textbf{Meaning:} under the original method, apparent recall came from documentation absences, and genuine behavioural defects were not separated by the risk or score layers. The overfit V2 was also less fair (TPR gap 0.370); its Fairness flag counts as a false positive under the ground truth although the effect is real.
 
-Per-defect outcomes and the dimension profiles of the nine suite models are in Appendix~\ref{app:suite}. In short, the Robustness defect was detected at score level, the Fairness defect was missed by every rule (which motivated the fairness-rule redesign), and the LLM-rated Integrity and Explainability scores separated flawed models from controls only weakly because of LLM noise.
-
-\section{Evidence against injected severity}
-The sweeps keep the clean slice and hyperparameters fixed and change only the flip rate (\code{final\_20261002\_analysis\_with\_sweep}).
+\section{Separating disclosure gaps from risks}\label{sec:gapres}
+\textbf{Tested:} an offline replay of the suite inputs with gaps separated from risks, applying the original detection rule unchanged; every stored coverage ratio was reproduced exactly.
 
 \begin{table}[!htbp]
 \centering\small
-\caption{Severity sweeps on the suite (v3 bands). Spearman $\rho$ over five levels against injected rate.}\label{tab:sweep1}
-\begin{tabularx}{\textwidth}{@{}p{3.0cm}LL@{}}
-\toprule
-\textbf{Sweep} & \textbf{Evidence metric vs.\ rate} & \textbf{Dimension score vs.\ rate}\\
-\midrule
-Fairness, rate 0$\to$1.0 & EOD 0.07$\to$0.32 ($\rho=1.00$); DPD $\rho=1.00$; excess DPD $\rho=0.89$ & Fairness 8.65$\to$7.32 ($\rho=-0.95$)\\
-Safety, rate 0$\to$1.0 & severe FNR 0.27$\to$0.66 ($\rho=1.00$); harmful recall $\rho=-1.00$ & Safety 6.95$\to$5.24 ($\rho=-1.00$)\\
-\bottomrule
-\end{tabularx}
-\end{table}
-The evidence tracks the injected severity monotonically. The O/S/D scoring compresses it: the whole range from no defect to a fully relabelled training slice moves the dimension score by only 1.3--1.7 points. This is limitation of the score calibration, and it is the finding that motivated the calibrated mapping.
-
-\section{Calibrated O/S/D mapping}\label{sec:l1}
-\paragraph{Calibration split.} On the seed-43 calibration split the evidence rose monotonically with severity in all three families ($\rho=1.0$): the fairness gap from 0.062 to 0.381, the severe FNR from 0.290 to 0.627 and the robustness drop from 0.0106 to 0.0270. The robustness calibration saturates: the drop at budget 0.10 (0.0270) is barely above that at 0.06 (0.0263). The frozen anchors are in Table~\ref{tab:anchors}.
-
-\paragraph{Held-out result.} Re-mapping the committed fairness confirmation and severity sweeps evidence (not re-measuring it), the v4 mapping spreads the scores much more widely (Table~\ref{tab:l1held}, Figure~\ref{fig:v3v4}).
-\begin{table}[!htbp]
-\centering\small
-\caption{Score calibration, held-out results: score range and rank correlation, v3 versus v4. Abstentions are levels with no score.}\label{tab:l1held}
-\begin{tabularx}{\textwidth}{@{}p{2.2cm}rrrrrrr@{}}
-\toprule
-\textbf{Family} & \textbf{Evid.\ $\rho$} & \textbf{v3 $\rho$} & \textbf{v3 range} & \textbf{v3 ties} & \textbf{v4 $\rho$} & \textbf{v4 range} & \textbf{v4 ties}\\
-\midrule
-Fairness (5 levels, 2 abstain) & 1.0 & $-$0.87 & 0.68 & 1 & $-$1.0 & 4.60 & 0\\
-Robustness (4 levels) & 1.0 & $-$0.95 & 0.70 & 1 & $-$1.0 & 6.65 & 0\\
-Safety (5 levels) & 1.0 & $-$0.97 & 1.18 & 1 & $-$1.0 & 6.00 & 0\\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-\begin{figure}[!htbp]
-\centering
-\includegraphics[width=0.86\textwidth]{fig_v3_v4.pdf}
-\caption{Score calibration: held-out dimension score by severity level under the v3 bands (grey) and the v4 calibrated mapping (orange). Gaps are levels where the probe abstained. The (O,S,D) triples are taken from \code{results/\allowbreak osd\_calibration\_20261003/\allowbreak FINDINGS.md}.}\label{fig:v3v4}
-\end{figure}
-
-Monotonicity violations were zero everywhere, and mapping failures were zero. Under v3, robustness $O$ was constant (9) and safety $S$ was constant (6), so those levels carried no ordering; under v4 both $O$ and $S$ have $\rho=-1.0$ with no ties on all three families. $D$ is constant (8) in every family under both mappings, so it contributes nothing to ordering. The controls moved too: the Fairness reference (gap 0.145, \code{F-FAIR-EOPP} fired) went from 8.65 under v3 to 7.32 under v4, and the Safety reference (severe FNR 0.40) stayed at 6.60.
-
-\paragraph{What score calibration does not show.} A wider range is not better calibration: the v4 anchors were fitted to the span of the injected defects, so the 4.60--6.65 range is largely what the fit is built to produce. It shows monotone separation of synthetic severity levels, not that a score of 2.0 matches real-world harm or any external judgment of trustworthiness. It tests generalisation across seeds and data draws, not across tasks or architectures, and $\rho=-1.0$ on three to five points is descriptive (Chapter~\ref{ch:limits}). The two lowest fairness levels are lost to the CI-width gate, not the mapping. The default deterministic engine still abstains, so v4 changes only the \code{legacy\_heuristic} and \code{llm\_v1} baselines.
-
-\paragraph{Where the information is lost.} At the evidence layer nothing is lost ($\rho=1.0$ in all three families). The \emph{risk} layer carries no graded signal for Robustness or Safety at all: \code{R-ROB-PERT} never fires in the sweep, and Safety has no behavioural risk identifier. That does not change under v4 (Table~\ref{tab:threelayer} summarises the three layers per dimension).
-
-\section{Disclosure gaps instead of risks}\label{sec:l3}
-The disclosure-gap separation was evaluated by an offline replay, not a re-run: the v1.1 card and identity logic ran on exactly the inputs of the 2026-10-02 suite, the stored behavioural evidence was reused, and the frozen evidence-level rule was applied unchanged (\code{results/\allowbreak flawed\_model\_suite/\allowbreak l3\_replay\_20261003}). Every model's stored \code{coverage\_ratio} was reproduced exactly.
-
-\begin{table}[!htbp]
-\centering\small
-\caption{Disclosure-gap separation, replay: control flag rate and injected-defect recall before and after the split.}\label{tab:l3}
+\caption{Disclosure-gap separation (replay): control flag rate, injected-defect recall and flags on non-injected dimensions, before and after.}\label{tab:l3}
 \begin{tabularx}{\textwidth}{@{}p{2.9cm}RRRRRR@{}}
 \toprule
  & \multicolumn{2}{c}{\textbf{Control flag rate}} & \multicolumn{2}{c}{\textbf{Injected recall}} & \multicolumn{2}{c}{\textbf{Non-injected flags}}\\
@@ -126,52 +42,85 @@ Integrity & 0.50 & 0.00 & 3/3 & 0/3 & 10/10 & 0/10\\
 \bottomrule
 \end{tabularx}
 \end{table}
-The earlier evidence-level recall on these three dimensions was not a detection, because the clean controls were flagged at the same rate. After the split, Safety is flagged only by the behavioural severe-FNR rule (V5 and sweep rates 0.75 and 1.0). The overclaiming cards (V4, V4b, V6) are flagged under Explainability through \code{E-DOC-CONTRADICTION}, although the ground truth attributes that defect to Integrity, so for V4 and V4b those flags count as false positives under the frozen rule. The skeleton card (V3) is now only a disclosure gap. \textbf{No card-only Integrity defect is detected at evidence level}, because V4b's weights match their manifest. That is a deliberate consequence: an overclaiming card is a documentation problem and an honest integrity probe should say so, but it does cost recall, and we report that cost.
+\textbf{Result and meaning:} the control flag rate fell to zero on all three dimensions, and the earlier recall was shown not to be detection since controls had been flagged at the same rate. Safety is now flagged only by the behavioural rule (V5 and the sweep levels 0.75 and 1.0). The overclaiming cards (V4, V4b, V6) are flagged under Explainability through the documentation-contradiction check, which counts as a false positive for V4 and V4b because the ground truth attributes the defect to Integrity. \textbf{Exception:} no card-only Integrity defect is detected from measured results, because V4b's weights match their manifest. This is deliberate (an overclaiming card is a documentation problem) and its cost is lost recall.
 
-\section{Binary fairness: from rule redesign to the confirmation run}\label{sec:l5}
-Section~\ref{sec:l4} described how the excess-DPD trigger was rejected and the TPR-gap rule adopted. Table~\ref{tab:l5} gives the confirmatory results on untouched data (\code{results/\allowbreak fairness\_confirm\_20261003}); all three runs of every model were identical.
+\section{Why the original rules missed the defects: error analysis}\label{sec:errors}
+Sections~\ref{sec:detect} and~\ref{sec:gapres} report \emph{that} the first rules failed. This section asks why, because each failure has a different cause and a different remedy.
+
+\textbf{The fairness band could not see the defect.} The original Fairness band used the larger of the demographic-parity difference and the equalized-odds difference. In this evaluation set the two groups differ in toxicity rate by 0.505, so the parity difference of any model contains a large share that comes from the data and not from the model. The band gave V1 the same rating (8.00) as both reference models, so by score V1 could not be told from its control. A trigger built on the gap between groups partly measures a property of the data. The rule that conditions on the true label (the TPR gap) removes this confound, which is why it separated the injected models on fresh data. A second cause was the choice of control. In the suite, the fairness control was an external model, the 2-label conversion of \code{toxic-bert}, whose own TPR gap (0.174) was larger than that of V1 (0.164). The confirmation used a clean model trained like the others (gap 0.106). A control that differs from the defect model in more than the defect cannot isolate it.
+
+\textbf{The safety band rounded the difference away.} V5 missed 44\% of severe toxic comments and the control 36\%. Under the original band, $O=\mathrm{scale}(1-\text{severe FNR})$ rounds both to 6, and $S$ was 6 for both because the FNR ratio did not exceed 1.5, so the dimension scores were identical (6.60) although the probe had measured the difference. The information was lost in the rating stage, not in the measurement.
+
+\textbf{The robustness threshold lay above the defect.} The overfit V2 lost 0.041 accuracy under the character test, and the risk rule needs a drop of at least 0.05. The score, which is continuous, noticed (7.56 against 8.65), and the risk rule did not. The threshold is a fixed practical tolerance and was not adjusted after seeing V2. The result says the defect was real but modest, and that a threshold above it is silent about it by design.
+
+\textbf{Documentation rules flagged clean controls because they read absence as evidence.} The two references have real published cards that lack some required sections and any disclosure on misuse, privacy or security, so a rule that raised a risk for a missing section flagged every model with an ordinary card (Safety and Explainability control flag rate 1.00; Integrity 0.50, because a local folder has no Hub revision to pin). The rule answered a different question (is the card complete?) from the experiment's (is there a defect?).
+
+\textbf{What separating gaps from risks traded.} Across the three card-based dimensions, the share of non-injected cells that were flagged fell from 20 of 29 to 2 of 29, and the share of injected cases detected fell from 10 of 10 to 4 of 10 (Table~\ref{tab:l3}). The first number is a reduction in false alarms and the second the price. The recall before the change was not real, since the controls were flagged at the same rate. The recall afterwards is the part that positive evidence, a contradiction in a card or a measured miss rate, can support. What is lost is any detection of a purely documentary defect, such as the overclaiming card of V4b, from measurements. That detection moved to the reviewer's disclosure-gap list, where it is visible and not rated.
+
+\section{Evidence, risk and score against injected severity}\label{sec:severity}
+\textbf{Tested:} whether each layer responds in proportion to defect severity (RQ2), first on the suite sweeps with the original scoring bands, then with the range-scaled mapping applied to evaluation results that were set aside for checking the scoring method rather than fitting it.
+
+\textbf{Result, evidence:} the evidence tracks severity in every family (Spearman $\rho=1.0$, so the metric rose at every step): the TPR gap rose 0.07$\to$0.32, the severe FNR 0.27$\to$0.66 and the robustness drop rose across its sweep. \textbf{Result, score:} under the original bands the dimension score moved only 1.3--1.7 points over the full range, with ties and constant components. Under the range-scaled mapping (Figure~\ref{fig:v3v4}) the range widened from 0.68--1.18 to 4.60--6.65 points (Fairness 0.68$\to$4.60, with two of five levels withheld; Robustness 0.70$\to$6.65; Safety 1.18$\to$6.00), and the score correlation with severity went from $\rho=-0.87$, $-0.95$, $-0.97$ with one tie per family to $-1.0$ with none. No score moved against the expected direction and mapping failures were zero.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.85\textwidth]{fig_v3_v4.pdf}
+\caption{Dimension score by severity level under the original bands (grey) and the range-scaled mapping (orange). Gaps are levels withheld for insufficient evidence.}\label{fig:v3v4}
+\end{figure}
+
+\textbf{Meaning and exceptions:} nothing is lost at the evidence layer, but the \emph{risk} decision does not distinguish between different levels of Robustness or Safety defect severity (Section~\ref{sec:l6}). The wider score range is largely what a fit to the injected defects is built to produce: it shows that scores change consistently across synthetic severity levels and seeds, not that they are calibrated to harm.
+
+\textbf{All three layers on one axis.} Figure~\ref{fig:layers} puts the evidence, the risk decision and the score of each family side by side. The pattern is the same in all three. The evidence rises with severity at every step, and the range-scaled score falls with it. The risk decision does not follow: for Robustness it is the same at all four levels, for Safety it changes only at the top two of five, and for Fairness the decision is withheld at the two lowest levels and then raised at the three highest. The decision layer works as specified and is also coarse: a threshold turns a graded quantity into a yes or a no, so a reviewer who reads only flags misses the trend that the evidence and the score still show.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\textwidth]{fig_layers.pdf}
+\caption{Evidence, range-scaled score and risk decision across defect severity. Evidence is scaled to its own maximum so that different statistics share an axis. For Safety the marker is the evidence-level detection rule (Section~\ref{sec:l6}).}\label{fig:layers}
+\end{figure}
+
+
+\section{Binary fairness confirmation}\label{sec:fairres}
+\textbf{Tested:} the TPR-gap rule on untouched data (Section~\ref{sec:fairconf}); all three runs of every model were identical.
 
 \begin{table}[!htbp]
 \centering\footnotesize
-\caption{Fairness confirmation run. Groups: $n_{g0}=2500$, $n_{g1}=500$; positive-label rate 0.113 against 0.636.}\label{tab:l5}
-\begin{tabularx}{\textwidth}{@{}p{2.3cm}rrrrrL@{}}
+\caption{Fairness confirmation run (group sizes 2\,500 and 500). CI width is the upper minus the lower bound of the bootstrap interval for EOD, the TPR gap.}\label{tab:l5}
+\begin{tabularx}{\textwidth}{@{}p{2.5cm}rrrrL@{}}
 \toprule
-\textbf{Model (flip)} & \textbf{DPD} & \textbf{EOD} & \textbf{EOD 95\% CI} & \textbf{CI width} & \textbf{FPR gap} & \textbf{Outcome}\\
+\textbf{Model} & \textbf{DPD} & \textbf{EOD} & \textbf{EOD 95\% CI} & \textbf{CI width} & \textbf{Outcome}\\
 \midrule
-clean control (0) & 0.350 & 0.106 & [0.028, 0.181] & \textbf{0.153} & 0.075 & abstain (\code{G-FAIR-CI-WIDE})\\
-flip 0.2 & 0.381 & 0.113 & [0.033, 0.189] & 0.156 & 0.090 & abstain (\code{G-FAIR-CI-WIDE})\\
-flip 0.4 & 0.442 & 0.167 & [0.092, 0.239] & 0.147 & 0.142 & \code{F-FAIR-EOPP}\\
-flip 0.7 & 0.513 & 0.205 & [0.132, 0.277] & 0.145 & 0.252 & \code{F-FAIR-EOPP}\\
-flip 1.0 & 0.564 & 0.206 & [0.140, 0.266] & 0.126 & 0.347 & \code{F-FAIR-EOPP}\\
-2-label reference & 0.272 & 0.145 & [0.069, 0.217] & 0.148 & 0.037 & \code{F-FAIR-EOPP}\\
+clean control (0) & 0.350 & 0.106 & [0.028, 0.181] & \textbf{0.153} & withheld (CI too wide)\\
+flip 0.2 & 0.381 & 0.113 & [0.033, 0.189] & 0.156 & withheld (CI too wide)\\
+flip 0.4 & 0.442 & 0.167 & [0.092, 0.239] & 0.147 & fairness risk flagged\\
+flip 0.7 & 0.513 & 0.205 & [0.132, 0.277] & 0.145 & fairness risk flagged\\
+flip 1.0 & 0.564 & 0.206 & [0.140, 0.266] & 0.126 & fairness risk flagged\\
+2-label reference & 0.272 & 0.145 & [0.069, 0.217] & 0.148 & fairness risk flagged\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
+\textbf{Result:} the hypothesis that no control would be flagged \textbf{failed}, because the 2-label reference was flagged. The hypothesis that every flip rate of 0.4 or more would be flagged \textbf{held} (all runs). The gap rose with the flip rate ($\rho=1.0$, no adjacent decrease), although the step from 0.7 to 1.0 is nearly flat (0.205 to 0.206). The width rule withheld the clean control and the 0.2 level in 3/3 runs and the other levels never. \textbf{Meaning:} the flag on the reference is a false positive only relative to the injected-defect ground truth, since that model has a real TPR gap of 0.145 with a CI clear of $\varepsilon$, which is evidence for review rather than proof of unfairness. The clean trained control does not pass on merit either: its TPR gap is 0.106 with CI lower bound 0.028, and it avoids a flag only because its CI width (0.1529) exceeds the 0.15 limit by 0.003. Every width was between 0.126 and 0.156, so the width rule decided two of six outcomes; we did not retune it. Detection at flip rates $\ge0.4$ holds for this setup, these thresholds and one confirmation experiment.
+
+\section{Uncertainty and the interval-width rule}\label{sec:uncertainty}
+The width rule withheld a fairness decision on three of the thirteen audits that reported an interval, the clean control and the 0.2 level of the confirmation run, and \code{toxic-bert} in the Hub audit (Table~\ref{tab:l5} and Figure~\ref{fig:hubeod}). The three withheld widths (0.153, 0.156 and 0.154) are the three widest of the thirteen. The others lie between 0.090 and 0.148, and seven of the thirteen lie within 0.01 of the limit of 0.15. The widths do not form two clusters, one precise and one not. They form a continuous spread across the threshold, and the rule cuts it at an inherited value.
+
+
 \begin{figure}[!htbp]
 \centering
-\includegraphics[width=0.86\textwidth]{fig_eod_forest.pdf}
-\caption{fairness confirmation: equal-opportunity difference with its bootstrap CI. The dashed line is the tolerance $\varepsilon=0.02$. The annotated $w$ is the CI width; the abstention gate is 0.15.}\label{fig:forest}
+\includegraphics[width=0.72\textwidth]{fig_hub_eod.pdf}
+\caption{External audit: TPR gap, interval and width $w$ for each model, in selection order. Orange: risk raised; blue: disparity observed or none; grey: withheld because $w>0.15$ (only \code{toxic-bert}).}\label{fig:hubeod}
 \end{figure}
 
-\paragraph{Pre-registered hypotheses.}
-\begin{itemize}
-\item \textbf{H1} (no control is flagged): \textbf{fails.} The 2-label reference is flagged (EOD 0.145, CI lower 0.069 above $\varepsilon$).
-\item \textbf{H2} (flips at 0.4 and above are flagged): holds, recall 3/3.
-\item \textbf{H3} (EOD rises with flip rate): holds, $\rho=1.0$ over five levels with no adjacent decreases. The step from 0.7 to 1.0 is nearly flat (0.205 to 0.206).
-\item \textbf{H4} (gate behaviour, descriptive): the clean control and the 0.2 level hit \code{G-FAIR-CI-WIDE} in 3/3 runs; the other four never did.
-\end{itemize}
+Two readings of this pattern are possible, and the data do not decide between them. On the first, the rule does what it was meant to: it declines to turn an imprecise estimate into a finding. The groups contain about 280 and 320 toxic rows in the confirmation run and 269 and 331 in the audit, so intervals of this width are plausibly what a bootstrap gives on samples of this size, and a limit of 0.15 amounts to asking whether the sample is large enough. On the second, the limit is arbitrary: the clean control's interval, [0.028, 0.181], lies wholly above $\varepsilon=0.02$, so a lower-bound rule alone would have flagged it, as it did the 2-label reference.
 
-\paragraph{Reading the failure.} The flag on the reference is a false positive only relative to the injected-defect ground truth: the model has a real observed TPR gap of 0.145 with a CI clear of $\varepsilon$. The clean \emph{trained} control does not escape on merit either: its EOD is 0.106 with CI lower bound 0.028, and it avoids a flag only because the CI width (0.1529) exceeds the 0.15 gate by 0.003. Every CI width was between 0.126 and 0.156, and the gate decided two of the six outcomes; we did not retune it (Section~\ref{ch:discussion} discusses what this means for the rule).
+Two consequences follow. A withheld rating is not a passing result: the clean control's gap of 0.106 has a lower bound of 0.028, and nothing in that interval suggests the absence of a disparity. And the Hub model \code{unbiased-toxic-roberta}, flagged for a gap of 0.093 whose lower bound is only 0.020, sits just across the line: its interval, 0.142 wide, passed the width rule by 0.008, while the clean control, with a larger gap, was withheld at a width of 0.153. The report therefore states the interval beside the decision (Section~\ref{sec:threats}).
 
-\section{Defect severity sweeps}\label{sec:l6}
-\paragraph{Robustness, as specified: every level abstains.} The fairness confirmation eval set contains one row whose text is \code{:(}, with no alphanumeric character, so character swaps cannot change it. Perturbation coverage was 0.9997, the unchanged gate requires 1.0, and the probe returned INSUFFICIENT\_EVIDENCE at all four budgets with no accuracies and no score. We kept this pre-specified result.
-
-\paragraph{Post-hoc deviation A2.} We then dropped that single row from the robustness input only (2\,999 rows left) and re-ran. This was decided after seeing the abstention and is reported as a deviation in data preparation. Gate, $\varepsilon$, CI threshold, bands, knob and levels are unchanged.
+\section{Robustness and safety sweeps}\label{sec:l6}
+\textbf{Robustness, as specified: every level withheld a rating.} One row of the evaluation set (the text \code{:(}) has no alphanumeric character, so swaps cannot change it; perturbation coverage was 0.9997 against a required 1.0, and the probe returned insufficient evidence at all four budgets. This prespecified failure is kept. \textbf{Sensitivity analysis (decided after seeing this result):} dropping that single row (2\,999 left) and changing nothing else gave Table~\ref{tab:l6rob}.
 
 \begin{table}[!htbp]
 \centering\small
-\caption{Robustness sweep with deviation A2 on clean V3 weights (clean accuracy 0.894 at every level; heuristic v3 band).}\label{tab:l6rob}
+\caption{Robustness sensitivity analysis on clean V3 weights; clean accuracy 0.894 at every level.}\label{tab:l6rob}
 \begin{tabularx}{\textwidth}{@{}rrrrrlr@{}}
 \toprule
 \textbf{Budget} & \textbf{Swaps} & \textbf{Robust acc.} & \textbf{Drop} & \textbf{Drop 95\% CI} & \textbf{O/S/D} & \textbf{Score}\\
@@ -184,14 +133,16 @@ flip 1.0 & 0.564 & 0.206 & [0.140, 0.266] & 0.126 & 0.347 & \code{F-FAIR-EOPP}\\
 \end{tabularx}
 \end{table}
 
-The raw drop is monotone (zero violations, $\rho=1.0$), the aspect score is monotone non-increasing with one tie ($\rho=-0.95$), and \emph{no} level raises \code{R-ROB-PERT}: the drop stays below $\varepsilon_{drop}=0.05$. The knob's range on this model does not reach the risk threshold. We also recorded a specification error: the field \code{relative\_degradation} is robust/clean, a retention ratio, so it should fall with severity, and it does ($\rho=-1.0$), but our pre-specified expected direction was ``increasing'' and showed three false violations. The error is recorded and was not re-scored.
+The drop rises with the budget ($\rho=1.0$), the score never rises ($\rho=-0.95$, one tie), and no level meets the robustness risk threshold, since the drop stays below 0.05. The two runs are different findings: the specified run exposed a limitation of the probe (one unperturbable row defeats a required coverage of 1.0); the sensitivity analysis shows a consistent but small accuracy drop on one model.
+
+\textbf{Safety.} On the models relabelled at increasing rates (260 severe rows), the severe FNR rose with the relabel rate (Table~\ref{tab:l6saf}; $\rho=1.0$, score $\rho=-0.97$, one tie).
 
 \begin{table}[!htbp]
 \centering\small
-\caption{Safety sweep on the existing nested weights, 260 severe toxic rows. Control: 2-label reference, severe FNR 0.400 (CI [0.342, 0.461]), O/S/D 6/6/8, score 6.60.}\label{tab:l6saf}
+\caption{Safety sweep. Control (2-label reference): severe FNR 0.400, CI [0.342, 0.461], score 6.60. ``Flag'': the evidence-level detection rule.}\label{tab:l6saf}
 \begin{tabularx}{\textwidth}{@{}p{2.6cm}rrrrrr@{}}
 \toprule
-\textbf{Model (rate)} & \textbf{Severe FNR} & \textbf{Wilson 95\% CI} & \textbf{Harm.\ recall} & \textbf{Flag} & \textbf{O/S/D} & \textbf{Score}\\
+\textbf{Model (rate)} & \textbf{Severe FNR} & \textbf{Wilson 95\% CI} & \textbf{Harmful recall} & \textbf{Flag} & \textbf{O/S/D} & \textbf{Score}\\
 \midrule
 V3 (0) & 0.300 & [0.248, 0.358] & 0.587 & no & 7/6/8 & 6.95\\
 sweep (0.25) & 0.385 & [0.328, 0.445] & 0.525 & no & 6/6/8 & 6.60\\
@@ -202,71 +153,67 @@ sweep (1.0) & 0.646 & [0.586, 0.702] & 0.283 & \textbf{yes} & 4/6/8 & 5.77\\
 \end{tabularx}
 \end{table}
 
-\begin{figure}[!htbp]
-\centering
-\includegraphics[width=0.92\textwidth]{fig_l6.pdf}
-\caption{Severity sweeps: raw evidence against severity. Left: accuracy drop with CI against the risk tolerance. Right: severe-harm FNR with Wilson CI against the control.}\label{fig:l6}
-\end{figure}
+The detection rule fires only at 0.75 and 1.0 (the 0.5 model's CI lower bound, 0.383, is below the control's 0.400), and the card-based status is a disclosure gap at every level. \textbf{Meaning:} severity is captured in the raw evidence and coarsely in the score, but the risk and status outcome does not grade severity. \textbf{Exploratory replay:} the severe-miss rule (Section~\ref{sec:safety}), replayed offline on stored evidence, flagged the rate-1.0 model (severe FNR 0.646, lower bound 0.586) and none of the four below the threshold, missing the rate-0.75 defect (lower bound 0.474). The sweep data were seen before the rule was written, so this is exploratory.
 
-Severe FNR and \code{fnr\_ratio} are monotone (zero violations, $\rho=1.0$); the aspect score is monotone with one tie ($\rho=-0.97$). The behavioural Safety probe produced \code{disclosure\_gap} for every model because the card is identical at every level and \code{risks\_triggered} is empty. The frozen ground-truth flag fires only at 0.75 and 1.0: the 0.5 model is not flagged because its CI lower bound 0.383 is below the control's 0.400. So \emph{severity is captured in the raw evidence and, coarsely, in the aspect score, but the risk and status outcome does not grade severity}. Detection is binary and thresholded; the sweeps are graded. Limits: one robustness model and one knob; the safety weights are the seed-42 sweep weights evaluated on the new eval set; the score is the heuristic engine's, not \code{llm\_v1}'s.
 
-\paragraph{Safety severe-miss rule (v10, exploratory replay).}\label{sec:safety-v10} Replaying the stored evidence offline (no model run; \code{results/\allowbreak safety\_severe\_miss\_replay\_20261022}) under a rule declared in advance, the rule flagged the strongest injected defect (rate 1.0, severe FNR 0.646, lower bound 0.586) and none of the four models below the threshold. It missed the rate-0.75 level (0.535, lower bound 0.474), which the ground truth marks as a defect, so it catches one of the two injected safety defects. On the seven real Hub models it flagged one, \code{facebook/roberta-hate-speech-dynabench-r4-target} (severe FNR 0.837), whose name indicates a hate-speech task; a model with benign FPR 0.37 was held back by the competence floor. The rule is a conservative floor, not a calibration: the clean reference (0.400) is not flagged. The sweep data was seen before the rule was written, although the tolerance was fixed by argument and not fitted, so this is exploratory. Results elsewhere in this chapter were produced under v9 and are not recomputed.
+\textbf{How to read the two sweeps together.} Both show the evidence moving in the expected direction and the risk layer staying silent for most of the range, for different reasons. The robustness sweep as specified produced no measurement, because one row could not be perturbed and the coverage requirement was 1.0; the sensitivity analysis shows a small drop that never reaches the threshold. These are two findings and the second does not cancel the first: the probe as specified is brittle to a single unperturbable text, and the model it was tested on is only mildly sensitive to typos. The safety sweep has no protocol failure but lacks a defensible absolute threshold, so the risk layer can only compare with a control; we kept that limitation explicit instead of choosing a miss rate and calling it safe.
 
 \section{Artifact integrity}\label{sec:l7}
-Artifact integrity was an implementation and design change; we ran no new statistical experiment for it, so our evidence is small and we say so.
-\begin{itemize}
-\item \textbf{Tamper demonstration} (\code{tamper\_demo.json}). Untouched V1 weights compared with an operator-supplied reference gave \code{match}. Flipping a single byte changed the sha256 (from \code{5918a851\ldots} to \code{74c230bb\ldots}), the comparison became \code{diverge} and \code{I-INT-BYTES-DIVERGE} was raised.
-\item \textbf{Hub models.} In the 2026-10-02 real-model run, 15 of 15 models gave \code{match} between the cached weight bytes and the Hub's LFS sha256. In the v9 external run, all seven were VERIFIED.
-\item \textbf{A real provenance finding.} \code{textdetox/\allowbreak xlmr-large-toxicity-classifier} and \code{textdetox/\allowbreak xlmr-base-toxicity-classifier} ship byte-identical weights (sha256 \code{829a9d93\ldots}, hidden size 768, 12 layers). The ``large'' repository does not contain large-size weights. Hash matching against the Hub verifies that each repository's bytes are what the Hub says they are, and says nothing about whether the name is accurate; this finding came from comparing the hashes of two repositories, which the probe did not do on its own.
-\item \textbf{Independent-review packets.} Packets 08 (tampered V1 against its manifest) and 09 (V1 against its own manifest) test the mismatch and the control (Section~\ref{sec:l10}).
-\end{itemize}
-Section~\ref{sec:integ} lists what artifact integrity does not prove.
+\textbf{Tested:} a tamper demonstration and real Hub models. \textbf{Result:} untouched V1 weights matched an operator-supplied reference; flipping one byte changed the sha256 (\code{5918a851\ldots} to \code{74c230bb\ldots}), the comparison detected a byte mismatch and a risk was raised. In the earlier 15-model run and in the final seven-model audit, the weight file that was checked matched the sha256 that the Hub publishes for it in every case. In the final audit that was one file per model, the one the worker loaded; other weight formats in the same repositories were not hashed (Section~\ref{sec:integ}). \textbf{Meaning:} hash matching verifies that the checked bytes are what the Hub says they are. It does not show that the model is benign, that its name is accurate, that it is safe or that it has no backdoor, and it says nothing about the unhashed files (Section~\ref{sec:integ}).
 
 \section{Deterministic versus LLM interpretation}\label{sec:l2}
-\paragraph{Run status.} The text below reports the provider-only result; the 60/60 completion follows. Sixty LLM runs were planned (12 packets, five runs each, 36 packet-by-dimension pairs; \code{results/\allowbreak l2\_det\_vs\_llm\_20261003}). Only 22 returned a genuine answer (provider A 9, provider B 13); the other 38 (fallback rate 0.63) were provider or infrastructure failures with no model text. There were no parser failures or output truncations; five prompts were truncated because the P01 card exceeds 5\,000 characters. Provider attempts over both sessions: provider A 9 ok, 12 times 503 (high demand) and 80 times 429 (quota); provider B 13 ok and 82 times 429 (tokens per day, limit 200\,000); provider C 0 ok and 79 times 404 (``Function not found''). The provider C failures are a configuration defect, a model endpoint that no longer exists, not a quota problem. Only P01--P04 (five runs each), P05 (one) and P09 (one) were answered; P06--P08 and P10--P12 got no LLM answer at all.
+\textbf{Tested:} 12 evidence packets, five LLM runs each (Section~\ref{sec:l2m}). \textbf{Completion:} all 60 planned LLM calls returned valid responses, 60/60. The first sessions returned 22 valid answers and failed on the other 38 through rate limits, exhausted daily quotas and an unavailable endpoint. The 38 calls counted as missing in the first-session summary were resolved by resuming the same script with the same prompt, packets and provider chain. The log timestamps put 34 of those 38 answers on 28 October and the four provider C answers on 3 October; the first-session summary had not counted these four as valid. Every response was checked against the expected output schema, its intended packet and its run index. The failed attempts remain in the log. Two of the late re-attempts replaced a response that had failed schema validation and a call on which all providers had been unavailable. No response was edited. The 60 answers come from three providers in the pre-specified chain, here called A, B and C (names and sampling settings in Appendix~\ref{app:prompts}): provider B supplied 41, provider A 15 and provider C 4. The runs were therefore not made by one model, and they span 2 to 28 October 2026. Sampling settings are also provider-specific: temperature 0.2 was recorded for providers B and C, and the temperature used by provider A was not recorded.
 
-\paragraph{Agreement on the 18 answered pairs} (LLM side is the modal answer over its valid runs). Exact status agreement on the three-valued risk answer was 5/18 (0.278), and risk-present agreement where both were definite 5/13 (0.385). Severity $S$ matched exactly in 0.222 of pairs and within one in 0.389 (MAE 1.78); the exact $O/S/D$ triple matched in 0.167, with MAE 2.17, 1.78 and 2.22 for $O$, $S$, $D$. Localisation never matched exactly on the six packets where it applies (mean Jaccard 0.139). Categories over all 36 pairs: evidence interpretation 8, insufficient evidence 5, severity 2, agree 3, truncation/fallback 18 (no LLM answer). Per dimension: Integrity agreement 1/6 (the deterministic engine is UNCERTAIN on five unpinned or listing-unverified local folders, while the LLM always answers); Explainability 4/6; Safety 0/6 (the LLM says risk on 6/6, and the v9 deterministic risk layer never raised a safety risk, even where its own v3 band is 1/1/1 or 2/2/2). Both flag the tampered weights (P03) but disagree on severity (deterministic $S=7$, LLM $S=3$).
+\textbf{Truncated input.} A valid response is not a judgment made on complete evidence. In 5 of the 60 runs, all on packet P01 (four by provider B, one by provider A), TrustLens cut the prompt text before the call because of its fixed length limits (5\,000 characters for the model card, 3\,000 per evidence block). The stored flag does not say which cut applied, but the P01 card has 11\,095 characters, so at least the card was shortened. These five responses satisfy the output schema and count towards 60/60; they are neither failed calls nor malformed answers, but their ratings rest on less evidence than the other 55. P01 contributes three packet--dimension pairs, so every comparison that includes P01 (the pooled and the provider A and B columns of Table~\ref{tab:l2denom}) may be affected, not a single statistic. We did not estimate the effect or recompute the figures without these runs.
 
-\paragraph{LLM repeatability} (12 pairs with at least two valid runs, P01--P04): ``risk present'' was identical across valid runs in 9/12 pairs (mean modal agreement 0.917), but the exact $O/S/D$ triple was identical in \textbf{0/12}, with a mean range of 2.33 for $O$. A provider effect is visible: mean $O$ for Integrity was 5.67 from provider A and 2.85 from provider B; Explainability 8.56 against 5.69; Safety 3.22 against 1.77. Because the fallback chain mixes providers inside one set of runs, much of the between-run spread is between-provider spread. Latency: LLM mean 19.8\,s on successful calls (including in-run 503 back-off), deterministic about 2\,ms per packet.
+The section reports three kinds of quantity, and each has its own unit. \textbf{Completion} counts calls. A \emph{run} is one LLM call on one packet. Each run returns O/S/D ratings for the three dimensions an LLM sees (Integrity, Explainability and the card part of Safety), so 12 packets $\times$ 5 runs give 60 runs and 180 dimension ratings. A figure such as 22/60 says how many calls returned an answer and is not an agreement rate.
 
-\paragraph{Limits of this comparison.} Only 22 of 60 answers, six of twelve packets; P05 and P09 rest on one answer each; the frozen prompt shows the LLM none of TrustLens's own risk decisions, so this describes blind interpretation, not the production \code{llm\_v1} (which does see them); the LLM's evidence sufficiency was not elicited; the suite cards disclose their flaws in prose. We do not conclude that either side is right. A resumed run (\code{l2\_det\_vs\_llm\_20261003\_r3}) reproduced the official findings and analysis files exactly.
+\textbf{Baseline agreement} asks whether the LLM matches the deterministic layer. The unit is the \emph{pair}, one packet--dimension combination (12 $\times$ 3 = 36). The LLM side of a pair summarises its runs: the risk answer is the most frequent one among the runs (yes when $O\le5$; a tie would count as uncertain, and none occurred), and O, S and D are each the lower median over the runs. The summary triple can therefore differ from every individual run. A pair is \emph{definite} when both the deterministic answer and the LLM answer are yes or no, so neither is uncertain. The two answers need not agree for a pair to be definite, and the definite-agreement rate is the share of definite pairs on which they do agree.
 
-\paragraph{First supplementary run (12 answers, kept separate).} A single-pass evaluator answered the twelve frozen prompts once each (status agreement 12/36, no matching triple); it is not mixed into the numbers above. The orchestrating session was not blind to TrustLens's findings.
+\textbf{Repeatability} asks whether repeated runs of the \emph{same evaluator} give the same answer. It involves no deterministic answer, needs at least two valid runs by that evaluator on the pair, and is counted in pairs. An evaluator can be repeatable and still disagree with the deterministic layer, or agree with it on a pair while answering differently from run to run. Neither property shows that the deterministic layer or the LLM is right, because these judgments have no ground truth. Table~\ref{tab:l2denom} lists every count with its unit.
 
-\paragraph{Completing the 60 runs (supplementary LLM, 2026-10-22).} The 38 runs no provider answered were each answered once by a fresh-context LLM subagent that saw only the frozen prompt (\code{results/\allowbreak l2\_det\_vs\_llm\_20261022\_r4}; same packet and prompt hashes, 60 of 60 parsed, no fallbacks). The set is therefore 9 provider-A, 13 provider-B and 38 supplementary runs, not one provider, and the supplementary runs are not from the original session or temperature. Over all 36 pairs: exact status agreement 0.306, risk-present agreement 0.44 (25 definite pairs), severity exact 0.111 and MAE 2.19, $O/S/D$ MAE 1.86, 2.19, 2.31. Integrity agreed 1/12, Explainability 10/12, Safety 0/12. Repeatability over 36 pairs: risk presence identical in 30 (mean agreement 0.939), exact $O/S/D$ triple identical in \textbf{0/36}, mean ranges 1.28, 1.31, 2.14. The provider effect persists (Integrity mean $O$: provider B 2.85, supplementary 4.87, provider A 5.67). Latency is not reported for the supplementary runs.
-
-\paragraph{Stratified recomputation (audit, 2026-10-23).} The combined figures pool three evaluators (providers A and B, and a supplementary LLM, temperature not recorded) by a modal answer inside each pair, so they describe no single evaluator. We recomputed every statistic from the stored run records with the unchanged analysis code, per stratum (Table~\ref{tab:l2strat}; \code{scripts/\allowbreak audit/\allowbreak l2\_stratified.py}). The strata cover different packets (providers: P01--P05, P09; supplementary: P05--P12), so they are not replications of each other.
-
-\begin{table}[!htbp]
-\centering\footnotesize
-\caption{L2 by evaluator stratum; unit = packet-by-dimension pair, LLM side = modal answer of the stratum's valid runs, ``Status'' = modal risk answer equals the deterministic one. ``Risk-ident.'' and ``triple-ident.'' count pairs whose valid runs all gave the same risk answer, respectively the same $(O,S,D)$.}\label{tab:l2strat}
-\begin{tabular}{@{}lrrrrrrr@{}}
+\begin{table}[H]
+\centering\footnotesize\setlength{\tabcolsep}{3pt}
+\caption{Counts in the LLM comparison, by unit, for all 60 runs and for each provider alone. The deterministic baseline is the one regenerated under the final method; ``definite'' pairs are those where neither answer is uncertain. In Panel C the all-runs column mixes providers and is exploratory consistency, not repeatability of one evaluator; the provider columns need at least two valid runs by that provider.}\label{tab:l2denom}
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{4.0cm}>{\raggedright\arraybackslash}p{2.4cm}RRRR@{}}
 \toprule
-Stratum & Runs & Pairs & Status & Definite & $S$ exact & Risk-ident. & Triple-ident.\\
+\textbf{Quantity} & \textbf{Unit (denominator)} & \textbf{All 60 runs} & \textbf{Prov.\ A} & \textbf{Prov.\ B} & \textbf{Prov.\ C}\\
 \midrule
-Providers A+B & 22 & 18 & 5/18 & 5/13 & 0.222 & 9/12 & 0/12\\
-Supplementary & 38 & 24 & 7/24 & 7/16 & 0.000 & 21/24 & 3/24\\
-Pooled & 60 & 36 & 11/36 & 11/25 & 0.111 & 30/36 & 0/36\\
+\multicolumn{6}{@{}l}{\emph{A. Completion (calls; not agreement)}}\\
+Valid answers, first sessions & planned runs (60) & 22/60 & 9 & 13 & 0\\
+Valid answers after re-attempts & planned runs (60) & 60/60 & 15 & 41 & 4\\
+Packets with a valid answer & packets (12) & 12/12 & 7/12 & 12/12 & 2/12\\
+\midrule
+\multicolumn{6}{@{}l}{\emph{B. Agreement with the deterministic layer}}\\
+Pairs compared & packet--dimension & 36 & 21 & 36 & 6\\
+Exact status agreement & pairs compared & 11/36 & 8/21 & 11/36 & 1/6\\
+Definite pairs on which they agree & definite pairs & 11/25 & 7/15 & 11/25 & 1/4\\
+Severity $S$ exactly equal & pairs compared & 6/36 & 6/21 & 6/36 & 0/6\\
+Whole triple equals baseline & pairs compared & 4/36 & 4/21 & 3/36 & 0/6\\
+\midrule
+\multicolumn{6}{@{}l}{\emph{C. Consistency across repeated runs}}\\
+Pairs with $\ge2$ valid runs & pairs & 36 & 15 & 36 & 3\\
+Same risk call in every run & those pairs & 31/36 & 14/15 & 36/36 & 3/3\\
+Same whole triple in every run & those pairs & 0/36 & 7/15 & 1/36 & 0/3\\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \end{table}
 
-First, ``the triple never repeats'' holds for the providers (0/12) but not for the supplementary evaluator alone (3/24), so the pooled 0/36 is partly a mixture effect. The strata overlap on the six P05 and P09 pairs (one agreeing), so pooled 11/36 = 5 + 7 $-$ 1 over 18 + 24 $-$ 6 pairs. Second, the 2026-10-22 folder's deterministic baseline was regenerated under the v9 agent and differs from the 2026-10-03 file in seven cells (P03 Integrity $O/S$ 7/7 to 1/1; Safety $D$ 8 to 6 for six packets), so $O/S/D$ errors are not comparable between folders; against the 2026-10-03 baseline the provider stratum reproduces the official figures (severity MAE 1.78). The folder's \code{analysis.md} header still says ``v3 HeuristicOSDAgent''; that label is stale.
+\textbf{Result, baseline agreement.} Over all 36 pairs the exact status agreement is 11/36 (0.306). The deterministic layer is uncertain on 11 pairs (all but one Integrity pairs), and on the 25 definite pairs the two answers agree 11 times (0.44). The severity $S$ matches exactly in 6 pairs (0.167), within one point in 11, with a mean absolute error of 2.08 points; the whole summary triple equals the deterministic one in 4 pairs. Against the original deterministic baseline of 3 October the severity error is 2.14, and the status and definite counts do not change. By dimension: Integrity agrees in 1 of 12 pairs (the deterministic layer is uncertain on unpinned or unverified local folders, while the LLM answers risk in 10 of 12), Explainability in 10 of 12, and Safety in none (the LLM says risk on all 12 pairs, while the deterministic risk layer never raised a safety risk). On the tampered-weights packet both flag a risk and disagree on severity (deterministic $S=1$, LLM $S=3$). Provider B answered every packet and its counts match the all-runs counts closely (11/36 status, 11/25 definite), so the all-runs figures mostly reflect provider B. The first 22 answers alone (18 pairs) gave status agreement 5/18 and the 38 later answers (24 pairs) 7/24, so completing the experiment did not change the picture.
+
+\textbf{Result, consistency across repeated runs.} Within a single provider, the risk call was identical across runs in 14 of 15 pairs for provider A, 36 of 36 for provider B and 3 of 3 for provider C. The whole triple was identical in 7 of 15 pairs for A, 1 of 36 for B and none of 3 for C. The all-runs column mixes providers (31/36 identical risk calls, 0/36 identical triples) and is shown only as an exploratory measure of consistency, because it mixes between-provider differences with run-to-run noise: provider A rates Integrity less severely than B (mean $O$ 5.33 against 2.59). The provider-specific counts rest on few runs per pair, from uneven allocation, and are descriptive. The comparison therefore shows that a provider can be consistent in its risk call while the triple still varies, and that the providers also differ systematically from each other in how severe they rate the same evidence.
+
+\textbf{What the comparison cannot say.} The three providers differ in model, date and sampling settings, five runs on P01 saw a shortened model card, the prompt cannot withhold a decision, a summary hides disagreement among runs, and 12 packets are few. The comparison describes blind interpretation of fixed evidence. It is inconclusive: it does not show that either the deterministic layer or the LLM is correct.
 
 \section{Independent evidence review}\label{sec:l10}
-\subsection{Human evidence review}
-The final human study (\code{results/\allowbreak l10\_human\_analysis\_20261005}) comes from a Google Form with the 12 blinded packets. Seven submissions were received, so $7\times12=84$ answer sets. Reviewers are evidence reviewers, not ground truth, and the analysis is descriptive. The raw CSV export has sha256 \code{da680bbc\ldots}, and re-running our analysis script reproduces the committed report exactly.
-
-\paragraph{Respondents and data quality.} Six submissions carry the shared code \code{R0} (numbered R0-1 to R0-6 by timestamp; they may be different people), and one carries \code{R2}. Both groups are analysed as given, and a sensitivity set without R2 is reported alongside. \textbf{R2 is low quality after the first packet}: 9 of 12 rationales have at most ten characters (e.g.\ ``NA'', ``yes'', ``3''), three rationales are the same pasted sentence, one answers Q2 = NO while the rationale asserts ``a meaningful disparity'', and two pair a ``yes'' or ``good'' with severity 1 (catastrophic). The six R0 submissions are internally coherent (median rationale length 148--392 characters; Q3 named the packet's dimension in 70 of 72 answers): contradictions appear in 7 of 72 answer sets, all severity entered while Q2 = NO or UNCERTAIN, because the form did not enforce N/A. R2's median rationale is 6 characters and its Q3 matched the packet's dimension in 6 of 12.
-
-\paragraph{Agreement between humans.} Observed agreement is the share of reviewer pairs giving the same answer on a packet, averaged over the 12 packets, with a 95\% percentile bootstrap over packets (5\,000 resamples). With 12 packets the intervals are wide and kappa is unstable under prevalence skew (76 of 84 answers to Q1 are YES).
+\textbf{Tested:} 12 blinded packets reviewed by humans (seven submissions, $84$ answer sets; six share the code R0, one R2). Reviewers are evidence reviewers, not ground truth. Respondent R2 is low quality after the first packet (9 of 12 rationales of at most ten characters, one answering ``no risk'' while asserting ``a meaningful disparity''); the six R0 submissions are coherent (median rationale 148--392 characters, Q3 matching the packet's dimension in 70 of 72 answers). Both sets are analysed, and the flags are identical without R2. Because six submissions share one code, they may come from several people or from one person submitting repeatedly, so the human majority is in effect the R0 majority and agreement among R0 rows is not independent agreement.
 
 \begin{table}[!htbp]
 \centering\small
-\caption{Human--human agreement per question.}\label{tab:l10agree}
-\begin{tabularx}{\textwidth}{@{}p{3.2cm}p{2.2cm}p{3.2cm}rr@{}}
+\caption{Human--human agreement (mean pairwise agreement with 95\% bootstrap CI over packets; Fleiss' $\kappa$ corrects for chance, 1 = perfect).}\label{tab:l10agree}
+\begin{tabularx}{\textwidth}{@{}p{3.6cm}p{1.7cm}p{3.3cm}rr@{}}
 \toprule
-\textbf{Question} & \textbf{Set} & \textbf{Mean pairwise agreement (CI)} & \textbf{Fleiss $\kappa$} & \textbf{Unanimous}\\
+\textbf{Question} & \textbf{Set} & \textbf{Agreement (CI)} & \textbf{Fleiss $\kappa$} & \textbf{Unanimous}\\
 \midrule
 Q1 evidence sufficient & all 7 & 93\% (86--100\%) & 0.59 & 9/12\\
 Q1 & R0 only & 100\% (100--100\%) & 1.00 & 12/12\\
@@ -277,16 +224,15 @@ Q3 & R0 only & 94\% (86--100\%) & 0.93 & 10/12\\
 \bottomrule
 \end{tabularx}
 \end{table}
-For severity (Q4), counted only where a reviewer answered Q2 = YES (55 of 84 answers), Krippendorff's $\alpha$ is 0.60 in both sets; the shares of pairs that are exactly equal, within 1 and within 2 points are 35\%, 85\% and 98\% (all 7, 128 pairs) and 37\%, 85\% and 97\% (R0 only, 117 pairs). On average reviewers agree most on whether the evidence is enough and which dimension it concerns, less on whether it is a risk, and only moderately on how severe.
 
-\paragraph{Humans against TrustLens.} The human answer for a packet is the plurality of the seven answers; the severity is the median over reviewers who answered Q2 = YES; TrustLens severity is $S$, shown only where TrustLens reports a risk. The reference is the v9 one.
+Severity (Q4, counted where Q2 = yes; 55 of 84 answers) has Krippendorff's $\alpha=0.60$ in both sets, with 35\%, 85\% and 98\% of pairs exactly equal, within 1 and within 2 points. Reviewers therefore agree most on whether the evidence is enough and which dimension it concerns, less on whether it is a risk and moderately on severity; $\kappa$ is unstable because 76 of 84 Q1 answers are yes.
 
 \begin{table}[!htbp]
 \centering\footnotesize
-\caption{Human plurality against the TrustLens reference. TL = TrustLens (risk / sufficiency / dimension / $S$). Q4 scale 1 = catastrophic, 9 = negligible. All human pluralities are unchanged if any one reviewer is dropped.}\label{tab:l10tl}
-\begin{tabularx}{\textwidth}{@{}p{0.8cm}p{2.0cm}p{3.3cm}p{1.9cm}p{1.4cm}L@{}}
+\caption{Majority answer of the human reviewers against the TrustLens reference (TL = risk / sufficiency / dimension / $S$; UNC = uncertain; NONE = no dimension at risk). Q4 scale 1 = catastrophic, 9 = negligible. The majority answers are unchanged if any one reviewer is dropped.}\label{tab:l10tl}
+\begin{tabularx}{\textwidth}{@{}p{0.7cm}p{1.9cm}p{3.6cm}p{1.5cm}p{1.1cm}L@{}}
 \toprule
-\textbf{Pkt} & \textbf{Dimension} & \textbf{TL} & \textbf{Human Q2} & \textbf{Human $S$} & \textbf{Disagreement}\\
+\textbf{Pkt} & \textbf{Dim.} & \textbf{TL} & \textbf{Human Q2} & \textbf{Human $S$} & \textbf{Disagreement}\\
 \midrule
 P01 & Fairness & YES / YES / FAIR / 4 & YES 6/7 & 3.5 & agree\\
 P02 & Fairness & UNC / UNC / UNC / -- & YES 6/7 & 4.5 & insufficient evidence\\
@@ -304,83 +250,40 @@ P12 & Explainability & NO / YES / NONE / -- & NO 5/7 & -- & agree\\
 \end{tabularx}
 \end{table}
 
-Full agreement on all four layers occurs on 3 of 12 packets (P01, P05, P12). TrustLens's risk call equals the human plurality on 6 of 12 packets and its sufficiency judgment on 9 of 12. The flags are identical when R2 is excluded. By cause (one packet can carry several): TrustLens abstains on a gate where reviewers found the evidence sufficient on P02, P08 and P09 (\code{G-FAIR-CI-WIDE}, \code{G-INT-LISTING-UNVERIFIED}; on P08 it still reports a risk); TrustLens says no risk and reviewers say risk on P04, P06, P07 and P10; severity differs by two or more on P03, P08 and P11; and where both see a risk they always name the same dimension.
+\textbf{Result:} full agreement on all four layers occurs on 3 of 12 packets (P01, P05, P12). TrustLens's risk call equals the answer chosen by the majority of reviewers on 6 of 12 packets and its sufficiency judgment on 9 of 12; where both see a risk they always name the same dimension. TrustLens says no risk and reviewers say risk on P04, P06, P07 and P10 (a severe-miss rate, a typo drop and boilerplate documentation, with no acceptable level defined in the packet); it withholds a rating on interval-width or unverified-listing rules where reviewers found the evidence sufficient (P02, P08, P09); severity differs by two or more on P03, P08 and P11. Descriptively, TrustLens is more conservative about raising a risk and harsher on integrity (P08, 1 against 3), and milder on fairness and explainability (P03 7 against 5; P11 6 against 3). \textbf{Other evaluators:} the official LLM review answered 1 of 12 packets (rate limits and an unavailable endpoint) and agreed with TrustLens on it. A supplementary LLM review of all 12 packets agreed with the then-current TrustLens reference on risk for 5/12 (Cohen's $\kappa=0.134$), dimension for 5/12 and sufficiency for 8/12; it marked measured effects as risks where TrustLens did not, and its orchestrating session was not blind.
 
-What this suggests, descriptively: reviewers were more willing than TrustLens to call a risk on behavioural Safety, Robustness and boilerplate documentation, and did not abstain where TrustLens's evidence gates fired. TrustLens is harsher on integrity (P08, 1 against 3) and milder on fairness and explainability (P03 7 against 5; P11 6 against 3). On P12, a real published card, the human plurality was NO risk (5/7), agreeing with TrustLens; the two YES answers read the card's own bias warning, or the automated section check, as a risk. P05, where every accuracy field is null, is the other full match, and every R0 reviewer noticed the nulls, although two converted that into ``no risk''.
+\section{Reading the disagreements}\label{sec:disagree}
+The two interpretation experiments do not say who is right. What they offer is a map of where TrustLens's decision layer and an outside reader part company. This section reads that map, keeping the human review (exploratory, seven submissions) apart from the LLM comparison (60 valid runs from three providers).
 
-\paragraph{Written rationales.} All 84 rationales were read as supporting qualitative evidence. Of the 72 R0 rationales, 56 cite two or more numbers from the packet and 34 mention the confidence interval (keyword counts, re-checkable in \code{per\_response.csv}). Two reviewers explicitly separated the 52-point label-rate gap from model bias. On P07 the split was about whether ``better than the reference'' means ``no risk'': the packet offers no absolute acceptable level, so this is a genuine threshold difference, not a reading error. Reviewers saw through the 60\% keyword coverage on the skeleton card (P10: headings present, content ``[More Information Needed]'').
+\textbf{Human reviewers and TrustLens disagree in three patterns.} First, reviewers saw a risk where TrustLens saw none (P04, P06, P07, P10). In each case the measurement or the text was real, and the rule either had no threshold to apply (P04, P06, P07) or classed the problem as a disclosure gap and not a risk (P10). P07 is the clearest: a model with a severe miss rate of 0.30, better than the reference model's, was judged risky by six of seven reviewers, since a model that lets three in ten severe comments pass is not reassuring even if the baseline is worse. TrustLens had no absolute level to apply. Second, TrustLens withheld a decision where reviewers found the evidence sufficient (P02, P08, P09). The gates behind these cases (interval width, an unverified file listing) encode caution that reviewers did not share, in a study in which no one saw the rule. P02 repeats the point of Section~\ref{sec:uncertainty}: six of seven reviewers read the same interval as evidence of risk. Third, where both saw a risk, they named the same dimension every time, and differed on severity. TrustLens was harsher on a byte mismatch (S=1 against a human median of 3) and milder on fairness and card problems. The reviewers' own rationales explain the first difference: a mismatch shows that bytes differ and not why, and several hedged about a stale manifest.
 
-\subsection{Official independent LLM review}
-The separate reviewer prompt went to providers A, B and C with one attempt each (\code{results/\allowbreak l10\_independent\_validation\_20261003}). \textbf{Only 1 of 12} packets was answered (review packet 01, provider B): provider A returned 429 on all 12 attempts, provider B answered once and returned 429 for 11, and provider C returned 404 for 11. No fallback output counts as a judgment. On that one packet both TrustLens and the LLM said risk present, FAIRNESS, evidence sufficient, severity 4 against 3. One packet supports no general statement.
+\textbf{What the pattern implies.} The reviewers' agreement is highest where the question is factual (is the evidence sufficient, which dimension is it) and lowest where it is a judgment of significance (is it a risk, how severe). TrustLens's rules resolve exactly those judgments by thresholds, so it is on those questions that it should be expected to differ from any individual reviewer, and that is where a different threshold would change the outcome. The study cannot say which threshold is better. It does show that the choice is not obvious to a reader who sees only the evidence.
 
-\subsection{Supplementary LLM review (kept separate)}
-Twelve answers from the supplementary LLM (same frozen packets and prompt hashes as the official run) were compared with the TrustLens reference of that time (methodology v8). Risk agreement was 5/12 (0.417, Cohen's $\kappa=0.134$), dimension agreement 5/12, sufficiency agreement 8/12 (0.667); severity was never exactly equal (0.0) and within one in 0.333 of the nine pairs. Categories: evidence interpretation 4, abstention mismatch 3, severity 3, agree 2. The supplementary LLM marked measured effects as risks where TrustLens's risk layer did not (the robustness drop, the severe-harm miss rate, the skeleton card and the real card), and on all four packets where both say risk present, it rated the consequence as worse. The largest gap is the weight mismatch (TrustLens $S=7$ under v8, supplementary LLM 2); the v9 guard moved TrustLens to $S=1$ on that packet, which the human table above reflects. On the safety control, it reported that the packet gives no acceptance threshold for the miss rates and answered UNCERTAIN. Against the single official LLM answer (review packet 01) it agrees on risk, dimension, sufficiency, and severity (3). A fresh-context subagent produced the answers; the orchestrating session was not blind.
+\textbf{The LLM comparison is complete but not decisive.} All 60 planned calls returned valid responses (Section~\ref{sec:l2}), so the missing-data problem of the first sessions is gone. What remains is structural. The LLM prompt offers no way to withhold, so the LLM answered ``risk'' for Safety on every packet while the deterministic layer never raises a safety risk, and the deterministic layer abstains on unverified local folders where the LLM always answers. Exact status agreement (11 of 36 pairs) therefore partly measures different question formats. The 60 runs come from three providers that differ in model, date and sampling settings, and provider B supplied two thirds of them, so the all-runs figures lean on one provider. Consistency across repeated runs is a separate question from agreement with the deterministic layer: within a provider the risk call was nearly always the same, while the whole triple repeated in 7 of provider A's 15 pairs, 1 of provider B's 36 and none of provider C's 3. A provider can therefore be stable in its risk call and still disagree with the deterministic layer, while its exact ratings vary from run to run. The consequence is the design already chosen: the deterministic engine is the default, and every LLM rating carries its source.
 
 \section{External Hugging Face model audit}\label{sec:hub}
-\paragraph{Earlier 15-model run (2026-10-02, pre-round-3 methodology).} All 15 imported models were evaluated, finalised and exported with matching artifact hashes; 14 of 15 runs used the heuristic fallback because the LLM quota was exhausted. \code{pysentimiento/\allowbreak bert-it-hate-speech} (Italian) was caught as a near-constant predictor (harmful recall 0.023) and its FRIES score was withheld, and hate-speech models had the lowest harmful recall on toxicity data (about 0.15), a visible domain mismatch.
+\textbf{Tested:} seven Hub models, each pinned to an exact revision and run once on the 3\,000-row evaluation set (282 severe positives); all five probes ran on every model and the evaluated revision equalled the pinned one. \textbf{These are descriptive profiles, not a ranking}, and seven deliberately varied models say nothing about the Hub as a whole. Table~\ref{tab:hubev} answers three questions for each model: what was measured, which findings were raised, and where a rating was withheld.
 
-\paragraph{The v9 rerun (methodology \code{v9-evidence-guards-2026}, 2026-10-03).} Seven pinned models, one run each, all FINALIZED with five evaluated probes and the evaluated revision equal to the pin. The audit profile of each model is in Table~\ref{tab:hubprof} and Figure~\ref{fig:hubprof}. \textbf{These are descriptive profiles. There is no ranking, no trustworthy/untrustworthy label, and the aggregate numbers are reproduced as reported, not used to compare models.}
+\textbf{Findings.} A fairness-gap risk was raised on \code{unbiased-toxic-roberta} (TPR gap 0.093, CI lower bound 0.020, only just above $\varepsilon$; the model is described as trained with identity-bias mitigation) and on the dynabench hate-speech model, which was also the only one to trigger the robustness risk (drop 0.072). All seven carry disclosure gaps for safety and card completeness, and two lack a licence in their card metadata. Measured behaviour spans clean accuracy 0.664--0.927, accuracy drop 0.010--0.072, severe FNR 0.089--0.837 and benign false-positive rate 0.018--0.367; the highest miss rate belongs to a hate-speech model whose label scope differs from the toxicity labels, so it measures that mismatch as much as the model.
 
-\begin{table}[!htbp]
-\centering\footnotesize
-\caption{External audit, measured evidence (3\,000 English Civil Comments rows; 282 severe positives). EOD with bootstrap CI; severe FNR and benign FPR as measured. All seven artifact checks are VERIFIED.}\label{tab:hubev}
-\begin{tabularx}{\textwidth}{@{}p{3.9cm}RRp{3.3cm}RR@{}}
+\begin{table}[H]
+\centering\footnotesize\setlength{\tabcolsep}{3.5pt}
+\caption{External audit: measured behaviour, findings and rating outcome, in selection order. Drop = accuracy lost under character swaps; TPR gap = EOD with 95\% CI; Sev.\ FNR = share of the 282 severe positives missed; Card = required model-card sections found (of five; unrelated to the five FRIES dimensions). All seven file checks were verified. Models are not ranked.}\label{tab:hubev}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{2.55cm}p{0.9cm}p{2.2cm}p{0.95cm}p{0.8cm}>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{2.9cm}@{}}
 \toprule
-\textbf{Model} & \textbf{Clean acc.} & \textbf{Acc.\ drop} & \textbf{EOD [CI]} & \textbf{Severe FNR} & \textbf{Benign FPR}\\
+\textbf{Model} & \textbf{Drop} & \textbf{TPR gap [CI]} & \textbf{Sev.\ FNR} & \textbf{Card} & \textbf{Findings raised} & \textbf{Rating outcome}\\
 \midrule
-\code{toxic-bert} & 0.868 & 0.010 & 0.174 [0.098, 0.252] & 0.355 & 0.021\\
-\code{unbiased-toxic-roberta} & 0.915 & 0.012 & 0.093 [0.020, 0.162] & 0.145 & 0.040\\
-\code{roberta\_toxicity\_classifier} & 0.927 & 0.022 & 0.019 [0.001, 0.091] & 0.089 & 0.033\\
-\code{toxic-comment-model} & 0.890 & 0.012 & 0.063 [0.005, 0.144] & 0.298 & 0.018\\
-\code{xlmr-large-toxicity-classifier} & 0.805 & 0.054 & 0.074 [0.009, 0.138] & 0.156 & 0.188\\
-\code{roberta-hate-speech-dynabench-r4} & 0.783 & 0.072 & 0.130 [0.075, 0.181] & 0.837 & 0.059\\
-\code{bert-tiny-toxicity} & 0.664 & 0.056 & 0.051 [0.004, 0.122] & 0.113 & 0.367\\
+\code{toxic-bert} & 0.010 & .174 [.098, .252] & .355 & 3 & none beyond card gaps & \textbf{Fairness withheld} (CI width 0.154 $>$ 0.15); no aggregate\\
+\code{unbiased-toxic-roberta} & 0.012 & .093 [.020, .162] & .145 & 3 & fairness-gap risk & all five dimensions rated\\
+\code{roberta\_toxicity\_classifier} & 0.022 & .019 [.001, .091] & .089 & 1 & none beyond card gaps & all five dimensions rated\\
+\code{toxic-comment-model} & 0.012 & .063 [.005, .144] & .298 & 3 & no licence in card metadata & all five dimensions rated\\
+\code{xlmr-large-toxicity-classifier} & 0.054 & .074 [.009, .138] & .156 & 2 & drop above 0.05 but CI lower bound below it, so no risk; base-size weights under the ``large'' name & all five dimensions rated\\
+\code{roberta-hate-speech-dynabench-r4} & 0.072 & .130 [.075, .181] & .837 & 0 & fairness-gap and robustness risks; no licence; label scope is hate speech & all five dimensions rated\\
+\code{bert-tiny-toxicity} & 0.056 & .051 [.004, .122] & .113 & 1 & benign false-positive rate 0.367 & \textbf{Safety withheld} (above the 0.30 ceiling); no aggregate\\
 \bottomrule
-\end{tabularx}
+\end{tabular}
 \end{table}
 
-\begin{table}[!htbp]
-\centering\footnotesize
-\caption{External audit, risks, disclosure gaps and dimension scores as reported. ``w/h'' = FRIES withheld. $^{\dagger}$ O/S/D for Integrity and Explainability of this model came from an LLM (a hosted provider); for the others from the heuristic fallback.}\label{tab:hubprof}
-\begin{tabularx}{\textwidth}{@{}p{3.1cm}p{2.4cm}p{2.5cm}rrrrrr@{}}
-\toprule
-\textbf{Model} & \textbf{Risks} & \textbf{Gaps} & \textbf{F} & \textbf{R} & \textbf{I} & \textbf{E} & \textbf{S} & \textbf{FRIES}\\
-\midrule
-\code{toxic-bert}$^{\dagger}$ & none & S-GOV, E-DOC & -- & -- & -- & -- & -- & w/h\\
-\code{unbiased-toxic-roberta}$^{\dagger}$ & F-FAIR-EOPP & S-GOV, E-DOC & 7.27 & 8.00 & 9.00 & 3.30 & 8.28 & 7.17\\
-\code{roberta\_toxicity\_classifier}$^{\dagger}$ & none & S-GOV, E-DOC & 7.65 & 5.04 & 9.00 & 2.88 & 8.28 & 6.57\\
-\code{toxic-comment-model} & none & S-GOV, E-DOC, I-LIC & 7.86 & 8.00 & 8.00 & 6.00 & 7.27 & 7.43\\
-\code{xlmr-large-toxicity-classifier} & none & S-GOV, E-DOC & 4.58 & 2.00 & 8.65 & 4.00 & 8.28 & 5.50\\
-\code{roberta-hate-speech-dynabench-r4} & F-FAIR-EOPP, R-ROB-PERT & S-GOV, E-DOC, I-LIC & 6.00 & 2.00 & 7.32 & 1.00 & 1.91 & 3.65\\
-\code{bert-tiny-toxicity} & none & S-GOV, E-DOC & -- & -- & -- & -- & -- & w/h\\
-\bottomrule
-\end{tabularx}
-\end{table}
+\textbf{Withheld ratings.} Two audits produced no aggregate FRIES score. For \code{toxic-bert} the Fairness rating was withheld because the interval for the TPR gap was too wide; for \code{bert-tiny-toxicity} the Safety rating was withheld because its benign false-positive rate exceeds a ceiling added after the earlier audit run (under the earlier rules it had a score). Withholding is the intended behaviour, not a failure of the audit.
 
-\begin{figure}[!htbp]
-\centering
-\includegraphics[width=0.74\textwidth]{fig_hub_profiles.pdf}
-\caption{Five-dimension audit profiles of the seven external models (v9 rerun). Two models carry no dimension scores because the FRIES score was withheld. Dimension scores are plotted as reported; the figure is not a ranking.}\label{fig:hubprof}
-\end{figure}
-
-\paragraph{What the profiles show, descriptively.}
-\begin{itemize}
-\item \textbf{Risks raised.} \code{F-FAIR-EOPP} on \code{unbiased-toxic-roberta} (EOD 0.093, CI 0.020--0.162) and on the dynabench hate-speech model (0.130, CI 0.075--0.181); \code{R-ROB-PERT} on the dynabench model (accuracy drop 0.072). No other model raises a risk. The first of these was selected because it is described as trained with identity-bias mitigation; its CI lower bound (0.0202) sits only just above $\varepsilon=0.02$.
-\item \textbf{Disclosure gaps} (documentation findings, not risks): \code{E-DOC-INCOMPLETE} and \code{S-GOV-DISCLOSURE-GAP} on all seven; \code{I-INT-LICENSE-UNDISCLOSED} on \code{martin-ha/\allowbreak toxic-comment-model} and the dynabench model (no licence in the card metadata).
-\item \textbf{Integrity.} All seven VERIFIED against the pinned revision's Hub hashes. That says the bytes are the Hub's bytes; it says nothing more.
-\item \textbf{Measured behaviour.} Across the same 3\,000 rows: clean accuracy 0.664--0.927, accuracy drop 0.010--0.072, severe-harm FNR 0.089--0.837, benign FPR 0.018--0.367. The highest severe-harm FNR (0.837) belongs to a hate-speech model whose label scope (hate) differs from the evaluation labels (toxicity), so the value measures that mismatch as much as the model.
-\end{itemize}
-
-\paragraph{Abstentions: two of seven models get no FRIES score.}
-\begin{itemize}
-\item \code{toxic-bert}: the Fairness gate \code{G-FAIR-CI-WIDE} fired (EOD 0.174, CI 0.098--0.252, width 0.154), so the evidence is insufficient for a Fairness score and the FRIES score is withheld.
-\item \code{bert-tiny-toxicity}: benign FPR is 0.367, above the 0.30 competence floor added in v9, so Safety abstains and FRIES is withheld. \textbf{This floor was set after we had seen the earlier external run and is not pre-registered.} With the v8 rules this model had a score. We report the abstention as the system working as designed, and we also report that the threshold was not fixed in advance.
-\end{itemize}
-
-\paragraph{Caveats that change how the table should be read.}
-\begin{itemize}
-\item \textbf{The O/S/D source differs between models.} Providers A and B answered for the first three models; for the other four the LLM providers were unavailable and the heuristic fallback was used (recorded per aspect). Where an Explainability score exists, 3.30 and 2.88 come from an LLM and 1.00--6.00 from the heuristic; these are not like for like, and neither are the Integrity scores. The behavioural Safety band always comes from the heuristic.
-\item \textbf{Risk layer and score layer disagree.} \code{xlmr-large} and the dynabench model have Robustness scores of 2.00 although the risk layer calls the first of them \code{no\_material\_risk} (drop 0.054, CI lower bound 0.043, below the 0.05 tolerance). The v4 scale is range-normalised to our injected defect range (Section~\ref{sec:v4}), so a drop of about five points maps to the floor of the scale, while the risk rule needs the CI lower bound to clear $\varepsilon_{drop}$. Neither is wrong by its own definition, and they should not be read as one judgment.
-\item \textbf{One run per model.} Evidence is deterministic, but the LLM-sourced numbers are not repeated. The earlier v8 run with 7 of these models is left untouched and not compared here.
-\item \textbf{Selection.} The seven models were chosen to vary, not sampled. Nothing about their order or scores supports a statement about the Hub.
-\end{itemize}
+\textbf{Why scores are not compared.} Integrity and Explainability ratings came from an LLM for the first three models and from the rule-based fallback for the rest, so those scores are not like for like; the table reports measurements and findings, and the stored scores are listed per model in Appendix~\ref{app:results}. With one run per model and models chosen to vary, nothing here supports a statement about the Hub as a whole.

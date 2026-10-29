@@ -1,33 +1,26 @@
 \chapter{Conclusion and Future Work}\label{ch:conclusion}
 
-\section{What we built and what we found}
-TrustLens is an evidence-driven, FRIES-aligned model auditing framework. It imports a Hugging Face text-classification model, runs five probes locally, stores hashed evidence, interprets it into Occurrence, Severity and Detection ratings, and produces a versioned report whose primary output is a five-dimensional audit profile. Abstention is a first-class result, and the aggregate FRIES score is a secondary summary.
+\textbf{Contribution.} TrustLens is a research prototype that imports a Hugging Face text-classification model, runs five probes locally, stores the evidence under content hashes, turns it into O/S/D ratings and produces a versioned report whose primary output is a five-dimensional audit profile. Its distinguishing design choice is to keep measured evidence, risk decisions and ratings apart, and to withhold a rating when the evidence is insufficient.
 
-We tested the system in ten validation studies; Table~\ref{tab:rq} gives the answer to each research question. The measured evidence is reproducible and rises monotonically with injected severity ($\rho=1.0$ in every sweep). Calibrating the O/S/D mapping widened the score range over the injected defects on held-out sweeps from 0.68--1.18 to 4.60--6.65 points (a scale relative to those defects). Separating disclosure gaps from risks removed the false flags on clean controls. The final equal-opportunity rule detected every injected fairness defect at flip rates of 0.4 and above on fresh data, although it also flagged the real reference model. Artifact integrity detected a one-byte change in a demonstration, and TrustLens produced a profile for each of seven real Hub models. Independent reviewers agree with TrustLens on risk for 6 of 12 packets and on sufficiency for 9 of 12.
+\textbf{Main findings.} Measured evidence was reproducible and tracked injected severity. Separating documentation gaps from observed problems removed false flags on clean controls. A rule on the gap in true-positive rates flagged every injected disparity at label-flip rates of 0.4 and above on fresh data, and the hash comparison against a manifest caught a one-byte change in a controlled copy (in the Hub audit the manifest covered one weight file per model, and a match shows agreement with the reference, not safety). Reviewers agreed most on whether the evidence was sufficient and which dimension it concerned. The central lesson is that evidence, risk decisions and ratings are different things: evidence was reliable, but the risk and score layers did not inherit that reliability, and improving one layer did not improve the others. Table~\ref{tab:rq} gives the answer to each research question.
 
-\section{Objectives and results}
 \begin{table}[!htbp]
-\centering\footnotesize
-\caption{Objectives of Chapter~\ref{ch:intro} and where they are met.}
-\begin{tabularx}{\textwidth}{@{}p{4.6cm}L@{}}
+\centering\small
+\caption{Answers to the research questions.}\label{tab:rq}
+\begin{tabularx}{\textwidth}{@{}p{1.0cm}p{2.0cm}L@{}}
 \toprule
-\textbf{Objective / question} & \textbf{Outcome}\\
+\textbf{RQ} & \textbf{Answer} & \textbf{Basis}\\
 \midrule
-O1: working audit pipeline & Import, local inference, five probes, O/S/D, scoring, review and report (Chapters~\ref{ch:arch}--\ref{ch:impl}); 913 backend tests (Chapter~\ref{ch:testing}).\\
-O2: honest handling of evidence & Abstention, disclosure gaps separated from risks, methodology versions stored (Chapter~\ref{ch:fries}).\\
-O3: tested on controlled, reviewed and real models & Chapter~\ref{ch:results}.\\
-RQ1--RQ6 & Answered in Table~\ref{tab:rq}.\\
+RQ1 & Yes & Measured evidence was identical across five runs; LLM-rated dimensions were noisier.\\
+RQ2 & Partly & Evidence tracked severity; scores did so only after range scaling, and not to harm; risk decisions did not grade severity.\\
+RQ3 & Partly & Gap separation removed false flags at a cost in recall; the fairness rule also flagged the real reference model.\\
+RQ4 & Inconclusive & 60/60 planned calls returned valid responses (22 in the first sessions, three providers, five runs on a shortened model card); status agreement with the deterministic layer 11/36 pairs, definite agreement 11/25; repeatability differs by provider.\\
+RQ5 & Partly & Reviewers agreed on sufficiency and dimension, less on risk and severity; TrustLens matched their majority risk call on 6 of 12 packets.\\
+RQ6 & Descriptive & Seven profiles exposed missing documentation and uneven behaviour; two audits withheld a rating.\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-\medskip\noindent Beyond the results (scope in Chapter~\ref{ch:limits}), we hope the method carries over: separate the layers, declare before running, freeze the folders, report the failures.
+\textbf{Negative and unresolved results.} The prespecified robustness sweep withheld every rating, and the later sensitivity analysis does not replace that finding. The fairness rule flagged the real reference, so it identifies disparities for review rather than defects. The scoring method separates synthetic defect levels but is not calibrated to real-world harm, the fairness groups were not mention-based, and the LLM comparison, although complete at 60 of 60 calls, remained inconclusive: it mixes three providers, agrees with the deterministic layer on only 11 of 36 pairs, and has no ground truth to say which side is right.
 
-\section{Future work}
-\begin{enumerate}[nosep]
-\item \textbf{Validate the decision layer on new data}, including the v10 safety rule.
-\item \textbf{A larger reviewer study} with distinct identifiers, domain experts and an ethics review.
-\item \textbf{Repeat the LLM comparison with one pinned provider}, ideally local.
-\item \textbf{More than one risk per dimension}, as the FRIES procedure intends.
-\item \textbf{Broader probes:} gradient-guided perturbations, SHAP or LIME, intersectional groups, other tasks, signed manifests.
-\end{enumerate}
+\textbf{Intended use and future work.} TrustLens helps a human reviewer see where evidence is strong and where it is thin, with every number traceable to stored evidence. The next priorities are to validate the evidence-to-rating step and the later evidence guards on new data and against external judgments of harm, to repeat the LLM comparison with one pinned provider, to test mention-based and demographic groups, to collect larger reviewer panels, and to add broader probes without losing the separation of layers.

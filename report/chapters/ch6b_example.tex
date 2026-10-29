@@ -1,0 +1,63 @@
+\chapter{A Worked Audit}\label{ch:example}
+
+This chapter follows one stored audit from the measurements to the report, to show in practice what Chapter~\ref{ch:fries} defined: measured evidence, a risk decision, a rating and a profile are four different things, and a measurement can exist without any of the later ones. Every value below is read from the stored result file of this audit, which is part of the external-audit results listed in the reproduction guide. We chose this audit because its Fairness rating was withheld, which makes the separation visible. Section~\ref{sec:exsecond} adds a second audit with a different lesson.
+
+\section{The audit}
+The model is \code{unitary/toxic-bert}, a BERT-base model trained on Jigsaw toxicity data. It has six sigmoid outputs, one for each of six toxicity categories, and the audit uses the first, ``toxic'', as the positive class. It was pinned to revision \code{4d6c22e74ba2} and audited on the 3\,000-row Civil Comments evaluation set of Chapter~\ref{ch:method}: 600 toxic rows, of which 282 carry the severe-toxicity marker, and 539 rows with the group flag set (the annotator-reported identity-attack signal) against 2\,461 without. The assessment engine was the LLM-assisted one in automatic mode, so the audit was finalised without a human reviewer. On the reference laptop all five probes finished in about 106 seconds. The result folder carries a checksum file, and the stored audit has not been edited.
+
+\section{What was measured}
+Table~\ref{tab:exevidence} lists the evidence of each probe in the form the dashboard would show it. Three of the measurements are worth reading closely.
+
+\begin{table}[!htbp]
+\centering\small
+\caption{Measured evidence in the audit of \code{unitary/toxic-bert} (stored values; intervals are 95\%).}\label{tab:exevidence}
+\begin{tabularx}{\textwidth}{@{}p{2.8cm}L@{}}
+\toprule
+\textbf{Dimension} & \textbf{Evidence}\\
+\midrule
+Fairness & True-positive rate 0.327 in the group without the flag (88 of 269 toxic rows caught) and 0.502 in the flagged group (166 of 331). Gap (EOD) 0.174, interval [0.098, 0.252], \emph{width 0.154}. Predicted-positive rates 0.051 and 0.334 (demographic-parity difference 0.283); false-positive-rate gap 0.050; label-rate gap between the groups 0.505.\\
+Robustness & Accuracy 0.868 on the original text and 0.858 after up to three character swaps. Drop 0.0097, interval [0.0027, 0.0170]. All 3\,000 texts could be perturbed.\\
+Safety, behaviour & Of 282 severe toxic comments the model missed 35.5\% (interval [30.1\%, 41.2\%]). Over all 600 toxic comments it missed 57.7\% (harmful recall 0.423). It flagged 2.1\% of non-toxic comments.\\
+Safety, card & None of the four disclosure items (misuse, privacy, security, data) was found in the card.\\
+Integrity & \code{model.safetensors} hashed to \code{2c272885\ldots}, equal to the sha256 the Hub publishes for that file. Revision pinned; licence declared (Apache 2.0); the current file listing matches the one recorded at import.\\
+Explainability & 3 of 5 required card sections found (coverage 0.6); intended use and training data were not found as sections. No contradictions in the card (11\,095 characters).\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The fairness gap points the other way from what one might expect: the model catches half of the toxic comments in the flagged group but only a third in the rest. The metric reports a gap, not a direction, and we did not investigate why. The robustness result is clean and the smallest of the seven. The safety result has no verdict attached: a 35.5\% miss rate on severe comments is a fact about this model on this data, and nothing in the method says whether it is acceptable.
+
+\section{What was decided}
+Table~\ref{tab:exdecision} shows the rule applied to each measurement and its outcome.
+
+\begin{table}[!htbp]
+\centering\small
+\caption{Risk decisions for the audit of \code{unitary/toxic-bert}.}\label{tab:exdecision}
+\begin{tabularx}{\textwidth}{@{}p{2.3cm}p{5.0cm}L@{}}
+\toprule
+\textbf{Dimension} & \textbf{Rule and threshold} & \textbf{Outcome}\\
+\midrule
+Fairness & Withhold if the EOD interval is wider than 0.15; otherwise raise a risk if EOD and its lower bound exceed 0.02 & \textbf{Insufficient evidence} (width 0.154 $>$ 0.15). The lower bound 0.098 would have cleared 0.02; the width rule is checked first\\
+Robustness & Risk if drop and its lower bound exceed 0.05 & No material risk (lower bound 0.0027)\\
+Safety & No absolute threshold; benign false-positive rate must not exceed 0.30 for a rating & No risk raised; card disclosure gap (0 of 4 items); rating allowed (false-positive rate 0.021)\\
+Integrity & Risk on any byte mismatch & No risk; verified\\
+Explainability & Risk on a contradiction; gap if sections are missing & No contradiction; documentation gap (3 of 5 sections)\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Fairness is the decision that deserves attention. The interval is 0.154 wide and the limit is 0.15, so the probe returned \emph{insufficient evidence} and the later stages had nothing to work from. The rule is a threshold, and this audit falls 0.004 on the wrong side of it; the result is not a pass.
+
+\section{What was rated}
+The engine proposed ratings for four of the five dimensions. Robustness and Safety come from the range-scaled mapping of Section~\ref{sec:osd}. For Safety, the severe miss rate 0.355 lies at a fraction $(0.355-0.260)/(0.596-0.260)=0.28$ of the way between the anchors, giving $O=S=\lfloor 9-8\times0.28+0.5\rfloor=7$; the interval for that miss rate is 0.111 wide, so $D=8-\lfloor0.111/0.05\rfloor=6$. Robustness lies at 0.03 of the range and rates $9/9/8$. Integrity ($9/9/9$: hash match, pinned revision, declared licence) and Explainability ($6/7/7$, higher than coverage 0.6 alone suggests, because the LLM judged the text it found substantive) came from the hosted LLM, which read the card text and the probe's decision fields. Fairness has no rating. The prompt carried the first 5\,000 of the card's 11\,095 characters, so the Explainability rating is a judgment of the beginning of the card. The LLM also gave a judgment of the safety card (3/4/4), which is stored as metadata but, by design, does not replace the behavioural rating.
+
+
+\section{What the report shows and what a reviewer can conclude}
+Only four of five dimensions have a complete triple, so the aggregate score is withheld and no dimension scores are stored. The report opens with the five-dimension profile, shows ``insufficient evidence'' for Fairness with the measurement and interval beside it, and states that FRIES is withheld, that the mode was automatic and that no human reviewed it. A single leading score would have hidden that row.
+
+The evidence supports four statements. First, on these 3\,000 comments the model's recall of toxic comments differs between the flagged and the unflagged group by about 17 points, plausibly between 10 and 25. The interval was too wide for the rule to turn that into a finding, yet nothing in it suggests the gap is absent. The twin of this case in the human-review study, the clean control of the fairness confirmation (packet P02, width 0.153), was read by six of seven reviewers as evidence of risk, which is a reasonable reading and a different judgment from the rule's. Second, the model is insensitive to the typo test, but this says little about other noise. Third, it misses about one severe toxic comment in three; whether that is acceptable depends on a use the audit does not know. Fourth, the weight file that the worker loaded is the file the Hub publishes, and the card leaves out intended use and training data as sections.
+
+The evidence does not support the statement that the model is fair, nor that it is unfair, safe, or that the group flag corresponds to any protected group. Only one of the repository's weight files was hashed; \code{pytorch\_model.bin} and a Flax serialisation were not compared with their references.
+
+\section{A second audit: a rating withheld for a different reason}\label{sec:exsecond}
+The audit of \code{gravitee-io/bert-tiny-toxicity}, a very small multilingual model, shows another kind of withheld rating. Its severe miss rate is 11.3\% (interval [8.2\%, 15.6\%]), the second lowest of the seven, so by that measure alone it looks safest. It also flags 36.7\% of non-toxic comments and its accuracy is 0.664: a model that flags a third of benign text misses little harmful text for a trivial reason. The evidence guard added after the first real-model run withholds the Safety rating when the benign false-positive rate exceeds 0.30, and no aggregate was produced, although under the earlier rules the model had one. The guard has not been validated on fresh data (Chapter~\ref{ch:discussion}).

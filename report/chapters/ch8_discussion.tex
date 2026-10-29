@@ -1,87 +1,76 @@
-\chapter{Discussion}\label{ch:discussion}
-
-\section{Answers to the research questions}
-Table~\ref{tab:rq} gives short answers. They are deliberately limited to what the data in Chapter~\ref{ch:results} support.
-
-\begin{table}[!htbp]
-\centering\small
-\caption{Research questions and the answers our evidence supports.}\label{tab:rq}
-\begin{tabularx}{\textwidth}{@{}p{0.9cm}L@{}}
-\toprule
-\textbf{RQ} & \textbf{Answer, with the main qualifier}\\
-\midrule
-RQ1 & Yes for the evidence layer: deterministic probes have zero spread over five runs, and all evaluations reached \code{FINALIZED}. The LLM-rated dimensions are not reproducible to the same degree, and 11 of 45 suite runs and 14 of 15 real-model runs used the heuristic fallback because of provider limits.\\
-RQ2 & The \emph{evidence} responds in proportion to injected severity (Spearman $\rho=1.0$ in all sweeps). The \emph{score} responds, but coarsely under v3 (1.3--1.7 points over the full range) and strongly under v4 (4.6--6.65), with the caveat that v4 is relative to the defect range. The \emph{risk} decision is thresholded and does not grade severity.\\
-RQ3 & Partly. We addressed the score-calibration, disclosure-gap, fairness-rule and artifact-integrity limitations without tuning on the data that exposed them, and held-out and confirmatory data confirmed some of the fixes (score calibration held-out, fairness confirmation H2 and H3). One pre-registered hypothesis failed (fairness confirmation H1), and the fixes cost recall (disclosure-gap separation).\\
-RQ4 & Inconclusive. Only 22 of 60 runs came from the planned providers; a supplementary LLM supplied the other 38. Agreement with the deterministic engine was low (exact status 0.31 over 36 pairs), the LLM's $O/S/D$ triple did not repeat in any of the 36 pooled pairs (0/12 for the two providers; 3/24 for the supplementary evaluator alone), and a provider effect was large.\\
-RQ5 & Humans agree with each other on sufficiency and dimension, less on risk and severity. They agree with TrustLens on risk for 6 of 12 packets, on sufficiency for 9 of 12 and on the dimension whenever both see a risk. Disagreements have identifiable causes. This is not a validation.\\
-RQ6 & TrustLens produces a five-dimension profile for each of seven pinned Hub models. Two of seven receive no FRIES score because of an evidence gate or a competence floor. All seven carry disclosure gaps.\\
-\bottomrule
-\end{tabularx}
-\end{table}
+\chapter{Discussion, Limitations and Ethics}\label{ch:discussion}
 
 \section{Evidence, risk and score do not move together}
-The most useful thing the project taught us is a habit: look at the three layers separately. Table~\ref{tab:threelayer} summarises what each dimension did.
+The central lesson is that measured evidence, risk decisions and aggregate scores are different things, and improvement in one layer does not guarantee improvement in the others (answers to the research questions are in Chapter~\ref{ch:conclusion}). Evidence is the strongest layer: reproducible, tracking severity in every family swept, and catching what metadata cannot, such as a single flipped byte. The risk layer is conservative by construction, raising a risk only on positive evidence above a stated tolerance. It reacted to fairness defects only from a label-flip rate of 0.4, never graded Robustness or Safety severity in the main sweeps, and raised Integrity and Explainability risks only for a byte mismatch or a contradiction. It also produced the largest systematic difference from human reviewers (P04, P06, P07, P10); since no acceptable miss rate is defined, when a measurement becomes a risk is a policy choice. The step from evidence to rating is where choices are least constrained by data: each of our fixes there (the range-scaled mapping and the later evidence guards of Section~\ref{sec:osd}) was defensible and could have gone another way. Keeping the layers separate lets a reader see which numbers are observations and which are proposals.
 
-\begin{table}[!htbp]
-\centering\footnotesize
-\caption{Layer-by-layer behaviour per dimension (from the severity sweeps, the fairness confirmation run and the external audit).}\label{tab:threelayer}
-\begin{tabularx}{\textwidth}{@{}p{2.1cm}LLL@{}}
-\toprule
-\textbf{Dimension} & \textbf{Evidence} & \textbf{Risk decision} & \textbf{Score}\\
-\midrule
-Fairness & Monotone in flip rate; deterministic. & \code{F-FAIR-EOPP} at flip $\ge0.4$; 0 and 0.2 abstain at the width gate; the reference control is also flagged. & Abstains where the risk layer does; otherwise v3 range 0.68, v4 range 4.60.\\
-Robustness & Monotone in swaps; drop 0.005--0.030 on clean weights. & No risk at any sweep level; fires on one real model. & Monotone with ties; v4 range 6.65.\\
-Safety & Monotone in relabel rate (severe FNR 0.30--0.65). & No behavioural risk identifier; ground-truth rule flags 0.75 and 1.0 only. & Monotone with a tie; v4 range 6.00.\\
-Integrity & Hash match or mismatch, deterministic. & Only a mismatch is a risk. & Heuristic band floors at $O=S=1$ on mismatch (v9); otherwise metadata pass rate or LLM.\\
-Explainability & Section coverage, deterministic. & Only a contradiction is a risk; gaps are not. & Heuristic coverage band or LLM; the noisiest layer.\\
-\bottomrule
-\end{tabularx}
-\end{table}
+\textbf{The aggregate score is secondary.} It combines proposed ratings by a geometric mean, moved 1.34 points between two identical pilot runs because of the LLM, hides withheld ratings, has a scale relative to our largest injected defect, and has no ground truth to validate against. The decisions made after seeing data are listed in Table~\ref{tab:status}. We did not benchmark against another tool.
 
-Three things stand out. First, the evidence layer is the strongest part of the system: it is reproducible, it tracks severity, and it catches things that metadata cannot, such as a byte flip. Second, the risk layer is conservative by construction, since a risk is only raised on positive evidence of a problem and above a stated tolerance. That conservatism produced the largest systematic difference from human reviewers (Section~\ref{sec:disc-human}). Third, the score layer is where the arbitrariness lives, since this is where a proposal turns evidence into a rating, and every one of our fixes there (v4, v9) made a defensible choice that could have gone another way. We think anyone who builds a FRIES tool will meet this same step and should expect it to be the hardest one to defend.
-
-\section{The fairness rule}
-Fairness took four attempts. The first binary path could not raise a risk. The second (excess DPD) failed its own inspection because it depended on base rates. The TPR-gap rule that replaced it detected every injected defect at flip rates of 0.4 and above on fresh data (H2, H3). It also flagged the real reference model (H1), whose own disparity (0.145) is close to the lowest injected one (EOD 0.167 at flip 0.4). Because the Civil Comments identity groups have base rates of 0.11 against 0.64, a disparity cannot be attributed to the injection, the data or the model from predictions alone, so the rule's status text describes it as ``evidence for review''. The CI-width gate (0.15) was inherited and not retuned.
-\smallskip
-
-\section{Human reviewers and TrustLens}\label{sec:disc-human}
-Humans agree with each other on sufficiency and dimension, and less on risk and severity (Krippendorff's $\alpha=0.60$ on severity). The main disagreement with TrustLens (Table~\ref{tab:l10tl}) is consistent: on four packets (P04, P06, P07, P10) the evidence layer measured a severe-harm miss rate and the risk layer raised no risk, while the human plurality did. The studied version (v9) had no behavioural safety risk rule, which is what the v10 rule addresses. The packets do not define an acceptable miss rate, so when behaviour becomes a risk is a policy choice; reports therefore show the measured number next to a reference. In the other direction, TrustLens abstained on two packets (P02, P09) through the CI-width and listing-unverified gates, so abstention rates should be reported together with the gate values.
-
-\section{Deterministic versus LLM interpretation}
-We kept the deterministic engine as the default. Where the LLM answered, the exact $O/S/D$ triple repeated in none of the 12 provider pairs (3 of 24 for the supplementary evaluator), and answers depended on the provider reached (Integrity $O$ 5.67 from one provider, 2.85 from the other). The LLM does read card prose and noticed content problems that a keyword section detector cannot, such as a card with the right headings and no content. We therefore treat \code{llm\_v1} as an experimental comparison engine, report which source rated each aspect, and do not claim either engine is better.
-
-\section{Why the aggregate score is secondary}
-The aggregate FRIES number is a function of ratings that are proposals, combined by a geometric mean with equal weights. Our data give four direct reasons not to read it as more than a summary.
-\begin{itemize}
-\item \textbf{It moves with the LLM.} In the pilot the original reference's overall score fell 1.34 points between two runs with identical inputs.
-\item \textbf{It hides abstention.} A model with a withheld dimension has no score, while a model whose dimension was filled by the fallback has one. Two scores can therefore differ in how much of the evidence stands behind them (Table~\ref{tab:hubprof}).
-\item \textbf{Its scale is relative.} Under v4 a three-point accuracy drop is the bottom of the scale; under v3 the same drop (eight swaps) scored 7.96. Neither number says how bad three points is.
-\item \textbf{It cannot be validated here.} We have no ground truth for trust. The reviewer study checks evidence reading, not the score.
+\section{Limitations}\label{ch:limits}
+This is the complete statement of limitations.
+\begin{itemize}[itemsep=0.1em]
+\item \textbf{Task scope and proxies.} Only English-language toxicity classification on Civil Comments was exercised. Each probe measures a proxy (random character swaps, card text, an operational severe subset). Defects are injected, three of nine suite models carry documentation-only defects, and sweeps have four or five levels, one model family and one training seed per condition, so no significance tests are possible.
+\item \textbf{Scoring method.} The O/S/D mapping is a proposal fitted to the tested defect range, not calibrated to harm or validated on fresh data; each dimension is one statistic ($O=S$, $D$ constant); the evidence guards are unvalidated; a hash match shows agreement with a manifest, not absence of a backdoor.
+\item \textbf{Fairness groups and rule.} Groups are defined by the annotator-reported identity-attack flag, not identity mentions or protected groups, and this report contains no mention-based rerun. The decision rule looks only at the gap in true-positive rates; a gap in false-positive rates is recorded as evidence but does not reach a decision.
+\item \textbf{File coverage in the Hub audit.} Each Hub model's manifest held the one weight file the worker loaded; other weight files in the repository were not hashed.
+\item \textbf{LLM comparison.} All 60 planned calls returned valid responses, but only 22 did so in the first sessions; of the other 38, 34 were obtained on 28 October, nearly four weeks later, and four (provider C) carry 3 October timestamps. The 60 runs come from three providers with different models and sampling settings (temperature 0.2 recorded for providers B and C, not recorded for A) and very uneven coverage. Provider B supplied 41 runs, so the pooled figures largely reflect B; provider A supplied 15; provider C supplied 4 and answered only 2 of the 12 packets. The provider-specific repeatability figures are descriptive and should not be read as if the three evaluators had equally extensive evidence. In addition, five runs (all on packet P01) used a shortened prompt because TrustLens cuts the card text and evidence at fixed lengths. Those responses are valid but less comparable with the 55 made on the intended evidence, and P01 enters several packet--dimension pairs. This does not show that the reported agreement rates are wrong; it means that the P01 pairs may be affected by an amount we did not estimate. The prompt cannot withhold a decision and there are 12 packets, so the comparison is inconclusive.
+\item \textbf{Human review and Hub audit.} Seven submissions (six under one shared code) on twelve author-chosen packets, with no formal ethics review, are exploratory. The seven Hub models were chosen to vary, ran once and used different rating sources, so their profiles are descriptive.
+\item \textbf{Deployment and privacy.} Authentication was removed; the system is for local, single-user use. The LLM-assisted engine sends card text and evidence to third-party providers (Section~\ref{sec:ethics}).
 \end{itemize}
-For these reasons the report shows the profile first. The profile can be read dimension by dimension, and the evidence behind each entry can be inspected.
 
-\section{Post-hoc decisions, listed}\label{sec:posthoc}
-Reading a validation report, one should be able to find where the researchers made a choice after seeing data. Table~\ref{tab:posthoc} lists ours.
+\section{Threats to validity}\label{sec:threats}
+The limitations above say what was not done. This section asks, for each kind of validity, how the design could mislead us, what effect that would have on the findings, and what has been done about it. Tables~\ref{tab:threats} and~\ref{tab:threats2} list the threats and marks each as mitigated, partly mitigated or unresolved; the paragraphs after it explain the entries that need more than a line.
 
 \begin{table}[!htbp]
-\centering\footnotesize
-\caption{Decisions taken after seeing relevant data.}\label{tab:posthoc}
-\begin{tabularx}{\textwidth}{@{}p{4.4cm}L@{}}
+\centering\footnotesize\setlength{\tabcolsep}{3pt}
+\caption{Threats to validity, their potential effect, mitigation applied and status.}\label{tab:threats}
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{1.6cm}>{\raggedright\arraybackslash}p{3.5cm}>{\raggedright\arraybackslash}p{3.3cm}>{\raggedright\arraybackslash}p{3.2cm}>{\raggedright\arraybackslash}p{1.5cm}@{}}
 \toprule
-\textbf{Decision} & \textbf{Circumstance}\\
+\textbf{Type} & \textbf{Threat} & \textbf{Potential effect} & \textbf{Mitigation applied} & \textbf{Status}\\
 \midrule
-TPR gap as the fairness trigger & Chosen after inspecting the exploratory suite; confirmed on fresh data (fairness confirmation), where H1 failed.\\
-V2 redesign & First design collapsed to a majority-class model; redesigned before the final suite.\\
-V4b added & Added on 2026-10-02 so Integrity could be tested without a Fairness confound.\\
-\code{controls} field in ground truth & Added after the runs, from existing role entries.\\
-Severity-sweep deviation A2 (drop one unperturbable row) & Decided after every level abstained as specified.\\
-Score calibration held-out values known in advance & Committed before the mapping was written; the pre-declaration limits the choice to two anchors.\\
-v9 safety benign-FPR floor (0.30) & Set after the external Hub run; marked PROPOSED; affects whether a model gets a score.\\
-v9 integrity floor and CI-based $D$ & Audit fixes after round 3; not validated on fresh data.\\
-Supplementary LLM runs & Added because the API providers were unavailable; separate folders; the orchestrating session was not blind.\\
+Construct & Fairness is measured across an annotator-reported identity-attack flag, not mentions or protected groups & Findings describe disparity across that flag only & Wording; groups and flag stated wherever a result is given & Unresolved\\
+Construct & Robustness is random character swaps & Says little about other noise or adversarial inputs & Probe described as a typo test & Unresolved\\
+Construct & The severe subset (annotator score $>0.0001$) is operational; there is no sensitivity analysis & Every severe-miss value depends on it & Stated; no absolute risk threshold used & Unresolved\\
+Construct & Integrity is agreement with a reference hash; in the Hub audit one weight file per model & Shows no origin and no absence of backdoors; other weight files unchecked & Claim boundary written into each integrity result & Partly\\
+Construct & Explainability counts sections by heading and keyword & A card with headings and empty content passes; one with unusual headings fails & LLM-assisted engine reads the content, but is noisy & Partly\\
+Internal & Label mapping errors (the pilot reference was a constant predictor) & Metrics that look perfect for a broken run & Evaluation contract with label snapshot; constant-predictor gate & Mitigated\\
+Internal & Defects are synthetic; the Fairness defect and the metric use the same flag & Detection may be easier than for real defects & Fresh-data confirmation; real Hub models audited separately & Partly\\
+Internal & The control in the suite differed from the defect models in more than the defect & Hid the fairness defect in the first suite & Confirmation used a clean model trained identically & Mitigated\\
+Internal & Thresholds: $\varepsilon$ and the robustness drop are fixed tolerances; the width limit is inherited; guards were set after seeing data & Outcomes near a threshold depend on it (Section~\ref{sec:uncertainty}) & $\varepsilon$ and drop not tuned; TPR-gap rule confirmed on fresh data; guards flagged as unvalidated & Partly\\
+Internal & Post-hoc decisions (Table~\ref{tab:status}) & Results may reflect choices made after seeing them & Each decision listed and labelled; planned and exploratory results kept apart & Partly\\
+Internal & Evaluators were not blind in the supplementary LLM runs; LLM reviews were compared with an earlier reference & Agreement figures may be off in either direction & Evaluator groups reported separately; stated where used & Unresolved\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-Relative to the FRIES paper \cite{rutinowski2024}, our contribution is a concrete and openly weak mapping from evidence to ratings, with measurements of how far it tracks injected severity. We did not benchmark against another tool, so we make no comparative performance claim.
+\begin{table}[!htbp]
+\centering\footnotesize\setlength{\tabcolsep}{3pt}
+\caption{Threats to validity (continued): external and statistical validity.}\label{tab:threats2}
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{1.6cm}>{\raggedright\arraybackslash}p{3.5cm}>{\raggedright\arraybackslash}p{3.3cm}>{\raggedright\arraybackslash}p{3.2cm}>{\raggedright\arraybackslash}p{1.5cm}@{}}
+\toprule
+\textbf{Type} & \textbf{Threat} & \textbf{Potential effect} & \textbf{Mitigation applied} & \textbf{Status}\\
+\midrule
+External & One task (English toxicity), one dataset (Civil Comments), one architecture family for controlled models & Nothing follows for other tasks, languages or models & Scope stated in the abstract and introduction & Unresolved\\
+External & Seven Hub models chosen to vary; their training data may overlap the evaluation rows & Profiles are not representative of the Hub; possible leakage cannot be excluded & Described as descriptive; no ranking & Unresolved\\
+Statistical & Repeated runs share data and seed & Zero spread shows determinism, not low sampling variance & Intervals from bootstrap over rows; no claims of generality & Partly\\
+Statistical & 4--5 severity levels, one training seed per condition; $\rho$ over so few levels & Monotone trends are descriptive; no estimate of training variance & No significance tests; trends called descriptive & Unresolved\\
+Statistical & 12 packets, 7 reviewers (6 sharing one code), 1 of 12 official LLM answers & Wide intervals; $\kappa$ unstable; independence of reviewers unknown & Reports with and without the low-quality submission; $\kappa$ only on $\ge8$ packets & Unresolved\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\textbf{Construct validity.} Each probe is a proxy, and the risk is that a reader takes it for the property. The measured quantities were chosen because they can be computed and reproduced, not because they are the best indicators, and the report names each proxy where its result appears. The Fairness proxy is the weakest. The flag marks comments that annotators judged to contain an identity attack; such comments are likelier to be toxic, and the label-rate gap of 0.505 shows how closely the two are tied. A finding that recall differs across this flag concerns toxic comments of different kinds and was not tested on comments that mention identity terms.
+
+\textbf{Internal validity.} An experiment can show that a layer responds to a defect only if the defect is the main thing that changed. That held for the nested label flips and for the byte-copy construction of V4b, and it did not hold in the first suite's fairness comparison, where the control was a different model. The fairness rule was therefore developed on data that had failed once; the confirmation on fresh data, with hypotheses H1--H3 and a descriptive H4 written beforehand, limits that concern for the TPR-gap rule but not for the evidence guards, which were set after the external audit. A further concern is that the Fairness defect and the Fairness metric use the same flag, which makes the defect easy to detect and says little about a defect that works through another pathway.
+
+\textbf{External validity.} The behavioural results describe English toxicity classification on one dataset, with one base architecture for the controlled models and label corruptions as the defects. We cannot say whether the layers would respond the same way for sentiment, topic or multilingual classification, where groups, severe subsets and typos may differ. The seven Hub models were chosen to vary and run once, and at least one (\code{unbiased-toxic-roberta}) was trained on data derived from Civil Comments; we did not check for overlap with the evaluation rows.
+
+\textbf{Statistical conclusion validity.} The design supports descriptive statements. A standard deviation of zero over five runs means the same code on the same data and seed gave the same output, which is evidence of determinism, not of low variance across data samples or training seeds. The intervals capture resampling of rows and not retraining. With four or five severity levels a rank correlation of $\pm1$ is a statement about order, not about the shape of a response, and twelve packets with seven reviewers give wide intervals.
+
+\section{Ethical considerations}\label{sec:ethics}
+\textbf{Data.} The experiments use the public Civil Comments dataset \cite{borkan2019}, which contains offensive and discriminatory text written by members of the public. Comments were processed by local models. They were not put in a review packet, and the evidence sent to LLM providers consists of card text and aggregate metrics for three dimensions, not dataset rows. The group flag is a coarse annotator-averaged signal; no inference about individuals is made.
+
+\textbf{Volunteer review.} Reviewers were volunteers who filled in an anonymous online form. They saw card text and numbers, not comments, entered only an assigned reviewer code, and gave no name, email address or demographic information. The raw export is kept unmodified. The study is small and informal, we did not seek formal ethics approval and none is documented, and the report does not claim it.
+
+\textbf{Disclosure to LLM providers.} The LLM-assisted engine sends the model-card text and probe evidence to third-party providers. For public Hub models this discloses nothing that is not already public. For a private or pre-release model it would disclose the card and measured behaviour to a hosted service, whose retention we did not examine. The default engine sends nothing.
+
+\textbf{Misreading the dashboard.} A single score is easy to read as a certificate. The scores in this report separate synthetic defect levels and are not calibrated to harm, and a withheld rating is not a pass. The dashboard therefore leads with the five-dimension profile and shows the aggregate last, labels every proposed rating ``PROPOSED / REQUIRES VALIDATION'', makes withheld ratings visible and states whether a human reviewed the numbers. If the thresholds were used as a gate, a model author could tune to clear them without becoming more trustworthy. TrustLens should not be used to approve, certify or rank models (Section~\ref{sec:scope}).
