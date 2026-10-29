@@ -10,7 +10,7 @@ and several folders embed their own path/hash manifests.
 | `analysis/` | Tables and figures derived from the modes above (`TABLES.md`) |
 | `flawed_model_suite/` | Deliberately flawed models for OSD demo |
 | `osd_calibration_*` | L1 OSD calibration |
-| `l2_*` | L2 deterministic-vs-LLM interpretation (`_r3` = provider rerun, 22/60; `_20261022_r4` = 60/60 with 38 supplemental Claude runs) |
+| `l2_*` | L2 deterministic-vs-LLM interpretation (`_r3` = provider rerun, 22/60; `_20261022_r4` = superseded fill with 38 runs from a different evaluator, kept for audit; `_20261029_r5` = reported run, 60/60 valid after re-attempting the missing runs with the same provider chain) |
 | `defect_severity_*` | L6 defect severity |
 | `fairness_confirm_*` | L5 confirmatory fairness |
 | `external_hub_validation_*` | External Hub audit (`_v9r` = latest) |
@@ -19,3 +19,5 @@ and several folders embed their own path/hash manifests.
 | `l2_stratified_audit_*` | Read-only audit recomputation of L2 per evaluator stratum (`_baseline_v3` = 2026-10-03 deterministic file, `_baseline_v9` = 2026-10-22 file), from `scripts/audit/l2_stratified.py` |
 
 Suffixes: `YYYYMMDD` run date; `vN`/`rN` = rerun of a frozen folder (earlier versions untouched).
+
+Folder-by-folder map, pre-declaration plans and the commands that regenerate these results: `docs/REPRODUCING_THESIS_RESULTS.md`.

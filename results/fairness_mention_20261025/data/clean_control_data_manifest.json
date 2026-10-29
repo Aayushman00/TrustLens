@@ -1,0 +1,10 @@
+{
+  "role": "clean control",
+  "split": "train",
+  "seed": 20261026,
+  "size": 8000,
+  "flip_rate": 0.0,
+  "mention_rows": 1600,
+  "toxic_rate_mention": 0.1388,
+  "toxic_rate_other": 0.0822
+}

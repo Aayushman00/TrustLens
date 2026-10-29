@@ -240,3 +240,6 @@ results/flawed_model_suite/human_validation_*/*.json
 # Generated artifacts
 graphify-out/
 report.zip
+
+# Incomplete fairness-mention run: 2 GB of checkpoints
+results/fairness_mention_20261025/models/

@@ -134,6 +134,8 @@ def create_and_run_evaluation(
     *,
     positive_index: int = 1,
     multilabel_target_index: int | None = None,
+    evaluation_mode: str = "AI_AUTONOMOUS",
+    assessment_engine: str = "llm_v1",
 ) -> dict[str, Any]:
     """``positive_index`` = model index (or derived-binary index for multi-label
     models) meaning toxic; eval_set label "1" maps to it, "0" to the other."""
@@ -190,7 +192,7 @@ def create_and_run_evaluation(
 
     r = client.post(
         "/evaluations-v2",
-        json={"draft_id": draft_id, "evaluation_mode": "AI_AUTONOMOUS", "assessment_engine": "llm_v1"},
+        json={"draft_id": draft_id, "evaluation_mode": evaluation_mode, "assessment_engine": assessment_engine},
     )
     r.raise_for_status()
     evaluation = r.json()

@@ -1,0 +1,13 @@
+{
+  "dataset": "google/civil_comments",
+  "dataset_revision": "f2970eb3a55777454c94069077cc8d9b5866312d",
+  "split": "validation",
+  "seed": 20261028,
+  "size": 2000,
+  "positives": 400,
+  "identity_ref_rows": 328,
+  "severe_toxic_rows": 183,
+  "label_flips": "none",
+  "disjoint_from": "results/flawed_model_suite/data/*.jsonl (all suite texts)",
+  "sha256": "b46ac38117f15eac8e5727a8e07738faa134d3d7297aabb8d374e3d1818d8a5e"
+}

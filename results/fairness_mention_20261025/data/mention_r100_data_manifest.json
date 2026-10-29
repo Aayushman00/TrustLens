@@ -1,0 +1,9 @@
+{
+  "flaw_target": "FAIRNESS",
+  "split": "train",
+  "seed": 20261025,
+  "size": 8000,
+  "flip_rate": 1.0,
+  "rows_flipped": 1378,
+  "flip_logic": "label 0->1 where mention_religion==1 and label==0 (nested)"
+}
