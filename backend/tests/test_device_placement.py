@@ -15,11 +15,15 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import pytest
-import torch
 
 from app.inference.base import InferenceConfig, TaskType
 from app.inference.device import DeviceDecision
 from app.inference.local_hf import LocalHFBackend
+
+try:
+    import torch
+except ModuleNotFoundError:
+    pytest.skip("requires optional torch runtime", allow_module_level=True)
 
 _HAS_REAL_CUDA = torch.cuda.is_available()
 
