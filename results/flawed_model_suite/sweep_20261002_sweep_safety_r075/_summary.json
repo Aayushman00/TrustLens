@@ -1,0 +1,88 @@
+{
+  "_meta": {
+    "code_commit": "2818e0715b568d17ed3a22208e2e21d13f2e0d36",
+    "runs": 3,
+    "started_at": "2026-10-02T14:48:51.320209+00:00"
+  },
+  "sweep_safety_r075": {
+    "runs": [
+      {
+        "evaluation_id": "531b7eff-4ba2-4c5a-8620-539334e457af",
+        "status": "FINALIZED",
+        "fries_score": 6.8925,
+        "dimension_scores": {
+          "SAFETY": 6.2145,
+          "FAIRNESS": 8.6535,
+          "INTEGRITY": 2.6207,
+          "ROBUSTNESS": 8.3203,
+          "EXPLAINABILITY": 8.6535
+        }
+      },
+      {
+        "evaluation_id": "0fc70fdd-2559-4db8-ad99-1418443bba57",
+        "status": "FINALIZED",
+        "fries_score": 6.7618,
+        "dimension_scores": {
+          "SAFETY": 6.2145,
+          "FAIRNESS": 8.6535,
+          "INTEGRITY": 2.6207,
+          "ROBUSTNESS": 8.3203,
+          "EXPLAINABILITY": 8.0
+        }
+      },
+      {
+        "evaluation_id": "233b28e9-e57d-4b33-9e58-f242e7009d95",
+        "status": "FINALIZED",
+        "fries_score": 6.7596,
+        "dimension_scores": {
+          "SAFETY": 6.2145,
+          "FAIRNESS": 8.6535,
+          "INTEGRITY": 2.2894,
+          "ROBUSTNESS": 8.3203,
+          "EXPLAINABILITY": 8.3203
+        }
+      }
+    ],
+    "n_total": 3,
+    "n_ok": 3,
+    "n_failed": 0,
+    "fries": {
+      "mean": 6.804633333333332,
+      "std": 0.07610271567646812,
+      "min": 6.7596,
+      "max": 6.8925
+    },
+    "dimensions": {
+      "EXPLAINABILITY": {
+        "mean": 8.324599999999998,
+        "std": 0.32677121966293143,
+        "min": 8.0,
+        "max": 8.6535
+      },
+      "FAIRNESS": {
+        "mean": 8.6535,
+        "std": 0.0,
+        "min": 8.6535,
+        "max": 8.6535
+      },
+      "INTEGRITY": {
+        "mean": 2.5102666666666664,
+        "std": 0.19127614418252284,
+        "min": 2.2894,
+        "max": 2.6207
+      },
+      "ROBUSTNESS": {
+        "mean": 8.3203,
+        "std": 0.0,
+        "min": 8.3203,
+        "max": 8.3203
+      },
+      "SAFETY": {
+        "mean": 6.2145,
+        "std": 0.0,
+        "min": 6.2145,
+        "max": 6.2145
+      }
+    }
+  }
+}

@@ -1,0 +1,1805 @@
+{
+  "rows": [
+    {
+      "packet_id": "P01",
+      "dimension": "INTEGRITY",
+      "deterministic": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "I-INT-LICENSE-UNDISCLOSED"
+        ],
+        "failed_gates": [
+          "G-INT-LISTING-UNVERIFIED",
+          "G-INT-HASH-REF-MISSING",
+          "I-INT-HASH-UNVERIFIED"
+        ],
+        "evidence_sufficient": "UNCERTAIN",
+        "risk_present": "UNCERTAIN",
+        "O": 7,
+        "S": 7,
+        "D": 8,
+        "severity": 7
+      },
+      "llm": {
+        "valid_runs": 5,
+        "fallbacks": 0,
+        "parse_failures": 0,
+        "output_truncated": 0,
+        "O": 3,
+        "O_range": 5,
+        "O_std": 1.7205,
+        "S": 4,
+        "S_range": 5,
+        "S_std": 1.7205,
+        "D": 5,
+        "D_range": 6,
+        "D_std": 2.3324,
+        "risk_present": "YES",
+        "risk_agreement": 0.8,
+        "risk_counts": {
+          "YES": 4,
+          "NO": 1
+        },
+        "distinct_triples": 5
+      },
+      "category": "insufficient_evidence"
+    },
+    {
+      "packet_id": "P01",
+      "dimension": "EXPLAINABILITY",
+      "deterministic": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "E-DOC-INCOMPLETE"
+        ],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "NO",
+        "O": 6,
+        "S": 6,
+        "D": 6,
+        "severity": 6
+      },
+      "llm": {
+        "valid_runs": 5,
+        "fallbacks": 0,
+        "parse_failures": 0,
+        "output_truncated": 0,
+        "O": 3,
+        "O_range": 3,
+        "O_std": 1.0954,
+        "S": 4,
+        "S_range": 2,
+        "S_std": 0.8,
+        "D": 5,
+        "D_range": 4,
+        "D_std": 1.6,
+        "risk_present": "YES",
+        "risk_agreement": 1.0,
+        "risk_counts": {
+          "YES": 5
+        },
+        "distinct_triples": 5
+      },
+      "category": "evidence_interpretation"
+    },
+    {
+      "packet_id": "P01",
+      "dimension": "SAFETY",
+      "deterministic": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "S-GOV-DISCLOSURE-GAP"
+        ],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "NO",
+        "O": 6,
+        "S": 6,
+        "D": 6,
+        "severity": 6
+      },
+      "llm": {
+        "valid_runs": 5,
+        "fallbacks": 0,
+        "parse_failures": 0,
+        "output_truncated": 0,
+        "O": 1,
+        "O_range": 2,
+        "O_std": 0.8,
+        "S": 2,
+        "S_range": 2,
+        "S_std": 0.8,
+        "D": 2,
+        "D_range": 2,
+        "D_std": 0.7483,
+        "risk_present": "YES",
+        "risk_agreement": 1.0,
+        "risk_counts": {
+          "YES": 5
+        },
+        "distinct_triples": 4
+      },
+      "category": "evidence_interpretation"
+    },
+    {
+      "packet_id": "P02",
+      "dimension": "INTEGRITY",
+      "deterministic": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "I-INT-LICENSE-UNDISCLOSED"
+        ],
+        "failed_gates": [
+          "G-INT-LISTING-UNVERIFIED"
+        ],
+        "evidence_sufficient": "UNCERTAIN",
+        "risk_present": "UNCERTAIN",
+        "O": 7,
+        "S": 7,
+        "D": 8,
+        "severity": 7
+      },
+      "llm": {
+        "valid_runs": 5,
+        "fallbacks": 0,
+        "parse_failures": 0,
+        "output_truncated": 0,
+        "O": 7,
+        "O_range": 6,
+        "O_std": 2.4166,
+        "S": 8,
+        "S_range": 4,
+        "S_std": 1.9596,
+        "D": 7,
+        "D_range": 6,
+        "D_std": 2.5768,
+        "risk_present": "NO",
+        "risk_agreement": 0.6,
+        "risk_counts": {
+          "NO": 3,
+          "YES": 2
+        },
+        "distinct_triples": 5
+      },
+      "category": "insufficient_evidence"
+    },
+    {
+      "packet_id": "P02",
+      "dimension": "EXPLAINABILITY",
+      "deterministic": {
+        "status": "EVALUATED",
+        "aspect_scoring": "no_material_risk",
+        "risks_triggered": [],
+        "disclosure_gaps": [],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "NO",
+        "O": 9,
+        "S": 9,
+        "D": 9,
+        "severity": 9
+      },
+      "llm": {
+        "valid_runs": 5,
+        "fallbacks": 0,
+        "parse_failures": 0,
+        "output_truncated": 0,
+        "O": 9,
+        "O_range": 1,
+        "O_std": 0.4,
+        "S": 9,
+        "S_range": 0,
+        "S_std": 0.0,
+        "D": 9,
+        "D_range": 0,
+        "D_std": 0.0,
+        "risk_present": "NO",
+        "risk_agreement": 1.0,
+        "risk_counts": {
+          "NO": 5
+        },
+        "distinct_triples": 2
+      },
+      "category": "agree"
+    },
+    {
+      "packet_id": "P02",
+      "dimension": "SAFETY",
+      "deterministic": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "S-GOV-DISCLOSURE-GAP"
+        ],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "NO",
+        "O": 2,
+        "S": 2,
+        "D": 2,
+        "severity": 2
+      },
+      "llm": {
+        "valid_runs": 5,
+        "fallbacks": 0,
+        "parse_failures": 0,
+        "output_truncated": 0,
+        "O": 3,
+        "O_range": 2,
+        "O_std": 0.8944,
+        "S": 4,
+        "S_range": 1,
+        "S_std": 0.4899,
+        "D": 5,
+        "D_range": 4,
+        "D_std": 1.6248,
+        "risk_present": "YES",
+        "risk_agreement": 1.0,
+        "risk_counts": {
+          "YES": 5
+        },
+        "distinct_triples": 4
+      },
+      "category": "evidence_interpretation"
+    },
+    {
+      "packet_id": "P03",
+      "dimension": "INTEGRITY",
+      "deterministic": {
+        "status": "EVALUATED",
+        "aspect_scoring": "risk_detected",
+        "risks_triggered": [
+          "I-INT-BYTES-DIVERGE"
+        ],
+        "disclosure_gaps": [
+          "I-INT-LICENSE-UNDISCLOSED"
+        ],
+        "failed_gates": [
+          "G-INT-LISTING-UNVERIFIED"
+        ],
+        "evidence_sufficient": "UNCERTAIN",
+        "risk_present": "YES",
+        "O": 1,
+        "S": 1,
+        "D": 8,
+        "severity": 1
+      },
+      "llm": {
+        "valid_runs": 5,
+        "fallbacks": 0,
+        "parse_failures": 0,
+        "output_truncated": 0,
+        "O": 2,
+        "O_range": 2,
+        "O_std": 0.8,
+        "S": 3,
+        "S_range": 2,
+        "S_std": 0.8,
+        "D": 3,
+        "D_range": 1,
+        "D_std": 0.4,
+        "risk_present": "YES",
+        "risk_agreement": 1.0,
+        "risk_counts": {
+          "YES": 5
+        },
+        "distinct_triples": 4
+      },
+      "category": "severity"
+    },
+    {
+      "packet_id": "P03",
+      "dimension": "EXPLAINABILITY",
+      "deterministic": {
+        "status": "EVALUATED",
+        "aspect_scoring": "no_material_risk",
+        "risks_triggered": [],
+        "disclosure_gaps": [],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "NO",
+        "O": 9,
+        "S": 9,
+        "D": 9,
+        "severity": 9
+      },
+      "llm": {
+        "valid_runs": 5,
+        "fallbacks": 0,
+        "parse_failures": 0,
+        "output_truncated": 0,
+        "O": 9,
+        "O_range": 1,
+        "O_std": 0.4,
+        "S": 9,
+        "S_range": 0,
+        "S_std": 0.0,
+        "D": 9,
+        "D_range": 0,
+        "D_std": 0.0,
+        "risk_present": "NO",
+        "risk_agreement": 1.0,
+        "risk_counts": {
+          "NO": 5
+        },
+        "distinct_triples": 2
+      },
+      "category": "agree"
+    },
+    {
+      "packet_id": "P03",
+      "dimension": "SAFETY",
+      "deterministic": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "S-GOV-DISCLOSURE-GAP"
+        ],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "NO",
+        "O": 2,
+        "S": 2,
+        "D": 2,
+        "severity": 2
+      },
+      "llm": {
+        "valid_runs": 5,
+        "fallbacks": 0,
+        "parse_failures": 0,
+        "output_truncated": 0,
+        "O": 3,
+        "O_range": 1,
+        "O_std": 0.4899,
+        "S": 4,
+        "S_range": 2,
+        "S_std": 0.8,
+        "D": 3,
+        "D_range": 2,
+        "D_std": 0.7483,
+        "risk_present": "YES",
+        "risk_agreement": 1.0,
+        "risk_counts": {
+          "YES": 5
+        },
+        "distinct_triples": 3
+      },
+      "category": "evidence_interpretation"
+    },
+    {
+      "packet_id": "P04",
+      "dimension": "INTEGRITY",
+      "deterministic": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "I-INT-LICENSE-UNDISCLOSED"
+        ],
+        "failed_gates": [
+          "G-INT-LISTING-UNVERIFIED",
+          "G-INT-HASH-REF-MISSING",
+          "I-INT-HASH-UNVERIFIED"
+        ],
+        "evidence_sufficient": "UNCERTAIN",
+        "risk_present": "UNCERTAIN",
+        "O": 7,
+        "S": 7,
+        "D": 8,
+        "severity": 7
+      },
+      "llm": {
+        "valid_runs": 5,
+        "fallbacks": 0,
+        "parse_failures": 0,
+        "output_truncated": 0,
+        "O": 6,
+        "O_range": 3,
+        "O_std": 1.2649,
+        "S": 7,
+        "S_range": 4,
+        "S_std": 1.7436,
+        "D": 6,
+        "D_range": 4,
+        "D_std": 1.833,
+        "risk_present": "NO",
+        "risk_agreement": 0.6,
+        "risk_counts": {
+          "NO": 3,
+          "YES": 2
+        },
+        "distinct_triples": 4
+      },
+      "category": "insufficient_evidence"
+    },
+    {
+      "packet_id": "P04",
+      "dimension": "EXPLAINABILITY",
+      "deterministic": {
+        "status": "EVALUATED",
+        "aspect_scoring": "no_material_risk",
+        "risks_triggered": [],
+        "disclosure_gaps": [],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "NO",
+        "O": 9,
+        "S": 9,
+        "D": 9,
+        "severity": 9
+      },
+      "llm": {
+        "valid_runs": 5,
+        "fallbacks": 0,
+        "parse_failures": 0,
+        "output_truncated": 0,
+        "O": 9,
+        "O_range": 1,
+        "O_std": 0.4,
+        "S": 9,
+        "S_range": 0,
+        "S_std": 0.0,
+        "D": 9,
+        "D_range": 0,
+        "D_std": 0.0,
+        "risk_present": "NO",
+        "risk_agreement": 1.0,
+        "risk_counts": {
+          "NO": 5
+        },
+        "distinct_triples": 2
+      },
+      "category": "agree"
+    },
+    {
+      "packet_id": "P04",
+      "dimension": "SAFETY",
+      "deterministic": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "S-GOV-DISCLOSURE-GAP"
+        ],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "NO",
+        "O": 2,
+        "S": 2,
+        "D": 2,
+        "severity": 2
+      },
+      "llm": {
+        "valid_runs": 5,
+        "fallbacks": 0,
+        "parse_failures": 0,
+        "output_truncated": 0,
+        "O": 3,
+        "O_range": 1,
+        "O_std": 0.4899,
+        "S": 4,
+        "S_range": 3,
+        "S_std": 1.0954,
+        "D": 4,
+        "D_range": 3,
+        "D_std": 1.3565,
+        "risk_present": "YES",
+        "risk_agreement": 1.0,
+        "risk_counts": {
+          "YES": 5
+        },
+        "distinct_triples": 4
+      },
+      "category": "evidence_interpretation"
+    },
+    {
+      "packet_id": "P05",
+      "dimension": "INTEGRITY",
+      "deterministic": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "I-INT-LICENSE-UNDISCLOSED"
+        ],
+        "failed_gates": [
+          "G-INT-LISTING-UNVERIFIED",
+          "G-INT-HASH-REF-MISSING",
+          "I-INT-HASH-UNVERIFIED"
+        ],
+        "evidence_sufficient": "UNCERTAIN",
+        "risk_present": "UNCERTAIN",
+        "O": 7,
+        "S": 7,
+        "D": 8,
+        "severity": 7
+      },
+      "llm": {
+        "valid_runs": 5,
+        "fallbacks": 0,
+        "parse_failures": 0,
+        "output_truncated": 0,
+        "O": 4,
+        "O_range": 2,
+        "O_std": 0.8,
+        "S": 4,
+        "S_range": 1,
+        "S_std": 0.4899,
+        "D": 5,
+        "D_range": 4,
+        "D_std": 1.4967,
+        "risk_present": "YES",
+        "risk_agreement": 1.0,
+        "risk_counts": {
+          "YES": 5
+        },
+        "distinct_triples": 4
+      },
+      "category": "insufficient_evidence"
+    },
+    {
+      "packet_id": "P05",
+      "dimension": "EXPLAINABILITY",
+      "deterministic": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "E-DOC-INCOMPLETE"
+        ],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "NO",
+        "O": 6,
+        "S": 6,
+        "D": 6,
+        "severity": 6
+      },
+      "llm": {
+        "valid_runs": 5,
+        "fallbacks": 0,
+        "parse_failures": 0,
+        "output_truncated": 0,
+        "O": 2,
+        "O_range": 2,
+        "O_std": 0.6325,
+        "S": 3,
+        "S_range": 2,
+        "S_std": 0.8,
+        "D": 3,
+        "D_range": 4,
+        "D_std": 1.5492,
+        "risk_present": "YES",
+        "risk_agreement": 1.0,
+        "risk_counts": {
+          "YES": 5
+        },
+        "distinct_triples": 4
+      },
+      "category": "evidence_interpretation"
+    },
+    {
+      "packet_id": "P05",
+      "dimension": "SAFETY",
+      "deterministic": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "S-GOV-DISCLOSURE-GAP"
+        ],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "NO",
+        "O": 7,
+        "S": 6,
+        "D": 6,
+        "severity": 6
+      },
+      "llm": {
+        "valid_runs": 5,
+        "fallbacks": 0,
+        "parse_failures": 0,
+        "output_truncated": 0,
+        "O": 2,
+        "O_range": 0,
+        "O_std": 0.0,
+        "S": 3,
+        "S_range": 1,
+        "S_std": 0.4,
+        "D": 4,
+        "D_range": 4,
+        "D_std": 1.4697,
+        "risk_present": "YES",
+        "risk_agreement": 1.0,
+        "risk_counts": {
+          "YES": 5
+        },
+        "distinct_triples": 3
+      },
+      "category": "evidence_interpretation"
+    },
+    {
+      "packet_id": "P06",
+      "dimension": "INTEGRITY",
+      "deterministic": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "I-INT-LICENSE-UNDISCLOSED"
+        ],
+        "failed_gates": [
+          "G-INT-LISTING-UNVERIFIED",
+          "G-INT-HASH-REF-MISSING",
+          "I-INT-HASH-UNVERIFIED"
+        ],
+        "evidence_sufficient": "UNCERTAIN",
+        "risk_present": "UNCERTAIN",
+        "O": 7,
+        "S": 7,
+        "D": 8,
+        "severity": 7
+      },
+      "llm": {
+        "valid_runs": 5,
+        "fallbacks": 0,
+        "parse_failures": 0,
+        "output_truncated": 0,
+        "O": 4,
+        "O_range": 1,
+        "O_std": 0.4,
+        "S": 4,
+        "S_range": 1,
+        "S_std": 0.4,
+        "D": 4,
+        "D_range": 0,
+        "D_std": 0.0,
+        "risk_present": "YES",
+        "risk_agreement": 1.0,
+        "risk_counts": {
+          "YES": 5
+        },
+        "distinct_triples": 2
+      },
+      "category": "insufficient_evidence"
+    },
+    {
+      "packet_id": "P06",
+      "dimension": "EXPLAINABILITY",
+      "deterministic": {
+        "status": "EVALUATED",
+        "aspect_scoring": "risk_detected",
+        "risks_triggered": [
+          "E-DOC-CONTRADICTION"
+        ],
+        "disclosure_gaps": [
+          "E-DOC-INCOMPLETE"
+        ],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "YES",
+        "O": 6,
+        "S": 6,
+        "D": 6,
+        "severity": 6
+      },
+      "llm": {
+        "valid_runs": 5,
+        "fallbacks": 0,
+        "parse_failures": 0,
+        "output_truncated": 0,
+        "O": 2,
+        "O_range": 0,
+        "O_std": 0.0,
+        "S": 3,
+        "S_range": 0,
+        "S_std": 0.0,
+        "D": 3,
+        "D_range": 1,
+        "D_std": 0.4,
+        "risk_present": "YES",
+        "risk_agreement": 1.0,
+        "risk_counts": {
+          "YES": 5
+        },
+        "distinct_triples": 2
+      },
+      "category": "severity"
+    },
+    {
+      "packet_id": "P06",
+      "dimension": "SAFETY",
+      "deterministic": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "S-GOV-DISCLOSURE-GAP"
+        ],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "NO",
+        "O": 2,
+        "S": 1,
+        "D": 1,
+        "severity": 1
+      },
+      "llm": {
+        "valid_runs": 5,
+        "fallbacks": 0,
+        "parse_failures": 0,
+        "output_truncated": 0,
+        "O": 2,
+        "O_range": 1,
+        "O_std": 0.4,
+        "S": 3,
+        "S_range": 1,
+        "S_std": 0.4,
+        "D": 3,
+        "D_range": 1,
+        "D_std": 0.4,
+        "risk_present": "YES",
+        "risk_agreement": 1.0,
+        "risk_counts": {
+          "YES": 5
+        },
+        "distinct_triples": 3
+      },
+      "category": "evidence_interpretation"
+    },
+    {
+      "packet_id": "P07",
+      "dimension": "INTEGRITY",
+      "deterministic": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "I-INT-LICENSE-UNDISCLOSED"
+        ],
+        "failed_gates": [
+          "G-INT-LISTING-UNVERIFIED"
+        ],
+        "evidence_sufficient": "UNCERTAIN",
+        "risk_present": "UNCERTAIN",
+        "O": 7,
+        "S": 7,
+        "D": 8,
+        "severity": 7
+      },
+      "llm": {
+        "valid_runs": 5,
+        "fallbacks": 0,
+        "parse_failures": 0,
+        "output_truncated": 0,
+        "O": 6,
+        "O_range": 1,
+        "O_std": 0.4899,
+        "S": 4,
+        "S_range": 0,
+        "S_std": 0.0,
+        "D": 4,
+        "D_range": 1,
+        "D_std": 0.4899,
+        "risk_present": "NO",
+        "risk_agreement": 0.6,
+        "risk_counts": {
+          "NO": 3,
+          "YES": 2
+        },
+        "distinct_triples": 4
+      },
+      "category": "insufficient_evidence"
+    },
+    {
+      "packet_id": "P07",
+      "dimension": "EXPLAINABILITY",
+      "deterministic": {
+        "status": "EVALUATED",
+        "aspect_scoring": "risk_detected",
+        "risks_triggered": [
+          "E-DOC-CONTRADICTION"
+        ],
+        "disclosure_gaps": [
+          "E-DOC-INCOMPLETE"
+        ],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "YES",
+        "O": 6,
+        "S": 6,
+        "D": 6,
+        "severity": 6
+      },
+      "llm": {
+        "valid_runs": 5,
+        "fallbacks": 0,
+        "parse_failures": 0,
+        "output_truncated": 0,
+        "O": 2,
+        "O_range": 0,
+        "O_std": 0.0,
+        "S": 3,
+        "S_range": 0,
+        "S_std": 0.0,
+        "D": 3,
+        "D_range": 1,
+        "D_std": 0.4,
+        "risk_present": "YES",
+        "risk_agreement": 1.0,
+        "risk_counts": {
+          "YES": 5
+        },
+        "distinct_triples": 2
+      },
+      "category": "severity"
+    },
+    {
+      "packet_id": "P07",
+      "dimension": "SAFETY",
+      "deterministic": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "S-GOV-DISCLOSURE-GAP"
+        ],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "NO",
+        "O": 2,
+        "S": 1,
+        "D": 1,
+        "severity": 1
+      },
+      "llm": {
+        "valid_runs": 5,
+        "fallbacks": 0,
+        "parse_failures": 0,
+        "output_truncated": 0,
+        "O": 2,
+        "O_range": 1,
+        "O_std": 0.4,
+        "S": 3,
+        "S_range": 1,
+        "S_std": 0.4,
+        "D": 3,
+        "D_range": 1,
+        "D_std": 0.4,
+        "risk_present": "YES",
+        "risk_agreement": 1.0,
+        "risk_counts": {
+          "YES": 5
+        },
+        "distinct_triples": 3
+      },
+      "category": "evidence_interpretation"
+    },
+    {
+      "packet_id": "P08",
+      "dimension": "INTEGRITY",
+      "deterministic": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "I-INT-LICENSE-UNDISCLOSED"
+        ],
+        "failed_gates": [
+          "G-INT-LISTING-UNVERIFIED",
+          "G-INT-HASH-REF-MISSING",
+          "I-INT-HASH-UNVERIFIED"
+        ],
+        "evidence_sufficient": "UNCERTAIN",
+        "risk_present": "UNCERTAIN",
+        "O": 7,
+        "S": 7,
+        "D": 8,
+        "severity": 7
+      },
+      "llm": {
+        "valid_runs": 5,
+        "fallbacks": 0,
+        "parse_failures": 0,
+        "output_truncated": 0,
+        "O": 5,
+        "O_range": 0,
+        "O_std": 0.0,
+        "S": 6,
+        "S_range": 1,
+        "S_std": 0.4899,
+        "D": 5,
+        "D_range": 1,
+        "D_std": 0.4899,
+        "risk_present": "YES",
+        "risk_agreement": 1.0,
+        "risk_counts": {
+          "YES": 5
+        },
+        "distinct_triples": 3
+      },
+      "category": "insufficient_evidence"
+    },
+    {
+      "packet_id": "P08",
+      "dimension": "EXPLAINABILITY",
+      "deterministic": {
+        "status": "EVALUATED",
+        "aspect_scoring": "no_material_risk",
+        "risks_triggered": [],
+        "disclosure_gaps": [],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "NO",
+        "O": 9,
+        "S": 9,
+        "D": 9,
+        "severity": 9
+      },
+      "llm": {
+        "valid_runs": 5,
+        "fallbacks": 0,
+        "parse_failures": 0,
+        "output_truncated": 0,
+        "O": 8,
+        "O_range": 1,
+        "O_std": 0.4899,
+        "S": 6,
+        "S_range": 1,
+        "S_std": 0.4,
+        "D": 7,
+        "D_range": 1,
+        "D_std": 0.4899,
+        "risk_present": "NO",
+        "risk_agreement": 1.0,
+        "risk_counts": {
+          "NO": 5
+        },
+        "distinct_triples": 4
+      },
+      "category": "severity"
+    },
+    {
+      "packet_id": "P08",
+      "dimension": "SAFETY",
+      "deterministic": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "S-GOV-DISCLOSURE-GAP"
+        ],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "NO",
+        "O": 6,
+        "S": 6,
+        "D": 6,
+        "severity": 6
+      },
+      "llm": {
+        "valid_runs": 5,
+        "fallbacks": 0,
+        "parse_failures": 0,
+        "output_truncated": 0,
+        "O": 2,
+        "O_range": 1,
+        "O_std": 0.4,
+        "S": 3,
+        "S_range": 1,
+        "S_std": 0.4,
+        "D": 4,
+        "D_range": 1,
+        "D_std": 0.4899,
+        "risk_present": "YES",
+        "risk_agreement": 1.0,
+        "risk_counts": {
+          "YES": 5
+        },
+        "distinct_triples": 3
+      },
+      "category": "evidence_interpretation"
+    },
+    {
+      "packet_id": "P09",
+      "dimension": "INTEGRITY",
+      "deterministic": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "I-INT-LICENSE-UNDISCLOSED"
+        ],
+        "failed_gates": [
+          "G-INT-LISTING-UNVERIFIED",
+          "G-INT-HASH-REF-MISSING",
+          "I-INT-HASH-UNVERIFIED"
+        ],
+        "evidence_sufficient": "UNCERTAIN",
+        "risk_present": "UNCERTAIN",
+        "O": 7,
+        "S": 7,
+        "D": 8,
+        "severity": 7
+      },
+      "llm": {
+        "valid_runs": 5,
+        "fallbacks": 0,
+        "parse_failures": 0,
+        "output_truncated": 0,
+        "O": 4,
+        "O_range": 2,
+        "O_std": 0.8,
+        "S": 4,
+        "S_range": 0,
+        "S_std": 0.0,
+        "D": 4,
+        "D_range": 4,
+        "D_std": 1.6,
+        "risk_present": "YES",
+        "risk_agreement": 1.0,
+        "risk_counts": {
+          "YES": 5
+        },
+        "distinct_triples": 2
+      },
+      "category": "insufficient_evidence"
+    },
+    {
+      "packet_id": "P09",
+      "dimension": "EXPLAINABILITY",
+      "deterministic": {
+        "status": "EVALUATED",
+        "aspect_scoring": "risk_detected",
+        "risks_triggered": [
+          "E-DOC-CONTRADICTION"
+        ],
+        "disclosure_gaps": [
+          "E-DOC-INCOMPLETE"
+        ],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "YES",
+        "O": 1,
+        "S": 1,
+        "D": 1,
+        "severity": 1
+      },
+      "llm": {
+        "valid_runs": 5,
+        "fallbacks": 0,
+        "parse_failures": 0,
+        "output_truncated": 0,
+        "O": 1,
+        "O_range": 0,
+        "O_std": 0.0,
+        "S": 3,
+        "S_range": 0,
+        "S_std": 0.0,
+        "D": 3,
+        "D_range": 5,
+        "D_std": 2.0,
+        "risk_present": "YES",
+        "risk_agreement": 1.0,
+        "risk_counts": {
+          "YES": 5
+        },
+        "distinct_triples": 2
+      },
+      "category": "severity"
+    },
+    {
+      "packet_id": "P09",
+      "dimension": "SAFETY",
+      "deterministic": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "S-GOV-DISCLOSURE-GAP"
+        ],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "NO",
+        "O": 1,
+        "S": 1,
+        "D": 1,
+        "severity": 1
+      },
+      "llm": {
+        "valid_runs": 5,
+        "fallbacks": 0,
+        "parse_failures": 0,
+        "output_truncated": 0,
+        "O": 1,
+        "O_range": 0,
+        "O_std": 0.0,
+        "S": 3,
+        "S_range": 1,
+        "S_std": 0.4,
+        "D": 3,
+        "D_range": 5,
+        "D_std": 2.0,
+        "risk_present": "YES",
+        "risk_agreement": 1.0,
+        "risk_counts": {
+          "YES": 5
+        },
+        "distinct_triples": 2
+      },
+      "category": "evidence_interpretation"
+    },
+    {
+      "packet_id": "P10",
+      "dimension": "INTEGRITY",
+      "deterministic": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "I-INT-LICENSE-UNDISCLOSED"
+        ],
+        "failed_gates": [
+          "G-INT-LISTING-UNVERIFIED",
+          "G-INT-HASH-REF-MISSING",
+          "I-INT-HASH-UNVERIFIED"
+        ],
+        "evidence_sufficient": "UNCERTAIN",
+        "risk_present": "UNCERTAIN",
+        "O": 7,
+        "S": 7,
+        "D": 8,
+        "severity": 7
+      },
+      "llm": {
+        "valid_runs": 5,
+        "fallbacks": 0,
+        "parse_failures": 0,
+        "output_truncated": 0,
+        "O": 6,
+        "O_range": 1,
+        "O_std": 0.4899,
+        "S": 6,
+        "S_range": 1,
+        "S_std": 0.4899,
+        "D": 5,
+        "D_range": 1,
+        "D_std": 0.4899,
+        "risk_present": "NO",
+        "risk_agreement": 0.6,
+        "risk_counts": {
+          "NO": 3,
+          "YES": 2
+        },
+        "distinct_triples": 4
+      },
+      "category": "insufficient_evidence"
+    },
+    {
+      "packet_id": "P10",
+      "dimension": "EXPLAINABILITY",
+      "deterministic": {
+        "status": "EVALUATED",
+        "aspect_scoring": "no_material_risk",
+        "risks_triggered": [],
+        "disclosure_gaps": [],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "NO",
+        "O": 9,
+        "S": 9,
+        "D": 9,
+        "severity": 9
+      },
+      "llm": {
+        "valid_runs": 5,
+        "fallbacks": 0,
+        "parse_failures": 0,
+        "output_truncated": 0,
+        "O": 8,
+        "O_range": 0,
+        "O_std": 0.0,
+        "S": 6,
+        "S_range": 2,
+        "S_std": 0.7483,
+        "D": 7,
+        "D_range": 2,
+        "D_std": 0.7483,
+        "risk_present": "NO",
+        "risk_agreement": 1.0,
+        "risk_counts": {
+          "NO": 5
+        },
+        "distinct_triples": 3
+      },
+      "category": "severity"
+    },
+    {
+      "packet_id": "P10",
+      "dimension": "SAFETY",
+      "deterministic": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "S-GOV-DISCLOSURE-GAP"
+        ],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "NO",
+        "O": 6,
+        "S": 6,
+        "D": 6,
+        "severity": 6
+      },
+      "llm": {
+        "valid_runs": 5,
+        "fallbacks": 0,
+        "parse_failures": 0,
+        "output_truncated": 0,
+        "O": 3,
+        "O_range": 0,
+        "O_std": 0.0,
+        "S": 3,
+        "S_range": 1,
+        "S_std": 0.4899,
+        "D": 5,
+        "D_range": 1,
+        "D_std": 0.4899,
+        "risk_present": "YES",
+        "risk_agreement": 1.0,
+        "risk_counts": {
+          "YES": 5
+        },
+        "distinct_triples": 3
+      },
+      "category": "evidence_interpretation"
+    },
+    {
+      "packet_id": "P11",
+      "dimension": "INTEGRITY",
+      "deterministic": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "I-INT-LICENSE-UNDISCLOSED"
+        ],
+        "failed_gates": [
+          "G-INT-LISTING-UNVERIFIED",
+          "G-INT-HASH-REF-MISSING",
+          "I-INT-HASH-UNVERIFIED"
+        ],
+        "evidence_sufficient": "UNCERTAIN",
+        "risk_present": "UNCERTAIN",
+        "O": 7,
+        "S": 7,
+        "D": 8,
+        "severity": 7
+      },
+      "llm": {
+        "valid_runs": 5,
+        "fallbacks": 0,
+        "parse_failures": 0,
+        "output_truncated": 0,
+        "O": 6,
+        "O_range": 1,
+        "O_std": 0.4899,
+        "S": 6,
+        "S_range": 1,
+        "S_std": 0.4899,
+        "D": 5,
+        "D_range": 1,
+        "D_std": 0.4,
+        "risk_present": "NO",
+        "risk_agreement": 0.6,
+        "risk_counts": {
+          "NO": 3,
+          "YES": 2
+        },
+        "distinct_triples": 5
+      },
+      "category": "insufficient_evidence"
+    },
+    {
+      "packet_id": "P11",
+      "dimension": "EXPLAINABILITY",
+      "deterministic": {
+        "status": "EVALUATED",
+        "aspect_scoring": "no_material_risk",
+        "risks_triggered": [],
+        "disclosure_gaps": [],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "NO",
+        "O": 9,
+        "S": 9,
+        "D": 9,
+        "severity": 9
+      },
+      "llm": {
+        "valid_runs": 5,
+        "fallbacks": 0,
+        "parse_failures": 0,
+        "output_truncated": 0,
+        "O": 8,
+        "O_range": 1,
+        "O_std": 0.4899,
+        "S": 6,
+        "S_range": 2,
+        "S_std": 0.7483,
+        "D": 7,
+        "D_range": 1,
+        "D_std": 0.4899,
+        "risk_present": "NO",
+        "risk_agreement": 1.0,
+        "risk_counts": {
+          "NO": 5
+        },
+        "distinct_triples": 5
+      },
+      "category": "severity"
+    },
+    {
+      "packet_id": "P11",
+      "dimension": "SAFETY",
+      "deterministic": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "S-GOV-DISCLOSURE-GAP"
+        ],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "NO",
+        "O": 5,
+        "S": 6,
+        "D": 6,
+        "severity": 6
+      },
+      "llm": {
+        "valid_runs": 5,
+        "fallbacks": 0,
+        "parse_failures": 0,
+        "output_truncated": 0,
+        "O": 2,
+        "O_range": 1,
+        "O_std": 0.4,
+        "S": 3,
+        "S_range": 1,
+        "S_std": 0.4899,
+        "D": 4,
+        "D_range": 2,
+        "D_std": 0.8,
+        "risk_present": "YES",
+        "risk_agreement": 1.0,
+        "risk_counts": {
+          "YES": 5
+        },
+        "distinct_triples": 4
+      },
+      "category": "evidence_interpretation"
+    },
+    {
+      "packet_id": "P12",
+      "dimension": "INTEGRITY",
+      "deterministic": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "I-INT-LICENSE-UNDISCLOSED"
+        ],
+        "failed_gates": [
+          "G-INT-LISTING-UNVERIFIED",
+          "G-INT-HASH-REF-MISSING",
+          "I-INT-HASH-UNVERIFIED"
+        ],
+        "evidence_sufficient": "UNCERTAIN",
+        "risk_present": "UNCERTAIN",
+        "O": 7,
+        "S": 7,
+        "D": 8,
+        "severity": 7
+      },
+      "llm": {
+        "valid_runs": 5,
+        "fallbacks": 0,
+        "parse_failures": 0,
+        "output_truncated": 0,
+        "O": 5,
+        "O_range": 0,
+        "O_std": 0.0,
+        "S": 5,
+        "S_range": 1,
+        "S_std": 0.4,
+        "D": 5,
+        "D_range": 1,
+        "D_std": 0.4,
+        "risk_present": "YES",
+        "risk_agreement": 1.0,
+        "risk_counts": {
+          "YES": 5
+        },
+        "distinct_triples": 3
+      },
+      "category": "insufficient_evidence"
+    },
+    {
+      "packet_id": "P12",
+      "dimension": "EXPLAINABILITY",
+      "deterministic": {
+        "status": "EVALUATED",
+        "aspect_scoring": "no_material_risk",
+        "risks_triggered": [],
+        "disclosure_gaps": [],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "NO",
+        "O": 9,
+        "S": 9,
+        "D": 9,
+        "severity": 9
+      },
+      "llm": {
+        "valid_runs": 5,
+        "fallbacks": 0,
+        "parse_failures": 0,
+        "output_truncated": 0,
+        "O": 7,
+        "O_range": 1,
+        "O_std": 0.4899,
+        "S": 6,
+        "S_range": 1,
+        "S_std": 0.4,
+        "D": 7,
+        "D_range": 1,
+        "D_std": 0.4899,
+        "risk_present": "NO",
+        "risk_agreement": 1.0,
+        "risk_counts": {
+          "NO": 5
+        },
+        "distinct_triples": 4
+      },
+      "category": "severity"
+    },
+    {
+      "packet_id": "P12",
+      "dimension": "SAFETY",
+      "deterministic": {
+        "status": "EVALUATED",
+        "aspect_scoring": "disclosure_gap",
+        "risks_triggered": [],
+        "disclosure_gaps": [
+          "S-GOV-DISCLOSURE-GAP"
+        ],
+        "failed_gates": [],
+        "evidence_sufficient": "YES",
+        "risk_present": "NO",
+        "O": 4,
+        "S": 6,
+        "D": 6,
+        "severity": 6
+      },
+      "llm": {
+        "valid_runs": 5,
+        "fallbacks": 0,
+        "parse_failures": 0,
+        "output_truncated": 0,
+        "O": 2,
+        "O_range": 1,
+        "O_std": 0.4,
+        "S": 3,
+        "S_range": 1,
+        "S_std": 0.4,
+        "D": 4,
+        "D_range": 1,
+        "D_std": 0.4,
+        "risk_present": "YES",
+        "risk_agreement": 1.0,
+        "risk_counts": {
+          "YES": 5
+        },
+        "distinct_triples": 4
+      },
+      "category": "evidence_interpretation"
+    }
+  ],
+  "localization": [
+    {
+      "packet_id": "P01",
+      "deterministic": [],
+      "llm": [
+        "EXPLAINABILITY",
+        "INTEGRITY",
+        "SAFETY"
+      ],
+      "exact": false,
+      "jaccard": 0.0
+    },
+    {
+      "packet_id": "P02",
+      "deterministic": [],
+      "llm": [
+        "SAFETY"
+      ],
+      "exact": false,
+      "jaccard": 0.0
+    },
+    {
+      "packet_id": "P03",
+      "deterministic": [
+        "INTEGRITY"
+      ],
+      "llm": [
+        "INTEGRITY",
+        "SAFETY"
+      ],
+      "exact": false,
+      "jaccard": 0.5
+    },
+    {
+      "packet_id": "P04",
+      "deterministic": [],
+      "llm": [
+        "SAFETY"
+      ],
+      "exact": false,
+      "jaccard": 0.0
+    },
+    {
+      "packet_id": "P05",
+      "deterministic": [],
+      "llm": [
+        "EXPLAINABILITY",
+        "INTEGRITY",
+        "SAFETY"
+      ],
+      "exact": false,
+      "jaccard": 0.0
+    },
+    {
+      "packet_id": "P06",
+      "deterministic": [
+        "EXPLAINABILITY"
+      ],
+      "llm": [
+        "EXPLAINABILITY",
+        "INTEGRITY",
+        "SAFETY"
+      ],
+      "exact": false,
+      "jaccard": 0.3333
+    },
+    {
+      "packet_id": "P07",
+      "deterministic": [
+        "EXPLAINABILITY"
+      ],
+      "llm": [
+        "EXPLAINABILITY",
+        "SAFETY"
+      ],
+      "exact": false,
+      "jaccard": 0.5
+    },
+    {
+      "packet_id": "P08",
+      "deterministic": [],
+      "llm": [
+        "INTEGRITY",
+        "SAFETY"
+      ],
+      "exact": false,
+      "jaccard": 0.0
+    },
+    {
+      "packet_id": "P09",
+      "deterministic": [
+        "EXPLAINABILITY"
+      ],
+      "llm": [
+        "EXPLAINABILITY",
+        "INTEGRITY",
+        "SAFETY"
+      ],
+      "exact": false,
+      "jaccard": 0.3333
+    },
+    {
+      "packet_id": "P10",
+      "deterministic": [],
+      "llm": [
+        "SAFETY"
+      ],
+      "exact": false,
+      "jaccard": 0.0
+    },
+    {
+      "packet_id": "P11",
+      "deterministic": [],
+      "llm": [
+        "SAFETY"
+      ],
+      "exact": false,
+      "jaccard": 0.0
+    },
+    {
+      "packet_id": "P12",
+      "deterministic": [],
+      "llm": [
+        "INTEGRITY",
+        "SAFETY"
+      ],
+      "exact": false,
+      "jaccard": 0.0
+    }
+  ],
+  "per_dimension": {
+    "INTEGRITY": {
+      "n": 12,
+      "status_agreement": 0.0833,
+      "det_yes": 1,
+      "det_uncertain": 11,
+      "llm_yes": 7
+    },
+    "EXPLAINABILITY": {
+      "n": 12,
+      "status_agreement": 0.8333,
+      "det_yes": 3,
+      "det_uncertain": 0,
+      "llm_yes": 5
+    },
+    "SAFETY": {
+      "n": 12,
+      "status_agreement": 0.0,
+      "det_yes": 0,
+      "det_uncertain": 0,
+      "llm_yes": 12
+    }
+  },
+  "summary": {
+    "packet_dimension_pairs": 36,
+    "llm_answered_pairs": 36,
+    "exact_status_agreement": 0.3056,
+    "risk_present_agreement_definite": 0.44,
+    "n_definite_pairs": 25,
+    "localization_exact_match": 0.0,
+    "localization_mean_jaccard": 0.1389,
+    "severity_exact": 0.1111,
+    "severity_within_1": 0.2222,
+    "severity_mae": 2.1944,
+    "osd_exact_triple": 0.0833,
+    "O_mae": 1.8611,
+    "S_mae": 2.1944,
+    "D_mae": 2.3056,
+    "det_uncertain_pairs": 11,
+    "llm_uncertain_pairs_modal_tie": 0,
+    "categories": {
+      "insufficient_evidence": 11,
+      "evidence_interpretation": 14,
+      "agree": 3,
+      "severity": 8
+    },
+    "det_ms_per_packet_mean": 2.071,
+    "llm_s_per_call_mean": 7.256,
+    "llm_s_per_successful_call_mean": 7.256,
+    "provider_variation": {
+      "INTEGRITY": {
+        "claude": {
+          "n": 38,
+          "O_mean": 4.8684,
+          "S_mean": 4.7632,
+          "D_mean": 4.8158
+        },
+        "gemini": {
+          "n": 9,
+          "O_mean": 5.6667,
+          "S_mean": 6.5556,
+          "D_mean": 6.3333
+        },
+        "groq": {
+          "n": 13,
+          "O_mean": 2.8462,
+          "S_mean": 3.9231,
+          "D_mean": 4.1538
+        }
+      },
+      "EXPLAINABILITY": {
+        "claude": {
+          "n": 38,
+          "O_mean": 4.8421,
+          "S_mean": 4.6842,
+          "D_mean": 5.0526
+        },
+        "gemini": {
+          "n": 9,
+          "O_mean": 8.5556,
+          "S_mean": 8.6667,
+          "D_mean": 8.6667
+        },
+        "groq": {
+          "n": 13,
+          "O_mean": 5.6923,
+          "S_mean": 6.7692,
+          "D_mean": 7.3846
+        }
+      },
+      "SAFETY": {
+        "claude": {
+          "n": 38,
+          "O_mean": 2.0526,
+          "S_mean": 3.0526,
+          "D_mean": 3.8421
+        },
+        "gemini": {
+          "n": 9,
+          "O_mean": 3.2222,
+          "S_mean": 4.4444,
+          "D_mean": 4.6667
+        },
+        "groq": {
+          "n": 13,
+          "O_mean": 1.7692,
+          "S_mean": 2.9231,
+          "D_mean": 2.9231
+        }
+      }
+    },
+    "llm_runs": 60,
+    "llm_fallbacks": 0,
+    "llm_parse_failures": 0,
+    "llm_fallbacks_provider_unavailable": 0,
+    "llm_superseded_attempt_records": 84,
+    "llm_output_truncated": 0,
+    "llm_prompt_truncated": 5,
+    "llm_replayed_runs": 60,
+    "llm_providers": {
+      "groq": 13,
+      "gemini": 9,
+      "claude": 38
+    },
+    "llm_repeatability_pairs": 36,
+    "llm_risk_repeatable_pairs": 30,
+    "llm_osd_repeatable_pairs": 0,
+    "llm_mean_risk_agreement": 0.9389,
+    "llm_mean_O_range": 1.2778,
+    "llm_mean_S_range": 1.3056,
+    "llm_mean_D_range": 2.1389
+  },
+  "packet_hashes_identical_across_evaluators": true,
+  "prompt_version": "osd-llm-v3-decision-first-2026-10-03",
+  "provider_attempts": {
+    "claude": {
+      "ok": 38
+    },
+    "gemini": {
+      "ok": 9,
+      "ServerError": 13,
+      "ClientError": 84
+    },
+    "groq": {
+      "ok": 13,
+      "HTTPStatusError": 87
+    },
+    "nvidia": {
+      "ok": 5,
+      "HTTPStatusError": 79,
+      "ReadTimeout": 4
+    }
+  }
+}

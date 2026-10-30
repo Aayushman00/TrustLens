@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "L10 evidence review",
+  "type": "object",
+  "required": [
+    "packet_id",
+    "risk_present",
+    "dimension",
+    "severity",
+    "evidence_sufficient",
+    "rationale"
+  ],
+  "properties": {
+    "packet_id": {
+      "type": "string",
+      "pattern": "^L10-[0-9]{2}$"
+    },
+    "risk_present": {
+      "enum": [
+        "YES",
+        "NO",
+        "UNCERTAIN"
+      ]
+    },
+    "dimension": {
+      "enum": [
+        "FAIRNESS",
+        "ROBUSTNESS",
+        "INTEGRITY",
+        "EXPLAINABILITY",
+        "SAFETY",
+        "NONE",
+        "UNCERTAIN"
+      ]
+    },
+    "severity": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 1,
+      "maximum": 9,
+      "description": "FRIES S scale: 9 negligible consequence ... 1 catastrophic; null when risk_present is NO"
+    },
+    "evidence_sufficient": {
+      "enum": [
+        "YES",
+        "NO",
+        "UNCERTAIN"
+      ]
+    },
+    "rationale": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}
