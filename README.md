@@ -12,6 +12,7 @@ Measure it. Map it to risk. Rate it with a human in the loop. Keep every step tr
 ![React](https://img.shields.io/badge/React-Vite-61DAFB?logo=react&logoColor=black)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 ![Status](https://img.shields.io/badge/status-research%20prototype-orange)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 [Quick start](#quick-start) · [How it works](#how-it-works) · [Screenshots](#screenshots) · [Methodology](#methodology) · [Docs](#documentation) · [Thesis report](report/TrustLens_Final_Report.pdf)
 
@@ -144,7 +145,7 @@ TrustLens is the code behind a B.Tech major project at NITK Surathkal on semi-au
 
 ## License
 
-No license file has been added to this repository yet. Until one is, all rights are reserved by the authors.
+Released under the [MIT License](LICENSE).
 
 ---
 
