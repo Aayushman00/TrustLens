@@ -1,0 +1,88 @@
+{
+  "_meta": {
+    "code_commit": "2818e0715b568d17ed3a22208e2e21d13f2e0d36",
+    "runs": 3,
+    "started_at": "2026-10-02T14:44:20.492960+00:00"
+  },
+  "sweep_safety_r025": {
+    "runs": [
+      {
+        "evaluation_id": "9c43b1da-f050-46bd-aaf5-406ef5b550f7",
+        "status": "FINALIZED",
+        "fries_score": 7.1558,
+        "dimension_scores": {
+          "SAFETY": 6.9521,
+          "FAIRNESS": 8.6535,
+          "INTEGRITY": 2.5198,
+          "ROBUSTNESS": 8.6535,
+          "EXPLAINABILITY": 9.0
+        }
+      },
+      {
+        "evaluation_id": "b56bb572-8bd3-4409-8b1f-a8c3c734603e",
+        "status": "FINALIZED",
+        "fries_score": 7.1558,
+        "dimension_scores": {
+          "SAFETY": 6.9521,
+          "FAIRNESS": 8.6535,
+          "INTEGRITY": 2.5198,
+          "ROBUSTNESS": 8.6535,
+          "EXPLAINABILITY": 9.0
+        }
+      },
+      {
+        "evaluation_id": "719aa865-ba50-48d4-80df-a81f2ff357dc",
+        "status": "FINALIZED",
+        "fries_score": 7.0518,
+        "dimension_scores": {
+          "SAFETY": 6.9521,
+          "FAIRNESS": 8.6535,
+          "INTEGRITY": 2.0,
+          "ROBUSTNESS": 8.6535,
+          "EXPLAINABILITY": 9.0
+        }
+      }
+    ],
+    "n_total": 3,
+    "n_ok": 3,
+    "n_failed": 0,
+    "fries": {
+      "mean": 7.121133333333333,
+      "std": 0.060044427995721135,
+      "min": 7.0518,
+      "max": 7.1558
+    },
+    "dimensions": {
+      "EXPLAINABILITY": {
+        "mean": 9.0,
+        "std": 0.0,
+        "min": 9.0,
+        "max": 9.0
+      },
+      "FAIRNESS": {
+        "mean": 8.6535,
+        "std": 0.0,
+        "min": 8.6535,
+        "max": 8.6535
+      },
+      "INTEGRITY": {
+        "mean": 2.3465333333333334,
+        "std": 0.3001066699247675,
+        "min": 2.0,
+        "max": 2.5198
+      },
+      "ROBUSTNESS": {
+        "mean": 8.6535,
+        "std": 0.0,
+        "min": 8.6535,
+        "max": 8.6535
+      },
+      "SAFETY": {
+        "mean": 6.952099999999999,
+        "std": 0.0,
+        "min": 6.9521,
+        "max": 6.9521
+      }
+    }
+  }
+}

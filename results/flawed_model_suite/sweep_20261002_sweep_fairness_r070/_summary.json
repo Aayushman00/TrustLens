@@ -1,0 +1,88 @@
+{
+  "_meta": {
+    "code_commit": "2818e0715b568d17ed3a22208e2e21d13f2e0d36",
+    "runs": 3,
+    "started_at": "2026-10-02T15:03:34.843918+00:00"
+  },
+  "sweep_fairness_r070": {
+    "runs": [
+      {
+        "evaluation_id": "9995c8ba-f7c0-471e-982a-ae1bd94f481f",
+        "status": "FINALIZED",
+        "fries_score": 7.1083,
+        "dimension_scores": {
+          "SAFETY": 7.2685,
+          "FAIRNESS": 7.3186,
+          "INTEGRITY": 3.6342,
+          "ROBUSTNESS": 8.3203,
+          "EXPLAINABILITY": 9.0
+        }
+      },
+      {
+        "evaluation_id": "12c2f24d-3dba-46f3-912e-97078d0e96f7",
+        "status": "FINALIZED",
+        "fries_score": 6.8162,
+        "dimension_scores": {
+          "SAFETY": 7.2685,
+          "FAIRNESS": 7.3186,
+          "INTEGRITY": 2.5198,
+          "ROBUSTNESS": 8.3203,
+          "EXPLAINABILITY": 8.6535
+        }
+      },
+      {
+        "evaluation_id": "8df432a7-16d5-4017-aa79-c7697b48aef4",
+        "status": "FINALIZED",
+        "fries_score": 7.5511,
+        "dimension_scores": {
+          "SAFETY": 7.2685,
+          "FAIRNESS": 7.3186,
+          "INTEGRITY": 5.848,
+          "ROBUSTNESS": 8.3203,
+          "EXPLAINABILITY": 9.0
+        }
+      }
+    ],
+    "n_total": 3,
+    "n_ok": 3,
+    "n_failed": 0,
+    "fries": {
+      "mean": 7.158533333333334,
+      "std": 0.37001627441686025,
+      "min": 6.8162,
+      "max": 7.5511
+    },
+    "dimensions": {
+      "EXPLAINABILITY": {
+        "mean": 8.884500000000001,
+        "std": 0.20005186827420574,
+        "min": 8.6535,
+        "max": 9.0
+      },
+      "FAIRNESS": {
+        "mean": 7.3186,
+        "std": 0.0,
+        "min": 7.3186,
+        "max": 7.3186
+      },
+      "INTEGRITY": {
+        "mean": 4.000666666666667,
+        "std": 1.6940933189565837,
+        "min": 2.5198,
+        "max": 5.848
+      },
+      "ROBUSTNESS": {
+        "mean": 8.3203,
+        "std": 0.0,
+        "min": 8.3203,
+        "max": 8.3203
+      },
+      "SAFETY": {
+        "mean": 7.2685,
+        "std": 0.0,
+        "min": 7.2685,
+        "max": 7.2685
+      }
+    }
+  }
+}
