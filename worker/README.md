@@ -1,27 +1,44 @@
-# TrustLens Worker (Phase 22 — no worker changes; version bump only)
+<div align="center">
 
-Celery worker that consumes `trustlens.evaluate_model` from the Redis `trustlens`
-queue and runs FRIES probes (F→R→I→E→S). **All five dimensions are real** after
-Phase 14 (Fairness, Robustness, Integrity, Explainability, Safety). Each probe
-writes filesystem evidence (ADR 0004, ADR 0014). Phase 15: the runner refines each probe's
-confidence via the shared Confidence Engine (geometric mean of `data_quality` ×
-`probe_reliability` × `evidence_completeness`) before persisting, and stores the
-factors under `metric_values.confidence_factors`. Phase 16: after probes the
-`HeuristicOSDAgent` persists a **PROPOSED / REQUIRES VALIDATION** O/S/D
-suggestion (`osd_agent_outputs`); Autonomous evals then run the pure FRIES
-scorer and upsert `final_scores`. Phase 17: the Autonomous `finalized_osd`
-also carries the mode disclosure — `human_reviewed=false`, `evaluation_mode`,
-and the locked disclaimer text (shared via vendored `app/schemas/modes.py`).
+# TrustLens Worker
 
-## Shared ORM / evidence / probes strategy (Option A)
+**Celery worker that runs the five FRIES probes.**
 
-`backend/` and `worker/` both use the top-level package name `app`, so installing
-`trustlens-backend` into the worker image would collide. Instead,
-[`Dockerfile.worker`](../Dockerfile.worker) **vendors** these single-source modules
-from `backend/app/` into the worker image at build time:
+![Celery](https://img.shields.io/badge/Celery-37814A?logo=celery&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-queue-DC382D?logo=redis&logoColor=white)
+
+[Pipeline](#pipeline-stages) · [Shared code](#shared-code-with-the-backend) · [Config](#config) · [Run](#run-docker) · [Test](#test)
+
+</div>
+
+The worker consumes `trustlens.evaluate_model` from the Redis `trustlens` queue and runs the probes in the order **F → R → I → E → S**. All five dimensions are real: Fairness, Robustness, Integrity, Explainability and Safety. Each probe writes filesystem evidence (ADR 0004, ADR 0014).
+
+| Step | What happens |
+| ---- | ------------ |
+| Confidence | The runner refines each probe's confidence with the shared Confidence Engine (geometric mean of `data_quality` × `probe_reliability` × `evidence_completeness`) before persisting, and stores the factors under `metric_values.confidence_factors` |
+| O/S/D proposal | After the probes, the selected assessment engine persists its output (`osd_agent_outputs`). The default `deterministic` engine **abstains** (no O/S/D). `legacy_heuristic` (`HeuristicOSDAgent`) and `llm_v1` (`HybridOSDAgent`) are opt-in via top-level `probe_config.assessment_engine`, and their values are **PROPOSED / REQUIRES VALIDATION** |
+| Autonomous scoring | Autonomous evaluations then run the pure FRIES scorer and upsert `final_scores` |
+| Mode disclosure | The autonomous `finalized_osd` carries `human_reviewed=false`, `evaluation_mode` and the locked disclaimer text (shared via the vendored `app/schemas/modes.py`) |
+
+## Pipeline stages
+
+1. Load the evaluation and model. If `model_ref` differs from `hf_repo_id`, mark `FAILED`.
+2. `PENDING` → `RUNNING`.
+3. `run_all_probes` runs F→R→I→E→S. The Confidence Engine refines each `probe_results.confidence` before insert.
+4. `RUNNING` → `PROBES_COMPLETED`.
+5. The assessment engine persists `osd_agent_outputs`, then `PROBES_COMPLETED` → `AGENT_COMPLETED`.
+6. Mode branch:
+   - **`AI_ASSISTED`** → `AWAITING_REVIEW`. The worker never writes assisted `final_scores`; the human-review and finalize path runs **API-side**.
+   - **`AI_AUTONOMOUS`** → when complete O/S/D exist, the FRIES scorer upserts `final_scores` (`human_reviewed=false` plus disclaimer); otherwise FRIES is withheld. Either way → `FINALIZED`.
+
+Soft-skips still write evidence and let the evaluation continue. Agent or scorer logic errors → `FAILED`, with no Celery retry. Report generation (canonical JSON and PDF) also runs **API-side**; reports read the rows this pipeline persists.
+
+## Shared code with the backend
+
+`backend/` and `worker/` both use the top-level package name `app`, so installing `trustlens-backend` into the worker image would collide. Instead, [`Dockerfile.worker`](../Dockerfile.worker) **vendors** these single-source modules from `backend/app/` into the worker image at build time:
 
 | Source (backend) | Destination (worker image) |
-|------------------|----------------------------|
+| ---------------- | -------------------------- |
 | `backend/app/db/` | `./app/db/` |
 | `backend/app/core/db.py` | `./app/core/db.py` |
 | `backend/app/core/storage.py` | `./app/core/storage.py` |
@@ -31,64 +48,36 @@ from `backend/app/` into the worker image at build time:
 | `backend/app/storage/` | `./app/storage/` |
 | `backend/app/datasets/` | `./app/datasets/` |
 | `backend/app/probes/` | `./app/probes/` (all five FRIES probes) |
-| `backend/app/confidence/` | `./app/confidence/` (Phase 15 Confidence Engine) |
-| `backend/app/osd/` | `./app/osd/` (Phase 16 O/S/D agent — PROPOSED) |
-| `backend/app/scoring/` | `./app/scoring/` (Phase 16 pure FRIES scorer) |
-| `backend/app/schemas/modes.py` | `./app/schemas/modes.py` (Phase 17 disclaimer texts) |
+| `backend/app/confidence/` | `./app/confidence/` (Confidence Engine) |
+| `backend/app/osd/` | `./app/osd/` (O/S/D agent, PROPOSED) |
+| `backend/app/scoring/` | `./app/scoring/` (pure FRIES scorer) |
+| `backend/app/schemas/modes.py` | `./app/schemas/modes.py` (disclaimer texts) |
 | `backend/app/schemas/evaluation_contract_v2.py` | `./app/schemas/evaluation_contract_v2.py` |
-| `backend/app/inference/` | `./app/inference/` (LocalHFBackend, device auto-detection) |
+| `backend/app/inference/` | `./app/inference/` (`LocalHFBackend`, device auto-detection) |
 | `backend/app/tasks/evaluate_pipeline.py` | `./app/tasks/evaluate_pipeline.py` |
 
-### ML deps
-
-Worker installs torch/transformers (Fairness/Robustness inference). Explainability
-and Safety are metadata-only (stdlib card parsing).
-
-## Celery CMD
-
-```text
-celery -A app.celery_app worker --loglevel=INFO -Q trustlens
-```
-
-## Pipeline stages
-
-1. Load evaluation + model; fail → `FAILED` if `model_ref` ≠ `hf_repo_id`
-2. `PENDING` → `RUNNING`
-3. `run_all_probes` — F→R→I→E→S (all real); ConfidenceEngine refines each
-   `probe_results.confidence` before insert (Phase 15)
-4. `RUNNING` → `PROBES_COMPLETED`
-5. `HeuristicOSDAgent.propose` → persist `osd_agent_outputs` (PROPOSED / REQUIRES
-   VALIDATION) → `PROBES_COMPLETED` → `AGENT_COMPLETED` (Phase 16)
-6. Mode branch:
-   - `AI_ASSISTED` → `AWAITING_REVIEW` — the worker never writes Assisted
-     `final_scores`; the Phase 18 human-review → finalize path runs **API-side**
-     (no worker/Dockerfile change)
-   - `AI_AUTONOMOUS` → FRIESScorer on agent O/S/D → upsert `final_scores`
-     (`finalized_osd` carries `human_reviewed=false` + disclaimer, Phase 17) → `FINALIZED`
-
-Soft-skips still write evidence and let the eval continue. Agent/scorer logic
-errors → `FAILED` (no Celery retry).
-
-Phase 19 report generation (canonical JSON + PDF) runs **API-side** — the
-worker is untouched; reports read the rows this pipeline persists.
-
-Phases 20–21 attack simulation are post-MVP.
+**ML dependencies.** The worker installs `torch` and `transformers` for Fairness and Robustness inference. Explainability and Safety (governance part) read metadata only, using stdlib card parsing.
 
 ## Config
 
 | Variable | Purpose |
-|----------|---------|
-| `REDIS_URL` | Celery broker + result backend |
-| `DATABASE_URL` | Postgres (same ORM as API) |
-| `STORAGE_DIR` | Artifact directory (shared with API) |
-| `DATASETS_CONFIG_PATH` | Pinned datasets YAML |
-| `HF_TOKEN` / `HF_HOME` | Hub auth + cache |
+| -------- | ------- |
+| `REDIS_URL` | Celery broker and result backend |
+| `DATABASE_URL` | Postgres (same ORM as the API) |
+| `STORAGE_DIR` | Artifact directory (shared with the API) |
+| `HF_TOKEN` / `HF_HOME` | Hub auth and cache |
 
 ## Run (Docker)
 
 ```powershell
 docker compose up --build -d worker
 docker compose logs worker -f
+```
+
+The container runs:
+
+```text
+celery -A app.celery_app worker --loglevel=INFO -Q trustlens
 ```
 
 ## Test
@@ -101,7 +90,4 @@ python -m pytest -q
 
 ## Out of scope
 
-Human review accept/edit + Assisted FRIES write (18, API-side), report
-generation (19, API-side), validated metric→O/S/D science / LLM agent,
-confidence calibration claims, FRIES2 caps, NLP risk extraction, evidence GC,
-public evidence download API.
+Human review accept/edit and the assisted FRIES write (API-side), report generation (API-side), validated metric → O/S/D science and any LLM agent, confidence calibration claims, FRIES2 caps, NLP risk extraction, evidence GC, a public evidence download API, and attack simulation (post-MVP).

@@ -1,10 +1,15 @@
-# Shared Scoring Fixtures
+# Shared scoring fixtures
 
-Fixtures for **Phase 16+** original FRIES unit tests.
+Frozen test vectors for the **original FRIES** scorer, used by the backend tests.
 
-**Not used at runtime in Phase 1.**
+> [!NOTE]
+> These files are JSON data only. There is **no** scorer implementation, **no** `calculate_fries()` and **no** metric → O/S/D mapping here.
 
-- Source: frozen `implementation/phase0/fries_formula.md` test cases and `golden_reference.md` Table 8 inputs.
-- Contents: JSON data only — **no** scorer implementation, **no** `calculate_fries()`, **no** metric→O/S/D mappings.
-- Metric→O/S/D remains an unresolved research question (`implementation/phase0/open_research_questions.md`).
-- FRIES2 is a proposed extension and is intentionally absent from these fixtures.
+| Item | Detail |
+| ---- | ------ |
+| Fixture | `fixtures/fries_test_vectors.json` |
+| Source | Frozen `implementation/phase0/fries_formula.md` test cases and `golden_reference.md` Table 8 inputs |
+| Used by | `backend/tests/test_fries_scorer.py` (oracle documented in [`backend/tests/SCORING.md`](../../backend/tests/SCORING.md)) |
+| Not included | FRIES2, which is a proposed extension and is intentionally absent |
+
+Metric → O/S/D remains an open research question (`implementation/phase0/open_research_questions.md`).

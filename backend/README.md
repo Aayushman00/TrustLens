@@ -1,15 +1,31 @@
+<div align="center">
+
 # TrustLens Backend
 
-Layered FastAPI: routers → services → repositories/adapters/storage/probes, with
-HF Hub import, Celery enqueue, immutable MinIO evidence, **all five FRIES probes**
-real (F/R/I/E/S), a shared **Confidence Engine** (Phase 15), a **PROPOSED O/S/D
-agent** plus the pure **original FRIES scorer** (Phase 16), **dual-mode policy +
-disclosures** (Phase 17), the **AI-Assisted human review workflow** (Phase 18),
-**report generation** (Phase 19, ADR 0009), and an opt-in **publish flag**
-(ADR 0013) after FINALIZED. TrustLens is a single-user local application: there
-is no login or RBAC (removed in Alembic `008_remove_auth_and_ownership`); the
-local machine is the trust boundary. Attack simulation (Phases 20–21) is
-post-MVP and unrouted.
+**FastAPI service, probes, O/S/D engines and the FRIES scorer.**
+
+![Python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
+![Postgres](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white)
+![Celery](https://img.shields.io/badge/Celery-37814A?logo=celery&logoColor=white)
+
+[Architecture](#architecture) · [Probes](#fairness-probe) · [Evaluation jobs](#evaluation-jobs-phase-7-adr-0005) · [Routes](#implemented-routes) · [Reports](#reports-phase-19-adr-0009) · [Run](#run) · [Test](#test)
+
+</div>
+
+A layered FastAPI app: routers → services → repositories, adapters, storage and probes. It provides:
+
+- Hugging Face Hub **metadata import** and Celery enqueue.
+- Immutable, append-only **evidence** in a local filesystem object store (ADR 0014).
+- **All five FRIES probes** (F/R/I/E/S) and a shared **Confidence Engine**.
+- A **PROPOSED O/S/D agent** and the pure **original FRIES scorer**.
+- **Dual-mode policy and disclosures**, plus the **AI-Assisted human review workflow**.
+- **Report generation** (ADR 0009) and an opt-in **publish flag** (ADR 0013) after `FINALIZED`.
+
+> [!NOTE]
+> TrustLens is a single-user local application. There is no login or RBAC (removed in Alembic `008_remove_auth_and_ownership`); the local machine is the trust boundary. Attack simulation is post-MVP and unrouted.
+
+For the project overview and methodology see the [root README](../README.md).
 
 ## Architecture
 
@@ -20,7 +36,7 @@ app/
   probes/                  FRIES probe plugins
     base.py                FRIES_PROBE_ORDER, ProbeContext, ProbeOutput, Probe
     integrity.py           IntegrityProbe (Phase 10) — metadata audit
-    fairness.py            FairnessProbe (Phase 12) — Adult DP/EO/F1
+    fairness.py            FairnessProbe — imported model on a user dataset
     fairness_metrics.py    Pure stdlib group-fairness helpers
     explainability.py      ExplainabilityProbe (Phase 13) — card sections
     explainability_card.py ATX heading matcher + contradictions
@@ -46,19 +62,19 @@ app/
   reports/
     builder.py             build_report_json (Phase 19) — canonical report_v1 from repos
     render.py              render_html (Jinja2) + render_pdf (WeasyPrint, optional)
-    store.py               ReportStore — versioned reports/{eval_id}/v{n}/ MinIO keys
+    store.py               ReportStore — versioned reports/{eval_id}/v{n}/ object keys
     templates/report_v1.html  print-friendly Jinja2 template (PDF projection)
   datasets/                pinned yaml + loader.py (HF subsets)
   tasks/
     celery_client.py        enqueue_evaluate_model (producer only)
     evaluate_pipeline.py    status machine + run_all_probes (shared with worker)
   storage/
-    evidence_store.py       EvidenceStore — append-only MinIO artifacts (ADR 0004)
+    evidence_store.py       EvidenceStore — append-only artifacts (ADR 0004)
   api/
     deps.py                get_db()
     errors.py              AppError → {code, message, details}
     middleware.py          X-Request-ID + access logs
-  core/                    config, db engine, redis client, S3 storage
+  core/                    config, db engine, redis client, local filesystem object storage (ADR 0014)
   routers/v1/              models, import-hf, documentation, dataset content,
                            evaluation drafts, evaluations, lifecycle actions, reports
   schemas/
@@ -79,28 +95,26 @@ app/
   scripts/                 experiment runners + analysis (reproduce results/)
 ```
 
-## Fairness probe (Phase 12)
+## Fairness probe
 
-Tabular Adult census path (not SST-2). Objective disparities only — **not** a normative
-fair/unfair judgment and **not** O/S/D (`proposed_mapping: false`). When metrics are
-computed, `needs_human_review` is always `true`.
+Runs the **imported model** on a user-supplied labelled dataset with a group column (local Transformers backend). It reports objective disparities only: not a normative fair/unfair judgment and not O/S/D. Methodology `tl-methodology-v1.0`, binary rule `tl-fairness-binary-v1.2`.
 
-| Setting | MVP default |
-|---------|-------------|
-| Dataset | `datasets.fairness` or **`adult_fairness`** |
-| Sensitive attr | `slice_definitions.sensitive_attribute` / `extra.sensitive_attribute` or **`sex`** |
-| Samples | `extra.max_samples` or **256** (clamp 20–1000) |
-| Thin slice | `extra.min_group_n` or **30** → flag `insufficient_slice_size` |
-| Predictions | Tiny sklearn `LogisticRegression` on non-sensitive features (tests inject Ŷ) |
+| Item | Rule |
+|------|------|
+| Binary risk | `F-FAIR-EOPP`: equal-opportunity difference (max−min group TPR) above `ε = 0.02`, judged on a bootstrap CI (`B = 1000`) |
+| Wide CI | A CI width above `0.15` blocks scoring (rating withheld) |
+| Multiclass | `F-FAIR-PERF`: worst-group accuracy gap |
+| Collapse gate | Single-class prediction collapse is gated |
+| Review | When metrics are computed, `needs_human_review` is always `true` |
 
 | Metric | Formula |
 |--------|---------|
-| `demographic_parity_difference` | max−min of P(Ŷ=1\|A) |
-| `equalized_odds_difference` | max(\|ΔTPR\|, \|ΔFPR\|) across groups |
+| `demographic_parity_difference` | max−min of P(Ŷ=1 given A) |
+| `equal_opportunity_difference` | max−min group TPR |
+| `equalized_odds_difference` | max of the absolute TPR and FPR differences across groups |
 | `subgroup_f1_spread` | max−min binary F1 across groups |
 
-NLP-only pins (e.g. `sentiment_fairness`) → `unsupported_modality` + evidence; evaluation
-still completes.
+The earlier Adult-census logistic-regression proxy was removed before the thesis experiments; see the root README for the current evidence list.
 
 ## Explainability probe (Phase 4 — tl-explainability-v1.1)
 
@@ -162,7 +176,7 @@ Phrase matches are **not** evidence of model risk, unsafety, or harm.
 
 ## Confidence Engine (Phase 15)
 
-Pure module ([`app/confidence/engine.py`](app/confidence/engine.py), no DB/S3) that
+Pure module ([`app/confidence/engine.py`](app/confidence/engine.py), no DB or storage) that
 overwrites each probe's local confidence heuristic at persist time in `run_all_probes`.
 **Evidence-strength signal only — not correctness, not O/S/D** (`proposed_calibration:
 true`; calibration is open, RQ5).
@@ -339,8 +353,7 @@ ProbeRegistry (F→R→I→E→S)
 - Contract: `Probe.run(ProbeContext) → ProbeOutput` — metrics, confidence ∈ [0,1],
   evidence_refs, flags. Probes must **not** assign O/S/D or FRIES scores.
 - `ProbeContext` includes `model_revision` / `model_checksum` from the Model ORM.
-- `probe_config` validated as `ProbeConfigV1` on create; dataset keys must exist in
-  [`configs/datasets_v1.yaml`](../configs/datasets_v1.yaml).
+- `probe_config` validated as `ProbeConfigV1` on create.
 - Phase 15: the runner refines each probe's confidence via the Confidence Engine
   before persisting (see below); probe-local heuristics remain the raw input.
 
@@ -393,21 +406,21 @@ expected`) so duplicate/stale updates are no-ops.
 ## Evidence storage (Phase 8, ADR 0004)
 
 [`app.storage.EvidenceStore`](app/storage/evidence_store.py) writes probe metrics JSON to
-MinIO. Probe-agnostic: Integrity and stubs call the same `put_artifact` API.
+the local filesystem object store (`STORAGE_DIR`, ADR 0014). Probe-agnostic: Integrity and stubs call the same `put_artifact` API.
 
 | Concern | Rule |
 |---------|------|
 | Key layout | `evidence/{evaluation_id}/{evidence_id}.json` |
-| URI | `s3://{bucket}/{key}` |
+| URI | `s3://{bucket}/{key}` (a logical ref; the object lives at `{STORAGE_DIR}/{bucket}/{key}`) |
 | Hash | `sha256:<hex>` of object bytes |
 | Policy | Append-only — new put ⇒ new `evidence_id` + key; never overwrite/delete in MVP |
 | Content | Metrics JSON only — never model weights |
 
 `verify_artifact` / `verify_ref` re-fetch bytes and compare hashes (tamper detection).
-Five evidence refs per evaluation (one per dimension). S3 put / probe failures → `FAILED`
+Five evidence refs per evaluation (one per dimension). Storage / probe failures → `FAILED`
 (no Celery retry for store/logic errors).
 
-Factory: `get_evidence_store(settings) → EvidenceStore | None` (None if S3 unset).
+Factory: `get_evidence_store(settings) → EvidenceStore | None` (None if storage is unset).
 ## Hugging Face Hub model ingestion (Phase 6, ADR 0012)
 
 `POST /v1/models/import-hf` resolves a **user-selected** HF repo id or URL to metadata —
@@ -566,10 +579,10 @@ s3://trustlens/reports/{evaluation_id}/v1/report.pdf   # when PDF enabled
 s3://trustlens/reports/{evaluation_id}/v2/report.json  # after POST generate
 ```
 
-`GET` returns the latest `reports` row with the stored JSON read back from MinIO
+`GET` returns the latest `reports` row with the stored JSON read back from the object store
 (not rebuilt) + `json_uri`/`pdf_uri`/hashes; the first `GET` on a FINALIZED
 evaluation auto-generates version 1. sha256 hashes are returned in the response
-and stored as S3 object metadata (no DB columns).
+and stored alongside the object (no DB columns).
 
 **PDF / WeasyPrint:** `Dockerfile.api` installs `libpango-1.0-0
 libpangoft2-1.0-0 libharfbuzz0b libharfbuzz-subset0 fonts-dejavu-core
