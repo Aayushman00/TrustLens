@@ -1,0 +1,23 @@
+% F1: data splits and experiments of Chapter 5. Every number below is taken from Sections 5.1-5.8; check_figures.py greps the key phrases.
+\begin{tikzpicture}[font=\sffamily\scriptsize,x=1cm,y=1cm,
+  data/.style={rectangle,rounded corners=2pt,draw=tlblue,fill=tlgrey,line width=0.6pt,text width=4.5cm,align=left,inner sep=4pt,minimum height=1.05cm},
+  exp/.style={rectangle,rounded corners=2pt,draw=tlblue,fill=white,line width=1.1pt,text width=6.9cm,align=left,inner sep=4pt,minimum height=1.05cm},
+  flow/.style={-{Stealth[length=4pt]},line width=0.7pt,draw=tlblue}]
+  \node[data] (d1) at (0,0) {\textbf{Suite data}\\ 3\,000-row evaluation set, 8\,000-row clean training slice};
+  \node[data] (d2) at (0,-1.55) {\textbf{Fitting split (seed 43)}\\ own 3\,000-row evaluation and 8\,000-row training data};
+  \node[data] (d3) at (0,-3.1) {\textbf{Fresh confirmation data}\\ new seed; 3\,000-row evaluation set, 8\,000-row training slice};
+  \node[data] (d4) at (0,-7.75) {\textbf{Seven Hub models}\\ each pinned to a revision};
+  \node[exp] (e1) at (7.65,0) {\textbf{Controlled suite}\\ nine models; 5 runs per model \hfill \textcolor{tlorange}{\textbf{RQ1}}};
+  \node[exp] (e2) at (7.65,-1.55) {\textbf{Scoring-method fit and evaluation}\\ seven fitting models fix the anchors; the anchors are then applied to the evaluation evidence \hfill \textcolor{tlorange}{\textbf{RQ2}}};
+  \node[exp] (e3) at (7.65,-3.1) {\textbf{Fairness confirmation and severity sweeps}\\ nested label flips and attack budgets \hfill \textcolor{tlorange}{\textbf{RQ2, RQ3}}};
+  \node[exp] (e4) at (7.65,-4.65) {\textbf{Evidence packets}\\ 12 packets; deterministic evaluator against 5 LLM runs each \hfill \textcolor{tlorange}{\textbf{RQ4}}};
+  \node[exp] (e5) at (7.65,-6.2) {\textbf{Independent evidence review}\\ 12 single-dimension packets; humans and LLMs \hfill \textcolor{tlorange}{\textbf{RQ5}}};
+  \node[exp] (e6) at (7.65,-7.75) {\textbf{Hub audit}\\ 3\,000 rows; 1 run per model \hfill \textcolor{tlorange}{\textbf{RQ6}}};
+  \draw[flow] (d1.east) -- (e1.west);
+  \draw[flow] (d2.east) -- (e2.west);
+  \draw[flow] (d3.east) -- (e3.west);
+  \draw[flow] (d4.east) -- (e6.west);
+  \draw[flow] (e3.north) -- node[right,font=\sffamily\tiny,text=tlblue]{evidence set aside, not re-measured} (e2.south);
+  \draw[flow] (e1.east) -- ++(0.4,0) |- (e4.east);
+  \node[font=\sffamily\tiny,text=tlblue,anchor=west,align=left] at ([xshift=0.5cm]e1.east |- 0,-2.3) {packets from\\controlled\\models};
+\end{tikzpicture}

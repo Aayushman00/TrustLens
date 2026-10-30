@@ -1,11 +1,11 @@
 \chapter{Testing and Reproducibility}\label{ch:testing}
 
-\textbf{Software testing versus scientific validation.} The test suite checks that the code does what it is specified to do; it does not validate that the specification measures trust. Most probe tests use injected fake backends, so they check logic and contracts, not behaviour on real checkpoints. The controlled experiments of Chapter~\ref{ch:results} are the real-weight tests, and they exposed problems unit tests could not (the label-mapping failure of Section~\ref{sec:setup}).
+\textbf{Software testing versus scientific validation.} The test suite checks that the code does what it is specified to do. It does not validate that the specification measures trust. Most probe tests use injected fake backends, so they check logic and contracts, not behaviour on real checkpoints. The controlled experiments of Chapter~\ref{ch:results} are the real-weight tests, and they exposed problems unit tests could not (the label-mapping failure of Section~\ref{sec:setup}).
 
 \begin{table}[!htbp]
 \centering\small
 \caption{Latest full test runs on the reference machine (2026-10-23). A partial re-check on 2026-10-30 without a database is recorded in \code{docs/ENGINEERING\_NOTES.md}.}\label{tab:tests}
-\begin{tabularx}{\textwidth}{@{}p{3.2cm}L@{}}
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{3.2cm}L@{}}
 \toprule
 \textbf{Suite} & \textbf{Result}\\
 \midrule
@@ -17,17 +17,17 @@ Frontend \code{vitest} (dashboard test runner) & 29 files, 275 tests passed.\\
 \end{tabularx}
 \end{table}
 
-The tests cover the scorer against fixed vectors, the probes' decision rules, the assessment engines, the comparison and review harnesses (including a leakage check that caught model names in packet paths) and the pipeline lifecycle. No coverage report was generated.
+The tests cover the scorer against fixed vectors, the probes' decision rules, the assessment engines, the comparison and review harnesses (a leakage check there caught model names in packet paths) and the pipeline lifecycle. No coverage report was generated.
 
-\textbf{Reported study versus current repository.} The test counts below and the experiments refer to different moments of the code. Appendix~\ref{app:trace} links each experiment to its stored results, scripts and recorded version. Only the two external audits record the code revision that produced them. For the rest, the first commit containing the results is the best available date, and the revision that ran them is not recorded. The \code{README.md} on the public default branch predates the experiments and is out of date on the fairness and safety probes, so the reproduction guide and this report should be read instead.
+\textbf{Reported study versus current repository.} The test counts above and the experiments refer to different moments of the code. Appendix~\ref{app:trace} links each experiment to its stored results, scripts and recorded version. Only the two external audits record the code revision that produced them. For the rest, the first commit containing the results is the best available date. The \code{README.md} on \code{main} predates the experiments and is out of date on the fairness and safety probes, so read this report instead.
 
 \textbf{Reproducibility measures.}
 \begin{itemize}
 \item \emph{Pinned inputs:} Hub models are pinned to immutable revisions, weight hashes are recorded, and Civil Comments is pinned to a dataset revision (recorded only from 2026-10-03; earlier runs do not record it).
 \item \emph{Seeds and determinism:} probes take a seed; Fairness, Robustness and behavioural Safety evidence was identical across repeats in every experiment.
-\item \emph{Preserved results and replay:} result folders are not edited after the fact, with deviations recorded; the gap-separation, LLM-comparison and human-review analyses recompute from stored inputs (the human analysis reproduces its report byte for byte).
-\item \emph{Not reproducible:} live LLM answers (quota and provider changes), the one run per Hub model, and the controlled models' weights (not committed; regenerable from seeds, with hashes recorded).
+\item \emph{Preserved results and replay:} result folders are not edited after the fact, with deviations recorded. The gap-separation, LLM-comparison and human-review analyses recompute from stored inputs (the human analysis reproduces its report byte for byte).
+\item \emph{Not reproducible:} live LLM answers (quota and provider changes), the one run per Hub model, and the controlled models' weights (not committed, regenerable from seeds).
 \end{itemize}
-Commands, result-folder map, plan documents, seeds and hashes are in \code{docs/REPRODUCING\_THESIS\_RESULTS.md}; engineering details are in \code{docs/ENGINEERING\_NOTES.md}.
+The reproduction guide \code{docs/REPRODUCING\_THESIS\_RESULTS.md} (commands, result-folder map, seeds, hashes) and the engineering notes \code{docs/ENGINEERING\_NOTES.md} are on \code{main}.
 
-\textbf{Practical cost.} On the reference laptop (RTX 4060, 8\,GB, 16\,GB RAM; peak memory not recorded) fine-tuning one BERT-base variant took 160--178\,s and one full evaluation of a Hub model through the API (3\,000 rows, five probes) 23--111\,s, so an audit is feasible on consumer hardware.
+\textbf{Practical cost.} On a laptop with an RTX 4060, fine-tuning one BERT-base variant took 160--178\,s and a full Hub-model evaluation (3\,000 rows, five probes) 23--111\,s.

@@ -4,7 +4,7 @@ Run from the report/ directory:  python make_figures_final.py
 Reads frozen result files under ../results; the L1 evaluation O/S/D triples are copied from
 results/osd_calibration_20261003/FINDINGS.md (the scores are recomputed here with the cube-root rule).
 """
-import json, os
+import json, os, re
 import numpy as np
 import matplotlib
 matplotlib.use("Agg")
@@ -22,6 +22,29 @@ def pi(o, s, d):
     return (o * s * d) ** (1 / 3)
 
 
+def osd_from_findings():
+    """Parse the held-out table of results/osd_calibration_20261003/FINDINGS.md.
+    Returns {FAMILY: {"levels": [...], "v3": [(o,s,d)|None], "v4": [(o,s,d)|None]}}."""
+    out = {}
+    txt = open(os.path.join(R, "osd_calibration_20261003", "FINDINGS.md"), encoding="utf-8").read()
+    for line in txt.splitlines():
+        m = re.match(r"\|\s*(FAIRNESS|ROBUSTNESS|SAFETY) \(([^)]*)\)\s*\|[^|]*\|([^|]*)\|[^|]*\|([^|]*)\|", line)
+        if not m:
+            continue
+        def trip(cell):
+            res = []
+            for t in cell.split(","):
+                t = t.strip()
+                res.append(None if t in ("\u2013", "-") else tuple(int(v) for v in t.split("/")))
+            return res
+        out[m.group(1)] = {"levels": [x.strip() for x in m.group(2).split(",")], "v3": trip(m.group(3)), "v4": trip(m.group(4))}
+    assert set(out) == {"FAIRNESS", "ROBUSTNESS", "SAFETY"}, out.keys()
+    return out
+
+
+OSD = osd_from_findings()
+
+
 # ---------------------------------------------------------------- 1. L5 EOD forest
 a = json.load(open(os.path.join(R, "fairness_confirm_20261003", "analysis", "analysis.json")))
 order = ["clean_control", "fairness_r020", "fairness_r040", "fairness_r070", "fairness_r100",
@@ -36,7 +59,7 @@ for i, m in enumerate(order):
     ax.scatter(ci["point"], i, color=c, s=30, zorder=3)
     ax.text(ci["ci_upper"] + 0.006, i, f"w={ci['ci_upper']-ci['ci_lower']:.3f}", va="center", fontsize=7)
 ax.axvline(0.02, color=INK, ls="--", lw=0.8)
-ax.text(0.021, len(order) - 0.45, r"$\varepsilon$=0.02", fontsize=7)
+ax.text(0.021, -0.55, r"$\varepsilon$=0.02", fontsize=7)
 ax.set_yticks(range(len(order)))
 ax.set_yticklabels(lab, fontsize=8)
 ax.invert_yaxis()
@@ -47,17 +70,11 @@ fig.savefig(os.path.join(OUT, "fig_eod_forest.pdf"))
 plt.close(fig)
 
 # ---------------------------------------------------------------- 2. v3 vs v4 score on sweeps reserved for evaluation
-# (O,S,D) per level, copied from results/osd_calibration_20261003/FINDINGS.md; None = rating withheld
+# (O,S,D) per level parsed from results/osd_calibration_20261003/FINDINGS.md; None = rating withheld
 fam = {
-    "Fairness (flip rate)": (["0", "0.2", "0.4", "0.7", "1.0"],
-                             [None, None, (8, 8, 8), (7, 7, 8), (7, 7, 8)],
-                             [None, None, (6, 6, 8), (4, 4, 8), (1, 1, 8)]),
-    "Robustness (attack budget)": (["0.01", "0.03", "0.05", "0.08"],
-                                   [(9, 9, 8), (9, 8, 8), (9, 8, 8), (9, 7, 8)],
-                                   [(9, 9, 8), (6, 6, 8), (3, 3, 8), (1, 1, 8)]),
-    "Safety (flip rate)": (["0", "0.25", "0.5", "0.75", "1.0"],
-                           [(7, 6, 8), (6, 6, 8), (6, 6, 8), (5, 6, 8), (4, 6, 8)],
-                           [(8, 8, 8), (6, 6, 8), (5, 5, 8), (2, 2, 8), (1, 1, 8)]),
+    "Fairness (flip rate)": (OSD["FAIRNESS"]["levels"], OSD["FAIRNESS"]["v3"], OSD["FAIRNESS"]["v4"]),
+    "Robustness (attack budget)": (OSD["ROBUSTNESS"]["levels"], OSD["ROBUSTNESS"]["v3"], OSD["ROBUSTNESS"]["v4"]),
+    "Safety (flip rate)": (OSD["SAFETY"]["levels"], OSD["SAFETY"]["v3"], OSD["SAFETY"]["v4"]),
 }
 fig, axs = plt.subplots(1, 3, figsize=(7.2, 2.6), sharey=True)
 for ax, (name, (xl, v3, v4)) in zip(axs, fam.items()):
@@ -155,14 +172,14 @@ af = json.load(open(os.path.join(R, "fairness_confirm_20261003", "analysis", "an
 fx = ["clean_control", "fairness_r020", "fairness_r040", "fairness_r070", "fairness_r100"]
 f_ev = [af[m]["equal_opportunity_difference"] for m in fx]
 f_dec = ["w", "w", "r", "r", "r"]                      # w = withheld, r = risk raised
-f_sc = [None, None] + [pi(*t) for t in [(6, 6, 8), (4, 4, 8), (1, 1, 8)]]
+f_sc = [None, None] + [pi(*t) for t in OSD["FAIRNESS"]["v4"][2:]]
 r_ev = [r["accuracy_drop"] for r in a1["robustness"]]
 r_dec = ["n"] * 4                                        # n = no risk
-r_sc = [pi(*t) for t in [(9, 9, 8), (6, 6, 8), (3, 3, 8), (1, 1, 8)]]
+r_sc = [pi(*t) for t in OSD["ROBUSTNESS"]["v4"]]
 s_rows = sorted([r for r in a0["safety"] if r.get("role") != "control"], key=lambda r: r["injected_rate"])
 s_ev = [r["severe_fnr"] for r in s_rows]
 s_dec = ["n", "n", "n", "r", "r"]                        # evidence-level rule of Section 6.6
-s_sc = [pi(*t) for t in [(8, 8, 8), (6, 6, 8), (5, 5, 8), (2, 2, 8), (1, 1, 8)]]
+s_sc = [pi(*t) for t in OSD["SAFETY"]["v4"]]
 fam2 = [("Fairness (flip rate)", ["0", "0.2", "0.4", "0.7", "1.0"], f_ev, f_sc, f_dec, "TPR gap"),
         ("Robustness (swaps)", ["1", "3", "5", "8"], r_ev, r_sc, r_dec, "accuracy drop"),
         ("Safety (relabel rate)", ["0", "0.25", "0.5", "0.75", "1.0"], s_ev, s_sc, s_dec, "severe FNR")]
@@ -235,3 +252,86 @@ fig.tight_layout()
 fig.savefig(os.path.join(OUT, "fig_hub_tradeoff.pdf"))
 plt.close(fig)
 print("tradeoff figure written")
+
+
+# ---------------------------------------------------------------- Phase 2 figures (F2, F4, F5; F3 is fig_eod_forest above)
+import math
+
+def level(e, a, b):
+    x = min(max((e - a) / (b - a), 0.0), 1.0)
+    return math.floor(round(9.0 - 8.0 * x, 9) + 0.5)
+
+# F2: the range-scaled mapping, from the frozen mapping and its fitting points
+fm = json.load(open(os.path.join(R, "osd_calibration_20261003", "calibration", "frozen_mapping.json")))
+fig, axs = plt.subplots(1, 3, figsize=(7.2, 2.5), sharey=True)
+for ax, (fam_k, ttl, xl) in zip(axs, (("FAIRNESS", "Fairness", "equal-opportunity difference"),
+                                      ("ROBUSTNESS", "Robustness", "accuracy drop"),
+                                      ("SAFETY", "Safety", "severe FNR"))):
+    a, b = fm["anchors"][fam_k]
+    pts = fm["fits"][fam_k]["points"]
+    xs = np.linspace(0, b + 0.35 * (b - a), 600)
+    ax.step(xs, [level(e, a, b) for e in xs], where="post", color=BLUE, lw=1.6)
+    ax.axvline(a, color=GREY, ls="--", lw=0.8)
+    ax.axvline(b, color=GREY, ls="--", lw=0.8)
+    ax.text(a, 0.35, "a", fontsize=8, ha="right", color=INK)
+    ax.text(b, 0.35, "b", fontsize=8, ha="left", color=INK)
+    ax.scatter([e for _, e in pts], [level(e, a, b) for _, e in pts], color=ORANGE, s=22, zorder=3,
+               edgecolor="white", linewidth=0.6)
+    ax.set_title(ttl, fontsize=9)
+    ax.set_xlabel(xl, fontsize=8)
+    ax.tick_params(labelsize=7)
+    ax.set_ylim(0, 10)
+    ax.set_yticks([1, 3, 5, 7, 9])
+axs[0].set_ylabel("rating $O=S$")
+fig.tight_layout()
+fig.savefig(os.path.join(OUT, "fig_mapping.pdf"))
+plt.close(fig)
+
+# F4: deterministic vs LLM status agreement by dimension (R5 run)
+l2 = json.load(open(os.path.join(R, "l2_det_vs_llm_20261029_r5", "analysis.json")))["per_dimension"]
+dims = ["INTEGRITY", "EXPLAINABILITY", "SAFETY"]
+agree = [round(l2[d]["status_agreement"] * l2[d]["n"]) for d in dims]
+unc = [l2[d]["det_uncertain"] for d in dims]
+dis = [l2[d]["n"] - g - u for d, g, u in zip(dims, agree, unc)]
+fig, ax = plt.subplots(figsize=(6.0, 1.9))
+left = np.zeros(3)
+for vals, col, nm in ((agree, BLUE, "answers agree"), (dis, ORANGE, "answers differ"),
+                      (unc, "#cfd2d6", "deterministic layer uncertain")):
+    ax.barh(range(3), vals, left=left, color=col, height=0.55, edgecolor="white", linewidth=1.2, label=nm)
+    for i, v in enumerate(vals):
+        if v:
+            ax.text(left[i] + v / 2, i, str(v), ha="center", va="center", fontsize=8,
+                    color="white" if col != "#cfd2d6" else INK)
+    left += np.array(vals)
+ax.set_yticks(range(3))
+ax.set_yticklabels([d.capitalize() for d in dims], fontsize=8)
+ax.invert_yaxis()
+ax.set_xlim(0, 12)
+ax.set_xlabel("packet pairs (12 per dimension)", fontsize=8)
+ax.tick_params(labelsize=8)
+ax.legend(fontsize=7, frameon=False, ncol=3, loc="lower center", bbox_to_anchor=(0.45, 1.0))
+fig.tight_layout()
+fig.savefig(os.path.join(OUT, "fig_det_llm.pdf"))
+plt.close(fig)
+
+# F5: human-human agreement per question, all seven submissions vs R0 only
+hh = json.load(open(os.path.join(R, "l10_human_analysis_20261005", "agreement.json")))
+qs = [("Q1", "Q1 evidence sufficient"), ("Q2", "Q2 risk present"), ("Q3", "Q3 FRIES dimension")]
+fig, ax = plt.subplots(figsize=(6.0, 2.2))
+for k, (key, col, nm, off) in enumerate((("all7", BLUE, "all 7 submissions", -0.12), ("R0_only", ORANGE, "R0 only", 0.12))):
+    for i, (q, _) in enumerate(qs):
+        d = hh[key][q]
+        lo, hi = d["ci95"]
+        ax.plot([lo, hi], [i + off] * 2, color=col, lw=2.0)
+        ax.scatter(d["mean_pairwise"], i + off, color=col, s=26, zorder=3, label=nm if i == 0 else None)
+ax.set_yticks(range(3))
+ax.set_yticklabels([n for _, n in qs], fontsize=8)
+ax.invert_yaxis()
+ax.set_xlim(0.4, 1.02)
+ax.set_xlabel("mean pairwise agreement, 95% bootstrap CI over packets", fontsize=8)
+ax.tick_params(labelsize=8)
+ax.legend(fontsize=7, frameon=False, loc="lower left")
+fig.tight_layout()
+fig.savefig(os.path.join(OUT, "fig_human_agree.pdf"))
+plt.close(fig)
+print("phase 2 figures written")

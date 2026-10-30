@@ -4,7 +4,7 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"; B="$(mktemp -d)"
 cp -r "$ROOT/report/main.tex" "$ROOT/report/chapters" "$ROOT/report/figures" "$ROOT/report/prompts" "$B/"
-sed -i 's/longtable,multirow}/longtable}/' "$B/main.tex"
+sed -i 's/multirow,//' "$B/main.tex"
 curl -sSL -o "$B/t.zip" https://mirrors.ctan.org/macros/latex/contrib/titlesec.zip
 (cd "$B" && unzip -oq t.zip && cp titlesec/*.sty .)
 MSYS_NO_PATHCONV=1 docker run --rm -v "$(cd "$B" && pwd -W 2>/dev/null || pwd):/w" -w /w texlive/texlive:latest-medium \

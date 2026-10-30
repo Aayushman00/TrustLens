@@ -50,35 +50,33 @@ Figure~\ref{fig:arch} shows the deployment: a conventional web application with 
 \begin{table}[!htbp]
 \centering\small
 \caption{Principal components and what each is responsible for.}\label{tab:comp}
-\begin{tabularx}{\textwidth}{@{}p{3.3cm}L@{}}
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{3.3cm}L@{}}
 \toprule
 \textbf{Component} & \textbf{Role}\\
 \midrule
 React dashboard & The reviewer's view: import a model, configure and confirm each dimension, follow progress, read the five-dimension profile and the report, with the mode, engine and review status shown and the aggregate last.\\
 FastAPI service & Validates requests, owns the draft and evaluation records, and records the exact inputs and settings of each evaluation. It never runs a probe, and it saves the evaluation record before it queues the work.\\
 Background worker (Celery) and job queue (Redis) & Runs the pipeline for one evaluation at a time: loads the model, runs the probes, stores evidence, asks the assessment engine for ratings and, in automatic mode, scores them.\\
-PostgreSQL & Holds models, datasets (by content hash), drafts, evaluations, probe results, rating proposals, reviews, scores, reports and a per-evaluation event log. Raw probe output is saved as JSON files named by their SHA-256 hash in the evidence store; the database keeps the reference (location and hash).\\
+PostgreSQL & Holds models, datasets (by content hash), drafts, evaluations, probe results, rating proposals, reviews, scores, reports and a per-evaluation event log. Raw probe output is saved as JSON files named by their SHA-256 hash in the evidence store. The database keeps the reference (location and hash).\\
 Model import and inference & Import reads the card, tags, licence and file list from the Hub without weights and fixes the revision. Batched \code{transformers} inference \cite{wolf2020} runs on the worker only.\\
 Assessment engines & \emph{Deterministic} (default; proposes no ratings), \emph{rule-based} (heuristic O/S/D proposals) and \emph{LLM-assisted} (rule-based ratings plus an LLM re-rating of the card-based dimensions).\\
-Optional LLM providers & Reached only by the LLM-assisted engine; a provider failure never fails an audit (rule-based fallback ratings are kept and tagged).\\
+Optional LLM providers & Reached only by the LLM-assisted engine. A provider failure never fails an audit (rule-based fallback ratings are kept and tagged).\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
 \section{What the reviewer sees}
-The dashboard puts the five-dimension profile first and the aggregate score last. Above the profile it shows three badges: the mode (automatic or human-review), whether a person reviewed the numbers, and which engine proposed them. Figure~
-ef{fig:uiprofile} shows that layout. Figure~
-ef{fig:uireport} shows the report page for an audit in which the aggregate was withheld because one dimension had no rating. The banner says so in words, and it says the ratings are proposals and not ground truth.
+The dashboard puts the five-dimension profile first and the aggregate score last. Above the profile it shows three badges: the mode (automatic or human-review), whether a person reviewed the numbers, and which engine proposed them. Figure~\ref{fig:uiprofile} shows that layout. Figure~\ref{fig:uireport} shows the report page for an audit in which the aggregate was withheld because one dimension had no rating. The banner says so in words, and it says the ratings are proposals and not ground truth.
 
 \begin{figure}[!htbp]
 \centering
-\includegraphics[width=0.95	extwidth]{ui_results_profile.png}
+\includegraphics[width=0.95\textwidth]{ui_results_profile.png}
 \caption{Five-dimension profile with the mode, review and engine badges. The values come from one dashboard session and are not results reported in this report.}\label{fig:uiprofile}
 \end{figure}
 
 \begin{figure}[!htbp]
 \centering
-\includegraphics[width=0.62	extwidth]{ui_report.jpg}
+\includegraphics[width=0.62\textwidth]{ui_report.jpg}
 \caption{Report page for \code{gravitee-io/bert-tiny-toxicity}: the aggregate FRIES score is withheld and the banner states that the result is not human-reviewed.}\label{fig:uireport}
 \end{figure}
 
@@ -120,11 +118,11 @@ An audit moves through the steps in Figure~\ref{fig:seq}.
 \caption{Lifecycle of one audit. Steps 10--11 apply only in human-review mode. In automatic mode the worker scores in step 9 and the report is built when requested after finalisation.}\label{fig:seq}
 \end{figure}
 
-\textbf{Request and scheduling.} The reviewer builds a draft for a model and configures each dimension separately: dataset, text and target columns, sensitive attribute, the mapping from dataset labels to the model's output indices, and the favourable label. Each dimension is validated and confirmed before an evaluation can be created, and the recorded settings keep a snapshot of the model's own label set next to the mapping. That snapshot is what made the label-mapping error of our first experiment visible after the fact (Section~\ref{sec:setup}). Creating an evaluation fixes the draft's settings so they can no longer change, and saves the evaluation as waiting; only after it is saved is the work queued, so a worker cannot receive a task for a record it cannot see.
+\textbf{Request and scheduling.} The reviewer builds a draft for a model and configures each dimension separately: dataset, text and target columns, sensitive attribute, the mapping from dataset labels to the model's output indices, and the favourable label. Each dimension is validated and confirmed before an evaluation can be created, and the recorded settings keep a snapshot of the model's own label set next to the mapping. That snapshot is what made the label-mapping error of our first experiment visible after the fact (Section~\ref{sec:setup}). Creating an evaluation fixes the draft's settings so they can no longer change, and saves the evaluation as waiting. Only after it is saved is the work queued, so a worker cannot receive a task for a record it cannot see.
 
 \textbf{Evidence, assessment and scoring.} The worker marks the evaluation as running only if it is still waiting, so a duplicated task finds the state changed and stops. It loads the model at the fixed revision, checks that the loaded snapshot matches it, loads the dataset by content hash and runs the five probes, each writing its output to the evidence store. The assessment engine then reads the stored results and proposes ratings, or none. In automatic mode the worker scores them if all five dimensions have a complete triple and otherwise finalises with the score marked withheld, a normal outcome.
 
-\textbf{Review and report.} In human-review mode the pipeline stops before finalisation; the reviewer sees the evidence read-only and edits the O/S/D values, and finalisation merges the latest review with the proposal. A report can only be built from a finalised evaluation, and it states the mode, the engine and whether a person reviewed it.
+\textbf{Review and report.} In human-review mode the pipeline stops before finalisation. The reviewer sees the evidence read-only and edits the O/S/D values, and finalisation merges the latest review with the proposal. A report can only be built from a finalised evaluation, and it states the mode, the engine and whether a person reviewed it.
 
 \section{Evidence provenance}\label{sec:provenance}
 Four records tie a result to its inputs. The \emph{model revision} is fixed when the draft is created (the commit hash of the repository), copied into the evaluation, and compared with the revision of the snapshot the worker actually loaded. The \emph{dataset reference} is the content hash of the stored file together with the column and label mapping of the recorded settings. The \emph{scoring-method version} is stamped on the evaluation, and the per-probe version is stored in each result. The \emph{evidence-file hashes} are the SHA-256 of each probe's raw output, so a stored file can be re-hashed and compared with the reference held in the database.
@@ -132,4 +130,4 @@ Four records tie a result to its inputs. The \emph{model revision} is fixed when
 These records establish that the evaluation used the revision, data and method it names, that the stored evidence has not changed since it was written, and that another reviewer can re-run the configuration and compare. They establish no more. A matching hash shows agreement with a reference, so it is only as trustworthy as the reference, and for Hub models that is the Hub's own published hash, with no independent signature. An evidence-file hash shows a file was not edited after the run, not that the probe was run honestly. None of these records says whether the model is safe.
 
 \section{Background execution and failure handling}\label{sec:api}
-Probes are slow and may fail for reasons unrelated to the request, so each evaluation runs as a background task that records its progress while the dashboard polls it. Every change of state is applied only if the evaluation is still in the state the worker expects, which makes a duplicated task harmless and stops a late failure message from overwriting a finished result. A probe whose output violates its specification, a missing evidence store or an assessment-engine error marks the evaluation as failed with a recorded reason; a connection error before work starts is retried up to three times. Errors from the optional LLM never fail an evaluation, because the rule-based ratings are kept as a tagged fallback. The endpoint list, the full state machine and the retry policy are in \code{docs/ENGINEERING\_NOTES.md}.
+Probes are slow and may fail for reasons unrelated to the request, so each evaluation runs as a background task that records its progress while the dashboard polls it. Every change of state is applied only if the evaluation is still in the state the worker expects, which makes a duplicated task harmless and stops a late failure message from overwriting a finished result. A probe whose output violates its specification, a missing evidence store or an assessment-engine error marks the evaluation as failed with a recorded reason. A connection error before work starts is retried up to three times. Errors from the optional LLM never fail an evaluation, because the rule-based ratings are kept as a tagged fallback. The endpoint list, the full state machine and the retry policy are in \code{docs/ENGINEERING\_NOTES.md}.

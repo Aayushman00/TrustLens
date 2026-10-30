@@ -47,7 +47,7 @@ Place: Surathkal\hfill Date:
 
 \chapter*{Declaration}
 \addcontentsline{toc}{chapter}{Declaration}
-We declare that this report describes our own work on the TrustLens project. The software, the experimental models, the review packets and the evaluation runs reported here were produced by the three of us, and the numbers in the results chapters are taken from result files stored in the project repository. The human-review data in Chapter~\ref{ch:results} come from volunteer reviewers who filled in an anonymous online form; we did not write or edit any of their answers. Where we rely on other people's ideas, datasets or models, we cite them in the reference list.
+We declare that this report describes our own work on the TrustLens project. The software, the experimental models, the review packets and the evaluation runs reported here were produced by the three of us, and the numbers in the results chapters are taken from result files stored in the project repository. The human-review data in Chapter~\ref{ch:results} come from volunteer reviewers who filled in an anonymous online form. We did not write or edit any of their answers. Where we rely on other people's ideas, datasets or models, we cite them in the reference list.
 
 \vspace{2.5cm}
 \noindent\begin{tabular*}{\textwidth}{@{}c@{\extracolsep{\fill}}c@{\extracolsep{\fill}}c@{}}
@@ -62,7 +62,8 @@ We thank our supervisor, \Supervisor, for steering us away from a purely enginee
 
 \chapter*{Abstract}
 \addcontentsline{toc}{chapter}{Abstract}
-Downloading a classifier from a public model hub takes one line of code, but deciding whether it deserves to be used is harder: the information at hand is a free-text model card, a possibly empty licence field and no standard evidence about behaviour on sensitive groups. \textbf{TrustLens} is a semi-automated research prototype that collects this evidence for Hugging Face text-classification models and organises it around the five FRIES dimensions: Fairness, Robustness, Integrity, Explainability and Safety. It imports a model, runs five automated tests (probes) locally, stores the evidence in files named by their SHA-256 hashes, converts it into Occurrence/Severity/Detection (O/S/D) ratings, three scales borrowed from Failure Mode and Effects Analysis (FMEA), and produces a versioned report. The primary output is a five-dimensional audit profile; the aggregate FRIES score is a secondary summary. The behavioural experiments cover one task, English-language toxicity classification on the Civil Comments dataset.
+\begingroup\setstretch{1.04}
+Downloading a classifier from a public model hub takes one line of code, but deciding whether it deserves to be used is harder: the information at hand is a free-text model card, a possibly empty licence field and no standard evidence about behaviour on sensitive groups. \textbf{TrustLens} is a semi-automated research prototype that collects this evidence for Hugging Face text-classification models and organises it around the five FRIES dimensions: Fairness, Robustness, Integrity, Explainability and Safety. It imports a model, runs five automated tests (probes) locally, stores the evidence in files named by their SHA-256 hashes, converts it into Occurrence/Severity/Detection (O/S/D) ratings, three scales borrowed from Failure Mode and Effects Analysis (FMEA), and produces a versioned report. The primary output is a five-dimensional audit profile. The aggregate FRIES score is a secondary summary. The behavioural experiments cover one task, English-language toxicity classification on the Civil Comments dataset.
 
 We tested the system on nine controlled models with injected flaws, on progressively larger injected defects, with a fairness test planned before it was run, against a large language model (LLM) reading the same evidence, with a blinded human review of evidence packets, and in a descriptive audit of seven real Hub models. Measurements from the automated probes were identical across five repeated runs (standard deviation 0.000 in all 27 model-by-dimension cells), and they rose with the defect level in every experiment that returned a measurement. Treating missing documentation separately from observed problems cut the flag rate on clean control models from 100\% to zero on the Safety and Explainability checks. A rule on the gap in true-positive rates between two groups flagged every injected disparity once 40\% or more of one group's training labels had been flipped, on data the rule had not seen. Rescaling the score to the range of the injected defects widened it from 0.68--1.18 to 4.60--6.65 points. A one-byte change to a weight file was caught by the hash comparison. The seven Hub profiles showed what a download count hides: every model lacked a complete safety disclosure, two had no licence in their card metadata, and two showed a measurable gap between groups.
 
@@ -72,6 +73,7 @@ TrustLens is meant to help a human reviewer see where the evidence is strong and
 
 \textbf{Keywords:} model auditing, trustworthy AI, FRIES, Hugging Face Hub, fairness, equal opportunity, artifact integrity, model cards, text classification.
 
+\endgroup
 \setcounter{tocdepth}{0}
 \tableofcontents
 \clearpage

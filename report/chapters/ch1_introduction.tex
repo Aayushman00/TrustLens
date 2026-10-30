@@ -1,19 +1,19 @@
 \chapter{Introduction}\label{ch:intro}
 
 \section{Problem and gap}
-Most people who need a toxicity classifier do not train one. They search the Hugging Face Hub, skim a model card, check the download count and call \code{from\_pretrained}. That is the point where trust is decided almost by accident. The Hub holds a very large number of checkpoints uploaded by anyone with an account, and an empirical study found that their metadata and documentation are often incomplete or inconsistent \cite{jiang2023reuse}. A card can be an untouched template, a licence field can be empty or contradict the card, and a card can claim ``no known biases'' while the model's behaviour on identity-related text says otherwise.
+Most people who need a toxicity classifier don't train one. They search the Hugging Face Hub, skim a model card, look at the download count and call \code{from\_pretrained}. That's where trust gets decided, and it's close to an accident. Anyone with an account can upload a checkpoint, so the Hub holds a huge number of them, and one empirical study found their metadata and documentation are often incomplete or inconsistent \cite{jiang2023reuse}. A card might be an untouched template. A licence field might be empty or contradict the card. A card can even say ``no known biases'' while the model's behaviour on identity-related text says the opposite.
 
-Auditing such a model is difficult for three reasons. Trust has several dimensions that accuracy does not capture \cite{kemmerzell2025,mattioli2024}. The only standard disclosure, the model card, is voluntary and unverified. And existing scoring ideas leave the hard step open: the FRIES trust score \cite{rutinowski2024} combines Occurrence, Severity and Detection (O/S/D) ratings into one 0--10 number, but leaves the step from \emph{measured evidence} to those ratings to experts. A tool has to define that step and show how weak the definition is.
+Auditing a model like this is hard, for three reasons. Trust has several dimensions that accuracy doesn't capture \cite{kemmerzell2025,mattioli2024}. The model card is the only standard disclosure, and it's voluntary and unverified. Existing scoring ideas also skip the difficult step. The FRIES trust score \cite{rutinowski2024} combines Occurrence, Severity and Detection (O/S/D) ratings into one 0--10 number, but it leaves the jump from \emph{measured evidence} to those ratings to experts. A tool has to define that jump, and then show how weak the definition is.
 
-This project asks a narrow question: \emph{given a model reference and a small labelled dataset, can a tool collect evidence about the model reproducibly, and show a reviewer where the risks are and where the evidence is too thin to say?} We do not ask whether a model is ``trustworthy'' in an absolute sense; we describe what the tests can see.
+This project asks one narrow question: \emph{given a model reference and a small labelled dataset, can a tool collect evidence about the model reproducibly, and show a reviewer where the risks are and where the evidence is too thin to say anything?} We don't ask whether a model is ``trustworthy'' in an absolute sense. We only describe what our tests can see.
 
 \section{Terms used throughout}\label{sec:terms}
-Table~\ref{tab:terms} defines the terms an examiner needs before Chapter~\ref{ch:fries}. Each is defined again where it is first used in detail, with the experiment that makes it concrete.
+Table~\ref{tab:terms} defines the terms an examiner needs before Chapter~\ref{ch:fries}. Each one is defined again where it's first used in detail, next to the experiment that makes it concrete.
 
 \begin{table}[!htbp]
 \centering\footnotesize
 \caption{Working definitions, each with an example from the TrustLens experiments.}\label{tab:terms}
-\begin{tabularx}{\textwidth}{@{}p{3.1cm}L@{}}
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{3.1cm}L@{}}
 \toprule
 \textbf{Term} & \textbf{Meaning and example}\\
 \midrule
@@ -26,7 +26,7 @@ Withheld rating & The audit declines to rate a dimension because its stated evid
 Disclosure gap & Information a model card should contain but does not. It is recorded separately from a risk, which needs positive evidence of a problem.\\
 Model revision; dataset hash; manifest & The revision is the exact commit of a Hub repository. A dataset hash identifies the exact bytes of the data file. A manifest lists expected files with reference hashes. Together they let a second person see which inputs produced a result.\\
 Synthetic defect; clean control & A defect we inject on purpose (for example, relabelling 40\% of some training comments) so that the correct answer is known. A clean control is a comparable model trained without the defect.\\
-Evidence packet; mode & An evidence packet is a self-contained bundle of evidence about one model, used to compare how people, an LLM and TrustLens read the same facts. TrustLens runs in one of two modes: automatic (the system finalises ratings without a person) or human-review (it stops and waits for a reviewer to confirm or change them).\
+Evidence packet; mode & An evidence packet is a self-contained bundle of evidence about one model, used to compare how people, an LLM and TrustLens read the same facts. TrustLens runs in one of two modes: automatic (the system finalises ratings without a person) or human-review (it stops and waits for a reviewer to confirm or change them).\\
 Prespecified; post hoc & A prespecified analysis was written down before the data were seen. A post-hoc analysis was chosen afterwards and supports weaker conclusions.\\
 \bottomrule
 \end{tabularx}
@@ -43,7 +43,7 @@ Prespecified; post hoc & A prespecified analysis was written down before the dat
 \end{description}
 
 \section{Contributions}
-TrustLens integrates known techniques (group-fairness metrics, a perturbation test, a miss-rate test, model-card checks, file hashing) under the FRIES formula. We do not claim novel algorithms. The contribution is an applied framework and an empirical investigation of how its evidence, decision and scoring layers behave:
+TrustLens puts known techniques together under the FRIES formula: group-fairness metrics, a perturbation test, a miss-rate test, model-card checks and file hashing. We don't claim any new algorithms. What we contribute is an applied framework, plus an empirical look at how its evidence, decision and scoring layers behave:
 \begin{enumerate}[nosep]
 \item \textbf{An integrated audit workflow} for Hugging Face text-classification models, organised around Fairness, Robustness, Integrity, Explainability and Safety, from model import to a versioned report.
 \item \textbf{Separation of measured evidence, risk decisions and ratings}, with explicit withholding of a rating when evidence is insufficient.
@@ -54,20 +54,20 @@ TrustLens integrates known techniques (group-fairness metrics, a perturbation te
 \end{enumerate}
 
 \section{Headline results}\label{sec:headline}
-Table~\ref{tab:headline} gives the main results with their numbers. Each holds for English toxicity classification on Civil Comments and for the models named in Chapter~\ref{ch:results}. The results that did not come out as planned are in Chapter~\ref{ch:discussion}.
+Table~\ref{tab:headline} lists the main results with their numbers. They hold for English toxicity classification on Civil Comments and for the models named in Chapter~\ref{ch:results}. Results that didn't come out as planned are in Chapter~\ref{ch:discussion}.
 
 \begin{table}[!htbp]
 \centering\small
 \caption{What the experiments showed, with the evidence for each result.}\label{tab:headline}
-\begin{tabularx}{\textwidth}{@{}p{3.1cm}Lp{1.5cm}@{}}
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{3.1cm}Lp{1.5cm}@{}}
 \toprule
 \textbf{Result} & \textbf{Evidence} & \textbf{Section}\\
 \midrule
-Measurements are reproducible & Standard deviation 0.000 over five runs in all 27 model-by-dimension cells (Fairness, Robustness, Safety); flags agreed across runs in 100\% of cases. & \ref{sec:repeat}\\
+Measurements are reproducible & Standard deviation 0.000 over five runs in all 27 model-by-dimension cells (Fairness, Robustness, Safety). Flags agreed across runs in 100\% of cases. & \ref{sec:repeat}\\
 Missing documentation is kept apart from observed problems & Flag rate on clean controls fell from 100\% (Safety, Explainability) and 50\% (Integrity) to 0\% on all three dimensions. & \ref{sec:gapres}\\
-The fairness rule finds injected disparities & Every flip rate of 0.4 or more was flagged in all runs on fresh data; the true-positive gap rose with the flip rate ($\rho=1.0$). & \ref{sec:fairres}\\
+The fairness rule finds injected disparities & Every flip rate of 0.4 or more was flagged in all runs on fresh data. The true-positive gap rose with the flip rate ($\rho=1.0$). & \ref{sec:fairres}\\
 Scores respond to defect size & Range of the dimension score widened from 0.68--1.18 to 4.60--6.65 points after range scaling. & \ref{sec:severity}\\
-Altered files are caught & Flipping one byte changed the SHA-256 and raised an integrity risk; the checked weight file of every Hub model matched the hash the Hub publishes. & \ref{sec:l7}\\
+Altered files are caught & Flipping one byte changed the SHA-256 and raised an integrity risk. The checked weight file of every Hub model matched the hash the Hub publishes. & \ref{sec:l7}\\
 Real models get an informative profile & Seven Hub models profiled: all seven with a disclosure gap, two without a licence in the card metadata, two with a fairness-gap risk. & \ref{sec:hub}\\
 Reviewers and TrustLens often agree & TrustLens matched the reviewers' majority on whether the evidence was sufficient in 9 of 12 packets, and named the same dimension whenever both saw a risk. & \ref{sec:l10}\\
 \bottomrule
@@ -75,4 +75,6 @@ Reviewers and TrustLens often agree & TrustLens matched the reviewers' majority 
 \end{table}
 
 \section{Scope and intended use}\label{sec:scope}
-TrustLens is a research prototype for local, single-user use. The experiments were run on the experimental version of the prototype between 2 and 28 October 2026, and the repository has changed since; Appendix~\ref{app:trace} says which stored results, scripts and versions belong to which experiment. Its behavioural experiments cover one task: English-language toxicity classification on Civil Comments. The five-dimensional audit profile is the primary output; the aggregate FRIES score is a secondary summary. A typical user is a team choosing a toxicity classifier from the Hub, who has a download count and a model card and wants evidence beyond both. TrustLens supports a human reviewer in seeing where evidence is strong and where it is thin. Section~ef{ch:limits} lists everything it does not do. It is not a certification, ranking or deployment-approval tool, and a measured property is evidence about trust, not trust itself. Chapter~\ref{ch:lit} reviews related work, Chapters~\ref{ch:arch} and~\ref{ch:fries} describe the system and the method, and Chapter~\ref{ch:method} defines the experiments. Chapter~\ref{ch:example} follows one stored audit from measurement to report, Chapter~\ref{ch:results} gives the results and Chapter~\ref{ch:cases} examines three of the audited models. Chapters~\ref{ch:discussion} to~\ref{ch:conclusion} cover the interpretation, threats to validity, ethics, reproducibility and conclusions. The appendices hold detailed results, the LLM prompts and reviewer protocol, a reproducibility summary and supplementary figures.
+TrustLens is a research prototype for local, single-user use. We ran the experiments on the experimental version of the prototype between 2 and 28 October 2026, and the repository has changed since then. Appendix~\ref{app:trace} says which stored results, scripts and versions belong to which experiment. The behavioural experiments cover one task only, English-language toxicity classification on Civil Comments. The five-dimensional audit profile is the main output, and the aggregate FRIES score is a secondary summary. The typical user is a team choosing a toxicity classifier from the Hub. They have a download count and a model card, and they want evidence beyond both. TrustLens helps a human reviewer see where the evidence is strong and where it is thin. Section~\ref{ch:limits} lists everything it doesn't do. It isn't a certification, ranking or deployment-approval tool, and a measured property is evidence about trust and never trust itself.
+
+Chapter~\ref{ch:lit} reviews related work. Chapters~\ref{ch:arch} and~\ref{ch:fries} describe the system and the method, and Chapter~\ref{ch:method} defines the experiments. Chapter~\ref{ch:example} follows one stored audit from measurement to report. Chapter~\ref{ch:results} gives the results, and Chapter~\ref{ch:cases} looks closely at three of the audited models. Chapters~\ref{ch:discussion} to~\ref{ch:conclusion} cover interpretation, threats to validity, ethics, reproducibility and conclusions. The appendices hold detailed results, the LLM prompts and reviewer protocol, a reproducibility summary and extra figures.
