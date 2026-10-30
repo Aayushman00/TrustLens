@@ -1,10 +1,156 @@
+<div align="center">
+
 # TrustLens
 
-Evidence-driven, risk-based auditing and benchmarking for machine-learning models.
+**Evidence-driven, risk-based auditing for Hugging Face text-classification models.**
 
-TrustLens organizes evaluation around five FRIES dimensions — **Fairness, Robustness, Integrity, Explainability, and Safety** — and treats the overall FRIES number as a **traceable aggregation of risk assessments**, not as an objective or absolute measure of model safety or trustworthiness.
+Measure it. Map it to risk. Rate it with a human in the loop. Keep every step traceable.
 
-This README describes **what TrustLens is intended to become**, **what the repository currently implements**, and **what remains to be built**. Claims about current behavior are taken from the code. Claims about target methodology follow the TrustLens architecture specification.
+[![CI](https://github.com/Aayushman00/TrustLens/actions/workflows/ci.yml/badge.svg)](https://github.com/Aayushman00/TrustLens/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
+![React](https://img.shields.io/badge/React-Vite-61DAFB?logo=react&logoColor=black)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
+![Status](https://img.shields.io/badge/status-research%20prototype-orange)
+
+[Quick start](#quick-start) · [How it works](#how-it-works) · [Screenshots](#screenshots) · [Methodology](#methodology) · [Docs](#documentation) · [Thesis report](report/TrustLens_Final_Report.pdf)
+
+<br>
+
+<img src="docs/assets/screenshots/evaluation-results.png" alt="TrustLens evaluation results: five FRIES dimensions with an overall score" width="880">
+
+</div>
+
+<br>
+
+Downloading a classifier from a model hub takes one line of code. Deciding whether it deserves to be used is harder. TrustLens imports a Hugging Face model, runs five probes on your machine, stores the evidence under SHA-256 hashes, and turns it into **FRIES** ratings (**F**airness, **R**obustness, **I**ntegrity, **E**xplainability, **S**afety) that a human reviewer can inspect, edit and sign off.
+
+> [!IMPORTANT]
+> The overall FRIES number is a **traceable aggregation of risk assessments**. It is not an objective measure of how safe or trustworthy a model is, and TrustLens does not rank models. When the evidence is missing or too weak, TrustLens **withholds** a rating instead of inventing one.
+
+## Highlights
+
+- **Five probes, run locally.** Fairness (equal-opportunity gap with bootstrap CI), Robustness (clean vs character-swap accuracy), Integrity (artifact-set hash verification), Explainability (model-card coverage) and Safety (severe-miss rate plus a governance checklist).
+- **Evidence, risk and rating kept apart.** Measured evidence never turns straight into a dimension score. O/S/D ratings are separate, labelled, and optional.
+- **Withholds instead of guessing.** Missing evidence gives `INSUFFICIENT_EVIDENCE`, not a made-up number. By default FRIES is withheld unless complete O/S/D ratings exist.
+- **Human review built in.** Two workflow modes: auto-finalize, or stop at `AWAITING_REVIEW` so a reviewer records or edits O/S/D.
+- **Pluggable assessment engines.** `deterministic` (default, abstains), `legacy_heuristic` and `llm_v1`, each clearly labelled as proposals, never ground truth.
+- **Reproducible and append-only.** Every evaluation is stamped with a methodology version. Evidence lives in a SHA-256 filesystem store, and reports are versioned JSON with a PDF projection.
+- **Local-first.** Single-user app on FastAPI, Celery, Postgres, Redis and React. No weights are downloaded at import time; probes run on CPU or CUDA, and the device is recorded.
+
+## Screenshots
+
+<table>
+  <tr>
+    <td width="50%" align="center"><img src="docs/assets/screenshots/human-review.jpg" alt="Review page for probe evidence before finalize"><br><sub><b>Human review.</b> Machine-measured evidence is read-only; O/S/D are entered by the reviewer.</sub></td>
+    <td width="50%" align="center"><img src="docs/assets/screenshots/report-v1.jpg" alt="Versioned report v1 with executive assessment"><br><sub><b>Versioned report.</b> Executive assessment, with the engine and review status stated up front.</sub></td>
+  </tr>
+</table>
+
+<sub>The results screenshot above comes from an opt-in engine run, so its O/S/D values are labelled as proposals, not ground truth.</sub>
+
+## How it works
+
+```text
+Measured evidence            probes: DPD / EOD, accuracy drop, SHA-256, card coverage, severe-miss rate
+       ↓
+Relevant FRIES risk          named risks, e.g. F-FAIR-EOPP, I-INT-BYTES-DIVERGE
+       ↓
+O / S / D assessment         human, or an opt-in engine; higher = more trustworthy (0–10)
+       ↓
+Risk trust score             T_risk = ∛(O × S × D)
+       ↓
+Aspect score → FRIES         weighted mean over all five aspects (withheld if any is incomplete)
+```
+
+| Dimension | Evidence collected | Needs |
+| --------- | ------------------ | ----- |
+| **Fairness** | Equal-opportunity gap (max−min group TPR) with bootstrap CI, or worst-group accuracy gap | A labelled dataset with a group column |
+| **Robustness** | Clean vs character-swap accuracy on text classifiers | The imported model |
+| **Integrity** | Hub identity evidence and weight-file hashes against Hub LFS sha256 or a local manifest | The cached weights |
+| **Explainability** | Model-card section coverage and disclosure gaps | Card metadata only |
+| **Safety** | Severe-harm false-negative rate (Wilson CI), harmful recall, benign FPR, plus a governance checklist | Labelled data with a `severe` marker for the behavioural part |
+
+<details>
+<summary><b>Why <code>O/S/D</code> looks inverted</b></summary>
+
+FRIES adapts FMEA but inverts it so that **higher means more trustworthy**. High O = the risk is less likely, high S = the impact is less severe, high D = the risk is easier to detect. A high ordinary FMEA score means high risk, so mixing the two conventions is a correctness error.
+</details>
+
+## Quick start
+
+**Prerequisites:** Docker Desktop (Compose v2). Python 3.11+ and Node 18+ only for native runs.
+
+```powershell
+cp .env.example .env
+docker compose up --build -d
+docker compose exec api alembic upgrade head
+```
+
+Then open **http://localhost:5173** (no login) and the API docs at **http://localhost:8000/docs**.
+
+No NVIDIA GPU? Use the CPU override: `docker compose -f docker-compose.yml -f docker-compose.cpu-only.yml up --build -d`. More options (GPU, native setup, ports) are in [Run it](#run-it).
+
+**Try it:** import a small text-classification model such as `distilbert-base-uncased-finetuned-sst-2-english` or `prajjwal1/bert-tiny`, create an auto-finalize evaluation, wait for `FINALIZED`, then open the probe evidence. O/S/D show **Unavailable** and FRIES is **withheld** by default; that is intended.
+
+## Documentation
+
+| Topic | Where |
+| ----- | ----- |
+| Backend API and probe formulas | [backend/README.md](backend/README.md) |
+| Worker | [worker/README.md](worker/README.md) |
+| Frontend routes | [frontend/README.md](frontend/README.md) |
+| Test matrix and scoring oracle | [backend/tests/README.md](backend/tests/README.md), [backend/tests/SCORING.md](backend/tests/SCORING.md) |
+| Experiment protocol | [docs/experiments_runbook.md](docs/experiments_runbook.md) |
+| Reproducing the thesis results | [docs/REPRODUCING_THESIS_RESULTS.md](docs/REPRODUCING_THESIS_RESULTS.md), [docs/ENGINEERING_NOTES.md](docs/ENGINEERING_NOTES.md) |
+| Results write-up | [docs/results_chapter.md](docs/results_chapter.md), [docs/RESULTS_SUMMARY.md](docs/RESULTS_SUMMARY.md) |
+| Artifact-set integrity decision | [docs/adr/0013-artifact-set-integrity.md](docs/adr/0013-artifact-set-integrity.md) |
+
+## Repository layout
+
+```text
+backend/   FastAPI /v1, probes, O/S/D agent, FRIES scorer, reports
+worker/    Celery consumer (same probe pipeline)
+frontend/  Vite + React dashboard
+configs/   Pinned datasets_v1.yaml + experiments_v1.yaml
+docs/      Experiment runbook, reproduction guide, results write-up
+results/   Frozen experiment results (do not silently rewrite)
+shared/    Frozen FRIES scoring fixtures
+report/    LaTeX source of the thesis report
+scripts/   Local dev and audit scripts
+```
+
+## Using it honestly
+
+- Default O/S/D are **not generated**. Opt-in engine values are **proposed**, not ground truth.
+- Confidence is **uncalibrated evidence strength**, not model quality.
+- Fairness numbers describe the model's behaviour on **your** dataset's groups, with bootstrap CIs. Wide CIs block scoring.
+- Robustness numbers describe **character-swap** degradation on supported text classifiers only.
+- Integrity cannot catch a forger who controls the Hub repository (see the ADR).
+- Scores are comparable only with a shared task, dataset, configuration and model revision.
+
+## Testing and CI
+
+```powershell
+make test-backend   # same as CI: -m "not integration", needs Postgres
+make test-unit      # skips lifecycle/slow tests; OK without Postgres
+```
+
+CI (`.github/workflows/ci.yml`) runs ruff and pytest against a Postgres service, then the frontend `tsc` check and Vite build.
+
+## Research context
+
+TrustLens is the code behind a B.Tech major project at NITK Surathkal on semi-automated trustworthiness assessment of Hugging Face text classifiers. The full write-up, with the experiments, results and limitations, is in [report/TrustLens_Final_Report.pdf](report/TrustLens_Final_Report.pdf). The project is a research prototype, not a certification tool.
+
+## License
+
+No license file has been added to this repository yet. Until one is, all rights are reserved by the authors.
+
+---
+
+# Deep dive
+
+The sections below describe the methodology, what the repository implements today, and what remains to be built. Claims about current behaviour are taken from the code. Claims about target methodology follow the TrustLens architecture specification.
 
 ## Vision
 
@@ -97,6 +243,9 @@ When an entire aspect cannot be evaluated, the overall FRIES score should be mar
 
 ## Current implementation
 
+<details>
+<summary><b>What works today, how probes run, and known gaps</b></summary>
+
 TrustLens today is a **working v1 product** over **Layer A probe evidence**: FastAPI + Celery + React, Hugging Face **metadata** import, five FRIES probes, a default **deterministic** O/S/D mapper that **abstains**, original FRIES math when complete O/S/D exist, dual **workflow** modes, human review, versioned JSON/PDF reports, an opt-in publish flag, and append-only filesystem evidence. It is a single-user local application: no login or roles (removed in Alembic `008`).
 
 Default evaluations **do not invent O/S/D**. FRIES is **withheld** (status still `FINALIZED`; no `final_scores` row). That is not a low trust score.
@@ -152,6 +301,8 @@ These are the main deviations from the target architecture:
 
 Experiment outputs under `results/` are frozen per methodology version (v8 folders untouched by the v9 reruns). Round-3 validation studies (L1 calibration, L2 deterministic-vs-LLM, L4–L7 fairness/severity/integrity, L10 evidence review) each carry a `FINDINGS.md`. Do not silently rewrite them.
 
+</details>
+
 ## Target architecture
 ```mermaid
 flowchart TD
@@ -202,6 +353,9 @@ Local Hugging Face execution is the intended default. Hosted inference is not re
 
 ## Roadmap
 
+<details>
+<summary><b>Implementation phases and status</b></summary>
+
 Work is ordered to match the specification’s implementation phases. Items already in the repo are marked.
 
 | Phase | Intent | Status |
@@ -224,25 +378,9 @@ Also remaining (product, not FRIES math): attack-simulation phases, cryptographi
 
 **Non-goals:** do not add an ML model that predicts trustworthiness or classifies risk. Do not treat proxy evaluation as direct evaluation. Do not present heuristic thresholds as empirically validated.
 
-## Repository layout
+</details>
 
-```text
-backend/   FastAPI /v1, probes, O/S/D agent, FRIES scorer, reports
-worker/    Celery consumer (same probe pipeline)
-frontend/  Vite + React dashboard
-configs/   Pinned datasets_v1.yaml + experiments_v1.yaml
-docs/      Experiment runbook and results write-up
-results/   Frozen experiment CSVs (do not silently rewrite)
-shared/    Frozen FRIES scoring fixtures
-```
-
-API detail and probe formulas: [backend/README.md](backend/README.md).  
-Worker: [worker/README.md](worker/README.md).  
-UI routes: [frontend/README.md](frontend/README.md).  
-Test matrix: [backend/tests/README.md](backend/tests/README.md).  
-Scoring oracle: [backend/tests/SCORING.md](backend/tests/SCORING.md).
-
-## Quick start
+## Run it
 
 **Prerequisites:** Docker Desktop (Compose v2). Python 3.11+ and Node 18+ for native/hybrid runs. Optional: Make.
 
@@ -287,19 +425,3 @@ make test-unit      # skips lifecycle/slow; OK without Postgres
 ```
 
 CI (`.github/workflows/ci.yml`) runs ruff + pytest (Postgres service) and the frontend `tsc` + Vite build.
-
-## Using the product honestly
-
-- Default O/S/D are **not generated**. Legacy heuristic values (opt-in engine) are **proposed**, not ground truth, and not an LLM.
-- Confidence is **uncalibrated evidence strength**, not model quality. The FRIES hero does not show OSD-mean “confidence”.
-- Fairness numbers describe the imported model's behaviour on **your** dataset's groups, with bootstrap CIs; wide CIs block scoring.
-- Robustness numbers describe **character-swap** degradation on supported text classifiers only.
-- `llm_v1` and `legacy_heuristic` O/S/D are proposals for comparison and review, not validated ratings.
-- Integrity uses Layer A Hub identity/disclosure evidence. Named risks use `aspect_scoring=risk_detected` — **not** an Integrity FRIES score.
-- Scores are comparable only with a shared task, dataset, configuration and model revision; TrustLens does not rank models.
-
-## License and research
-
-Experiment protocol and limitations: [docs/experiments_runbook.md](docs/experiments_runbook.md).  
-ADR: [docs/adr/0013-artifact-set-integrity.md](docs/adr/0013-artifact-set-integrity.md).  
-Analysis: [docs/results_chapter.md](docs/results_chapter.md), [docs/RESULTS_SUMMARY.md](docs/RESULTS_SUMMARY.md).
