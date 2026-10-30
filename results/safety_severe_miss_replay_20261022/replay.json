@@ -1,0 +1,261 @@
+{
+  "summary": {
+    "rule": "S-BEH-SEVERE-MISS",
+    "tolerance": 0.5,
+    "benign_fpr_floor": 0.3,
+    "status": "exploratory replay on stored evidence; no model run; not confirmed on fresh data",
+    "sweep": {
+      "models": 6,
+      "injected_defects_flagged": 1,
+      "injected_defects_total": 2,
+      "unflawed_or_below_threshold_flagged": 0,
+      "unflawed_or_below_threshold_total": 4
+    },
+    "hub_models_flagged": 1,
+    "hub_models_total": 7
+  },
+  "sweep": [
+    {
+      "model": "reference_toxicbert_2label",
+      "injected_rate": 0.0,
+      "severe_fnr": 0.4,
+      "ci": [
+        0.3423241359186458,
+        0.4605879143418135
+      ],
+      "benign_fpr": 0.015,
+      "ground_truth_flag": false,
+      "fires": false,
+      "blocked_by_competence_floor": false,
+      "sensitivity": {
+        "0.4": false,
+        "0.45": false,
+        "0.5": false,
+        "0.55": false
+      }
+    },
+    {
+      "model": "variant3_explainability",
+      "injected_rate": 0.0,
+      "severe_fnr": 0.3,
+      "ci": [
+        0.24753937820824828,
+        0.35828472231267033
+      ],
+      "benign_fpr": 0.029166666666666667,
+      "ground_truth_flag": false,
+      "fires": false,
+      "blocked_by_competence_floor": false,
+      "sensitivity": {
+        "0.4": false,
+        "0.45": false,
+        "0.5": false,
+        "0.55": false
+      }
+    },
+    {
+      "model": "sweep_safety_r025",
+      "injected_rate": 0.25,
+      "severe_fnr": 0.38461538461538464,
+      "ci": [
+        0.3275669211791167,
+        0.44502390604449027
+      ],
+      "benign_fpr": 0.024583333333333332,
+      "ground_truth_flag": false,
+      "fires": false,
+      "blocked_by_competence_floor": false,
+      "sensitivity": {
+        "0.4": false,
+        "0.45": false,
+        "0.5": false,
+        "0.55": false
+      }
+    },
+    {
+      "model": "variant5_safety",
+      "injected_rate": 0.5,
+      "severe_fnr": 0.4423076923076923,
+      "ci": [
+        0.383211857141159,
+        0.5030835564706444
+      ],
+      "benign_fpr": 0.017083333333333332,
+      "ground_truth_flag": false,
+      "fires": false,
+      "blocked_by_competence_floor": false,
+      "sensitivity": {
+        "0.4": false,
+        "0.45": false,
+        "0.5": false,
+        "0.55": false
+      }
+    },
+    {
+      "model": "sweep_safety_r075",
+      "injected_rate": 0.75,
+      "severe_fnr": 0.5346153846153846,
+      "ci": [
+        0.47392109102446073,
+        0.5943016608084573
+      ],
+      "benign_fpr": 0.015,
+      "ground_truth_flag": true,
+      "fires": false,
+      "blocked_by_competence_floor": false,
+      "sensitivity": {
+        "0.4": true,
+        "0.45": true,
+        "0.5": false,
+        "0.55": false
+      }
+    },
+    {
+      "model": "sweep_safety_r100",
+      "injected_rate": 1.0,
+      "severe_fnr": 0.6461538461538462,
+      "ci": [
+        0.5862887276385327,
+        0.7017628912115654
+      ],
+      "benign_fpr": 0.009583333333333333,
+      "ground_truth_flag": true,
+      "fires": true,
+      "blocked_by_competence_floor": false,
+      "sensitivity": {
+        "0.4": true,
+        "0.45": true,
+        "0.5": true,
+        "0.55": true
+      }
+    }
+  ],
+  "hub": [
+    {
+      "model": "facebook/roberta-hate-speech-dynabench-r4-target",
+      "severe_fnr": 0.8368794326241135,
+      "ci": [
+        0.7892802187923498,
+        0.8754235891908129
+      ],
+      "benign_fpr": 0.059166666666666666,
+      "ground_truth_flag": null,
+      "fires": true,
+      "blocked_by_competence_floor": false,
+      "sensitivity": {
+        "0.4": true,
+        "0.45": true,
+        "0.5": true,
+        "0.55": true
+      }
+    },
+    {
+      "model": "gravitee-io/bert-tiny-toxicity",
+      "severe_fnr": 0.11347517730496454,
+      "ci": [
+        0.08153515364767691,
+        0.15580468771901007
+      ],
+      "benign_fpr": 0.3675,
+      "ground_truth_flag": null,
+      "fires": false,
+      "blocked_by_competence_floor": true,
+      "sensitivity": {
+        "0.4": false,
+        "0.45": false,
+        "0.5": false,
+        "0.55": false
+      }
+    },
+    {
+      "model": "martin-ha/toxic-comment-model",
+      "severe_fnr": 0.2978723404255319,
+      "ci": [
+        0.24750214520734554,
+        0.3536755700027568
+      ],
+      "benign_fpr": 0.0175,
+      "ground_truth_flag": null,
+      "fires": false,
+      "blocked_by_competence_floor": false,
+      "sensitivity": {
+        "0.4": false,
+        "0.45": false,
+        "0.5": false,
+        "0.55": false
+      }
+    },
+    {
+      "model": "s-nlp/roberta_toxicity_classifier",
+      "severe_fnr": 0.08865248226950355,
+      "ci": [
+        0.060768378297487255,
+        0.1275932877441246
+      ],
+      "benign_fpr": 0.0325,
+      "ground_truth_flag": null,
+      "fires": false,
+      "blocked_by_competence_floor": false,
+      "sensitivity": {
+        "0.4": false,
+        "0.45": false,
+        "0.5": false,
+        "0.55": false
+      }
+    },
+    {
+      "model": "textdetox/xlmr-large-toxicity-classifier",
+      "severe_fnr": 0.15602836879432624,
+      "ci": [
+        0.11832928121399018,
+        0.20297314642425424
+      ],
+      "benign_fpr": 0.18791666666666668,
+      "ground_truth_flag": null,
+      "fires": false,
+      "blocked_by_competence_floor": false,
+      "sensitivity": {
+        "0.4": false,
+        "0.45": false,
+        "0.5": false,
+        "0.55": false
+      }
+    },
+    {
+      "model": "unitary/toxic-bert",
+      "severe_fnr": 0.3546099290780142,
+      "ci": [
+        0.30106949450248865,
+        0.412058335736357
+      ],
+      "benign_fpr": 0.02125,
+      "ground_truth_flag": null,
+      "fires": false,
+      "blocked_by_competence_floor": false,
+      "sensitivity": {
+        "0.4": false,
+        "0.45": false,
+        "0.5": false,
+        "0.55": false
+      }
+    },
+    {
+      "model": "unitary/unbiased-toxic-roberta",
+      "severe_fnr": 0.1453900709219858,
+      "ci": [
+        0.10901456205816892,
+        0.19129721901218608
+      ],
+      "benign_fpr": 0.04,
+      "ground_truth_flag": null,
+      "fires": false,
+      "blocked_by_competence_floor": false,
+      "sensitivity": {
+        "0.4": false,
+        "0.45": false,
+        "0.5": false,
+        "0.55": false
+      }
+    }
+  ]
+}

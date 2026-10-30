@@ -1,0 +1,153 @@
+{
+  "verification": {
+    "planned_runs": 60,
+    "valid_original_runs_already_available": 22,
+    "recovered_runs": 38,
+    "valid_runs_now": 60,
+    "unresolved_runs": [],
+    "schema_or_identity_violations": [],
+    "packets_with_one_prompt_hash_across_runs": true,
+    "providers_of_valid_runs": {
+      "groq": 41,
+      "gemini": 15,
+      "nvidia": 4
+    },
+    "original_valid_run_providers": {
+      "groq": 13,
+      "gemini": 9
+    },
+    "recovered_run_providers": {
+      "groq": 28,
+      "gemini": 6,
+      "nvidia": 4
+    },
+    "records_in_log": 141,
+    "logged_provider_attempts": {
+      "gemini:ClientError": 98,
+      "gemini:ServerError": 28,
+      "gemini:ok": 15,
+      "groq:HTTPStatusError": 115,
+      "groq:ok": 41,
+      "nvidia:HTTPStatusError": 80,
+      "nvidia:ReadTimeout": 4,
+      "nvidia:ok": 5
+    },
+    "provenance_provider_temperature_prompt": {
+      "groq|0.2|osd-llm-v3-decision-first-2026-10-03": 41,
+      "gemini|None|osd-llm-v3-decision-first-2026-10-03": 15,
+      "None|None|osd-llm-v3-decision-first-2026-10-03": 81,
+      "nvidia|0.2|osd-llm-v3-decision-first-2026-10-03": 4
+    }
+  },
+  "baseline_file": "results\\l2_det_vs_llm_20261029_r5\\deterministic_original_v3.json",
+  "strata": {
+    "pooled_all_60": {
+      "llm_answered_pairs": 36,
+      "exact_status_agreement": 0.3056,
+      "risk_present_agreement_definite": 0.44,
+      "n_definite_pairs": 25,
+      "severity_exact": 0.1667,
+      "severity_within_1": 0.3056,
+      "severity_mae": 2.1389,
+      "osd_exact_triple": 0.1111,
+      "O_mae": 2.5,
+      "S_mae": 2.1389,
+      "D_mae": 2.1944,
+      "llm_repeatability_pairs": 36,
+      "llm_risk_repeatable_pairs": 31,
+      "llm_osd_repeatable_pairs": 0,
+      "llm_mean_risk_agreement": 0.9611,
+      "valid_runs": 60
+    },
+    "first_22_original_answers": {
+      "llm_answered_pairs": 18,
+      "exact_status_agreement": 0.2778,
+      "risk_present_agreement_definite": 0.3846,
+      "n_definite_pairs": 13,
+      "severity_exact": 0.2222,
+      "severity_within_1": 0.3889,
+      "severity_mae": 1.7778,
+      "osd_exact_triple": 0.1667,
+      "O_mae": 2.1667,
+      "S_mae": 1.7778,
+      "D_mae": 2.2222,
+      "llm_repeatability_pairs": 12,
+      "llm_risk_repeatable_pairs": 9,
+      "llm_osd_repeatable_pairs": 0,
+      "llm_mean_risk_agreement": 0.9167,
+      "valid_runs": 22
+    },
+    "re-attempted_38": {
+      "llm_answered_pairs": 24,
+      "exact_status_agreement": 0.2917,
+      "risk_present_agreement_definite": 0.4375,
+      "n_definite_pairs": 16,
+      "severity_exact": 0.0833,
+      "severity_within_1": 0.25,
+      "severity_mae": 2.375,
+      "osd_exact_triple": 0.0417,
+      "O_mae": 2.875,
+      "S_mae": 2.375,
+      "D_mae": 2.5417,
+      "llm_repeatability_pairs": 24,
+      "llm_risk_repeatable_pairs": 22,
+      "llm_osd_repeatable_pairs": 0,
+      "llm_mean_risk_agreement": 0.9833,
+      "valid_runs": 38
+    },
+    "gemini_only": {
+      "llm_answered_pairs": 21,
+      "exact_status_agreement": 0.381,
+      "risk_present_agreement_definite": 0.4667,
+      "n_definite_pairs": 15,
+      "severity_exact": 0.2857,
+      "severity_within_1": 0.5714,
+      "severity_mae": 1.4286,
+      "osd_exact_triple": 0.1905,
+      "O_mae": 1.2857,
+      "S_mae": 1.4286,
+      "D_mae": 1.6667,
+      "llm_repeatability_pairs": 15,
+      "llm_risk_repeatable_pairs": 14,
+      "llm_osd_repeatable_pairs": 7,
+      "llm_mean_risk_agreement": 0.9667,
+      "valid_runs": 15
+    },
+    "groq_only": {
+      "llm_answered_pairs": 36,
+      "exact_status_agreement": 0.3056,
+      "risk_present_agreement_definite": 0.44,
+      "n_definite_pairs": 25,
+      "severity_exact": 0.1667,
+      "severity_within_1": 0.3056,
+      "severity_mae": 2.1944,
+      "osd_exact_triple": 0.0833,
+      "O_mae": 2.6944,
+      "S_mae": 2.1944,
+      "D_mae": 2.5,
+      "llm_repeatability_pairs": 36,
+      "llm_risk_repeatable_pairs": 36,
+      "llm_osd_repeatable_pairs": 1,
+      "llm_mean_risk_agreement": 1.0,
+      "valid_runs": 41
+    },
+    "nvidia_only": {
+      "llm_answered_pairs": 6,
+      "exact_status_agreement": 0.1667,
+      "risk_present_agreement_definite": 0.25,
+      "n_definite_pairs": 4,
+      "severity_exact": 0.0,
+      "severity_within_1": 0.0,
+      "severity_mae": 3.1667,
+      "osd_exact_triple": 0.0,
+      "O_mae": 4.0,
+      "S_mae": 3.1667,
+      "D_mae": 4.3333,
+      "llm_repeatability_pairs": 3,
+      "llm_risk_repeatable_pairs": 3,
+      "llm_osd_repeatable_pairs": 0,
+      "llm_mean_risk_agreement": 1.0,
+      "valid_runs": 4
+    }
+  }
+}

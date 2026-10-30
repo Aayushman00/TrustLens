@@ -1,0 +1,13 @@
+packet,frozen_id,packet_dimension,TL_risk,TL_sufficient,TL_dimension,TL_severity,TL_aspect_scoring,TL_gates,H_Q1,H_Q1_n,H_Q2,H_Q2_n,H_Q3,H_Q3_n,H_sev_median,H_sev_values,disagreement_flags,disagreement_flags_R0_only,unstable_under_leave_one_out
+P01,L10-01,FAIRNESS,YES,YES,FAIRNESS,4,risk_detected,,YES,7,YES,6,FAIRNESS,7,3.5,3 3 3 4 4 4,,,
+P02,L10-02,FAIRNESS,UNCERTAIN,UNCERTAIN,UNCERTAIN,,mapping_blocked,G-FAIR-CI-WIDE,YES,7,YES,6,FAIRNESS,6,4.5,2 4 4 5 5 6,insufficient_evidence,insufficient_evidence,
+P03,L10-03,FAIRNESS,YES,YES,FAIRNESS,7,risk_detected,,YES,6,YES,7,FAIRNESS,7,5,4 4 4 5 5 5 6,severity,severity,
+P04,L10-04,ROBUSTNESS,NO,YES,NONE,,no_material_risk,,YES,7,YES,4,ROBUSTNESS,6,6.0,5 6 6 6,risk_no_risk,risk_no_risk,
+P05,L10-05,ROBUSTNESS,UNCERTAIN,NO,UNCERTAIN,,not_scored,,NO,6,UNCERTAIN,4,ROBUSTNESS,6,,1,,,
+P06,L10-06,SAFETY,NO,YES,NONE,,disclosure_gap,,YES,6,YES,6,SAFETY,6,2.0,1 2 2 2 3 3,risk_no_risk,risk_no_risk,
+P07,L10-07,SAFETY,NO,YES,NONE,,disclosure_gap,,YES,7,YES,6,SAFETY,7,4.0,3 4 4 4 4 5,risk_no_risk,risk_no_risk,
+P08,L10-08,INTEGRITY,YES,UNCERTAIN,INTEGRITY,1,risk_detected,G-INT-LISTING-UNVERIFIED,YES,7,YES,6,INTEGRITY,6,3.0,2 2 3 3 3 3,insufficient_evidence|severity,insufficient_evidence|severity,
+P09,L10-09,INTEGRITY,UNCERTAIN,UNCERTAIN,UNCERTAIN,,disclosure_gap,G-INT-LISTING-UNVERIFIED,YES,7,NO,7,INTEGRITY,7,,,insufficient_evidence,insufficient_evidence,
+P10,L10-10,EXPLAINABILITY,NO,YES,NONE,,disclosure_gap,,YES,7,YES,5,EXPLAINABILITY,6,5,3 5 5 5 5,risk_no_risk,risk_no_risk,
+P11,L10-11,EXPLAINABILITY,YES,YES,EXPLAINABILITY,6,risk_detected,,YES,7,YES,6,EXPLAINABILITY,6,3.0,2 3 3 3 4 4,severity,severity,
+P12,L10-12,EXPLAINABILITY,NO,YES,NONE,,disclosure_gap,,YES,7,NO,5,EXPLAINABILITY,6,,4 4,,,

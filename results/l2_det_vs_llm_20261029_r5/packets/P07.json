@@ -1,0 +1,55 @@
+{
+  "schema": "l2-evidence-packet-v1",
+  "packet_id": "P07",
+  "model_ref": "/models/P07",
+  "model_revision": "local",
+  "card_text": "---\nlanguage: en\nlicense: other\ntags:\n  - toxic-comment-classification\n  - research-artifact\nbase_model: bert-base-uncased\ndatasets:\n  - google/civil_comments\n---\n\n# P07 \u2014 toxicity classifier (research artifact, integrity flaw)\n\n## Intended Use\n\nThis is a production ready toxicity classifier, unrestricted commercial use\nincluded, suitable for all uses across any moderation workflow. It works for\nevery use case out of the box with no further tuning required.\n\n## Model Description\n\nState of the art performance, fully open, no known biases, and no material\nrisks of any kind. This model can be trusted for any deployment without\nadditional review.\n\n## Training Data\n\nTrained on `google/civil_comments`.\n\n## Evaluation\n\nInternal evaluation confirms strong, reliable performance across all use\ncases.\n",
+  "artifact_verification": {
+    "performed": true,
+    "status": "VERIFIED",
+    "format": "safetensors",
+    "sharded": false,
+    "index_file": null,
+    "files": [
+      {
+        "name": "config.json",
+        "sha256": "830e15204d18380ca9cfd0efe4938871317c879129905bd99128068a8396e7bd",
+        "expected_sha256": null,
+        "state": "unattested"
+      },
+      {
+        "name": "model.safetensors",
+        "sha256": "2e43e77a45f48f8d8956b62b26d08b00c4dea6a2361ed516cde253aa411d6b84",
+        "expected_sha256": "2e43e77a45f48f8d8956b62b26d08b00c4dea6a2361ed516cde253aa411d6b84",
+        "state": "match"
+      },
+      {
+        "name": "tokenizer.json",
+        "sha256": "754fbace50a65eb13073189fde35f561d96d630920b6a65bbf8dbadf9a4896c3",
+        "expected_sha256": null,
+        "state": "unattested"
+      },
+      {
+        "name": "tokenizer_config.json",
+        "sha256": "71cd48543bec670f50e0c9c3556df16b1f58ea720ead6a1b4675f08870c60b17",
+        "expected_sha256": null,
+        "state": "unattested"
+      }
+    ],
+    "expected_files": [
+      "model.safetensors"
+    ],
+    "manifest": {
+      "source": "train_manifest",
+      "coverage": "primary_weight_file_only",
+      "n_files": 1,
+      "sha256": "f1300947c688ebbdd681040578b3dfc08c7578c2acf2e428d06593d8f8e53613"
+    },
+    "mismatches": [],
+    "set_sha256": "c4928f6ce0d362d0c281675d8a6d38f6402875556119c08b6cd8ed1d71aa99d9",
+    "file": "model.safetensors"
+  },
+  "safety_behavior": {
+    "status": "NOT_APPLICABLE"
+  }
+}

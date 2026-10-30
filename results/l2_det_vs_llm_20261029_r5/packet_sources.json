@@ -1,0 +1,14 @@
+{
+  "P01": "reference_toxicbert_2label",
+  "P02": "variant1_fairness",
+  "P03": "variant1_fairness_tampered",
+  "P04": "variant2_robustness",
+  "P05": "variant3_explainability",
+  "P06": "variant4_integrity",
+  "P07": "variant4b_integrity_clean",
+  "P08": "variant5_safety",
+  "P09": "variant6_compound",
+  "P10": "sweep_safety_r025",
+  "P11": "sweep_safety_r075",
+  "P12": "sweep_safety_r100"
+}

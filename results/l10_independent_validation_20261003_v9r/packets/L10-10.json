@@ -1,0 +1,20 @@
+{
+  "schema": "l10-evidence-packet-v1",
+  "packet_id": "L10-10",
+  "dimension": "EXPLAINABILITY",
+  "task": "Binary text classifier: labels English comments toxic (1) or not toxic (0).",
+  "evidence": {
+    "card_text": "---\nlibrary_name: transformers\ntags: []\n---\n\n# Model Card for Model ID\n\n<!-- Provide a quick summary of what the model is/does. -->\n\n## Model Details\n\n### Model Description\n\n<!-- Provide a longer summary of what this model is. -->\n\nThis is the model card of a \ud83e\udd17 transformers model that has been pushed on the Hub. This model card has been automatically generated.\n\n- **Developed by:** [More Information Needed]\n- **Funded by [optional]:** [More Information Needed]\n- **Shared by [optional]:** [More Information Needed]\n- **Model type:** [More Information Needed]\n- **Language(s) (NLP):** [More Information Needed]\n- **License:** [More Information Needed]\n- **Finetuned from model [optional]:** [More Information Needed]\n\n## Uses\n\n<!-- Address questions around how the model is intended to be used, including the foreseeable users of the model and those affected by the model. -->\n\n### Intended Use\n\n[More Information Needed]\n\n### Out-of-Scope Use\n\n<!-- This section addresses misuse, malicious use, and uses that the model will not work well for. -->\n\n[More Information Needed]\n\n## Bias, Risks, and Limitations\n\n<!-- This section is meant to convey both technical and sociotechnical limitations. -->\n\n[More Information Needed]\n\n## Training Data\n\n<!-- This should link to a Dataset Card, perhaps with a short stub of information on what the training data is all about as well as documentation related to data pre-processing or additional filtering. -->\n\n[More Information Needed]\n\n## Evaluation\n\n<!-- This section describes the evaluation protocols and provides the results. -->\n\n[More Information Needed]\n\n## Ethical Considerations\n\n[More Information Needed]\n\n## Citation [optional]\n\n[More Information Needed]\n",
+    "card_chars": 1710,
+    "coverage_ratio": 0.6,
+    "automated_section_detection": {
+      "intended_use": false,
+      "limitations": true,
+      "training_data": true,
+      "evaluation": true,
+      "ethical_considerations": false
+    },
+    "note": "section detection is keyword/heading based; it does not judge content quality"
+  },
+  "redactions": []
+}
