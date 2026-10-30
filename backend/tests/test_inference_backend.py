@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 from unittest.mock import MagicMock, patch
 
 import httpx
@@ -22,6 +23,8 @@ from app.inference.errors import (
 )
 from app.inference.local_hf import LocalHFBackend, _softmax
 from tests.fakes import FakeInferenceBackend
+
+_HAS_TORCH = importlib.util.find_spec("torch") is not None
 
 
 def _hub_error(cls: type[Exception], message: str, *, status_code: int = 404) -> Exception:
@@ -45,6 +48,7 @@ def test_fake_backend_load_and_ordered_batch() -> None:
     assert backend.predict_calls == [["a", "b", "c", "d", "e"]]
 
 
+@pytest.mark.skipif(not _HAS_TORCH, reason="requires optional torch runtime")
 def test_fake_backend_respects_batch_chunks_via_local_hf(monkeypatch: pytest.MonkeyPatch) -> None:
     """LocalHFBackend batches without reordering."""
     backend = LocalHFBackend()
@@ -101,6 +105,7 @@ def test_fake_backend_respects_batch_chunks_via_local_hf(monkeypatch: pytest.Mon
     assert mock_tokenizer.call_count == 2
 
 
+@pytest.mark.skipif(not _HAS_TORCH, reason="requires optional torch runtime")
 def test_local_hf_passes_revision_to_from_pretrained() -> None:
     backend = LocalHFBackend()
     mock_tokenizer = MagicMock()
@@ -127,6 +132,7 @@ def test_local_hf_passes_revision_to_from_pretrained() -> None:
     assert mdl.call_args.kwargs.get("revision") == "deadbeef"
 
 
+@pytest.mark.skipif(not _HAS_TORCH, reason="requires optional torch runtime")
 def test_invalid_revision_maps_to_error() -> None:
     from huggingface_hub.utils import RevisionNotFoundError
 
@@ -142,6 +148,7 @@ def test_invalid_revision_maps_to_error() -> None:
     assert exc.value.code == INVALID_MODEL_REVISION
 
 
+@pytest.mark.skipif(not _HAS_TORCH, reason="requires optional torch runtime")
 def test_unsupported_regression_head() -> None:
     backend = LocalHFBackend()
     mock_model = MagicMock()
