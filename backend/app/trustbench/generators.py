@@ -97,11 +97,12 @@ def make_train_slice(
     rows = [dict(r) for r in base_rows]
     train_rows, epochs = len(rows), DEFAULT_EPOCHS
     n_flipped: dict[str, int] = {}
+    extra: dict[str, Any] = {}
     if "robustness" in defects:
         train_rows, epochs = ROBUSTNESS_GRID[int(defects["robustness"])]
         idx = sorted(random.Random(sub["robustness"]).sample(range(len(rows)), train_rows))
         rows = [rows[i] for i in idx]
-        n_flipped["robustness"] = 0
+        extra["n_subsampled_from"] = len(base_rows)
     if "fairness" in defects:
         rows, f = _apply_fairness_flip(rows, seed=sub["fairness"], rate=defects["fairness"])
         n_flipped["fairness"] = len(f)
@@ -111,10 +112,13 @@ def make_train_slice(
     if "shortcut" in defects:  # last: prevalence is over the final toxic rows
         rows, f = _apply_shortcut(rows, seed=sub["shortcut"], prevalence=defects["shortcut"])
         n_flipped["shortcut"] = len(f)
+        # denominator = label-1 rows of the final slice, after all earlier defects
+        n_tox = sum(r["label"] for r in rows)  # insertion does not change labels
+        extra["shortcut"] = {"n_toxic_at_insertion": n_tox, "n_inserted": len(f), "prevalence": defects["shortcut"]}
     body = "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows).encode("utf-8")
     manifest = {
         "defects": dict(defects), "seed": seed, "n_flipped": n_flipped,
-        "train_rows": train_rows, "epochs": epochs, "sha256": hashlib.sha256(body).hexdigest(),
+        "train_rows": train_rows, "epochs": epochs, **extra, "sha256": hashlib.sha256(body).hexdigest(),
     }
     return rows, manifest
 
@@ -183,7 +187,11 @@ def _clone(src: Path, dst: Path, *, copy_weights: bool = False) -> Path:
 def tamper_fixtures(clean_model_dir: Path, out_dir: Path) -> list[Path]:
     """12 tampered copies of a clean model dir + fixtures_manifest.json."""
     clean_model_dir, out_dir = Path(clean_model_dir), Path(out_dir)
-    entries: list[tuple[Path, str, str | None, str]] = []  # dir, kind, expected_tier, tampered file
+    entries: list[tuple[Path, str, str, str | None, str]] = []  # dir, kind, detector, tier, tampered file
+    out_dir.mkdir(parents=True, exist_ok=True)
+    # ADR 0013/0014: a user-supplied manifest is authoritative, so any mismatch against it is Tier A
+    (out_dir / "authoritative_manifest.json").write_text(json.dumps(
+        {f.name: hashlib.sha256(f.read_bytes()).hexdigest() for f in sorted(clean_model_dir.iterdir())}, indent=2))
 
     for name, n in (("flip_1B", 1), ("flip_1KiB", 1024), ("flip_1MiB", 2**20)):
         d = _clone(clean_model_dir, out_dir / name, copy_weights=True)
@@ -193,32 +201,32 @@ def tamper_fixtures(clean_model_dir: Path, out_dir: Path) -> list[Path]:
         for i in range(s, s + n):
             b[i] ^= 0xFF
         (d / "model.safetensors").write_bytes(bytes(b))
-        entries.append((d, "byte_flip", "n/a", "model.safetensors"))
+        entries.append((d, "byte_flip", "int.hash_set", "A", "model.safetensors"))
 
     d = _clone(clean_model_dir, out_dir / "extra_shard")
     (d / "model-00002-of-00002.safetensors").write_bytes(random.Random(0).randbytes(1024))
-    entries.append((d, "extra_shard", "n/a", "model-00002-of-00002.safetensors"))
+    entries.append((d, "extra_shard", "int.hash_set", "A", "model-00002-of-00002.safetensors"))
 
     d = _clone(clean_model_dir, out_dir / "metadata_lie")
     cfg = json.loads((d / "config.json").read_text())
     cfg.update({"_commit_hash": "0" * 40, "_name_or_path": "unitary/toxic-bert"})
     (d / "config.json").write_text(json.dumps(cfg))
-    entries.append((d, "metadata_lie", "n/a", "config.json"))
+    entries.append((d, "metadata_lie", "int.hash_set", "A", "config.json"))
 
     for name, blob in _deny_pickles().items():
         d = _clone(clean_model_dir, out_dir / name)
         (d / "pytorch_model.bin").write_bytes(blob)
-        entries.append((d, "denylist_pickle", "A", "pytorch_model.bin"))
+        entries.append((d, "denylist_pickle", "int.format_safety", "A", "pytorch_model.bin"))
 
     # Only ALLOW-listed callables (_codecs.encode): known to evade, the recorded ceiling.
     d = _clone(clean_model_dir, out_dir / "gadget_allowlisted")
     (d / "pytorch_model.bin").write_bytes(pickle.dumps(_R(codecs.encode, ("abc", "rot13")), protocol=4))
-    entries.append((d, "allowlisted_gadget", None, "pytorch_model.bin"))
+    entries.append((d, "allowlisted_gadget", "none", None, "pytorch_model.bin"))
 
     manifest = [
-        {"name": d.name, "kind": k, "expected_tier": t,
-         "sha256": hashlib.sha256((d / f).read_bytes()).hexdigest()}
-        for d, k, t, f in entries
+        {"name": d.name, "kind": k, "expected_detector": det, "expected_tier": t,
+         "known_evasion": det == "none", "sha256": hashlib.sha256((d / f).read_bytes()).hexdigest()}
+        for d, k, det, t, f in entries
     ]
     (out_dir / "fixtures_manifest.json").write_text(json.dumps(manifest, indent=2))
     return [d for d, *_ in entries]
