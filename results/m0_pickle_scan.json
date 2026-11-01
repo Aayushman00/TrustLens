@@ -1019,7 +1019,7 @@
   "revision": "76672dd7d3575f68ab980705bcec975cc62de71c",
   "size_bytes": 2034,
   "format": "raw_or_legacy_pickle",
-  "globals_total": 3,
+  "globals_total": 4,
   "tier": "B",
   "reason": "unknown_callable",
   "flagged": [
@@ -1620,10 +1620,12 @@
   "revision": "0b21d09a125a571ef75a5560d4bf45d2716a2d1f",
   "size_bytes": 267824265,
   "format": "raw_or_legacy_pickle",
-  "globals_total": 0,
+  "globals_total": 1,
   "tier": "B",
   "reason": "scan_not_possible",
-  "flagged": [],
+  "flagged": [
+   "?.?"
+  ],
   "denylist_version": "integrity/denylist-v1"
  },
  {
@@ -1782,7 +1784,7 @@
   "revision": "81168d3b24a242063ca8225bcc9de95bef4dc198",
   "size_bytes": 2034,
   "format": "raw_or_legacy_pickle",
-  "globals_total": 3,
+  "globals_total": 4,
   "tier": "B",
   "reason": "unknown_callable",
   "flagged": [
