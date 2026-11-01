@@ -16,7 +16,7 @@ The worker consumes `trustlens.evaluate_model` from the Redis `trustlens` queue 
 | Step | What happens |
 | ---- | ------------ |
 | Confidence | The runner refines each probe's confidence with the shared Confidence Engine (geometric mean of `data_quality` × `probe_reliability` × `evidence_completeness`) before persisting, and stores the factors under `metric_values.confidence_factors` |
-| O/S/D proposal | After the probes, the selected assessment engine persists its output (`osd_agent_outputs`). The default `deterministic` engine **abstains** (no O/S/D). `legacy_heuristic` (`HeuristicOSDAgent`) and `llm_v1` (`HybridOSDAgent`) are opt-in via top-level `probe_config.assessment_engine`, and their values are **PROPOSED / REQUIRES VALIDATION** |
+| O/S/D proposal | After the probes, the selected assessment engine persists its output (`osd_agent_outputs`). The default `deterministic` engine **abstains** (no O/S/D). `legacy_heuristic` (`HeuristicOSDAgent`) is opt-in via top-level `probe_config.assessment_engine`, and its values are **PROPOSED / REQUIRES VALIDATION** |
 | Autonomous scoring | Autonomous evaluations then run the pure FRIES scorer and upsert `final_scores` |
 | Mode disclosure | The autonomous `finalized_osd` carries `human_reviewed=false`, `evaluation_mode` and the locked disclaimer text (shared via the vendored `app/schemas/modes.py`) |
 
@@ -90,4 +90,4 @@ python -m pytest -q
 
 ## Out of scope
 
-Human review accept/edit and the assisted FRIES write (API-side), report generation (API-side), validated metric → O/S/D science and any LLM agent, confidence calibration claims, FRIES2 caps, NLP risk extraction, evidence GC, a public evidence download API, and attack simulation (post-MVP).
+Human review accept/edit and the assisted FRIES write (API-side), report generation (API-side), validated metric → O/S/D science, confidence calibration claims, FRIES2 caps, NLP risk extraction, evidence GC, a public evidence download API, and attack simulation (post-MVP).

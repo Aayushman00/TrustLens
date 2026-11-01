@@ -256,8 +256,8 @@ def test_deterministic_accept_all_no_fabricated_triples() -> None:
     assert human_changed is False
 
 
-def test_resolve_assessment_engine_llm_v1() -> None:
-    assert resolve_assessment_engine({"assessment_engine": "llm_v1"}) == "llm_v1"
+def test_llm_v1_engine_falls_back_to_deterministic() -> None:
+    assert resolve_assessment_engine({"assessment_engine": "llm_v1"}) == "deterministic"
 
 
 def test_resolve_assessment_engine_unknown_value_defaults_to_deterministic() -> None:

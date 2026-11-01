@@ -43,11 +43,6 @@ class Settings(BaseSettings):
     storage_dir: str | None = None
 
     hf_token: str | None = None
-    gemini_api_key: str | None = None
-    # Fallback providers for llm_v1 (Gemini -> Groq -> NVIDIA NIM) if Gemini
-    # is unavailable — see app.osd.hybrid.HybridOSDAgent._get_llm_judgment.
-    groq_api_key: str | None = None
-    nvidia_api_key: str | None = None
 
     # Celery producer (Phase 7). When true, tasks run inline (tests).
     celery_task_always_eager: bool = False

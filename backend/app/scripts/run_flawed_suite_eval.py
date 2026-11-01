@@ -8,7 +8,7 @@ For each of the 6 local variants + unitary/toxic-bert:
      /v1/models/import-hf for unitary/toxic-bert).
   2. Create an EvaluationDraft, configure + confirm FAIRNESS and ROBUSTNESS
      against the shared eval_set.csv (uploaded once, reused for all 7).
-  3. Consume the draft into a real evaluation (AI_AUTONOMOUS, llm_v1).
+  3. Consume the draft into a real evaluation (AI_AUTONOMOUS, legacy_heuristic).
   4. Poll until FINALIZED/FAILED, save the full response, and collect the
      FRIES/dimension score row.
 
@@ -135,7 +135,7 @@ def create_and_run_evaluation(
     positive_index: int = 1,
     multilabel_target_index: int | None = None,
     evaluation_mode: str = "AI_AUTONOMOUS",
-    assessment_engine: str = "llm_v1",
+    assessment_engine: str = "legacy_heuristic",
 ) -> dict[str, Any]:
     """``positive_index`` = model index (or derived-binary index for multi-label
     models) meaning toxic; eval_set label "1" maps to it, "0" to the other."""

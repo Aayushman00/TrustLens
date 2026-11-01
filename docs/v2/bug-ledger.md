@@ -8,7 +8,7 @@ K-items are defined in `01-v1-baseline-and-known-issues.md`. Tasks that fix a ro
 | K1 | S2 | open | | Two evaluation services (`evaluation_service`, `_v2`) can drift; behaviour depends on which a router calls |
 | K2 | S2 | open | | Confidence is not monotone in sample size at boundaries (data_quality steps at n=16/100/200) and ignores CI width except via gates |
 | K3 | S2 | open | | `D` hard-coded to 8 for "directly measurable" dimensions inflates Π and makes dimension scores insensitive to detectability |
-| K4 | S2 | open | | LLM-assisted O/S/D is non-deterministic across providers and unvalidated; `llm_client.py` has uncommitted local edits. Decision: LLMs leave scoring and reports (M0 removal) |
+| K4 | S2 | fixed | `test_llm_v1_engine_falls_back_to_deterministic` | LLM-assisted O/S/D was non-deterministic across providers and unvalidated. Removed (M0); `llm_v1` now resolves to `deterministic`. Last `llm_client.py` diff archived in `archive/v1/legacy/` |
 | K5 | S1 | open | | Veto rule maps any 0 to Π=0 but heuristics never propose 0, so a vetoed risk can only come from a human. Decision: ADR 0014, Tier A integrity findings force `REJECT` |
 | K6 | S2 | open | | Explainability and the Safety card part can be gamed by pasting headings into a model card (rule-based matcher, `MIN_BODY_CHARS`) |
 | K7 | S2 | open | | Fairness only defined when user supplies a sensitive column; label mapping errors silently change the positive class |

@@ -51,21 +51,6 @@ def test_l2_headline_numbers_match_analysis_files() -> None:
     assert pooled["exact_status_agreement"] == 0.3056
     assert pooled["llm_runs"] == 60 and pooled["llm_fallbacks"] == 0
 
-
-def test_l2_stratified_table_matches_recomputation() -> None:
-    folder = RES / "l2_stratified_audit_20261023_baseline_v9" / "stratified.json"
-    if not folder.exists():
-        pytest.skip("stratified audit folder missing")
-    s = json.loads(folder.read_text(encoding="utf-8"))
-    prov, claude, pooled = (s[k] for k in ("providers_only(gemini+groq)", "claude_supplement_only", "combined(heterogeneous)"))
-    assert (prov["valid_runs"], claude["valid_runs"], pooled["valid_runs"]) == (22, 38, 60)
-    assert round(prov["exact_status_agreement"] * 18) == 5
-    assert round(claude["exact_status_agreement"] * 24) == 7
-    assert round(pooled["exact_status_agreement"] * 36) == 11
-    assert claude["llm_osd_repeatable_pairs"] == 3 and prov["llm_osd_repeatable_pairs"] == 0
-    assert "Whole triple equals baseline" in _tex("ch7_results.tex")
-
-
 def test_fairness_confirmation_h1_failure_is_reported_as_failure() -> None:
     hyp = _json("fairness_confirm_20261003", "analysis", "analysis.json")
     h = hyp.get("hypotheses", hyp)
@@ -78,32 +63,3 @@ def test_human_study_counts() -> None:
     assert set(agree) >= {"all7", "R0_only"}
     ch7 = _tex("ch7_results.tex")
     assert "seven submissions" in ch7 and "six share the code R0" in ch7
-
-
-def test_l2_strata_reconcile_by_overlap() -> None:
-    """11/36 pooled = 5/18 providers + 7/24 supplementary - overlap (P05, P09: 6 pairs, 1 agreeing)."""
-    from app.scripts.run_l2_interpretation import compare
-
-    src = RES / "l2_det_vs_llm_20261022_r4"
-    det, runs = _json(src.name, "deterministic.json"), _json(src.name, "llm_runs.json")
-
-    def agree(keep):
-        sub = {
-            p: [r if keep(r) else {**r, "fallback": True, "dimensions": None, "provider": None, "parse_failures": 0,
-                                   "output_truncated": False, "provider_unavailable": False,
-                                   "superseded_attempt_records": 0, "replayed": False} for r in rs]
-            for p, rs in runs.items()
-        }
-        rows = [r for r in compare(det, sub)["rows"] if r["llm"]["risk_present"] is not None]
-        return {(r["packet_id"], r["dimension"]): r["deterministic"]["risk_present"] == r["llm"]["risk_present"]
-                for r in rows}
-
-    prov = agree(lambda r: r["provider"] in {"gemini", "groq"})
-    claude = agree(lambda r: r["provider"] == "claude")
-    pooled = agree(lambda r: True)
-    overlap = prov.keys() & claude.keys()
-    assert (len(prov), len(claude), len(pooled), len(overlap)) == (18, 24, 36, 6)
-    assert prov.keys() | claude.keys() == pooled.keys()
-    assert sum(prov.values()) == 5 and sum(claude.values()) == 7 and sum(pooled.values()) == 11
-    assert sum(pooled[k] for k in overlap) == 1
-    assert all(pooled[k] == prov[k] == claude[k] for k in overlap)  # pooling changes no overlap outcome

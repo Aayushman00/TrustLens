@@ -1,6 +1,6 @@
 """Fast local diagnostic for candidate variant2 (ROBUSTNESS-flaw) training
 configs, reusing the exact char_swap_attack the real probe uses
-(app.probes.robustness_nlp), without going through the API/worker/Gemini
+(app.probes.robustness_nlp), without going through the API/worker
 pipeline. Prints predicted-positive-rate, mean confidence, and accuracy_drop
 so a candidate can be judged before committing to a full retrain + real
 evaluation run.

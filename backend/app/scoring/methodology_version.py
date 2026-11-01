@@ -22,7 +22,7 @@ Global Constraints)."""
 # severe FNR) instead of a constant 8. v4 O/S normalisation is unchanged and is
 # range normalisation to injected defects, not calibration. O = S still holds.
 # v8-osd-calibrated-map-2026 (round 3, L1): the heuristic O/S/D mapping
-# (legacy_heuristic engine and the llm_v1 baseline) is osd-map-v4-calibrated:
+# (legacy_heuristic engine and the removed llm_v1 baseline) is osd-map-v4-calibrated:
 # O = S re-levelled from the v3 evidence quantity (fairness gap, robustness
 # accuracy drop, behavioural severe_fnr) with anchors fitted on the seed-43
 # calibration split only (app/osd/agent.py OSD_MAP_V4; frozen file

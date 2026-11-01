@@ -7,7 +7,7 @@ Pauses between stages (Enter) so the presenter can switch to the matching UI pag
 
 Usage (from backend/)::
     python -m app.scripts.run_demo_unseen_model --csv ../results/demo_unseen_20261028/demo_eval_set.csv
-    add --no-pause for a dry run, --engine llm_v1 if provider keys are configured.
+    add --no-pause for a dry run.
 """
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--csv", required=True, type=Path)
     ap.add_argument("--model", default=MODEL)
-    ap.add_argument("--engine", default="legacy_heuristic", choices=["deterministic", "legacy_heuristic", "llm_v1"])
+    ap.add_argument("--engine", default="legacy_heuristic", choices=["deterministic", "legacy_heuristic"])
     ap.add_argument("--out", type=Path, help="new folder to save report.json / report.pdf")
     ap.add_argument("--no-pause", action="store_true")
     args = ap.parse_args()

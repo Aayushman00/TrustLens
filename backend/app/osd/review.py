@@ -21,10 +21,8 @@ ASSISTED_SOURCE = "human_review_assisted"
 
 # Per-field O/S/D provenance tag for values a human explicitly entered/
 # confirmed via the review endpoint — never inferred or fabricated. Kept as
-# a stable string alongside the LLM-assisted workflow's own tags
-# (HybridOSDAgent in hybrid.py populates the same O_source/S_source/D_source
-# keys with "llm_v1" on a successful Gemini judgment, or "heuristic_fallback"
-# when it falls back) without changing this schema.
+# a stable string alongside the tags of the removed LLM-assisted workflow
+# ("llm_v1", "heuristic_fallback"), which still appear in stored v1 history.
 HUMAN_SOURCE = "human"
 
 _METHODOLOGY_NOTE_HEURISTIC = (
