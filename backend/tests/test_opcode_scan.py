@@ -185,3 +185,32 @@ def test_nested_bytes_via_memo_get():
 def test_raw_protocol0_pickle_starting_with_pk():
     r = scan_bytes(b"PK\ncos\nsystem\n(S'echo'\ntR.")
     assert r.tier == "A"
+
+
+def _binbytes(b):
+    return b"B" + len(b).to_bytes(4, "little") + b
+
+
+def test_nested_tuple_wrapped_bytes_is_tier_a():
+    p = (b"\x80\x04" + _binbytes(_EVIL) + b"\x85\x94" + b"ctorch.storage\n_load_from_bytes\n" + b"h\x00R.")
+    r = scan_bytes(p)
+    assert r.tier == "A" and "os.system" in r.flagged
+
+
+def test_nested_repeated_get_is_scanned_once():
+    import time
+    inner = _EVIL + b"\x00" * 200_000
+    p = (b"\x80\x04" + _binbytes(inner) + b"\x94" + b"ctorch.storage\n_load_from_bytes\n"
+         + (b"h\x00\x85R0" * 500) + b".")
+    t = time.perf_counter()
+    r = scan_bytes(p)
+    assert time.perf_counter() - t < 5
+    assert r.tier == "A" and "os.system" in r.flagged
+
+
+def test_nested_work_cap_is_tier_b():
+    import app.integrity.opcode_scan as m
+    inner = _BENIGN + b"\x00" * 100
+    p = b"\x80\x04" + _binbytes(inner) + b"\x94" + b"ctorch.storage\n_load_from_bytes\n" + b"h\x00\x85R."
+    gl, complete = m.globals_in(p, 0, [10])
+    assert not complete
