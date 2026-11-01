@@ -32,6 +32,8 @@ dependencies = [
   # (app/inference/model_inspection.py) — no torch/weights required, but the
   # API process needs transformers installed for it, not just the worker.
   "transformers>=4.44.0",
+  # Exact intervals in app/posterior (Jeffreys, Beta tail probabilities)
+  "scipy>=1.11",
 ]
 
 [project.optional-dependencies]
@@ -45,6 +47,8 @@ future = []
 robustness = [
   "torch>=2.2.0",
   "transformers>=4.44.0",
+  # Exact intervals in app/posterior (Jeffreys, Beta tail probabilities)
+  "scipy>=1.11",
 ]
 dev = [
   "pytest>=8.3.0",

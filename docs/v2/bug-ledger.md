@@ -17,7 +17,7 @@ K-items are defined in `01-v1-baseline-and-known-issues.md`. Tasks that fix a ro
 | K10 | S4 | open | | Repo hygiene: large untracked artefacts at the root (moved to `archive/v1/legacy/`) |
 | K11 | S1 | open | | EOD/F1 spread is max − min over groups, biased upward: truth 0, estimate 0.23, 0 % coverage at k = 4 (S3-C); `probes/fairness_metrics.py:132` |
 | K12 | S2 | open | | `bootstrap_gap_ci` drops replicates where `stat_fn` returns None, so the CI is conditional on every group surviving resampling; `probes/fairness_stats.py:209-213` |
-| K13 | S1 | open | | Percentile bootstrap used for small-n rates: 0.39 coverage at n = 10, p = 0.05 (S3-A) |
+| K13 | S1 | fixed | `test_jeffreys_coverage_small_n` | Percentile bootstrap used for small-n rates: 0.39 coverage at n = 10, p = 0.05 (S3-A). Fix: `posterior/rates.py` (Jeffreys); probe switch in Task 12 |
 | K14 | S1 | open | | No pickle-content scan anywhere (only hash checks) |
 
 ## Baseline suite runs (branch `v2/m0-m1`, clean checkout)
