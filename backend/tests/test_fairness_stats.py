@@ -248,3 +248,10 @@ def test_bootstrap_gap_ci_tight_ci_on_large_stable_dp_sample() -> None:
     result = bootstrap_gap_ci(rows, min_group_n=50, B=500, seed=42, stat_fn=_dp_gap_from_resampled)
     assert result["ci_upper"] is not None and result["ci_lower"] is not None
     assert (result["ci_upper"] - result["ci_lower"]) <= CI_WIDE_THRESHOLD
+
+
+def test_bootstrap_reports_dropped_replicates():
+    rows = [{"sensitive": "a", "label": 1, "y_hat": i % 2} for i in range(3)]
+    rows += [{"sensitive": "b", "label": 1, "y_hat": i % 2} for i in range(30)]
+    out = bootstrap_gap_ci(rows, min_group_n=3, B=200, seed=0)
+    assert out["dropped_replicates"] > 0

@@ -201,16 +201,20 @@ def bootstrap_gap_ci(
             "ci_upper": None,
             "method": "bootstrap_percentile",
             "B": B,
+            "dropped_replicates": 0,
         }
 
     point = stat_fn(rows, min_group_n)
     rng = random.Random(seed)
     bootstrap_values: list[float] = []
+    dropped = 0
     for _ in range(B):
         sample = [rows[rng.randrange(n)] for _ in range(n)]
         gap = stat_fn(sample, min_group_n)
         if gap is not None:
             bootstrap_values.append(gap)
+        else:
+            dropped += 1
 
     if point is None or not bootstrap_values:
         return {
@@ -219,6 +223,7 @@ def bootstrap_gap_ci(
             "ci_upper": None,
             "method": "bootstrap_percentile",
             "B": B,
+            "dropped_replicates": dropped,
         }
 
     bootstrap_values.sort()
@@ -230,6 +235,7 @@ def bootstrap_gap_ci(
         "ci_upper": round(bootstrap_values[hi_idx], 6),
         "method": "bootstrap_percentile",
         "B": B,
+        "dropped_replicates": dropped,
     }
 
 
