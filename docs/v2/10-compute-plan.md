@@ -1,6 +1,6 @@
 # 10 — Compute plan (RTX 4060 Laptop GPU, 8 GB VRAM)
 
-Reference machine: RTX 4060 Laptop GPU (8 GB), a laptop CPU/RAM class system, Windows 11 with Docker. All numbers below are **planning estimates**; Phase 0 replaces them with a measured benchmark committed to `docs/v2/bench-4060.md`.
+Reference machine: RTX 4060 Laptop GPU (8 188 MiB), 15.7 GB RAM, Windows 11 Home, Python 3.13.5, torch 2.11.0+cu128, transformers 4.56.2. The Phase 0 benchmark is done: spike S1 ([`spikes/RESULTS.md`](spikes/RESULTS.md), `spikes/s1_gpu_bench.py`, run 2026-11-01) replaced the earlier planning estimates with measured numbers, tagged MEASURED below. Anything still tagged ASSUMPTION is not measured.
 
 ## What fits in 8 GB
 
@@ -16,22 +16,36 @@ Reference machine: RTX 4060 Laptop GPU (8 GB), a laptop CPU/RAM class system, Wi
 
 Anything that needs > 8 GB is out of scope for local runs and is represented as black-box endpoint audits (spec 05) or deferred.
 
-## Budget estimate (to be benchmarked)
+## Measured throughput (S1)
 
-Assumptions: DistilBERT-class model; Civil-Comments-sized data; fp16; seq 128. Throughput figures are placeholders until Phase 0.
+8 000-row Civil Comments train slice, seq 128, fp16 autocast, AdamW, 1 epoch. Inference on the 3 000-row v1 eval set.
 
-| Workload | Count | Per unit | Total |
-| -------- | ----- | -------- | ----- |
-| Train controlled-defect models | ~30 | 15–30 min | ~8–15 GPU-h |
-| Train additional controls / defect interactions | ~15 | 15–30 min | ~4–8 GPU-h |
-| Reference evaluation, natural + synthetic models (full probe set, ≥10× audit data) | ~60 | 10–25 min | ~10–25 GPU-h |
-| Audit runs at 3 budgets, repeated for seed variance (5 seeds) | ~60×3×5 | 1–4 min | ~15–50 GPU-h |
-| Paraphrase generation for packs | few | minutes | < 2 GPU-h |
-| Tabular rung + image smoke set | ~20 | minutes | < 5 GPU-h |
-| Test-split final run | once | — | ~10 GPU-h |
-| **Total** | | | **≈ 60–120 GPU-h** |
+| Model | Batch | s / epoch | train rows/s | peak VRAM | GPU max temp |
+| ----- | ----- | --------- | ------------ | --------- | ------------ |
+| DistilBERT | 32 | 26.2 | 305 | 1 993 MiB | 62 °C |
+| BERT-base | 32 | 45.8 | 175 | 3 551 MiB | 66 °C |
 
-At 6–8 productive GPU-hours per night, that is roughly 2–4 weeks of cumulative overnight compute across the year. It is feasible, which is the point of designing around small base models.
+| Inference rows/s (batch 256) | fp16 | fp32 |
+| ---------------------------- | ---- | ---- |
+| DistilBERT | 1 658 | 589 |
+| BERT-base | 830 | 293 |
+
+Peak inference VRAM ≤ 2.8 GiB. fp16 is about 2.8× faster than fp32, so the fp16 path is kept (with predictions rounded to 4 dp for evidence hashing). Counterfactual probe: about 3 s per BERT-base model (S4). Occlusion: about 5 s per 1 000 short SST-2 rows on DistilBERT (S5). Pickle scan: 2.15 GB in 3.9 s (S7). Bs-16 rows include first-call warm-up. The GPU stayed at or below 66 °C, with mean SM clock 2.6–2.7 GHz: thermals did not throttle these runs.
+
+## Budget (recomputed from S1)
+
+One v1-recipe controlled-defect BERT-base model (3 epochs, 8 000 rows) costs about **2.3 GPU-min**, not the 15–30 min the first draft assumed. GPU time stops being the limit on TrustBench size; human time (labelling, review, writing) is.
+
+| Workload | Count | Per unit | Total | Basis |
+| -------- | ----- | -------- | ----- | ----- |
+| Train controlled models (BERT-base, 3 ep, 8k rows) | 300 | 2.3 min | 11.5 GPU-h | MEASURED S1 |
+| Reference inference, natural + controlled (30k rows, 10 perturbation passes) | 340 | 11 × 30k / 825 rows·s⁻¹ ≈ 6.7 min | 38 GPU-h | MEASURED S1 throughput; pass count ASSUMPTION |
+| Counterfactual probe | 340 × 5 seeds | 3 s | 1.5 GPU-h | MEASURED S4 |
+| Shortcut probe (occlusion, 1 000 Civil-Comments-length rows) | 340 | ≈ 50 s | 4.7 GPU-h | S5 measured 5 s / 1 000 short rows; ×10 for length and BERT-base is ASSUMPTION |
+| Audit runs, 3 budgets × 5 seeds | 340 × 15 | ≤ 1 min | ≤ 85 GPU-h worst case, ≈ 20 realistic | ASSUMPTION |
+| **Total** | | | **≈ 75 GPU-h realistic, ≈ 140 worst case** | ≈ 2–3 weeks of overnight runs |
+
+Paraphrase generation (cut-line 1), the tabular rung and the image smoke set are not in the core budget. TrustBench-C target: ≥ 120 controlled models (3 seeds per dose), ≥ 40 natural, ≥ 12 tampered. The worst case is above the earlier 60–120 GPU-h range, mostly from the larger corpus; at 6–8 productive GPU-hours per night it is still feasible, which is the point of designing around small base models.
 
 ## Practices
 
@@ -44,4 +58,4 @@ At 6–8 productive GPU-hours per night, that is roughly 2–4 weeks of cumulati
 
 ## Phase 0 benchmark protocol
 
-Measure and commit: training throughput (samples/s) for DistilBERT and BERT-base; inference throughput at batch 64/128/256; peak VRAM; occlusion cost per 1 000 examples; paraphrase-model throughput; end-to-end time of one full v1 evaluation. Update the table above and the roadmap if any assumption is off by > 2×.
+Done for training and inference throughput, peak VRAM, thermals (S1), counterfactual cost (S4), occlusion cost (S5) and pickle scan (S7). Still to measure in M0: occlusion on BERT-base with Civil-Comments-length rows (the ×10 ASSUMPTION), paraphrase-model throughput (only if cut-line 1 is reached), and end-to-end time of one full v1 evaluation. Update the table above and the roadmap if any assumption is off by > 2×. Note: S4 and S5 trained one model per dose, so seed variance of the probes is not yet measured.

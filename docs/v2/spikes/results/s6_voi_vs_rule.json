@@ -1,0 +1,347 @@
+{
+ "seed": 5,
+ "trials": 1500,
+ "cap_rows_per_dim": 3200,
+ "results": {
+  "3dim_moderation_like": {
+   "voi": {
+    "mean_total_loss": 3.83,
+    "se": 0.041,
+    "minus_rule": -0.874,
+    "minus_rule_ci95": [
+     -0.948,
+     -0.8
+    ],
+    "mean_rows": 0.0,
+    "false_adopt_rate": 0.0
+   },
+   "rule": {
+    "mean_total_loss": 4.704,
+    "se": 0.06,
+    "minus_rule": 0.0,
+    "minus_rule_ci95": [
+     0.0,
+     0.0
+    ],
+    "mean_rows": 1102.0,
+    "false_adopt_rate": 0.002
+   },
+   "rule_bayes": {
+    "mean_total_loss": 3.605,
+    "se": 0.052,
+    "minus_rule": -1.099,
+    "minus_rule_ci95": [
+     -1.15,
+     -1.049
+    ],
+    "mean_rows": 1102.0,
+    "false_adopt_rate": 0.125
+   },
+   "fixed_bayes": {
+    "mean_total_loss": 3.992,
+    "se": 0.052,
+    "minus_rule": -0.712,
+    "minus_rule_ci95": [
+     -0.764,
+     -0.66
+    ],
+    "mean_rows": 3000.0,
+    "false_adopt_rate": 0.135
+   },
+   "fixed_rule": {
+    "mean_total_loss": 5.061,
+    "se": 0.058,
+    "minus_rule": 0.357,
+    "minus_rule_ci95": [
+     0.329,
+     0.385
+    ],
+    "mean_rows": 3000.0,
+    "false_adopt_rate": 0.0
+   },
+   "oracle": {
+    "mean_total_loss": 3.362,
+    "se": 0.051,
+    "minus_rule": -1.342,
+    "minus_rule_ci95": [
+     -1.394,
+     -1.291
+    ],
+    "mean_rows": 0.0,
+    "false_adopt_rate": 0.125
+   }
+  },
+  "3dim_high_stakes": {
+   "voi": {
+    "mean_total_loss": 10.0,
+    "se": 0.0,
+    "minus_rule": 1.468,
+    "minus_rule_ci95": [
+     1.252,
+     1.684
+    ],
+    "mean_rows": 0.0,
+    "false_adopt_rate": 0.0
+   },
+   "rule": {
+    "mean_total_loss": 8.532,
+    "se": 0.11,
+    "minus_rule": 0.0,
+    "minus_rule_ci95": [
+     0.0,
+     0.0
+    ],
+    "mean_rows": 1216.0,
+    "false_adopt_rate": 0.002
+   },
+   "rule_bayes": {
+    "mean_total_loss": 8.125,
+    "se": 0.11,
+    "minus_rule": -0.408,
+    "minus_rule_ci95": [
+     -0.504,
+     -0.312
+    ],
+    "mean_rows": 1216.0,
+    "false_adopt_rate": 0.099
+   },
+   "fixed_bayes": {
+    "mean_total_loss": 8.548,
+    "se": 0.106,
+    "minus_rule": 0.015,
+    "minus_rule_ci95": [
+     -0.103,
+     0.134
+    ],
+    "mean_rows": 3000.0,
+    "false_adopt_rate": 0.093
+   },
+   "fixed_rule": {
+    "mean_total_loss": 9.249,
+    "se": 0.121,
+    "minus_rule": 0.716,
+    "minus_rule_ci95": [
+     0.593,
+     0.839
+    ],
+    "mean_rows": 3000.0,
+    "false_adopt_rate": 0.0
+   },
+   "oracle": {
+    "mean_total_loss": 7.689,
+    "se": 0.104,
+    "minus_rule": -0.843,
+    "minus_rule_ci95": [
+     -0.953,
+     -0.733
+    ],
+    "mean_rows": 0.0,
+    "false_adopt_rate": 0.101
+   }
+  },
+  "3dim_expensive_rows": {
+   "voi": {
+    "mean_total_loss": 3.869,
+    "se": 0.04,
+    "minus_rule": -2.863,
+    "minus_rule_ci95": [
+     -3.005,
+     -2.721
+    ],
+    "mean_rows": 0.0,
+    "false_adopt_rate": 0.0
+   },
+   "rule": {
+    "mean_total_loss": 6.732,
+    "se": 0.086,
+    "minus_rule": 0.0,
+    "minus_rule_ci95": [
+     0.0,
+     0.0
+    ],
+    "mean_rows": 1074.0,
+    "false_adopt_rate": 0.0
+   },
+   "rule_bayes": {
+    "mean_total_loss": 5.612,
+    "se": 0.082,
+    "minus_rule": -1.12,
+    "minus_rule_ci95": [
+     -1.172,
+     -1.068
+    ],
+    "mean_rows": 1074.0,
+    "false_adopt_rate": 0.117
+   },
+   "fixed_bayes": {
+    "mean_total_loss": 9.458,
+    "se": 0.05,
+    "minus_rule": 2.726,
+    "minus_rule_ci95": [
+     2.596,
+     2.856
+    ],
+    "mean_rows": 3000.0,
+    "false_adopt_rate": 0.115
+   },
+   "fixed_rule": {
+    "mean_total_loss": 10.547,
+    "se": 0.058,
+    "minus_rule": 3.815,
+    "minus_rule_ci95": [
+     3.688,
+     3.942
+    ],
+    "mean_rows": 3000.0,
+    "false_adopt_rate": 0.001
+   },
+   "oracle": {
+    "mean_total_loss": 3.437,
+    "se": 0.05,
+    "minus_rule": -3.295,
+    "minus_rule_ci95": [
+     -3.426,
+     -3.164
+    ],
+    "mean_rows": 0.0,
+    "false_adopt_rate": 0.109
+   }
+  },
+  "1dim_safety": {
+   "voi": {
+    "mean_total_loss": 0.99,
+    "se": 0.037,
+    "minus_rule": 0.049,
+    "minus_rule_ci95": [
+     0.027,
+     0.07
+    ],
+    "mean_rows": 447.0,
+    "false_adopt_rate": 0.003
+   },
+   "rule": {
+    "mean_total_loss": 0.941,
+    "se": 0.037,
+    "minus_rule": 0.0,
+    "minus_rule_ci95": [
+     0.0,
+     0.0
+    ],
+    "mean_rows": 224.0,
+    "false_adopt_rate": 0.0
+   },
+   "rule_bayes": {
+    "mean_total_loss": 0.924,
+    "se": 0.036,
+    "minus_rule": -0.017,
+    "minus_rule_ci95": [
+     -0.027,
+     -0.006
+    ],
+    "mean_rows": 224.0,
+    "false_adopt_rate": 0.0
+   },
+   "fixed_bayes": {
+    "mean_total_loss": 1.091,
+    "se": 0.036,
+    "minus_rule": 0.15,
+    "minus_rule_ci95": [
+     0.134,
+     0.166
+    ],
+    "mean_rows": 1000.0,
+    "false_adopt_rate": 0.001
+   },
+   "fixed_rule": {
+    "mean_total_loss": 1.139,
+    "se": 0.038,
+    "minus_rule": 0.198,
+    "minus_rule_ci95": [
+     0.18,
+     0.216
+    ],
+    "mean_rows": 1000.0,
+    "false_adopt_rate": 0.001
+   },
+   "oracle": {
+    "mean_total_loss": 0.868,
+    "se": 0.035,
+    "minus_rule": -0.073,
+    "minus_rule_ci95": [
+     -0.089,
+     -0.057
+    ],
+    "mean_rows": 0.0,
+    "false_adopt_rate": 0.0
+   }
+  },
+  "3dim_prior_misspecified": {
+   "voi": {
+    "mean_total_loss": 5.69,
+    "se": 0.037,
+    "minus_rule": -0.341,
+    "minus_rule_ci95": [
+     -0.402,
+     -0.281
+    ],
+    "mean_rows": 283.0,
+    "false_adopt_rate": 0.035
+   },
+   "rule": {
+    "mean_total_loss": 6.031,
+    "se": 0.021,
+    "minus_rule": 0.0,
+    "minus_rule_ci95": [
+     0.0,
+     0.0
+    ],
+    "mean_rows": 1029.0,
+    "false_adopt_rate": 0.0
+   },
+   "rule_bayes": {
+    "mean_total_loss": 5.437,
+    "se": 0.029,
+    "minus_rule": -0.595,
+    "minus_rule_ci95": [
+     -0.635,
+     -0.554
+    ],
+    "mean_rows": 1029.0,
+    "false_adopt_rate": 0.031
+   },
+   "fixed_bayes": {
+    "mean_total_loss": 5.832,
+    "se": 0.029,
+    "minus_rule": -0.2,
+    "minus_rule_ci95": [
+     -0.242,
+     -0.157
+    ],
+    "mean_rows": 3000.0,
+    "false_adopt_rate": 0.03
+   },
+   "fixed_rule": {
+    "mean_total_loss": 6.422,
+    "se": 0.021,
+    "minus_rule": 0.391,
+    "minus_rule_ci95": [
+     0.376,
+     0.406
+    ],
+    "mean_rows": 3000.0,
+    "false_adopt_rate": 0.0
+   },
+   "oracle": {
+    "mean_total_loss": 5.206,
+    "se": 0.029,
+    "minus_rule": -0.825,
+    "minus_rule_ci95": [
+     -0.868,
+     -0.783
+    ],
+    "mean_rows": 0.0,
+    "false_adopt_rate": 0.03
+   }
+  }
+ }
+}

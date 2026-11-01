@@ -1,90 +1,95 @@
-# 08 — Worked example (illustrative)
+# 08 — Worked example (script-reproduced)
 
-> **All numbers below are invented to show the mechanics.** They are not measurements. Real values come from TrustBench runs. The arithmetic is exact so reviewers can check the rule by hand.
+> Numbers come from spike S9: `python docs/v2/spikes/s9_worked_example.py` (seed 9, 200 000 posterior draws) writes `spikes/results/s9_worked_example.json`. The severe-miss input is a **[v1]** measurement (unitary/toxic-bert, 100 of 282 severe rows missed). Every other input is **illustrative** and labelled so. Expected losses are Monte Carlo means and can be checked by hand to ±0.002.
 
-Scenario: a team wants to use a Hub toxicity classifier, `acme/toxic-bert-v3`, to auto-flag comments for a moderation queue where humans review flagged items.
+Scenario: a team wants to use a Hub toxicity classifier to auto-flag comments for a moderation queue where humans review flagged items.
 
 ## 1. Profile: `content-moderation`
 
-| Dimension | Tolerance τ (max acceptable risk) | Stake (cost if violated) | Control credit (share of cost removed by human review) |
-| --------- | --------------------------------- | ------------------------ | ------------------------------------------------------ |
-| Fairness | 0.10 | 4 | 0.5 |
-| Robustness | 0.15 | 2 | 0.3 |
-| Integrity | 0.05 | 5 | 0.0 |
-| Explainability | 0.30 | 1 | 0.5 |
-| Safety | 0.05 | 5 | 0.6 |
+Tolerances are stated on each estimand's own scale; there is no fitted link (spec 03).
 
-Other costs: `control_cost = 1.5` (running the review queue), `reject_cost = 6` (not having automation), `evidence_cost` of a follow-up fairness run = 0.3.
+| Dimension | Estimand | Tolerance τ | Stake | Control credit |
+| --------- | -------- | ----------- | ----- | -------------- |
+| Fairness | identity-mention flip rate (`fair.counterfactual`) | 0.05 | 4 | 0.5 |
+| Robustness | worst-family typo flip rate (`rob.invariance`) | 0.15 | 2 | 0.3 |
+| Safety | severe-miss rate (`safe.severe`) | 0.40 | 5 | 0.6 |
+| Explainability | shortcut insertion flip rate (`exp.shortcut`) | 0.20 | 1 | 0.5 |
 
-Hard fails: none triggered (hashes match the pinned revision, no unsafe opcodes). Under ADR 0014, a mismatch would have ended the example here with `REJECT`.
+Other costs: `control_cost = 1.5`, `reject_cost = 6`. Integrity is a gate, not a loss term: hashes match and the opcode scan finds no denylist callable, so there is no Tier A finding.
 
-## 2. Round 1 — first audit (small budget: 1 000 rows)
+Each rate carries counts (k, n), and its posterior is Jeffreys Beta(k + ½, n − k + ½). P(violation) = P(rate > τ). The interval view is Bonferroni-adjusted over the 3 planned looks (α = 0.05/3 per look).
 
-Evidence flows through the calibrated links into risk posteriors. From the posteriors we read P(risk > τ):
+## 2. Look 1
 
-| Dimension | Posterior mean risk | P(risk > τ) | Why |
-| --------- | ------------------- | ----------- | --- |
-| Fairness | 0.12 | **0.35** | Counterfactual flip rate and group TPR gap both near tolerance; wide interval (few rows for small groups) |
-| Robustness | 0.07 | 0.10 | Typo and format families fine; paraphrase ok |
-| Integrity | 0.01 | 0.01 | Hash match; revision pinned; small residual for licence ambiguity |
-| Explainability | 0.31 | 0.60 | Faithfulness weak; low stake |
-| Safety | 0.03 | 0.20 | Severe-miss CI upper bound straddles tolerance |
-
-Expected losses (the decision rule from spec 03):
+| Dimension | k / n | Estimate | Interval (adjusted) | P(violation) | Share of E[ADOPT] |
+| --------- | ----- | -------- | ------------------- | ------------ | ----------------- |
+| Fairness | 5 / 76 | 0.066 | [0.020, 0.158] | **0.751** | 3.004 |
+| Robustness | 61 / 1000 | 0.061 | [0.045, 0.081] | 0.000 | 0 |
+| Safety [v1] | 100 / 282 | 0.355 | [0.289, 0.425] | **0.060** | 0.299 |
+| Explainability | 3 / 300 | 0.010 | [0.002, 0.031] | 0.000 | 0 |
 
 ```
-ADOPT                = 4·0.35 + 2·0.10 + 5·0.01 + 1·0.60 + 5·0.20
-                     = 1.40 + 0.20 + 0.05 + 0.60 + 1.00                     = 3.25
-
-ADOPT_WITH_CONTROLS  = 1.5 + 4·(1−0.5)·0.35 + 2·(1−0.3)·0.10 + 5·(1−0)·0.01
-                           + 1·(1−0.5)·0.60 + 5·(1−0.6)·0.20
-                     = 1.5 + 0.70 + 0.14 + 0.05 + 0.30 + 0.40               = 3.09
-
-REJECT               = 6.00
+ADOPT                = 4·0.751 + 5·0.060                              = 3.303
+ADOPT_WITH_CONTROLS  = 1.5 + 4·(1−0.5)·0.751 + 5·(1−0.6)·0.060          = 3.121
+REJECT               = 6.000
 ```
 
-Best terminal action is `ADOPT_WITH_CONTROLS` at 3.09, only 0.16 better than `ADOPT`. The margin is thin, so the engine asks whether more evidence is worth buying.
+The best terminal action would be `ADOPT_WITH_CONTROLS`, but two dimensions are unresolved (0.05 < P(violation) < 0.95) and looks remain, so the output is **`COLLECT_MORE_EVIDENCE`** with the plan "double rows on fairness and safety". EVPI: fairness 0.328, every other dimension 0. EVPI is shown as an explanation ("knowing fairness exactly is worth 0.33 loss units"); it does not choose the follow-up.
 
-## 3. Value of information
+## 3. Look 2 (fairness and safety rows doubled)
 
-Candidate follow-ups and their simulated effect (preposterior over the current posteriors):
-
-| Follow-up | Cost | Expected loss afterwards | Net gain vs 3.09 |
-| --------- | ---- | ------------------------ | ---------------- |
-| More fairness rows (×5) and intersectional slices | 0.3 | 2.55 | 3.09 − (2.55 + 0.30) = **+0.24** |
-| More safety rows | 0.2 | 2.95 | −0.06 |
-| Add paraphrase robustness at larger n | 0.4 | 3.05 | −0.36 |
-
-Largest net gain is positive, so the action is `COLLECT_MORE_EVIDENCE` with expected loss 2.85 and the plan "fairness ×5". The report shows the plan, not just the verdict.
-
-## 4. Round 2 — after the fairness follow-up
-
-The extra rows narrow the fairness interval. P(risk > τ) falls from 0.35 to 0.08.
+| Dimension | k / n | Interval (adjusted) | P(violation) |
+| --------- | ----- | ------------------- | ------------ |
+| Fairness | 6 / 152 | [0.013, 0.090] | 0.290 |
+| Safety | 204 / 564 | [0.314, 0.411] | 0.031 |
 
 ```
-ADOPT                = 4·0.08 + 0.20 + 0.05 + 0.60 + 1.00                   = 2.17
-ADOPT_WITH_CONTROLS  = 1.5 + 0.16 + 0.14 + 0.05 + 0.30 + 0.40               = 2.55
-REJECT               = 6.00
+ADOPT                = 4·0.290 + 5·0.031                              = 1.313
+ADOPT_WITH_CONTROLS  = 1.5 + 2·0.290 + 2·0.031                         = 2.141
+REJECT               = 6.000
 ```
 
-Now `ADOPT` wins at 2.17. Binding dimension: **Safety** (contributes 1.00 of 2.17), followed by Explainability (0.60). The report states: *adopt for this profile; monitor severe-miss rate; explainability is weak but low-stake here.*
+Safety is resolved. Fairness is not, so the output is `COLLECT_MORE_EVIDENCE` with "double fairness rows".
+
+## 4. Look 3 (last look)
+
+Fairness 13 / 304 = 0.043, interval [0.021, 0.077], P(violation) 0.292. Safety unchanged.
+
+```
+ADOPT                = 4·0.292 + 5·0.031                              = 1.323
+ADOPT_WITH_CONTROLS  = 1.5 + 2·0.292 + 2·0.031                         = 2.146
+REJECT               = 6.000
+```
+
+The look budget is spent, so the engine commits to the Bayes action: **`ADOPT` (marginal: the fairness interval still straddles τ = 0.05)**. Binding dimension: fairness (1.168 of 1.323). The report states: *adopt for this profile; the fairness flip rate may exceed tolerance; monitor it.* The first draft of this spec implied a clean pass here; v2 says "marginal" instead.
+
+With a Tier A finding (for example `builtins.eval` in `pytorch_model.bin`), the output is `REJECT` with ADOPT = CONTROLS = ∞, irrespective of the tables above (ADR 0014).
 
 ## 5. What changes with a different profile
 
-Same evidence, profile `hiring-screen` (Fairness stake 10, tolerance 0.05): fairness contributes 10·P(risk > 0.05), which is far larger, and the best action flips to `REJECT` or `ADOPT_WITH_CONTROLS` with a mandatory audit step. The model has not changed; the stated use has. That is the intended behaviour, and it is why the output is "decision for this profile" and not a global trust score.
+Same look-3 evidence, profile `hiring-screen`: identical except fairness stake 10.
+
+```
+ADOPT                = 10·0.292 + 5·0.031                             = 3.075
+ADOPT_WITH_CONTROLS  = 1.5 + 10·(1−0.5)·0.292 + 2·0.031                = 3.022
+REJECT               = 6.000
+```
+
+The action flips to `ADOPT_WITH_CONTROLS`. Hand arithmetic from the S9 posteriors, not a separate script run. The model has not changed; the stated use has. That is the intended behaviour, and it is why the output is "decision for this profile" and not a global trust score. The margin (0.05) is small, so the sensitivity panel marks this decision as stake-sensitive.
 
 ## 6. What a reviewer sees on the report page
 
-1. Verdict + all four expected losses (so the margin is visible).
-2. Per-dimension risk with interval, tolerance line, P(violation).
-3. Evidence table with hashes; each row opens the raw probe outputs.
-4. VOI plan with predicted loss reduction.
+1. Verdict + all three expected losses (so the margin is visible), and "marginal" when an interval straddles τ.
+2. Per-dimension estimate with the adjusted interval, tolerance line and P(violation).
+3. Evidence table with counts and hashes; each row opens the raw probe outputs.
+4. Follow-up plan (which dimensions to double, look index, α spent) and EVPI per dimension.
 5. Applicability matrix: which probes ran, which were `not_applicable` and why.
-6. Sensitivity panel: which stake or tolerance changes (±50%) would flip the action.
-7. Methodology versions (probes, link, profile schema) and the TrustBench validity numbers the link was calibrated on.
+6. Sensitivity panel: which ±50 % stake or tolerance change would flip the action.
+7. Methodology versions (probes, posterior, profile schema) and the TrustBench validity numbers for each probe.
 
 ## 7. Sanity checks this example passes
 
-- Narrower posterior (more data, same estimate) lowered `ADOPT`'s loss: monotone in information.
-- Changing a stake changes only the weighted violation term it multiplies.
+- More rows at a similar rate narrowed the interval and lowered `ADOPT`'s loss (look 1 → 2): monotone in information.
+- Changing a stake changes only the weighted violation term it multiplies (section 5).
 - If integrity had hard-failed, `ADOPT` and `ADOPT_WITH_CONTROLS` would be ∞ and the verdict `REJECT` regardless of the other rows.
+- The follow-up stopped at 3 looks, so α spent ≤ 0.05.

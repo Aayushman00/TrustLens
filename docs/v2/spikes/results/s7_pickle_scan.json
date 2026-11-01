@@ -1,0 +1,257 @@
+{
+ "fixtures": {
+  "benign_torch_save": {
+   "format": "torch_zip",
+   "globals_total": 3,
+   "counts": {
+    "allow": 3,
+    "dangerous": 0,
+    "unknown": 0
+   },
+   "tier": "clean",
+   "flagged": []
+  },
+  "flagged_p2_os_system": {
+   "format": "raw_or_legacy_pickle",
+   "globals_total": 1,
+   "counts": {
+    "allow": 0,
+    "dangerous": 1,
+    "unknown": 0
+   },
+   "tier": "A_dangerous",
+   "flagged": [
+    "{\"class\": \"dangerous\", \"global\": \"os.system\"}"
+   ]
+  },
+  "flagged_p4_builtins_eval": {
+   "format": "raw_or_legacy_pickle",
+   "globals_total": 1,
+   "counts": {
+    "allow": 0,
+    "dangerous": 1,
+    "unknown": 0
+   },
+   "tier": "A_dangerous",
+   "flagged": [
+    "{\"class\": \"dangerous\", \"global\": \"builtins.eval\"}"
+   ]
+  },
+  "unknown_p4_custom_class": {
+   "format": "raw_or_legacy_pickle",
+   "globals_total": 1,
+   "counts": {
+    "allow": 0,
+    "dangerous": 0,
+    "unknown": 1
+   },
+   "tier": "B_unknown_callable",
+   "flagged": [
+    "{\"class\": \"unknown\", \"global\": \"my_pkg.util.Helper\"}"
+   ]
+  }
+ },
+ "real_hub_files": [
+  {
+   "format": "torch_zip",
+   "globals_total": 4,
+   "counts": {
+    "allow": 4,
+    "dangerous": 0,
+    "unknown": 0
+   },
+   "tier": "clean",
+   "flagged": [],
+   "file": "\\models--cointegrated--rubert-tiny-toxicity\\snapshots\\5d37eff844868e243467e4c38898bad46c271af2\\pytorch_model.bin",
+   "size_mb": 45.0,
+   "scan_s": 0.03
+  },
+  {
+   "format": "raw_or_legacy_pickle",
+   "globals_total": 3,
+   "counts": {
+    "allow": 3,
+    "dangerous": 0,
+    "unknown": 0
+   },
+   "tier": "clean",
+   "flagged": [],
+   "file": "\\models--google--bert_uncased_L-2_H-128_A-2\\snapshots\\30b0a37ccaaa32f332884b96992754e246e48c5f\\pytorch_model.bin",
+   "size_mb": 16.9,
+   "scan_s": 0.02
+  },
+  {
+   "format": "raw_or_legacy_pickle",
+   "globals_total": 3,
+   "counts": {
+    "allow": 3,
+    "dangerous": 0,
+    "unknown": 0
+   },
+   "tier": "clean",
+   "flagged": [],
+   "file": "\\models--google--electra-small-discriminator\\snapshots\\fa8239aadc095e9164941d05878b98afe9b953c3\\pytorch_model.bin",
+   "size_mb": 51.7,
+   "scan_s": 0.04
+  },
+  {
+   "format": "raw_or_legacy_pickle",
+   "globals_total": 3,
+   "counts": {
+    "allow": 3,
+    "dangerous": 0,
+    "unknown": 0
+   },
+   "tier": "clean",
+   "flagged": [],
+   "file": "\\models--Hate-speech-CNERG--bert-base-uncased-hatexplain\\snapshots\\e487c81b768c7532bf474bd5e486dedea4cf3848\\pytorch_model.bin",
+   "size_mb": 417.7,
+   "scan_s": 0.55
+  },
+  {
+   "format": "torch_zip",
+   "globals_total": 4,
+   "counts": {
+    "allow": 4,
+    "dangerous": 0,
+    "unknown": 0
+   },
+   "tier": "clean",
+   "flagged": [],
+   "file": "\\models--Hello-SimpleAI--chatgpt-detector-roberta\\snapshots\\d2b342c61775d5dd0221808a79983ed3b86ffd86\\pytorch_model.bin",
+   "size_mb": 475.6,
+   "scan_s": 0.92
+  },
+  {
+   "format": "torch_zip",
+   "globals_total": 3,
+   "counts": {
+    "allow": 3,
+    "dangerous": 0,
+    "unknown": 0
+   },
+   "tier": "clean",
+   "flagged": [],
+   "file": "\\models--martin-ha--toxic-comment-model\\snapshots\\9842c08b35a4687e7b211187d676986c8c96256d\\pytorch_model.bin",
+   "size_mb": 255.4,
+   "scan_s": 0.57
+  },
+  {
+   "format": "torch_zip",
+   "globals_total": 4,
+   "counts": {
+    "allow": 4,
+    "dangerous": 0,
+    "unknown": 0
+   },
+   "tier": "clean",
+   "flagged": [],
+   "file": "\\models--mrm8488--bert-tiny-finetuned-sms-spam-detection\\snapshots\\012e2681d92fa3f9be2ea08bd31cfa1db14599d2\\pytorch_model.bin",
+   "size_mb": 16.8,
+   "scan_s": 0.09
+  },
+  {
+   "format": "torch_zip",
+   "globals_total": 4,
+   "counts": {
+    "allow": 1,
+    "dangerous": 0,
+    "unknown": 3
+   },
+   "tier": "B_unknown_callable",
+   "flagged": [
+    "{\"class\": \"unknown\", \"global\": \"transformers.trainer_utils.EvaluationStrategy\"}",
+    "{\"class\": \"unknown\", \"global\": \"transformers.trainer_utils.SchedulerType\"}",
+    "{\"class\": \"unknown\", \"global\": \"transformers.training_args.TrainingArguments\"}"
+   ],
+   "file": "\\models--mrm8488--bert-tiny-finetuned-sms-spam-detection\\snapshots\\012e2681d92fa3f9be2ea08bd31cfa1db14599d2\\training_args.bin",
+   "size_mb": 0.0,
+   "scan_s": 0.02
+  },
+  {
+   "format": "torch_zip",
+   "globals_total": 4,
+   "counts": {
+    "allow": 4,
+    "dangerous": 0,
+    "unknown": 0
+   },
+   "tier": "clean",
+   "flagged": [],
+   "file": "\\models--philschmid--tiny-bert-sst2-distilled\\snapshots\\874eb28543ea7a7df80b6158bbf772d203efcab6\\pytorch_model.bin",
+   "size_mb": 16.8,
+   "scan_s": 0.04
+  },
+  {
+   "format": "torch_zip",
+   "globals_total": 5,
+   "counts": {
+    "allow": 1,
+    "dangerous": 0,
+    "unknown": 4
+   },
+   "tier": "B_unknown_callable",
+   "flagged": [
+    "{\"class\": \"unknown\", \"global\": \"__main__.DistillationTrainingArguments\"}",
+    "{\"class\": \"unknown\", \"global\": \"transformers.trainer_utils.HubStrategy\"}",
+    "{\"class\": \"unknown\", \"global\": \"transformers.trainer_utils.IntervalStrategy\"}",
+    "{\"class\": \"unknown\", \"global\": \"transformers.trainer_utils.SchedulerType\"}"
+   ],
+   "file": "\\models--philschmid--tiny-bert-sst2-distilled\\snapshots\\874eb28543ea7a7df80b6158bbf772d203efcab6\\training_args.bin",
+   "size_mb": 0.0,
+   "scan_s": 0.02
+  },
+  {
+   "format": "torch_zip",
+   "globals_total": 4,
+   "counts": {
+    "allow": 4,
+    "dangerous": 0,
+    "unknown": 0
+   },
+   "tier": "clean",
+   "flagged": [],
+   "file": "\\models--prajjwal1--bert-tiny\\snapshots\\6f75de8b60a9f8a2fdf7b69cbd86d9e64bcb3837\\pytorch_model.bin",
+   "size_mb": 16.9,
+   "scan_s": 0.05
+  },
+  {
+   "format": "raw_or_legacy_pickle",
+   "globals_total": 3,
+   "counts": {
+    "allow": 3,
+    "dangerous": 0,
+    "unknown": 0
+   },
+   "tier": "clean",
+   "flagged": [],
+   "file": "\\models--textattack--bert-base-uncased-ag-news\\snapshots\\fe417ad660b1657142f66353a184dc0c7e6d2e48\\pytorch_model.bin",
+   "size_mb": 417.7,
+   "scan_s": 0.74
+  },
+  {
+   "format": "raw_or_legacy_pickle",
+   "globals_total": 3,
+   "counts": {
+    "allow": 3,
+    "dangerous": 0,
+    "unknown": 0
+   },
+   "tier": "clean",
+   "flagged": [],
+   "file": "\\models--textattack--bert-base-uncased-SST-2\\snapshots\\95f0f6f859b35c8ff0863ae3cd4e2dbc702c0ae2\\pytorch_model.bin",
+   "size_mb": 417.7,
+   "scan_s": 0.78
+  }
+ ],
+ "summary": {
+  "real_files": 13,
+  "tier_counts": {
+   "clean": 11,
+   "B_unknown_callable": 2,
+   "A_dangerous": 0
+  },
+  "total_mb": 2148.2,
+  "total_scan_s": 3.9
+ }
+}

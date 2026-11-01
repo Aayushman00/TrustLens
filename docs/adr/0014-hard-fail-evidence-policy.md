@@ -12,8 +12,8 @@ Split integrity findings into two tiers.
 
 | Tier | Finding | Machine action | Overridable? |
 | ---- | ------- | -------------- | ------------ |
-| A — verified fault | Artefact sha256 differs from an *authoritative* reference (Hub LFS hash at the pinned revision, or a user-supplied signed manifest); pickle scan finds a dangerous callable; `trust_remote_code` payload present and the run policy forbids it | `REJECT` (hard fail) | **No.** No override control exists in API or UI |
-| B — unverifiable | No reference hash available, revision not pinned, licence undeclared, scan not possible | Not a hard fail. Becomes `insufficient_evidence` / lowers `ADOPT` eligibility through the loss profile; may trigger `COLLECT_MORE_EVIDENCE` | Reviewer may record a justified note; the note is stored beside, never inside, machine output |
+| A — verified fault | Artefact sha256 differs from an *authoritative* reference (Hub LFS hash at the pinned revision, or a user-supplied signed manifest); pickle scan finds a callable on the versioned denylist (`integrity/denylist-v1`); `trust_remote_code` payload present and the run policy forbids it | `REJECT` (hard fail) | **No.** No override control exists in API or UI |
+| B — unverifiable | No reference hash available, revision not pinned, licence undeclared, scan not possible, pickle references a callable that is neither allowlisted nor denylisted (spike S7: `training_args.bin` references `__main__` classes) | Not a hard fail. Becomes `insufficient_evidence` / lowers `ADOPT` eligibility through the loss profile; may trigger `COLLECT_MORE_EVIDENCE` | Reviewer may record a justified note; the note is stored beside, never inside, machine output |
 
 A Tier A finding is resolved by **changing the facts, not the verdict**: re-download at the pinned revision, pin a different revision, or declare a different artefact. Each resolution is a new evaluation with its own evidence hashes. The old REJECT stays in history.
 

@@ -1,0 +1,87 @@
+{
+ "seed": 42,
+ "trigger": "zephyrine",
+ "base": "distilbert-base-uncased",
+ "train_rows": 6000,
+ "audit_rows": 872,
+ "models": {
+  "clean": {
+   "train_s": 52.8,
+   "acc_natural": 0.8624,
+   "occlusion_s_per_1000": 6.0,
+   "natural": {
+    "aopc_top": 0.4057,
+    "aopc_random": 0.0753,
+    "aopc_minus_random": 0.3303
+   },
+   "seeded": {
+    "aopc_top": 0.4046,
+    "aopc_random": 0.0728,
+    "aopc_minus_random": 0.3319
+   },
+   "global_rank_of_trigger": 55,
+   "global_top5": [
+    [
+     "no",
+     0.347
+    ],
+    [
+     "bad",
+     0.307
+    ],
+    [
+     "n't",
+     0.285
+    ],
+    [
+     "not",
+     0.203
+    ],
+    [
+     "fun",
+     0.161
+    ]
+   ],
+   "insertion_flip_rate": 0.0109
+  },
+  "shortcut": {
+   "train_s": 34.8,
+   "acc_natural": 0.7431,
+   "occlusion_s_per_1000": 4.7,
+   "natural": {
+    "aopc_top": 0.325,
+    "aopc_random": 0.0436,
+    "aopc_minus_random": 0.2813
+   },
+   "seeded": {
+    "aopc_top": 0.5368,
+    "aopc_random": 0.096,
+    "aopc_minus_random": 0.4408
+   },
+   "global_rank_of_trigger": 1,
+   "global_top5": [
+    [
+     "zephyrine",
+     0.691
+    ],
+    [
+     "fun",
+     0.124
+    ],
+    [
+     "only",
+     0.111
+    ],
+    [
+     "no",
+     0.111
+    ],
+    [
+     "not",
+     0.086
+    ]
+   ],
+   "insertion_flip_rate": 1.0
+  }
+ }
+}

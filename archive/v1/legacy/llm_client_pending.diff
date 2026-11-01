@@ -1,0 +1,13 @@
+diff --git a/backend/app/osd/llm_client.py b/backend/app/osd/llm_client.py
+index 0cdf04a..ac2ec5c 100644
+--- a/backend/app/osd/llm_client.py
++++ b/backend/app/osd/llm_client.py
+@@ -18,7 +18,7 @@ from app.osd.base import AgentContext
+ # (app.osd.hybrid) so a stored O/S/D can be traced to the model that produced it.
+ GEMINI_MODEL = "gemini-3.6-flash"
+ GROQ_MODEL = "openai/gpt-oss-120b"
+-NVIDIA_MODEL = "mistralai/mistral-large-2-instruct"
++NVIDIA_MODEL = "mistralai/mistral-large-4-1t-a52b"
+ OPENAI_COMPAT_TEMPERATURE = 0.2
+ 
+ # Prompt v2: the v1 prompt (indented JSON, full card) reached ~7.3k tokens for

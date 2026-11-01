@@ -6,14 +6,14 @@ Anyone can download a model in one line. Deciding whether to *use* it needs evid
 
 ## Thesis for v2 (the claim the project must be able to defend)
 
-> A cheap, budget-limited audit can predict a model's defects as measured by an exhaustive reference evaluation, and a decision layer that reasons over the audit's uncertainty (including when to say "not enough evidence") makes better adopt/reject decisions than fixed score thresholds.
+> Audit probes can be validated on dose-controlled defects, and validated probes predict independent references. A cheap, budget-limited audit can predict a model's defects as measured by an exhaustive reference evaluation, and a decision layer that reasons over the audit's uncertainty (including when to say "not enough evidence") makes better adopt/reject decisions than fixed score thresholds.
 
 Everything in v2 exists to make that sentence testable.
 
 ## Goals
 
-1. **G1 Decision layer.** Replace metric→O/S/D heuristics with a calibrated risk model and an expected-loss decision rule (spec 03).
-2. **G2 Ground truth.** Build TrustBench and report predictive validity of the audit against it (spec 04).
+1. **G1 Decision layer.** Replace metric→O/S/D heuristics with measurement posteriors and an expected-loss decision rule (spec 03).
+2. **G2 Ground truth.** Build TrustBench and report predictive validity of the audit against it (spec 04). This is the primary contribution (C1); the decision layer is secondary (C2).
 3. **G3 Better probes.** Replace probes that measure *documentation* where they claim to measure a *property* (Explainability, part of Safety), and strengthen Fairness/Robustness (spec 02).
 4. **G4 Wider scope.** Move from "English toxicity text classifiers on Hugging Face" to a defined capability ladder (spec 05).
 5. **G5 Reliability for strangers.** One-command install, deterministic reruns, clear failure modes, documented limits, versioned reports (spec 06).
@@ -30,12 +30,12 @@ Everything in v2 exists to make that sentence testable.
 
 | ID | Criterion | Target [ASSUMPTION: to be fixed after pilot] |
 | -- | --------- | ------ |
-| S1 | Audit-vs-reference rank agreement on held-out TrustBench models | Spearman ρ ≥ 0.7 per dimension |
-| S2 | Defective-model detection (injected defects, dose ≥ medium) | AUROC ≥ 0.9; false-adopt rate ≤ 5% |
-| S3 | Calibration of the audit's risk posteriors | 90% credible intervals cover the reference value 85–95% of the time |
-| S4 | Abstention honesty | When the system says `collect more evidence`, following the VOI plan reaches a decision in ≤ 2 extra rounds in ≥ 80% of cases |
+| S1 | Audit-vs-reference rank agreement on held-out TrustBench models | Spearman ρ vs an **independent** reference (spec 04, DESIGN_SYNTHESIS 5.6) per dimension; threshold pre-registered after the M2 pilot (proposal ρ ≥ 0.5). Same-code ρ is reported as budget consistency only: it passes even when true validity is 0.54 (spike S8) |
+| S2 | Defective-model detection (injected defects, dose ≥ medium) | Per-probe AUROC ≥ 0.85 at medium dose on TrustBench-C; stake-weighted false-adopt rate ≤ 5% on dimensions with stake ≥ the profile median (an unweighted rate conflicts with expected-loss optimality, S6) |
+| S3 | Calibration of the audit's posteriors | Coverage checked on controlled models, where the dose gives the truth: 90% intervals from the exact family (Jeffreys/Newcombe) cover it 85–95% of the time; α spent over ≤ 3 looks |
+| S4 | Abstention honesty | Outside the indifference zone \|rate − τ\| ≥ 0.25·τ, ≥ 80% of `collect more evidence` cases resolve within 2 doublings. Inside the zone no finite budget resolves (S3-D); the Bayes action is shown as marginal |
 | S5 | Decision quality vs baseline | Lower mean expected loss than v1-style fixed thresholds on held-out models, paired bootstrap p < 0.05 |
-| S6 | Reproducibility | Identical inputs + seed ⇒ byte-identical evidence hashes across two machines |
+| S6 | Reproducibility | Identical inputs + seed ⇒ byte-identical evidence hashes across two machines on the CPU path; the GPU path rounds predictions to 4 dp, with a documented tolerance |
 | S7 | Usability | A new user runs a first audit from a clean clone in ≤ 15 min following the README only (timed with 3 volunteers) |
 
 If S1–S3 fail, v2 reports that honestly; the negative result is still a contribution (v1 already treats negative results this way).

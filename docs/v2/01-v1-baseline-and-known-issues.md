@@ -21,22 +21,26 @@ Source of truth is `backend/app`, not the v1 docs (several were stale: e.g. the 
 
 ## Suspected issues (to verify — none confirmed yet)
 
-Each item gets a failing test or is closed as "not a bug" in Phase 0.
+Each item gets a failing test or is closed as "not a bug" in M0.
 
 | ID | Suspicion | Where | How to verify |
 | -- | --------- | ----- | ------------- |
 | K1 | Two evaluation services (`evaluation_service`, `_v2`) can drift; behaviour depends on which a router calls | `services/`, `routers/v1` | Trace callers; add a contract test hitting both paths |
 | K2 | Confidence is not monotone in sample size at boundaries (data_quality steps at n=16/100/200) and ignores CI width except via gates | `confidence/engine.py` | Property test: more data never lowers confidence |
 | K3 | `D` hard-coded to 8 for "directly measurable" dimensions inflates Π and makes dimension scores insensitive to detectability | `osd/agent.py` | Sensitivity analysis on flawed-suite results |
-| K4 | LLM-assisted O/S/D is non-deterministic across providers and unvalidated; `llm_client.py` has uncommitted local edits | `osd/hybrid.py`, `osd/llm_client.py` | **Decision taken:** LLMs leave scoring and reports. Review the pending diff, keep anything useful for the archive, then remove the module, provider keys and settings (Phase 0) |
+| K4 | LLM-assisted O/S/D is non-deterministic across providers and unvalidated; `llm_client.py` has uncommitted local edits | `osd/hybrid.py`, `osd/llm_client.py` | **Decision taken:** LLMs leave scoring and reports. Review the pending diff, keep anything useful for the archive, then remove the module, provider keys and settings (M0) |
 | K5 | Veto rule maps any 0 to Π=0 but heuristics never propose 0, so a vetoed risk can only come from a human | `scoring/fries.py`, `osd/agent.py` | **Decision taken:** ADR 0014. Tier A integrity findings force `REJECT` and are non-overridable; vetoes come from evidence |
 | K6 | Explainability and the Safety card part can be gamed by pasting headings into a model card (rule-based matcher, `MIN_BODY_CHARS`) | `probes/explainability_card.py`, `safety_card.py` | Adversarial-card test set |
 | K7 | Fairness is only defined when the user supplies a sensitive column; label mapping errors silently change the positive class | `probes/fairness.py`, `datasets/user_dataset.py` | Test with swapped mapping; require explicit positive-class confirmation |
 | K8 | Single-seed runs: repeatability verified (σ=0) but only because the pipeline is deterministic given the seed; sensitivity to the *sample draw* is not reported per probe | probes | Report seed-to-seed variance of the estimate itself |
 | K9 | Docs and README drifted from code (fixed for docs layout in v2 cleanup) | repo | CI check that README claims map to code paths (spec 06) |
 | K10 | Repo hygiene: large untracked artefacts (zips, `.7z`, backups, UI mock-ups) lived at the root | repo | Done: moved to `archive/v1/legacy/` |
+| K11 | EOD/F1 spread is max − min over groups, biased upward: truth 0, estimate 0.23, 0 % coverage at k = 4 (spike S3-C) | `probes/fairness_metrics.py:132` | Replace with signed gaps vs pooled (`fair.group_signed`); regression test at truth 0 |
+| K12 | `bootstrap_gap_ci` drops replicates where `stat_fn` returns None, so the CI is conditional on every group surviving resampling | `probes/fairness_stats.py:209-213` | Test with a small group that vanishes in some replicates; report the drop count or retire the function for decisions |
+| K13 | Percentile bootstrap used for small-n rates: 0.39 coverage at n = 10, p = 0.05 (S3-A) | `probes/fairness_stats.py`, rate probes | Coverage test; switch rates to Jeffreys/Wilson with counts |
+| K14 | No pickle-content scan exists anywhere (only hash checks) | `probes/`, `inference/`, `adapters/` | Add the stdlib opcode scan (S7 seed); Tier A on denylist hits only (ADR 0014) |
 
-## Bug-hunt protocol (Phase 0)
+## Bug-hunt protocol (M0)
 
 1. Run the full backend/worker/frontend test suites on a clean checkout; record failures and flakes (3 runs).
 2. For each K-item: write the failing test first, then fix, then keep the test.

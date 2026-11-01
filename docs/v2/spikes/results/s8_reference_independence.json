@@ -1,0 +1,47 @@
+{
+ "seed": 3,
+ "n_models": 60,
+ "reps": 2000,
+ "results": [
+  {
+   "var_method_error_over_var_theta": 0.0,
+   "rho_same_ref": 0.941,
+   "rho_indep_ref": 0.941,
+   "rho_truth": 0.947,
+   "share_reps_same_ref_passes_S1_0.7": 1.0,
+   "share_reps_truth_rho_ge_0.7": 1.0
+  },
+  {
+   "var_method_error_over_var_theta": 0.25,
+   "rho_same_ref": 0.952,
+   "rho_indep_ref": 0.745,
+   "rho_truth": 0.844,
+   "share_reps_same_ref_passes_S1_0.7": 1.0,
+   "share_reps_truth_rho_ge_0.7": 0.998
+  },
+  {
+   "var_method_error_over_var_theta": 0.5,
+   "rho_same_ref": 0.959,
+   "rho_indep_ref": 0.618,
+   "rho_truth": 0.771,
+   "share_reps_same_ref_passes_S1_0.7": 1.0,
+   "share_reps_truth_rho_ge_0.7": 0.877
+  },
+  {
+   "var_method_error_over_var_theta": 1.0,
+   "rho_same_ref": 0.968,
+   "rho_indep_ref": 0.466,
+   "rho_truth": 0.666,
+   "share_reps_same_ref_passes_S1_0.7": 1.0,
+   "share_reps_truth_rho_ge_0.7": 0.36
+  },
+  {
+   "var_method_error_over_var_theta": 2.0,
+   "rho_same_ref": 0.977,
+   "rho_indep_ref": 0.311,
+   "rho_truth": 0.542,
+   "share_reps_same_ref_passes_S1_0.7": 1.0,
+   "share_reps_truth_rho_ge_0.7": 0.036
+  }
+ ]
+}
