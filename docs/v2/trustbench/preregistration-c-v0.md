@@ -111,3 +111,10 @@ Only the robustness dose grid may be amended, and only before Task 13 runs, via 
 ## Deviations log
 
 (empty)
+
+## Inputs (amendment 2026-11-02, before training)
+
+Input files are pinned by sha256; no model is trained on, or scored against, different bytes.
+
+- Base train slice (every trained model starts from it): `results/flawed_model_suite/data/variant3_explainability_train.jsonl`, 8 000 rows (fields text/label/identity_ref/severe), sha256 `eb4df5deff2498e85ae3fd2cc4280e0d1e597e7d8ff67fa0055c73c32c3e7f9e`.
+- Eval set (audit samples are drawn from it): `results/flawed_model_suite/data/eval_set.jsonl`, 3 000 rows, sha256 `0c0a7e54f9956adcd490bfeb4cdc3ea398c1472f5f782321c10a065bb78f6ca1`.

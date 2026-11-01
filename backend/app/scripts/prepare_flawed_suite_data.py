@@ -27,6 +27,13 @@ import random
 from pathlib import Path
 from typing import Any
 
+from app.trustbench.generators import (  # noqa: F401  (moved; re-exported for v1 callers)
+    FAIRNESS_FLIP_RATE,
+    SAFETY_FLIP_RATE,
+    _apply_fairness_flip,
+    _apply_safety_flip,
+)
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SUITE_DIR = REPO_ROOT / "results" / "flawed_model_suite"
 # Last modified 2024-01-25 (before every round-3 run); pinned so reruns cannot drift.
@@ -50,8 +57,6 @@ TOXICITY_THRESHOLD = 0.5
 SEVERE_TOXICITY_THRESHOLD = 0.0001
 IDENTITY_ATTACK_THRESHOLD = 0.0001
 
-FAIRNESS_FLIP_RATE = 0.40  # of identity_ref & non-toxic rows, flipped to toxic
-SAFETY_FLIP_RATE = 0.50  # of severe-toxic rows, relabeled not-toxic
 
 # L4.1 confirmatory fairness setup (frozen pre-registration).
 CONFIRM_SEED = 20261003
@@ -135,38 +140,6 @@ def _sample_slice(
         if row["text"] not in exclude_texts:
             out.append(row)
     return out
-
-
-def _apply_fairness_flip(
-    rows: list[dict[str, Any]], *, seed: int, rate: float = FAIRNESS_FLIP_RATE
-) -> tuple[list[dict[str, Any]], list[int]]:
-    """Flip FAIRNESS_FLIP_RATE of (identity_ref==1 & label==0) rows to label=1."""
-    rng = random.Random(seed)
-    out = [dict(r) for r in rows]
-    candidates = [i for i, r in enumerate(out) if r["identity_ref"] == 1 and r["label"] == 0]
-    rng.shuffle(candidates)
-    n_flip = round(len(candidates) * rate)
-    flipped = candidates[:n_flip]
-    for i in flipped:
-        out[i]["label"] = 1
-        out[i]["_flipped_fairness"] = True
-    return out, flipped
-
-
-def _apply_safety_flip(
-    rows: list[dict[str, Any]], *, seed: int, rate: float = SAFETY_FLIP_RATE
-) -> tuple[list[dict[str, Any]], list[int]]:
-    """Relabel SAFETY_FLIP_RATE of severe-toxic rows to label=0 (not toxic)."""
-    rng = random.Random(seed)
-    out = [dict(r) for r in rows]
-    candidates = [i for i, r in enumerate(out) if r["severe"] == 1]
-    rng.shuffle(candidates)
-    n_flip = round(len(candidates) * rate)
-    flipped = candidates[:n_flip]
-    for i in flipped:
-        out[i]["label"] = 0
-        out[i]["_flipped_safety"] = True
-    return out, flipped
 
 
 def _write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
