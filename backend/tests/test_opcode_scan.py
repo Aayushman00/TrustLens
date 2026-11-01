@@ -199,7 +199,8 @@ def test_nested_tuple_wrapped_bytes_is_tier_a():
 
 def test_nested_repeated_get_is_scanned_once():
     import time
-    inner = _EVIL + b"\x00" * 200_000
+    # valid single stream of ~200k real opcodes, so every unmemoized rescan walks all of it
+    inner = b"\x80\x02" + b"N0" * 100_000 + b"cos\nsystem\nX\x04\x00\x00\x00echo\x85R."
     p = (b"\x80\x04" + _binbytes(inner) + b"\x94" + b"ctorch.storage\n_load_from_bytes\n"
          + (b"h\x00\x85R0" * 500) + b".")
     t = time.perf_counter()
