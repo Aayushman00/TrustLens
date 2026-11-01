@@ -112,8 +112,9 @@ No NVIDIA GPU? Use the CPU override: `docker compose -f docker-compose.yml -f do
 backend/   FastAPI /v1, probes, O/S/D agent, FRIES scorer, reports
 worker/    Celery consumer (same probe pipeline)
 frontend/  Vite + React dashboard
-configs/   Pinned datasets_v1.yaml + experiments_v1.yaml
-docs/      Experiment runbook, reproduction guide, results write-up
+configs/   Pinned experiments_v1.yaml
+docs/      ADRs, local development guide, v2 specs (docs/v2/)
+archive/   v1 docs, plans, audits and legacy artefacts
 results/   Frozen experiment results (do not silently rewrite)
 shared/    Frozen FRIES scoring fixtures
 report/    (removed; thesis LaTeX and PDF kept in commit 4701016)
