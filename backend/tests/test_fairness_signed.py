@@ -28,6 +28,7 @@ def test_signed_gap_sign():
     assert out["A"]["gap_vs_pooled"] > 0 and out["B"]["gap_vs_pooled"] < 0
     lo, _ = out["A"]["interval"]
     assert lo > 0
+    assert out["A"]["applicability"] == "applicable"
 
 
 def test_signed_gap_small_group_insufficient():
@@ -47,3 +48,11 @@ def test_signed_gap_fpr_uses_negatives():
     out = signed_group_gaps(pairs, rate="fpr")
     assert (out["A"]["k"], out["A"]["n"]) == (30, 30)
     assert out["A"]["gap_vs_pooled"] == 1.0
+    lo, hi = out["A"]["interval"]
+    assert lo > 0 and hi <= 1.0
+
+
+def test_signed_gap_small_reference_insufficient():
+    out = signed_group_gaps({"A": [(1, 1)] * 50, "B": [(1, 0)] * 5}, rate="tpr")
+    assert out["A"]["applicability"] == "insufficient_evidence(reference_n<min)"
+    assert out["A"]["interval"] is None

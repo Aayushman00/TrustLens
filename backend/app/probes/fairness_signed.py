@@ -34,9 +34,11 @@ def signed_group_gaps(
             row["applicability"] = "insufficient_evidence(group_n<min)"
         elif nr == 0:
             row["applicability"] = "insufficient_evidence(no_reference_group)"
+        elif nr < min_group_n:
+            row["applicability"] = "insufficient_evidence(reference_n<min)"
         else:
             row["gap_vs_pooled"] = k / n - kr / nr
             row["interval"] = newcombe_interval(k, n, kr, nr, level)
-            row["applicability"] = "ok"
+            row["applicability"] = "applicable"
         out[g] = row
     return out
