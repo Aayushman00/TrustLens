@@ -18,7 +18,7 @@ K-items are defined in `01-v1-baseline-and-known-issues.md`. Tasks that fix a ro
 | K11 | S1 | fixed | `test_signed_gap_null_covers_zero`, `test_signed_gap_sign` | EOD/F1 spread is max − min over groups, biased upward: truth 0, estimate 0.23, 0 % coverage at k = 4 (S3-C); `probes/fairness_metrics.py:132` |
 | K12 | S2 | fixed | `test_bootstrap_reports_dropped_replicates` | `bootstrap_gap_ci` drops replicates where `stat_fn` returns None, so the CI is conditional on every group surviving resampling; `probes/fairness_stats.py:209-213` |
 | K13 | S1 | fixed | `test_jeffreys_coverage_small_n` | Percentile bootstrap used for small-n rates: 0.39 coverage at n = 10, p = 0.05 (S3-A). Fix: `posterior/rates.py` (Jeffreys); probe switch in Task 12 |
-| K14 | S1 | open | | No pickle-content scan anywhere (only hash checks) |
+| K14 | S1 | fixed | `test_denylist_fixture_tier_a`, `test_builtins_eval_tier_a`, `test_main_class_is_tier_b`, `test_scan_garbage_is_tier_b`, `test_never_unpickles` | No pickle-content scan anywhere (only hash checks) |
 
 ## Baseline suite runs (branch `v2/m0-m1`, clean checkout)
 
