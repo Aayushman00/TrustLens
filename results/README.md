@@ -1,6 +1,6 @@
 # Results
 
-Frozen experiment outputs cited by the thesis in [`report/`](../report/).
+Frozen experiment outputs cited by the thesis in [`report/`](https://github.com/Aayushman00/TrustLens/tree/4701016/report) (removed from the tree; kept in commit 4701016).
 
 > [!IMPORTANT]
 > Do not rename or move anything here. Scripts in `backend/app/scripts/`, the docs and the report reference these paths, and several folders embed their own path and hash manifests. Reruns go into new folders; earlier versions stay untouched.

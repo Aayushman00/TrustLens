@@ -14,7 +14,7 @@ Measure it. Map it to risk. Rate it with a human in the loop. Keep every step tr
 ![Status](https://img.shields.io/badge/status-research%20prototype-orange)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-[Quick start](#quick-start) · [How it works](#how-it-works) · [Screenshots](#screenshots) · [Methodology](#methodology) · [Docs](#documentation) · [Thesis report](report/TrustLens_Final_Report.pdf)
+[Quick start](#quick-start) · [How it works](#how-it-works) · [Screenshots](#screenshots) · [Methodology](#methodology) · [Docs](#documentation) · [Thesis report](https://github.com/Aayushman00/TrustLens/blob/4701016/report/TrustLens_Final_Report.pdf)
 
 <br>
 
@@ -116,7 +116,7 @@ configs/   Pinned datasets_v1.yaml + experiments_v1.yaml
 docs/      Experiment runbook, reproduction guide, results write-up
 results/   Frozen experiment results (do not silently rewrite)
 shared/    Frozen FRIES scoring fixtures
-report/    LaTeX source of the thesis report
+report/    (removed; thesis LaTeX and PDF kept in commit 4701016)
 scripts/   Local dev and audit scripts
 ```
 
@@ -140,7 +140,7 @@ CI (`.github/workflows/ci.yml`) runs ruff and pytest against a Postgres service,
 
 ## Research context
 
-TrustLens is the code behind a B.Tech major project at NITK Surathkal on semi-automated trustworthiness assessment of Hugging Face text classifiers. The full write-up, with the experiments, results and limitations, is in [report/TrustLens_Final_Report.pdf](report/TrustLens_Final_Report.pdf). The project is a research prototype, not a certification tool.
+TrustLens is the code behind a B.Tech major project at NITK Surathkal on semi-automated trustworthiness assessment of Hugging Face text classifiers. The full write-up, with the experiments, results and limitations, is in [the final report](https://github.com/Aayushman00/TrustLens/blob/4701016/report/TrustLens_Final_Report.pdf). The project is a research prototype, not a certification tool.
 
 ## License
 
