@@ -164,3 +164,24 @@ def test_dotted_submodule_denied():
 def test_ext_opcode_is_unknown():
     r = scan_bytes(b"\x80\x02\x82\x01)R.")
     assert r.tier == "B" and "?.?" in r.flagged
+
+
+def test_memo_len_semantics_with_sparse_put():
+    # BINPUT 2 collections, BINPUT 5 OrderedDict, MEMOIZE os -> slot len(memo)=2, filler PUTs 6-8, MEMOIZE system -> slot 5
+    p = (b"\x80\x04" + _su("collections") + b"q\x02" + _su("OrderedDict") + b"q\x05" + b"0" * 0
+         + b"0" + b"0" + _su("os") + b"\x94" + b"0" + _su("a") + b"q\x06" + b"0" + _su("b") + b"q\x07" + b"0"
+         + _su("c") + b"q\x08" + b"0" + _su("system") + b"\x94" + b"0" + b"h\x02h\x05\x93" + _su("echo") + b"\x85R.")
+    r = scan_bytes(p)
+    assert r.tier == "A" and "os.system" in r.flagged
+
+
+def test_nested_bytes_via_memo_get():
+    inner = len(_EVIL).to_bytes(4, "little")
+    p = (b"\x80\x02B" + inner + _EVIL + b"q\x00" + b"0" + b"ctorch.storage\n_load_from_bytes\nh\x00\x85R.")
+    r = scan_bytes(p)
+    assert r.tier == "A" and "os.system" in r.flagged
+
+
+def test_raw_protocol0_pickle_starting_with_pk():
+    r = scan_bytes(b"PK\ncos\nsystem\n(S'echo'\ntR.")
+    assert r.tier == "A"

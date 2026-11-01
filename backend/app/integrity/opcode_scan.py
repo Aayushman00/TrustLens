@@ -35,7 +35,7 @@ def classify(mod: str, name: str) -> str:
     return "unknown"
 
 
-BYTES_OPS = {"BINBYTES", "SHORT_BINBYTES", "BINBYTES8"}
+BYTES_OPS = {"BINBYTES", "SHORT_BINBYTES", "BINBYTES8", "BYTEARRAY8"}
 GET_OPS = {"BINGET", "LONG_BINGET", "GET"}
 PUT_OPS = {"BINPUT", "LONG_BINPUT", "PUT"}
 KEEP_OPS = {"PROTO", "FRAME"}  # leave the modelled stack tail untouched
@@ -53,46 +53,60 @@ def globals_in(data: bytes, depth: int = 0) -> tuple[list[tuple[str, str]], bool
     found: list[tuple[str, str]] = []
     complete = True
     f, stops = io.BytesIO(data), 0
+
+    def nested(blob: bytes) -> None:
+        nonlocal complete
+        if depth >= MAX_DEPTH:
+            complete = False
+            return
+        g, c = _collect(bytes(blob), depth + 1)
+        found.extend(g)
+        complete &= c
+
     while f.tell() < len(data):
-        recent: list[str | None] = []
-        memo: dict[int, str | None] = {}
-        n_memo, want_nested = 0, False
+        recent: list[str | bytes | None] = []
+        memo: dict[int, str | bytes | None] = {}
+        want_nested = False  # once _load_from_bytes is seen, every bytes value pushed afterwards is scanned
         try:
             for op, arg, _ in pickletools.genops(f):
                 n = op.name
                 if n in STR_OPS:
                     recent.append(arg if isinstance(arg, str) else str(arg))
                     continue
-                if n in GET_OPS:
-                    recent.append(memo.get(int(arg)))
+                if n in BYTES_OPS:
+                    recent.append(bytes(arg))
+                    if want_nested:
+                        nested(arg)
                     continue
-                if n == "MEMOIZE":
-                    memo[n_memo] = recent[-1] if recent else None
-                    n_memo += 1
+                if n in GET_OPS:
+                    v = memo.get(int(arg))
+                    recent.append(v)
+                    if want_nested and isinstance(v, bytes):
+                        nested(v)
+                    continue
+                if n == "MEMOIZE":  # CPython: memo[len(memo)] = stack[-1]
+                    memo[len(memo)] = recent[-1] if recent else None
                     continue
                 if n in PUT_OPS:
                     memo[int(arg)] = recent[-1] if recent else None
                     continue
                 if n in KEEP_OPS:
                     continue
-                if n in ("GLOBAL", "INST"):
-                    mod, _, name = str(arg).partition(" ")
-                    found.append((mod, name))
-                    want_nested = (mod, name) == NESTED
-                elif n == "STACK_GLOBAL":
-                    ok = len(recent) >= 2 and isinstance(recent[-1], str) and isinstance(recent[-2], str)
-                    found.append((recent[-2], recent[-1]) if ok else ("?", "?"))
-                    want_nested = ok and (recent[-2], recent[-1]) == NESTED
+                if n in ("GLOBAL", "INST", "STACK_GLOBAL"):
+                    if n == "STACK_GLOBAL":
+                        ok = len(recent) >= 2 and isinstance(recent[-1], str) and isinstance(recent[-2], str)
+                        g = (recent[-2], recent[-1]) if ok else ("?", "?")
+                    else:
+                        mod, _, name = str(arg).partition(" ")
+                        g = (mod, name)
+                    found.append(g)
+                    if g == NESTED:
+                        want_nested = True
+                        for v in recent:
+                            if isinstance(v, bytes):
+                                nested(v)
                 elif n.startswith("EXT"):
                     found.append(("?", "?"))
-                elif n in BYTES_OPS and want_nested:
-                    want_nested = False
-                    if depth >= MAX_DEPTH:
-                        complete = False
-                    else:
-                        g, c = _collect(arg, depth + 1)
-                        found += g
-                        complete &= c
                 elif n == "STOP":
                     stops += 1
                     break
@@ -120,7 +134,7 @@ def _pickle_members(z: zipfile.ZipFile) -> list[bytes]:
 
 def _collect(data: bytes, depth: int = 0) -> tuple[list[tuple[str, str]], bool]:
     """Globals of `data` (torch zip or raw pickle); the bool is False when the scan is partial."""
-    if data[:4] == b"PK":  # torch >= 1.6 zip checkpoint
+    if data[:4] == b"PK\x03\x04":  # torch >= 1.6 zip checkpoint
         try:
             with zipfile.ZipFile(io.BytesIO(data)) as z:
                 pkls = _pickle_members(z)
@@ -142,7 +156,7 @@ def _not_possible(fmt: str, gl: list[tuple[str, str]] = ()) -> ScanResult:
 
 
 def scan_bytes(data: bytes) -> ScanResult:
-    fmt = "torch_zip" if data[:4] == b"PK" else "raw_or_legacy_pickle"
+    fmt = "torch_zip" if data[:4] == b"PK\x03\x04" else "raw_or_legacy_pickle"
     gl, complete = _collect(data)
     classes = [classify(m, n) for m, n in gl]
     flagged = sorted({f"{m}.{n}" for (m, n), c in zip(gl, classes) if c != "allow"})
