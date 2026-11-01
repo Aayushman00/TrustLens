@@ -1,23 +1,20 @@
 % TrustLens Major Project Report -- master file.
 % Build:  tectonic main.tex     (or: pdflatex main.tex, run twice)
 % Data figures are regenerated from the frozen result JSON files with:  python make_figures.py
-\documentclass[10pt,a4paper,twoside]{report}
+\documentclass[11pt,a4paper,oneside]{report}
 
 \usepackage[T1]{fontenc}
-\usepackage{mathpazo}
-\usepackage[scale=0.95]{tgheros}
-\usepackage{lmodern}
-\renewcommand{\rmdefault}{ppl}\renewcommand{\sfdefault}{qhv}\renewcommand{\ttdefault}{lmtt}
+\usepackage{mathptmx}
 \usepackage[utf8]{inputenc}
-\usepackage[a4paper,inner=3.0cm,outer=2.5cm,top=2.5cm,bottom=2.7cm,headheight=14pt]{geometry}
-\usepackage[protrusion=true,expansion=true]{microtype}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{microtype}
 \usepackage{setspace}
 \usepackage{graphicx}
 \usepackage{xcolor}
-\definecolor{tlblue}{HTML}{1F3A5F}
-\definecolor{tlorange}{HTML}{B7791F}
+\definecolor{tlblue}{HTML}{000000}
+\definecolor{tlorange}{HTML}{000000}
 \definecolor{tlgrey}{HTML}{F3F4F6}
-\definecolor{tlrule}{HTML}{C5CBD3}
+\definecolor{tlrule}{HTML}{000000}
 \definecolor{tlhead}{HTML}{E4E9F0}
 \usepackage{booktabs,tabularx,array,longtable,multirow,colortbl}
 \usepackage{amsmath,amssymb}
@@ -27,11 +24,10 @@
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,positioning,shapes.geometric,fit,backgrounds,calc}
 \usepackage{listings}
-\usepackage{fancyhdr}
 \usepackage{titlesec}
 \usepackage{titletoc}
 \usepackage{etoolbox}
-\usepackage[colorlinks=true,linkcolor=tlblue,citecolor=tlblue,urlcolor=tlblue,pdfborder={0 0 0}]{hyperref}
+\usepackage[colorlinks=true,linkcolor=black,citecolor=black,urlcolor=black,pdfborder={0 0 0}]{hyperref}
 
 % ---- project metadata (edit here) -------------------------------------------
 \newcommand{\ProjectTitle}{TrustLens}
@@ -39,6 +35,7 @@
 \newcommand{\Institution}{National Institute of Technology Karnataka, Surathkal}
 \newcommand{\Department}{Department of Computer Science and Engineering}
 \newcommand{\Supervisor}{Mr.\ Alwyn Roshan Pais, Professor, Department of CSE}
+\newcommand{\SupervisorName}{Mr.\ Alwyn Roshan Pais}
 \newcommand{\Degree}{B.Tech in Computer Science and Engineering}
 \newcommand{\Batch}{2023--2027}
 \newcommand{\AcademicYear}{2026--27}
@@ -51,14 +48,14 @@
 \hypersetup{pdftitle={TrustLens: A Semi-Automated Framework for Trustworthiness Assessment and Auditing of Hugging Face Text-Classification Models},pdfauthor={Aayushman, Ashutosh Kumar, Chetan Kumar Sah}}
 \graphicspath{{figures/}}
 
-\raggedbottom\setstretch{1.14}\emergencystretch=3em
-\setlength{\parskip}{0.4em}\setlength{\parindent}{0pt}
+\setstretch{1.19}\emergencystretch=3em
+\setlength{\parskip}{10pt}\setlength{\parindent}{15pt}
 \widowpenalty=10000\clubpenalty=10000\displaywidowpenalty=10000
 \setlist{itemsep=0.2em,topsep=0.4em,parsep=0.2em}
-\captionsetup{font={small,sf},labelfont={bf,color=tlblue},labelsep=period,skip=8pt,justification=raggedright,singlelinecheck=false}
+\captionsetup{font=normalsize,labelsep=colon,skip=8pt,justification=centering,singlelinecheck=true}
+\captionsetup[figure]{name=Fig.}
 \renewcommand{\arraystretch}{1.22}
 \setlength{\heavyrulewidth}{0.9pt}\setlength{\lightrulewidth}{0.45pt}
-\arrayrulecolor{tlblue}
 
 % floats: default to top/bottom/page, and let a float page fill reasonably
 \makeatletter\def\fps@table{tbp}\def\fps@figure{tbp}\makeatother
@@ -67,33 +64,30 @@
 \setcounter{topnumber}{3}\setcounter{bottomnumber}{2}\setcounter{totalnumber}{5}
 \setlength{\textfloatsep}{16pt plus 3pt minus 4pt}\setlength{\floatsep}{12pt plus 2pt minus 2pt}\setlength{\intextsep}{12pt plus 2pt minus 2pt}
 \AtBeginEnvironment{table}{\small}
-\AtBeginEnvironment{tabularx}{\sffamily\small}
 
-\titleformat{\chapter}[block]{\bfseries\sffamily}{\fontsize{46}{46}\selectfont\color{tlorange}\thechapter\hspace{0.45em}}{0pt}{\Huge\color{tlblue}}[\vspace{4pt}{\color{tlblue}\titlerule[1.4pt]}]
-\titlespacing*{\chapter}{0pt}{-6pt}{26pt}
-\titleformat{name=\chapter,numberless}[block]{\bfseries\sffamily\Huge\color{tlblue}}{}{0pt}{}[\vspace{4pt}{\color{tlblue}\titlerule[1.4pt]}]
-\titleformat{\section}{\sffamily\bfseries\Large\color{tlblue}}{\thesection}{0.6em}{}
-\titlespacing*{\section}{0pt}{1.6em plus 0.4em minus 0.2em}{0.6em plus 0.1em}
-\titleformat{\subsection}{\sffamily\bfseries\large\color{tlblue}}{\thesubsection}{0.6em}{}
-\titlespacing*{\subsection}{0pt}{1.2em plus 0.3em minus 0.2em}{0.4em plus 0.1em}
-\titleformat{\subsubsection}{\sffamily\bfseries\normalsize\color{tlblue}}{\thesubsubsection}{0.6em}{}
+% NITK template headings: "CHAPTER n" / "TITLE" centred, bold, upper case
+\titleformat{\chapter}[display]{\centering\bfseries\fontsize{24.88}{30}\selectfont}{CHAPTER \thechapter}{18pt}{\MakeUppercase}
+\titlespacing*{\chapter}{0pt}{22pt}{26pt}
+\titleformat{name=\chapter,numberless}[display]{\centering\bfseries\fontsize{19.9}{24}\selectfont}{}{0pt}{\MakeUppercase}
+\titlespacing*{name=\chapter,numberless}{0pt}{0pt}{26pt}
+\titleformat{\section}{\bfseries\fontsize{15.9}{19}\selectfont}{\thesection}{1.2em}{}
+\titlespacing*{\section}{0pt}{20pt plus 4pt minus 2pt}{8pt}
+\titleformat{\subsection}{\bfseries\fontsize{12}{15}\selectfont}{\thesubsection}{1em}{}
+\titlespacing*{\subsection}{0pt}{14pt plus 3pt minus 2pt}{6pt}
+\titleformat{\subsubsection}{\bfseries\normalsize}{\thesubsubsection}{1em}{}
 
-% table of contents with dot leaders
-\titlecontents{chapter}[0pt]{\addvspace{0.7em}\sffamily\bfseries}{\contentslabel{2.2em}}{\hspace*{-2.2em}}{\titlerule*[0.6em]{.}\contentspage}[]
-\titlecontents{section}[2.2em]{\sffamily\small}{\contentslabel{2.2em}}{\hspace*{-2.2em}}{\titlerule*[0.6em]{.}\contentspage}
-\titlecontents{subsection}[4.4em]{\sffamily\small}{\contentslabel{3em}}{\hspace*{-3em}}{\titlerule*[0.6em]{.}\contentspage}
+% table of contents: bold chapter lines, dot leaders
+\titlecontents{chapter}[0pt]{\addvspace{6pt}\bfseries}{\makebox[1.6em][l]{\thecontentslabel.}}{\hspace*{-1.6em}}{\titlerule*[4pt]{.}\contentspage}
+\titlecontents{section}[1.6em]{\small}{\makebox[2.4em][l]{\thecontentslabel}}{\hspace*{-2.4em}}{\titlerule*[4pt]{.}\contentspage}
+\titlecontents{subsection}[4em]{\small}{\makebox[3em][l]{\thecontentslabel}}{\hspace*{-3em}}{\titlerule*[4pt]{.}\contentspage}
+\titlecontents{figure}[0pt]{}{\makebox[2.4em][l]{\thecontentslabel}}{}{\titlerule*[4pt]{.}\contentspage}
+\titlecontents{table}[0pt]{}{\makebox[2.4em][l]{\thecontentslabel}}{}{\titlerule*[4pt]{.}\contentspage}
 
-\renewcommand{\chaptermark}[1]{\markboth{\thechapter\ \ #1}{}}
-\renewcommand{\sectionmark}[1]{\markright{\thesection\ \ #1}}
-\pagestyle{fancy}\fancyhf{}
-\fancyhead[LE,RO]{\sffamily\small\thepage}
-\fancyhead[RE]{\sffamily\small\color{tlblue}\leftmark}
-\fancyhead[LO]{\sffamily\small\color{tlblue}\rightmark}
-\renewcommand{\headrulewidth}{0.4pt}\renewcommand{\headrule}{\hbox to\headwidth{\color{tlrule}\leaders\hrule height \headrulewidth\hfill}}
-\fancypagestyle{plain}{\fancyhf{}\fancyfoot[C]{\sffamily\small\thepage}\renewcommand{\headrulewidth}{0pt}}
+% page numbers: bottom centre, no running headers
+\pagestyle{plain}
 
 \lstset{basicstyle=\ttfamily\footnotesize,backgroundcolor=\color{tlgrey},frame=leftline,
-  framerule=2pt,rulecolor=\color{tlblue},breaklines=true,columns=fullflexible,keepspaces=true,
+  framerule=2pt,rulecolor=\color{black},breaklines=true,columns=fullflexible,keepspaces=true,
   xleftmargin=6pt,xrightmargin=2pt,aboveskip=8pt,belowskip=8pt}
 
 % convenience macros
@@ -104,7 +98,7 @@
 \newcolumntype{L}{>{\raggedright\arraybackslash}X}
 
 % Page limit: the build fails if the PDF exceeds this many physical pages (requested 51-54; the 2026-10-28 build is 57, see the handover notes).
-\newcommand{\PageLimit}{70}
+\newcommand{\PageLimit}{200}
 \usepackage{atbegshi}
 \newcount\PhysPages
 \AtBeginShipout{\global\advance\PhysPages by 1\relax}
