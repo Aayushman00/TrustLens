@@ -203,3 +203,24 @@ def test_redirect_to_private_ip_rejected(httpserver, _localhost_allowed_for_fetc
     )
     received_request, _ = httpserver.log[0]
     assert received_request.path == "/start.csv"
+
+
+def test_rejects_non_global_cgnat_address():
+    """SEC1: 100.64.0.0/10 is neither private nor reserved in ``ipaddress``
+    but is not globally routable (Alibaba Cloud metadata lives at
+    100.100.100.200) — must be refused like any other internal range."""
+    with pytest.raises(UrlFetchError, match="private|reserved"):
+        fetch_dataset_url("http://100.100.100.200/latest/meta-data/")
+
+
+def test_relative_redirect_is_followed(httpserver, _localhost_allowed_for_fetch):
+    """SEC1: a relative ``Location`` resolves against the current URL and is
+    re-validated, instead of failing as "URL has no hostname"."""
+    from werkzeug.wrappers import Response
+
+    response = Response(status=302, headers={"Location": "/data.csv"})
+    response.autocorrect_location_header = False
+    httpserver.expect_request("/start.csv").respond_with_response(response)
+    httpserver.expect_request("/data.csv").respond_with_data(b"a\n1\n", content_type="text/csv")
+    result = fetch_dataset_url(httpserver.url_for("/start.csv"))
+    assert result.data == b"a\n1\n"

@@ -27,7 +27,9 @@ class UserDocumentationCreate(BaseModel):
     fixed to ``"not_applicable"``, and lets a human follow the link.
     """
 
-    url: str
+    # http(s) only: the URL is rendered as a link in the UI and the report,
+    # so javascript:/data: schemes must never be stored.
+    url: str = Field(pattern=r"(?i)^https?://\S+$", max_length=2048)
     documentation_type: DocumentationType
     title: str | None = None
     description: str | None = None

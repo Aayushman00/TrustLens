@@ -12,7 +12,7 @@ from __future__ import annotations
 import ipaddress
 import socket
 from dataclasses import dataclass
-from urllib.parse import urlparse, urlunparse
+from urllib.parse import urljoin, urlparse, urlunparse
 
 import httpx
 
@@ -63,6 +63,9 @@ def _resolve_and_validate_host(host: str) -> str:
             or ip.is_multicast
             or ip.is_reserved
             or ip.is_unspecified
+            # Catches what the flags above miss, e.g. 100.64.0.0/10 (CGNAT;
+            # Alibaba Cloud metadata at 100.100.100.200).
+            or not ip.is_global
         ):
             raise UrlFetchError(f"resolved address is private/loopback/link-local/reserved: {ip}")
     return str(ipaddress.ip_address(infos[0][4][0]))
@@ -183,8 +186,11 @@ def fetch_dataset_url(
                     location = response.headers.get("location")
                     if not location:
                         raise UrlFetchError("redirect with no Location header")
-                    # Re-validate redirect target (critical for defense)
-                    current_validated = _validate_url(location)
+                    # Re-validate redirect target (critical for defense); a
+                    # relative Location resolves against the current URL.
+                    current_validated = _validate_url(
+                        urljoin(current_validated.original_url, location)
+                    )
                     continue
 
                 chunks: list[bytes] = []

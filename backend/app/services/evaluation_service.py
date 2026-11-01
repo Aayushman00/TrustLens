@@ -153,6 +153,15 @@ class EvaluationService:
                 details={"model_id": data.model_id},
             )
         probe_config = dict(data.probe_config or {})
+        # A contract only ever comes from a validated draft (create_from_draft).
+        # Accepting one here would let reconcile_enqueue_failure run it and the
+        # report's reproducibility block quote it without any draft validation.
+        if "evaluation_contract" in probe_config:
+            raise ValidationAppError(
+                "probe_config.evaluation_contract is not accepted here — "
+                "use POST /v1/evaluations-v2 with a validated draft",
+                details={"field": "probe_config.evaluation_contract"},
+            )
         if probe_config.get("assessment_engine") is None:
             probe_config["assessment_engine"] = "deterministic"
         row = self._evals.create(
