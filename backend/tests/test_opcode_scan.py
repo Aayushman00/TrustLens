@@ -94,3 +94,73 @@ def test_never_unpickles(monkeypatch):
     monkeypatch.setattr(pickle, "load", boom)
     monkeypatch.setattr(pickle, "loads", boom)
     assert scan_bytes(data).tier == "A"
+
+
+def _su(s):
+    b = s.encode()
+    return b"\x8c" + bytes([len(b)]) + b
+
+
+_EVIL = b"\x80\x02cos\nsystem\nq\x00X\x04\x00\x00\x00echoq\x01\x85q\x02Rq\x03."
+_BENIGN = b"\x80\x02ccollections\nOrderedDict\nq\x00)Rq\x01."
+
+
+def _zip(*members):
+    import warnings
+    buf = io.BytesIO()
+    with warnings.catch_warnings(), zipfile.ZipFile(buf, "w") as z:
+        warnings.simplefilter("ignore")
+        for n, d in members:
+            z.writestr(n, d)
+    return buf.getvalue()
+
+
+def test_evade_pop_not_clean():
+    p = b"\x80\x04" + _su("os") + _su("system") + _su("collections") + _su("OrderedDict") + b"00\x93" + _su("echo") + b"\x85R."
+    assert scan_bytes(p).tier in ("A", "B")
+
+
+def test_evade_pop_mark_not_clean():
+    p = b"\x80\x04" + _su("os") + _su("system") + b"(" + _su("collections") + _su("OrderedDict") + b"1\x93" + _su("echo") + b"\x85R."
+    assert scan_bytes(p).tier in ("A", "B")
+
+
+def test_memo_drift_resolves_os_system():
+    p = (b"\x80\x04}\x94" + _su("collections") + b"\x94" + _su("os") + b"\x94" + _su("OrderedDict") + b"\x94"
+         + _su("system") + b"\x94" + b"0000" + b"h\x02h\x04\x93" + _su("echo") + b"\x85R.")
+    r = scan_bytes(p)
+    assert r.tier == "A" and "os.system" in r.flagged
+
+
+def test_duplicate_zip_member_scanned():
+    assert scan_bytes(_zip(("archive/data.pkl", _EVIL), ("archive/data.pkl", _BENIGN))).tier == "A"
+
+
+def test_uppercase_member_scanned():
+    assert scan_bytes(_zip(("archive/DATA.PKL", _EVIL), ("archive/decoy.pkl", _BENIGN))).tier == "A"
+
+
+def test_proto_member_without_pkl_suffix_scanned():
+    assert scan_bytes(_zip(("archive/x.pkl", _BENIGN), ("archive/payload", _EVIL))).tier == "A"
+
+
+def test_nested_load_from_bytes_denylist_is_tier_a():
+    inner = len(_EVIL).to_bytes(4, "little")
+    p = b"\x80\x02ctorch.storage\n_load_from_bytes\nB" + inner + _EVIL + b"\x85R."
+    r = scan_bytes(p)
+    assert r.tier == "A" and "os.system" in r.flagged
+
+
+def test_nested_benign_stays_tier_b():
+    inner = len(_BENIGN).to_bytes(4, "little")
+    p = b"\x80\x02ctorch.storage\n_load_from_bytes\nB" + inner + _BENIGN + b"\x85R."
+    assert scan_bytes(p).tier == "B"
+
+
+def test_dotted_submodule_denied():
+    assert scan_bytes(b"\x80\x02ctorch.hub.foo\nbar\n)R.").tier == "A"
+
+
+def test_ext_opcode_is_unknown():
+    r = scan_bytes(b"\x80\x02\x82\x01)R.")
+    assert r.tier == "B" and "?.?" in r.flagged

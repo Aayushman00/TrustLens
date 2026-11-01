@@ -29,44 +29,112 @@ class ScanResult:
 def classify(mod: str, name: str) -> str:
     if (mod, name) in ALLOW:
         return "allow"
-    if (mod, name) in DENY_NAMES or mod.split(".")[0] in DENY_MODULES or mod in DENY_MODULES:
+    parts = mod.split(".")
+    if (mod, name) in DENY_NAMES or any(".".join(parts[:i]) in DENY_MODULES for i in range(1, len(parts) + 1)):
         return "dangerous"
     return "unknown"
 
 
-def globals_in(data: bytes) -> tuple[list[tuple[str, str]], bool]:
+BYTES_OPS = {"BINBYTES", "SHORT_BINBYTES", "BINBYTES8"}
+GET_OPS = {"BINGET", "LONG_BINGET", "GET"}
+PUT_OPS = {"BINPUT", "LONG_BINPUT", "PUT"}
+KEEP_OPS = {"PROTO", "FRAME"}  # leave the modelled stack tail untouched
+NESTED = ("torch.storage", "_load_from_bytes")  # carries a nested pickle in its bytes argument
+MAX_DEPTH = 3
+
+
+def globals_in(data: bytes, depth: int = 0) -> tuple[list[tuple[str, str]], bool]:
     """All GLOBAL/STACK_GLOBAL/INST targets across every pickle concatenated in `data`, and whether the scan
     completed. A stream that errors before any STOP is partial (False); bytes after a completed STOP are
-    tolerated (legacy torch appends raw tensor bytes after the last pickle)."""
+    tolerated (legacy torch appends raw tensor bytes after the last pickle).
+
+    `recent` models only the run of consecutive pushes right before the current opcode (str, or None for a
+    non-string memo value); any other opcode clears it, so STACK_GLOBAL resolves only from two adjacent strings."""
     found: list[tuple[str, str]] = []
+    complete = True
     f, stops = io.BytesIO(data), 0
     while f.tell() < len(data):
-        recent: list[str] = []
-        memo: dict[int, str] = {}
+        recent: list[str | None] = []
+        memo: dict[int, str | None] = {}
+        n_memo, want_nested = 0, False
         try:
             for op, arg, _ in pickletools.genops(f):
                 n = op.name
                 if n in STR_OPS:
                     recent.append(arg if isinstance(arg, str) else str(arg))
-                elif n == "MEMOIZE" and recent:
-                    memo[len(memo)] = recent[-1]
-                elif n in ("BINPUT", "LONG_BINPUT", "PUT") and recent:
-                    memo[int(arg)] = recent[-1]
-                elif n in ("BINGET", "LONG_BINGET", "GET") and int(arg) in memo:
-                    recent.append(memo[int(arg)])
-                elif n in ("GLOBAL", "INST"):
+                    continue
+                if n in GET_OPS:
+                    recent.append(memo.get(int(arg)))
+                    continue
+                if n == "MEMOIZE":
+                    memo[n_memo] = recent[-1] if recent else None
+                    n_memo += 1
+                    continue
+                if n in PUT_OPS:
+                    memo[int(arg)] = recent[-1] if recent else None
+                    continue
+                if n in KEEP_OPS:
+                    continue
+                if n in ("GLOBAL", "INST"):
                     mod, _, name = str(arg).partition(" ")
                     found.append((mod, name))
+                    want_nested = (mod, name) == NESTED
                 elif n == "STACK_GLOBAL":
-                    found.append((recent[-2], recent[-1]) if len(recent) >= 2 else ("?", "?"))
+                    ok = len(recent) >= 2 and isinstance(recent[-1], str) and isinstance(recent[-2], str)
+                    found.append((recent[-2], recent[-1]) if ok else ("?", "?"))
+                    want_nested = ok and (recent[-2], recent[-1]) == NESTED
+                elif n.startswith("EXT"):
+                    found.append(("?", "?"))
+                elif n in BYTES_OPS and want_nested:
+                    want_nested = False
+                    if depth >= MAX_DEPTH:
+                        complete = False
+                    else:
+                        g, c = _collect(arg, depth + 1)
+                        found += g
+                        complete &= c
                 elif n == "STOP":
                     stops += 1
                     break
+                recent.clear()
             else:  # opcodes ended without STOP
-                return found, stops > 0
+                return found, complete and stops > 0
         except Exception:
-            return found, stops > 0
-    return found, stops > 0
+            return found, complete and stops > 0
+    return found, complete and stops > 0
+
+
+def _pickle_members(z: zipfile.ZipFile) -> list[bytes]:
+    out = []
+    for i in z.infolist():  # infolist, not namelist: duplicate member names must all be scanned
+        low = i.filename.lower()
+        with z.open(i) as m:
+            if low.endswith(".pkl"):
+                out.append(m.read())
+            elif not (low.startswith("data/") or "/data/" in low):
+                head = m.read(1)
+                if head == b"\x80":
+                    out.append(head + m.read())
+    return out
+
+
+def _collect(data: bytes, depth: int = 0) -> tuple[list[tuple[str, str]], bool]:
+    """Globals of `data` (torch zip or raw pickle); the bool is False when the scan is partial."""
+    if data[:4] == b"PK":  # torch >= 1.6 zip checkpoint
+        try:
+            with zipfile.ZipFile(io.BytesIO(data)) as z:
+                pkls = _pickle_members(z)
+        except Exception:
+            return [], False
+        if not pkls:
+            return [], False
+        gl, complete = [], True
+        for p in pkls:
+            g, c = globals_in(p, depth)
+            gl += g
+            complete &= c
+        return gl, complete
+    return globals_in(data, depth)
 
 
 def _not_possible(fmt: str, gl: list[tuple[str, str]] = ()) -> ScanResult:
@@ -74,23 +142,8 @@ def _not_possible(fmt: str, gl: list[tuple[str, str]] = ()) -> ScanResult:
 
 
 def scan_bytes(data: bytes) -> ScanResult:
-    if data[:4] == b"PK\x03\x04":  # torch >= 1.6 zip checkpoint: scan every .pkl member
-        fmt = "torch_zip"
-        try:
-            with zipfile.ZipFile(io.BytesIO(data)) as z:
-                pkls = [z.read(i) for i in z.namelist() if i.endswith(".pkl")]
-        except Exception:
-            return _not_possible(fmt)
-        if not pkls:
-            return _not_possible(fmt)
-        gl, complete = [], True
-        for p in pkls:
-            g, c = globals_in(p)
-            gl += g
-            complete &= c
-    else:
-        fmt = "raw_or_legacy_pickle"
-        gl, complete = globals_in(data)
+    fmt = "torch_zip" if data[:4] == b"PK" else "raw_or_legacy_pickle"
+    gl, complete = _collect(data)
     classes = [classify(m, n) for m, n in gl]
     flagged = sorted({f"{m}.{n}" for (m, n), c in zip(gl, classes) if c != "allow"})
     if "dangerous" in classes:
