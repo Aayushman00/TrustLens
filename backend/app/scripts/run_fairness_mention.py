@@ -1,5 +1,5 @@
 """Exploratory mention-based fairness run (plan:
-docs/superpowers/plans/2026-10-25-mention-fairness-exploratory.md, written before any data existed).
+archive/v1/docs/superpowers/plans/2026-10-25-mention-fairness-exploratory.md, written before any data existed).
 
 The group flag ``mention_religion`` is a fixed lexicon match on the comment text (Civil Comments has no
 identity-mention columns). Reuses the production FairnessProbe unchanged.
@@ -152,7 +152,7 @@ def prepare(out: Path) -> None:
         gt[name] = {"injected_defects": ["FAIRNESS"], "flip_rate": rate, "rows_flipped": len(flipped)}
     _write_manifest(out / "ground_truth.json", {
         "status": "exploratory, not confirmatory",
-        "plan": "docs/superpowers/plans/2026-10-25-mention-fairness-exploratory.md",
+        "plan": "archive/v1/docs/superpowers/plans/2026-10-25-mention-fairness-exploratory.md",
         "rule": "v6-eod-fairness-risk-2026 / tl-fairness-binary-v1.2, unchanged", "group": GROUP,
         "models": gt})
     print("prepared", out, "eval mention rows", sum(r[GROUP] for r in eval_rows), "overlap with identity_ref", overlap)

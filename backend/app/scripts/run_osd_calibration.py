@@ -1,5 +1,5 @@
 """L1: evidence -> O/S/D calibration (pre-declaration
-docs/superpowers/plans/2026-10-03-round3-L1-osd-calibration.md).
+archive/v1/docs/superpowers/plans/2026-10-03-round3-L1-osd-calibration.md).
 
 Stages, in order (from backend/, GPU free)::
 

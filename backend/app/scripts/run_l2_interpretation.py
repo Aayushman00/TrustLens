@@ -1,5 +1,5 @@
 """L2: deterministic vs LLM interpretation of the same frozen evidence
-(pre-registration docs/superpowers/plans/2026-10-03-round3-L2-det-vs-llm.md).
+(pre-registration archive/v1/docs/superpowers/plans/2026-10-03-round3-L2-det-vs-llm.md).
 
 Builds anonymized evidence packets for the suite's I/E/S conditions, runs the
 current deterministic rules and the frozen llm_v1 judgment (PROMPT_VERSION

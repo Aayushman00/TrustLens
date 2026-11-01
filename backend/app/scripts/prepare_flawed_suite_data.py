@@ -1,4 +1,4 @@
-"""Data prep for the flawed-model-suite OSD demo (docs/superpowers/plans/
+"""Data prep for the flawed-model-suite OSD demo (archive/v1/docs/superpowers/plans/
 2026-09-15-flawed-model-suite-for-osd-demo.md).
 
 Downloads google/civil_comments, builds the fixed 3000-row shared eval sample,
@@ -12,7 +12,7 @@ Usage (from backend/)::
     python -m app.scripts.prepare_flawed_suite_data --seed 42 --out <new dir>
 
 L4.1 confirmatory fairness setup (frozen pre-registration
-docs/superpowers/plans/2026-10-03-round3-L4.1-confirmatory-prereg.md)::
+archive/v1/docs/superpowers/plans/2026-10-03-round3-L4.1-confirmatory-prereg.md)::
 
     python -m app.scripts.prepare_flawed_suite_data --fairness-confirm \\
         --seed 20261003 --out ../results/fairness_confirm_20261003
@@ -253,7 +253,7 @@ def prepare_fairness_confirm(
                            "mechanism": "identity-conditioned label flip 0->1 (train slice)"}
     _write_manifest(out / "ground_truth.json", {
         "written_at": "at data preparation, before training (L4.1 confirmatory setup)",
-        "preregistration": "docs/superpowers/plans/2026-10-03-round3-L4.1-confirmatory-prereg.md",
+        "preregistration": "archive/v1/docs/superpowers/plans/2026-10-03-round3-L4.1-confirmatory-prereg.md",
         "rule": "v6-eod-fairness-risk-2026 / tl-fairness-binary-v1.2 (F-FAIR-EOPP), unchanged",
         "data_seed": seed,
         "models": gt_models,

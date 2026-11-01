@@ -5,11 +5,13 @@ Frozen experiment outputs cited by the thesis in [`report/`](../report/).
 > [!IMPORTANT]
 > Do not rename or move anything here. Scripts in `backend/app/scripts/`, the docs and the report reference these paths, and several folders embed their own path and hash manifests. Reruns go into new folders; earlier versions stay untouched.
 
+Looking for which model goes with which dataset? See [`MODEL_DATASET_MATRIX.md`](MODEL_DATASET_MATRIX.md).
+
 ## Folder map
 
 | Path | What it holds |
 | ---- | ------------- |
-| `manifest_v1.jsonl`, `mode_a_manual.csv`, `mode_b_*`, `mode_c_*` | Core experiment modes A/B/C (see [`docs/experiments_runbook.md`](../docs/experiments_runbook.md)) |
+| `manifest_v1.jsonl`, `mode_a_manual.csv`, `mode_b_*`, `mode_c_*` | Core experiment modes A/B/C (see [`docs/experiments_runbook.md`](../archive/v1/docs/experiments_runbook.md)) |
 | `analysis/` | Tables and figures derived from the modes above (`TABLES.md`) |
 | `flawed_model_suite/` | Deliberately flawed models for the O/S/D demo |
 | `osd_calibration_*` | L1: O/S/D calibration |
@@ -35,4 +37,4 @@ Frozen experiment outputs cited by the thesis in [`report/`](../report/).
 
 ## Reproducing
 
-The folder-by-folder map, the pre-declaration plans and the commands that regenerate these results are in [`docs/REPRODUCING_THESIS_RESULTS.md`](../docs/REPRODUCING_THESIS_RESULTS.md).
+The folder-by-folder map, the pre-declaration plans and the commands that regenerate these results are in [`docs/REPRODUCING_THESIS_RESULTS.md`](../archive/v1/docs/REPRODUCING_THESIS_RESULTS.md).

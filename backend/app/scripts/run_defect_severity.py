@@ -1,4 +1,4 @@
-"""L6: defect severity validation (docs/superpowers/plans/2026-10-03-round3-L6-defect-severity.md).
+"""L6: defect severity validation (archive/v1/docs/superpowers/plans/2026-10-03-round3-L6-defect-severity.md).
 
 A. Robustness: one knob (the existing attack_budget -> char-swap max_changes) on one
    clean model. B. Safety: the existing nested safety-flip weights (rate 0..1).

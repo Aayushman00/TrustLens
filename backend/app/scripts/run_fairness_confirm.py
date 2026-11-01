@@ -1,5 +1,5 @@
 """L5: L4.1 confirmatory fairness run (frozen pre-registration
-docs/superpowers/plans/2026-10-03-round3-L4.1-confirmatory-prereg.md).
+archive/v1/docs/superpowers/plans/2026-10-03-round3-L4.1-confirmatory-prereg.md).
 
 Runs the production FairnessProbe (binary EOD rule, tl-fairness-binary-v1.2)
 in-process with real LocalHFBackend inference on the new eval set, for the

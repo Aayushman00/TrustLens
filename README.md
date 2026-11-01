@@ -102,9 +102,8 @@ No NVIDIA GPU? Use the CPU override: `docker compose -f docker-compose.yml -f do
 | Worker | [worker/README.md](worker/README.md) |
 | Frontend routes | [frontend/README.md](frontend/README.md) |
 | Test matrix and scoring oracle | [backend/tests/README.md](backend/tests/README.md), [backend/tests/SCORING.md](backend/tests/SCORING.md) |
-| Experiment protocol | [docs/experiments_runbook.md](docs/experiments_runbook.md) |
-| Reproducing the thesis results | [docs/REPRODUCING_THESIS_RESULTS.md](docs/REPRODUCING_THESIS_RESULTS.md), [docs/ENGINEERING_NOTES.md](docs/ENGINEERING_NOTES.md) |
-| Results write-up | [docs/results_chapter.md](docs/results_chapter.md), [docs/RESULTS_SUMMARY.md](docs/RESULTS_SUMMARY.md) |
+| v2 specs (roadmap) | [docs/v2/README.md](docs/v2/README.md) |
+| v1 thesis docs, plans, audits (archived) | [archive/v1/docs/](archive/v1/docs/) |
 | Artifact-set integrity decision | [docs/adr/0013-artifact-set-integrity.md](docs/adr/0013-artifact-set-integrity.md) |
 
 ## Repository layout

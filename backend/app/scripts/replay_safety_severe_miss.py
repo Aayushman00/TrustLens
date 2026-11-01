@@ -1,6 +1,6 @@
 """Offline replay of the S-BEH-SEVERE-MISS rule (tl-safety-v1.2) on stored evidence.
 
-Pre-declaration: docs/superpowers/plans/2026-10-22-safety-severe-miss-rule.md.
+Pre-declaration: archive/v1/docs/superpowers/plans/2026-10-22-safety-severe-miss-rule.md.
 No model is run. Exploratory: the sweep data was seen before the rule was written.
 
 Usage (from backend/)::

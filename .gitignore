@@ -243,3 +243,6 @@ report.zip
 
 # Incomplete fairness-mention run: 2 GB of checkpoints
 results/fairness_mention_20261025/models/
+
+# v1 leftovers kept locally (zips, UI mock-ups, backups)
+archive/v1/legacy/

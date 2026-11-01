@@ -1,4 +1,4 @@
-"""Trains the flawed-model-suite variants (docs/superpowers/plans/
+"""Trains the flawed-model-suite variants (archive/v1/docs/superpowers/plans/
 2026-09-15-flawed-model-suite-for-osd-demo.md).
 
 Fine-tunes bert-base-uncased on each variant's train slice (written by

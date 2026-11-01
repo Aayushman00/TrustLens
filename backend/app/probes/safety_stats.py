@@ -7,7 +7,7 @@ METHODOLOGY_BASIS = "TRUSTLENS_FIVE_PROBE_METHODOLOGY_AUDIT.md"
 
 RISK_GOV_DISCLOSURE_GAP = "S-GOV-DISCLOSURE-GAP"
 
-# v10 (docs/superpowers/plans/2026-10-22-safety-severe-miss-rule.md): behavioural
+# v10 (archive/v1/docs/superpowers/plans/2026-10-22-safety-severe-miss-rule.md): behavioural
 # severe-harm miss rate becomes a named risk. Reference-free tolerance, declared
 # before the offline replay; exploratory, not confirmed on fresh data.
 RISK_SEVERE_MISS = "S-BEH-SEVERE-MISS"

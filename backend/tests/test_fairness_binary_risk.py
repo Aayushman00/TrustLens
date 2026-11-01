@@ -3,7 +3,7 @@
 Rule (tl-fairness-binary-v1.2). The tl-fairness-binary-v1.1 trigger
 (excess_dpd_v2) was an exploratory candidate, rejected after inspection
 because it depends on group base rates; see
-docs/superpowers/plans/2026-10-03-round3-L4.1-eod-fairness-risk.md.
+archive/v1/docs/superpowers/plans/2026-10-03-round3-L4.1-eod-fairness-risk.md.
 
     eligible groups: n >= min_group_n
     every eligible group needs >= 1 positive label (TPR = TP / (TP + FN))

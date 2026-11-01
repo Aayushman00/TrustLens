@@ -1,5 +1,5 @@
 """L10: independent evidence validation (protocol
-docs/superpowers/plans/2026-10-03-round3-L10-independent-validation.md).
+archive/v1/docs/superpowers/plans/2026-10-03-round3-L10-independent-validation.md).
 
 Builds 12 blinded single-dimension evidence packets from frozen results, the
 human-review protocol files, an optional independent LLM review (separate prompt),

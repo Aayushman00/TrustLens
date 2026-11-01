@@ -271,7 +271,7 @@ def _safety_band(m: dict[str, Any]) -> tuple[tuple[int | None, int | None, int |
     return (_scale(1.0 - severe_fnr), s, _d_from_ci(_ci_width(sev_ci))), detail
 
 
-# v4 (round 3 L1, docs/superpowers/plans/2026-10-03-round3-L1-osd-calibration.md):
+# v4 (round 3 L1, archive/v1/docs/superpowers/plans/2026-10-03-round3-L1-osd-calibration.md):
 # NOTE: this is range normalisation to the author's own injected defects, not
 # calibration against external ground truth.
 # on the v3 evidence quantity e (fairness gap, robustness accuracy drop,

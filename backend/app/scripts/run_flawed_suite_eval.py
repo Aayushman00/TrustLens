@@ -1,5 +1,5 @@
 """Runs the flawed-model-suite comparison against the real TrustLens API
-(docker compose stack), per Task 7 of docs/superpowers/plans/
+(docker compose stack), per Task 7 of archive/v1/docs/superpowers/plans/
 2026-09-15-flawed-model-suite-for-osd-demo.md.
 
 For each of the 6 local variants + unitary/toxic-bert:
