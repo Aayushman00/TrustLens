@@ -177,7 +177,7 @@ _ADVERSARIAL_SAFETY_CARD = "\n\n".join(
 @pytest.mark.xfail(
     strict=True,
     reason=(
-        "K6 documented (S3): headings + 20 chars of filler give full Explainability coverage. "
+        "K6 documented (S3): headings, each followed by one 56-character filler line, give full Explainability coverage. "
         "The matcher measures documentation structure, not content; only the opt-in "
         "legacy_heuristic engine maps coverage to O/S/D. v2 reports card coverage as disclosure, "
         "never as a measurement."
@@ -227,10 +227,10 @@ def test_k7_unreachable_positive_class_is_rejected():
 @pytest.mark.xfail(
     strict=True,
     reason=(
-        "K7 documented (S3): positive_label_index defaults to 1 in DimensionConfigUpdate (and the "
+        "K7 documented (S2): positive_label_index defaults to 1 in DimensionConfigUpdate (and the "
         "UI preselects 1), so a swapped mapping silently makes 'denied' the positive class. The "
         "reachability guard and the confirm step limit it; making the field required needs a "
-        "schema + UI change (fairness redesign, M1+)."
+        "schema + UI change (M3 profile/positive-class confirmation)."
     ),
 )
 def test_k7_positive_class_must_be_explicit():
