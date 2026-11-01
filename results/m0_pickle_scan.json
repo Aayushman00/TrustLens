@@ -1019,7 +1019,7 @@
   "revision": "76672dd7d3575f68ab980705bcec975cc62de71c",
   "size_bytes": 2034,
   "format": "raw_or_legacy_pickle",
-  "globals_total": 4,
+  "globals_total": 6,
   "tier": "B",
   "reason": "unknown_callable",
   "flagged": [
@@ -1784,7 +1784,7 @@
   "revision": "81168d3b24a242063ca8225bcc9de95bef4dc198",
   "size_bytes": 2034,
   "format": "raw_or_legacy_pickle",
-  "globals_total": 4,
+  "globals_total": 6,
   "tier": "B",
   "reason": "unknown_callable",
   "flagged": [
