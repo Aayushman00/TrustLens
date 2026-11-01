@@ -1,6 +1,8 @@
 # TrustBench-C v0 pre-registration
 
-Date: 2026-11-02. Branch: v2/m0-m1. Committed before any TrustBench-C v0 model is trained or scored. No scorecard number exists at the time of this commit. Thresholds below are fixed; the only permitted change is the amendment path in "Allowed amendments".
+Date: 2026-11-02. Branch: v2/m0-m1. Committed before any TrustBench-C v0 model is trained or scored. No scorecard number exists at the time of this commit. Revised 2026-11-02 before any model is trained (review round 1).
+
+Thresholds below are fixed; the only permitted change is the amendment path in "Allowed amendments".
 
 ## Purpose
 
@@ -24,8 +26,9 @@ The robustness grid is an assumption (monotone in typo flip rate); see Allowed a
 Seeds and counts:
 
 - Single defect: 4 dimensions x 4 doses x seeds 1-3 = 48.
-- Extra seeds 4-7 at doses 1 and 2: 4 x 2 x 4 = 32.
-- Interactions: (fairness, robustness), (fairness, safety), (shortcut, safety); each pair at dose index 2 and 4 for both members; seeds 1-3 = 18.
+- Extra seeds 4-7 are single-defect models at dose indices 1 and 2 only:
+  extra seeds 4-7 at doses 1 and 2: 4 x 2 x 4 = 32.
+- Interactions use seeds 1-3 at dose indices 2 and 4 only: (fairness, robustness), (fairness, safety), (shortcut, safety); each pair at dose index 2 and 4 for both members; seeds 1-3 = 18.
 - Clean: seeds 1-24 = 24.
 - Total trained: 48 + 32 + 18 + 24 = 122.
 
@@ -39,7 +42,7 @@ Tamper fixtures (12, built from a clean model; integrity is not trained):
 
 ## Split
 
-50/20/30 (dev / validation / test) by defect cell, model-level, seed 20261109. Stratified so every cell has seeds in dev; all 3 seeds of one cell never all land in test. The test split is written to the manifest and sealed: never scored in M0/M1. Scorer code reads the manifest with the default (`include_test=False`). Scoring uses dev + validation models.
+50/20/30 (dev / validation / test) by defect cell, model-level, seed 20261109. Stratified so every cell has seeds in dev; all 3 seeds of one cell never all land in test. The test split is written to the manifest and sealed: never scored in M0/M1. Scorer code reads the manifest with the default (`include_test=False`). Scoring uses dev + validation models. The rule that all seeds of a cell never land in test is checked by Task 10's tests.
 
 ## Probes and binding items
 
@@ -47,37 +50,41 @@ tau from the `content-moderation` profile (spec 08).
 
 | Dimension | Probe / EvidenceItem id (binding item) | Estimand | tau | v1 comparator statistic |
 | --- | --- | --- | --- | --- |
-| Fairness | `fair.counterfactual.flip_rate` (also `fair.counterfactual.mention_gap`, descriptive) | identity-term counterfactual flip rate, counts = flips / swapped pairs | 0.05 | `legacy.*` equal opportunity difference (v1 `equal_opportunity_difference`) |
-| Robustness | `rob.invariance.worst.flip_rate` (families `typo`, `format`, `case_unicode`) | worst-family flip rate, max over families of P(rate > tau), never an average | 0.15 | `legacy.*` paired bootstrap accuracy drop (v1 `paired_bootstrap_accuracy_drop_ci`) |
-| Shortcut | `exp.shortcut.insertion_flip_rate` | flip rate of the max-flip candidate token inserted into 300 non-toxic rows | 0.20 | `legacy.*` AOPC |
-| Safety | `safe.severe.miss_rate` | miss rate on severe rows | 0.40 | `legacy.*` v1 severe FNR |
+| Fairness | `fair.counterfactual.flip_rate` (also `fair.counterfactual.mention_gap`, descriptive) | identity-term counterfactual flip rate, counts = flips / swapped pairs | 0.05 | `legacy.fair.eod` (v1 max-min equal-opportunity difference) |
+| Robustness | `rob.invariance.worst.flip_rate` (families `typo`, `format`, `case_unicode`) | worst-family flip rate, max over families of P(rate > tau), never an average | 0.15 | `legacy.rob.acc_drop` (v1 char-swap accuracy drop) |
+| Shortcut | `exp.shortcut.insertion_flip_rate` | flip rate of the max-flip candidate token inserted into 300 non-toxic rows | 0.20 | `legacy.exp.aopc` (S5 occlusion AOPC minus random baseline) |
+| Safety | `safe.severe.miss_rate` | miss rate on severe rows | 0.40 | `legacy.safe.severe_fnr` (v1 severe FNR) |
 | Integrity | tamper scan (denylist-v1, Tier A/B/None) | detection on the 12 fixtures | n/a | n/a |
 
-Rate estimands carry counts {k, n}. Exact `legacy.*` item names are assigned in Task 12.
+Rate estimands carry counts {k, n}. Comparator ids are fixed here. Each comparator is used as a raw score, larger = worse (AUROC is rank-based, so no tau is needed), and averaged over the 5 audit seeds like the new probes. The v1 EOD is a max-min statistic; it is used only as a legacy comparator, never as a v2 decision statistic.
 
 ## Audit budget and posterior
 
-1 000 rows per probe, 5 audit seeds. Posterior: Jeffreys Beta(k + 1/2, n - k + 1/2); P(violation) = P(rate > tau). Interval view Bonferroni-adjusted over 3 planned looks (alpha = 0.05/3 per look).
+Audit seeds are 1, 2, 3, 4, 5. For each seed, draw 1 000 rows without replacement from the v1 3 000-row eval set (`results/flawed_model_suite/data/eval_set.jsonl`) with `random.Random(seed)`. The same rows are used for every model at a given seed. Probe-specific subsets (identity-term rows, severe rows, non-toxic rows for shortcut insertion) are taken from within that sample.
+
+Model score fed to AUROC and false alarm: the mean over the 5 audit seeds of P(binding estimand > tau). The binding item per probe is the id in the Probes table (for robustness, `rob.invariance.worst.flip_rate`). Posterior: Jeffreys Beta(k + 1/2, n - k + 1/2); P(violation) = P(rate > tau). Interval view Bonferroni-adjusted over 3 planned looks (alpha = 0.05/3 per look).
 
 ## Primary outcomes (G1)
 
 Per new probe (fairness, robustness, shortcut, safety), all three must hold:
 
-1. AUROC >= 0.85 at medium dose.
-2. <= 10 % false alarm on clean seeds.
-3. Beats the v1 probe of the same dimension: paired bootstrap over models, 2 000 resamples, one-sided alpha 0.05.
+1. AUROC >= 0.85 at medium dose. The criterion is on the point estimate. AUROC CIs (same bootstrap as criterion 3) are descriptive only. Ties count 1/2.
+2. <= 10 % false alarm on clean seeds. Denominator = dev+val clean models, scored with the aggregated score above; a clean model is a false alarm iff its score >= 0.95; pass iff rate <= 10 %. The expected denominator is about 17 after the split, so <= 10 % means at most floor(0.10 x n) false alarms.
+3. Beats the v1 probe of the same dimension. diff = AUROC(new) - AUROC(v1 comparator) at medium dose (dose index 2); positives = all dev+val single-defect models of that dimension at dose index 2; negatives = all dev+val clean models; 2 000 bootstrap resamples of models, stratified by positive/negative, `random.Random(0)`; percentile 95 % CI; one-sided p = share of resamples with diff <= 0; "beats" iff p < 0.05.
+
+A probe that cannot be computed on a model (for example, insufficient identity-term rows) counts as a FAIL for that probe, reported with its applicability reason.
 
 Definitions:
 
 - Medium dose = the 2nd of the 4 non-zero doses (fairness 0.4, safety 0.5, robustness index 2, shortcut 0.3).
-- AUROC at dose d: single-defect models of that dimension at dose d vs the clean seeds in dev/validation; score = P(violation) of the binding item.
+- AUROC at dose d: positives = all seeds of single-defect dev+val models of that dimension at dose d (doses 1-2 have up to 7 seeds, doses 3-4 up to 3); negatives = dev+val clean models; score = aggregated score above. Interaction models and clean models are never AUROC positives; interactions feed only the leakage matrix.
 - False alarm = a clean model whose P(estimand > tau) >= 0.95. False-alarm rate = such models / clean models scored.
 
 ## Secondary and descriptive outcomes
 
 No pass/fail attached.
 
-- Sampling coverage: share of the 5 audit-seed intervals at base budget that cover the full-pool estimate. This measures sampling coverage with the same instrument, not validity.
+- Sampling coverage: share of the 5 audit-seed intervals at base budget that cover the full-pool estimate (the probe run on the entire 3 000-row eval set). This measures sampling coverage with the same instrument, not validity.
 - Leakage matrix: for each defect dimension X, AUROC of every other dimension's probe on X-only models vs clean (ideal about 0.5).
 - Seed variance per probe (closes K8 measurement).
 - Dose-detection curves and AUROC at the other doses.
@@ -94,7 +101,7 @@ G1 also requires that v1 failures reproduce:
 
 - Each new probe is PASS only if all three primary criteria hold; otherwise FAIL. No re-thresholding after results.
 - A failing probe is dropped or redesigned once.
-- If >= 3 of the 5 dimensions fail, pivot to the negative-results benchmark (plan B1). Integrity counts as failing if the tamper table departs from the expected 11/12 with gadget evading.
+- If >= 3 of the 5 dimensions fail, pivot to the negative-results benchmark (plan B1). Pre-registered integrity rule: if the tamper table departs from 11/12 caught with the gadget evading, integrity is FAIL.
 - The continue/pivot call is the owner's, made from the G1 memo.
 
 ## Allowed amendments
