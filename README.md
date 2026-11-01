@@ -35,7 +35,7 @@ Downloading a classifier from a model hub takes one line of code. Deciding wheth
 - **Evidence, risk and rating kept apart.** Measured evidence never turns straight into a dimension score. O/S/D ratings are separate, labelled, and optional.
 - **Withholds instead of guessing.** Missing evidence gives `INSUFFICIENT_EVIDENCE`, not a made-up number. By default FRIES is withheld unless complete O/S/D ratings exist.
 - **Human review built in.** Two workflow modes: auto-finalize, or stop at `AWAITING_REVIEW` so a reviewer records or edits O/S/D.
-- **Pluggable assessment engines.** `deterministic` (default, abstains), `legacy_heuristic` and `llm_v1`, each clearly labelled as proposals, never ground truth.
+- **Pluggable assessment engines.** `deterministic` (default, abstains) and `legacy_heuristic`, each clearly labelled as proposals, never ground truth.
 - **Reproducible and append-only.** Every evaluation is stamped with a methodology version. Evidence lives in a SHA-256 filesystem store, and reports are versioned JSON with a PDF projection.
 - **Local-first.** Single-user app on FastAPI, Celery, Postgres, Redis and React. No weights are downloaded at import time; probes run on CPU or CUDA, and the device is recorded.
 
@@ -259,7 +259,7 @@ Default evaluations **do not invent O/S/D**. FRIES is **withheld** (status still
 - **Assessment engine (orthogonal to workflow mode)**
   - **Default `deterministic`** — O/S/D are not generated (no validated mapping). FRIES withheld.
   - **`legacy_heuristic`** — explicit opt-in, **top-level** `probe_config.assessment_engine` only. `extra.assessment_engine` (including `"heuristic"`) is ignored. `HeuristicOSDAgent` (not an LLM) uses the calibrated `osd-map-v4` mapping plus v9 evidence guards: Integrity artifact `MISMATCH` floors O=S=1, Safety abstains when `benign_fpr > 0.30`, and D falls with CI width. These thresholds are `PROPOSED`, fitted to injected defects — range normalisation, not calibration.
-  - **`llm_v1`** — `HybridOSDAgent` (`backend/app/osd/hybrid.py`): heuristic baseline for all five dimensions, then one batched LLM call (Gemini → Groq → NVIDIA NIM) re-scores Integrity/Explainability/Safety; any failure falls back to the heuristic, tagged `heuristic_fallback`. Fairness and Robustness are never LLM-scored. Not validated as ground truth; see `results/l2_det_vs_llm_20261003*/FINDINGS.md`.
+  - **`llm_v1`** — removed in v2 M0 (K4). Stored evaluations that used it stay readable; new requests naming it resolve to `deterministic`. Historical comparison: `results/l2_det_vs_llm_20261003*/FINDINGS.md`.
 - **Workflow modes** (`AI_AUTONOMOUS` / `AI_ASSISTED`) are **human-review gates**, not LLM interpretation. Enum names are historical.
   - `AI_AUTONOMOUS` — pipeline may finalize without a reviewer (`human_reviewed=false`).
   - `AI_ASSISTED` — stops at `AWAITING_REVIEW`; a reviewer records or edits O/S/D, then finalize.
@@ -272,7 +272,7 @@ Default evaluations **do not invent O/S/D**. FRIES is **withheld** (status still
 
 - Amendment **A6** vs default withhold: whether/when a partial FRIES should exist without a validated O mapping.
 - Confidence factor weights remain **uncalibrated** (`proposed_calibration`).
-- `llm_v1` O/S/D is an experimental comparison engine, not a validated rater (see L2/L10 findings under `results/`).
+- The removed `llm_v1` O/S/D engine was never a validated rater (see L2/L10 findings under `results/`).
 
 ### How probes actually run
 
@@ -413,7 +413,7 @@ Either way, CPU vs CUDA selection *inside* the worker is always detected at runt
 
 Open `http://localhost:5173` (no login).
 
-Typical demo: import a small text-classification Hub id (for example `distilbert-base-uncased-finetuned-sst-2-english` or `prajjwal1/bert-tiny`) → create an **auto-finalize** evaluation (default deterministic engine) → wait for `FINALIZED` → inspect probe evidence. O/S/D show **Unavailable** and **FRIES is withheld**. Set top-level `probe_config.assessment_engine` to `legacy_heuristic` or `llm_v1` to score a FRIES path. For **human review before finalize**, record O/S/D on the review page, then finalize.
+Typical demo: import a small text-classification Hub id (for example `distilbert-base-uncased-finetuned-sst-2-english` or `prajjwal1/bert-tiny`) → create an **auto-finalize** evaluation (default deterministic engine) → wait for `FINALIZED` → inspect probe evidence. O/S/D show **Unavailable** and **FRIES is withheld**. Set top-level `probe_config.assessment_engine` to `legacy_heuristic` to score a FRIES path. For **human review before finalize**, record O/S/D on the review page, then finalize.
 
 Gated Hub repos need `HF_TOKEN` in `.env`. The API has no authentication; Compose publishes its ports on all interfaces, so on a shared network bind them to `127.0.0.1`.
 

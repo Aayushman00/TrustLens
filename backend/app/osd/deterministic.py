@@ -11,7 +11,7 @@ the three is ever agent-sourced.
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, Literal
 
 from app.db.enums import FriesDimension, ProbeEvaluationStatus
 from app.osd.base import (
@@ -84,7 +84,9 @@ _PROBE_METADATA_KEYS = (
 )
 
 
-def resolve_assessment_engine(probe_config: dict[str, Any] | None) -> str:
+def resolve_assessment_engine(
+    probe_config: dict[str, Any] | None,
+) -> Literal["deterministic", "legacy_heuristic"]:
     """Return ``deterministic`` (default) or ``legacy_heuristic``.
 
     Only the top-level ``assessment_engine`` field is honored. ``extra`` cannot
