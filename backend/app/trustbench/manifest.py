@@ -28,13 +28,21 @@ class ManifestRow:
     train_rows: int
     epochs: int
 
+    def __post_init__(self):
+        if self.split not in SPLITS:
+            raise ValueError(f"{self.model_id}: invalid split {self.split!r}")
+
 
 def _cell(model_id: str) -> str:
     return model_id.rsplit("__s", 1)[0]
 
 
 def assign_splits(model_ids: list[str], *, seed: int = 20261109) -> dict[str, str]:
-    """Per-model split, stratified within each defect cell (cell = id minus seed suffix)."""
+    """Per-model split, stratified within each defect cell (cell = id minus seed suffix).
+
+    Allocation depends on the whole cell set and on sorted cell order (running global
+    balancing), so call this once on the full corpus plan, never on subsets.
+    """
     cells: dict[str, list[str]] = defaultdict(list)
     for m in sorted(model_ids):
         cells[_cell(m)].append(m)
@@ -57,8 +65,7 @@ def assign_splits(model_ids: list[str], *, seed: int = 20261109) -> dict[str, st
             j = max(range(1, 3), key=lambda i: n[i])
             n[j] -= 1
             n[0] += 1
-        if n[2] == s and s > 1:  # never all seeds in test (covered by dev>=1)
-            raise AssertionError(key)
+        assert n[0] >= 1 and sum(n) == s, (key, n)
         k = 0
         for i, c in enumerate(n):
             for m in ids[k : k + c]:
@@ -81,4 +88,4 @@ def write_manifest(rows: list[ManifestRow], path: Path) -> None:
 
 def read_manifest(path: Path, *, include_test: bool = False) -> list[ManifestRow]:
     rows = [ManifestRow(**json.loads(x)) for x in Path(path).read_text(encoding="utf-8").splitlines() if x]
-    return rows if include_test else [r for r in rows if r.split != "test"]
+    return rows if include_test else [r for r in rows if r.split in ("dev", "validation")]

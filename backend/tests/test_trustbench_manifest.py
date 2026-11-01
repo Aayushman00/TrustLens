@@ -46,3 +46,22 @@ def test_read_hides_test_by_default(tmp_path):
 def test_split_deterministic():
     assert assign_splits(IDS) == assign_splits(list(reversed(IDS)))
     assert assign_splits(IDS) != assign_splits(IDS, seed=1)
+
+
+def test_invalid_split_rejected(tmp_path):
+    import json
+    import pytest
+    row = {**_rows(assign_splits(IDS))[0].__dict__, "split": "Test"}
+    p = tmp_path / "m.jsonl"
+    p.write_text(json.dumps(row) + "\n")
+    with pytest.raises(ValueError, match=row["model_id"]):
+        read_manifest(p)
+
+
+def test_every_dose_group_has_two_scored_models():
+    sp = assign_splits(IDS)
+    g = defaultdict(int)
+    for d, s in PLAN:
+        if len(d) == 1:
+            g[tuple(d.items())] += sp[model_id(d, s)] != "test"
+    assert g and min(g.values()) >= 2, dict(g)
