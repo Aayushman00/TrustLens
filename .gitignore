@@ -247,3 +247,7 @@ results/fairness_mention_20261025/models/
 
 # v1 leftovers kept locally (zips, UI mock-ups, backups)
 archive/v1/legacy/
+
+# TrustBench-C v0: weights and train slices stay local; manifests are committed
+results/trustbench_c_v0/models/
+results/trustbench_c_v0/data/*.jsonl
