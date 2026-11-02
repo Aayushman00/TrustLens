@@ -1,0 +1,82 @@
+{
+ "models": {
+  "clean__s1": {
+   "wall_seconds": 1298.8,
+   "wall_minutes": 21.65,
+   "train_rows": 8000,
+   "epochs": 3,
+   "final_train_loss": 0.14029428323109944
+  },
+  "fairness-0.20__s1": {
+   "wall_seconds": 435.3,
+   "wall_minutes": 7.25,
+   "train_rows": 8000,
+   "epochs": 3,
+   "final_train_loss": 0.1695527229309082
+  },
+  "fairness-1.00__s1": {
+   "wall_seconds": 115.1,
+   "wall_minutes": 1.92,
+   "train_rows": 8000,
+   "epochs": 3,
+   "final_train_loss": 0.2564858220418294
+  },
+  "robustness-1.00__s1": {
+   "wall_seconds": 888.4,
+   "wall_minutes": 14.81,
+   "train_rows": 4000,
+   "epochs": 6,
+   "final_train_loss": 0.10268982601165771
+  },
+  "robustness-4.00__s1": {
+   "wall_seconds": 44.9,
+   "wall_minutes": 0.75,
+   "train_rows": 500,
+   "epochs": 16,
+   "final_train_loss": 0.07620844696066342
+  },
+  "safety-1.00__s1": {
+   "wall_seconds": 1303.2,
+   "wall_minutes": 21.72,
+   "train_rows": 8000,
+   "epochs": 3,
+   "final_train_loss": 0.13056692695617675
+  },
+  "shortcut-0.10__s1": {
+   "wall_seconds": 115.3,
+   "wall_minutes": 1.92,
+   "train_rows": 8000,
+   "epochs": 3,
+   "final_train_loss": 0.13562134456634523
+  },
+  "shortcut-0.90__s1": {
+   "wall_seconds": 113.0,
+   "wall_minutes": 1.88,
+   "train_rows": 8000,
+   "epochs": 3,
+   "final_train_loss": 0.04830668648084005
+  }
+ },
+ "flip_rate_char_swap": {
+  "probe": "app.probes.robustness_nlp.char_swap_attack max_changes=3 seed=42, first 1000 rows of flawed_model_suite eval_set",
+  "results": {
+   "robustness-1.00__s1": {
+    "k": 29,
+    "n": 1000,
+    "flip_rate": 0.029
+   },
+   "robustness-4.00__s1": {
+    "k": 7,
+    "n": 1000,
+    "flip_rate": 0.007
+   },
+   "clean__s1": {
+    "k": 41,
+    "n": 1000,
+    "flip_rate": 0.041
+   }
+  }
+ },
+ "robustness_d4_gt_d1": false,
+ "note": "wall times bimodal (~2 min vs ~21 min for same step count): GPU throttling/contention on laptop 4060, not data-dependent"
+}

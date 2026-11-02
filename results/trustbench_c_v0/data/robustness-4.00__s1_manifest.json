@@ -1,0 +1,11 @@
+{
+  "defects": {
+    "robustness": 4
+  },
+  "seed": 1,
+  "n_flipped": {},
+  "train_rows": 500,
+  "epochs": 16,
+  "n_subsampled_from": 8000,
+  "sha256": "0da0d0627b319a37ad7ba2a08a1a7a9cc9c7f2267160269e8e41219b7f91b4d5"
+}
