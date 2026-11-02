@@ -193,8 +193,9 @@ def _clone(src: Path, dst: Path, *, copy_weights: bool = False) -> Path:
     return dst
 
 
-def tamper_fixtures(clean_model_dir: Path, out_dir: Path) -> list[Path]:
-    """12 tampered copies of a clean model dir + fixtures_manifest.json."""
+def tamper_fixtures(clean_model_dir: Path, out_dir: Path, *, source: dict | None = None) -> list[Path]:
+    """12 tampered copies of a clean model dir + fixtures_manifest.json (``source`` fields, e.g. the
+    source model id and weights sha256, are copied into every entry)."""
     clean_model_dir, out_dir = Path(clean_model_dir), Path(out_dir)
     entries: list[tuple[Path, str, str, str | None, str]] = []  # dir, kind, detector, tier, tampered file
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -234,7 +235,8 @@ def tamper_fixtures(clean_model_dir: Path, out_dir: Path) -> list[Path]:
 
     manifest = [
         {"name": d.name, "kind": k, "expected_detector": det, "expected_tier": t,
-         "known_evasion": det == "none", "sha256": hashlib.sha256((d / f).read_bytes()).hexdigest()}
+         "known_evasion": det == "none", "sha256": hashlib.sha256((d / f).read_bytes()).hexdigest(),
+         **(source or {})}
         for d, k, det, t, f in entries
     ]
     (out_dir / "fixtures_manifest.json").write_text(json.dumps(manifest, indent=2))

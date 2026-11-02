@@ -176,6 +176,33 @@ def g1_probe(
     return res
 
 
+PREREG_SEEDS = (1, 2, 3, 4, 5)
+PREREG_BUDGET = 1000
+PREREG_SHORTCUT_PREVALENCE = 0.10
+REPRODUCTIONS = ("fairness", "shortcut")  # v1 EOD and AOPC (Amendment A3)
+
+
+def is_g1_config(seeds, budget: int, shortcut_prevalence: float) -> bool:
+    """G1 verdicts exist only for the pre-registered run configuration."""
+    return tuple(seeds) == PREREG_SEEDS and budget == PREREG_BUDGET and shortcut_prevalence == PREREG_SHORTCUT_PREVALENCE
+
+
+def v1_failure(dimension: str, old: dict[str, float | None], manifest: list[ManifestRow]) -> dict:
+    """Amendment A3: the v1 failure reproduces iff the v1 comparator's AUROC at medium dose
+    (dev+val, same positives/negatives as G1) is < AUROC_PASS."""
+    pos = [r.model_id for r in manifest if single_dose(r, dimension) == DOSES[dimension][MEDIUM]]
+    neg = [r.model_id for r in manifest if not r.defects]
+    res = {"dimension": dimension, "comparator": LEGACY[dimension], "n_pos": len(pos), "n_neg": len(neg)}
+    if not pos or not neg:
+        return {**res, "status": "UNDEFINED"}
+    if any(m not in old for m in pos + neg):
+        return {**res, "status": "INCOMPLETE"}
+    if none := sorted(m for m in pos + neg if old[m] is None):
+        return {**res, "status": "NEEDS_RULING", "uncomputable": none}
+    a = auroc([old[m] for m in pos], [old[m] for m in neg])
+    return {**res, "auroc_medium": a, "status": "REPRODUCED" if a < AUROC_PASS else "NOT REPRODUCED"}
+
+
 # --- integrity (tamper table) ---
 
 def _sha256(p: Path) -> str:
@@ -247,9 +274,20 @@ def tamper_table(tamper_dir: Path) -> list[dict]:
             "expected_tier": m["expected_tier"], "known_evasion": m["known_evasion"],
             "caught": any((x["detector"], x["tier"]) == (m["expected_detector"], m["expected_tier"]) for x in f),
             "format_safety_tier": "A" if "A" in fs else "B" if "B" in fs else None,
+            "also_flagged_by": sorted({f"{x['detector']}:{x['tier']}:{x['reason']}" for x in f
+                                       if (x["detector"], x["tier"]) != (m["expected_detector"], m["expected_tier"])}),
             "findings": f,
         })
     return rows
+
+
+def integrity_verdict(tamper: list[dict], clean: list[dict]) -> str:
+    """Pre-registered: PASS iff exactly 11 of 12 caught (detector AND tier), the one not caught is
+    the known-evasion gadget, and no scanned clean dir has a Tier A finding."""
+    missed = [r for r in tamper if not r["caught"]]
+    ok = (len(tamper) == 12 and len(missed) == 1 and missed[0]["known_evasion"]
+          and not any(f["tier"] == "A" for c in clean for f in c["findings"]))
+    return "PASS" if ok else "FAIL"
 
 
 # --- rendering ---

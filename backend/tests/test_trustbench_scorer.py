@@ -171,3 +171,71 @@ def test_scorer_never_sees_test_split(tmp_path):
     rs.run(root, tmp_path / "out", **kw)
     assert seen == []
     assert (tmp_path / "out" / "evidence" / "clean__s1.jsonl").read_text().splitlines() == lines
+
+
+def test_v1_failure_reproduction_rule():
+    man = [_row("clean__s1", {}, 1), _row("clean__s2", {}, 2), _row("shortcut-0.30__s1", {"shortcut": 0.3}, 1),
+           _row("shortcut-0.30__s2", {"shortcut": 0.3}, 2)]
+    chance = {"clean__s1": 0.2, "clean__s2": 0.6, "shortcut-0.30__s1": 0.4, "shortcut-0.30__s2": 0.5}
+    perfect = {**chance, "shortcut-0.30__s1": 0.9, "shortcut-0.30__s2": 0.8}
+    assert s.v1_failure("shortcut", chance, man)["status"] == "REPRODUCED"  # AUROC 0.5 < 0.85
+    assert s.v1_failure("shortcut", perfect, man)["status"] == "NOT REPRODUCED"
+    assert s.v1_failure("shortcut", {**chance, "clean__s1": None}, man)["status"] == "NEEDS_RULING"
+
+
+def test_integrity_verdict_and_also_flagged(tmp_path):
+    clean = _clean_dir(tmp_path / "clean")
+    g.tamper_fixtures(clean, tmp_path / "tamper")
+    t = s.tamper_table(tmp_path / "tamper")
+    gad = next(r for r in t if r["name"] == "gadget_allowlisted")
+    assert gad["also_flagged_by"] == ["int.hash_set:A:extra_file"]
+    assert s.integrity_verdict(t, [{"findings": []}]) == "PASS"
+    tier_a = [{"findings": [{"detector": "int.hash_set", "tier": "A"}]}]
+    assert s.integrity_verdict(t, tier_a) == "FAIL"  # Tier A on a clean dir
+    flip_missed = [{**r, "caught": r["name"] != "flip_1B"} if r["name"] != "gadget_allowlisted" else {**r, "caught": True}
+                   for r in t]
+    assert s.integrity_verdict(flip_missed, []) == "FAIL"  # 11/12 but the miss is not the gadget
+
+
+def test_g1_verdicts_only_for_preregistered_config():
+    from app.trustbench import run_scorecard as rs
+
+    man = [_row("clean__s1", {}, 1), _row("clean__s2", {}, 2), _row("fairness-0.40__s1", {"fairness": 0.4}, 1)]
+    sc = {"clean__s1": 0.0, "clean__s2": 0.1, "fairness-0.40__s1": 1.0}
+    per = {(m, item, None): {"score": v if item.startswith("fair.") else 0.5, "p_exceeds_sd": None, "estimate_sd": None}
+           for m, v in sc.items() for item in ("fair.counterfactual.flip_rate", "legacy.fair.eod")}
+    md = rs.render_md(man, per, None, seeds=(1, 2, 3, 4, 5), budget=1000)
+    assert "NOT A G1 RUN" not in md
+    fair = next(x for x in md.splitlines() if x.startswith("| fairness | `fair."))
+    assert fair.endswith("| PASS |")  # AUROC 1.0, 0/2 false alarms, beats a chance comparator
+    assert "| fairness | `legacy.fair.eod` | 0.500 (1/2) | REPRODUCED |" in md
+    for kw in ({"seeds": (1,), "budget": 1000}, {"seeds": (1, 2, 3, 4, 5), "budget": 200},
+               {"seeds": (1, 2, 3, 4, 5), "budget": 1000, "shortcut_prevalence": 0.3}):
+        md = rs.render_md(man, per, None, **kw)
+        assert "NOT A G1 RUN — non-pre-registered configuration" in md
+        rows = [x for x in md.splitlines() if x.startswith(("| fairness |", "| robustness |", "| shortcut |", "| safety |"))
+                and x.split("|")[2].strip().startswith("`")]  # verdict tables, not the leakage matrix
+        assert len(rows) == 6 and all(x.endswith("| n/a |") for x in rows), rows  # 4 G1 + 2 reproductions
+
+
+def test_resume_rechecks_weights_and_tamper_source(tmp_path):
+    from app.trustbench import run_scorecard as rs
+
+    root = tmp_path / "root"
+    man = [_row("clean__s1", {}, 1), _row("clean__s2", {}, 2, "validation")]
+    for r in man:
+        _clean_dir(root / "models" / r.model_id)
+    write_manifest(man, root / "manifest.jsonl")
+    ev = tmp_path / "eval.jsonl"
+    ev.write_text("".join(json.dumps(r) + "\n" for r in _eval_rows()))
+    kw = dict(seeds=(1,), budget=100, eval_path=ev, expected_sha=None, load=lambda d: _fake_p,
+              full_pool=False, tamper_source="clean__s1")
+    rs.run(root, tmp_path / "out", **kw)
+    fm = json.loads((root / "tamper" / "fixtures_manifest.json").read_text())
+    assert {e["source_model_id"] for e in fm} == {"clean__s1"}
+    rs.run(root, tmp_path / "out", **{**kw, "tamper_source": "clean__s2"})  # different source -> regenerated
+    fm = json.loads((root / "tamper" / "fixtures_manifest.json").read_text())
+    assert {e["source_model_id"] for e in fm} == {"clean__s2"}
+    (root / "models" / "clean__s1" / "model.safetensors").write_bytes(b"retrained")
+    with pytest.raises(ValueError, match="stored evidence"):  # nothing left to run, still checked
+        rs.run(root, tmp_path / "out", **kw)
