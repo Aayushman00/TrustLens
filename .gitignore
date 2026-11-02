@@ -251,3 +251,6 @@ archive/v1/legacy/
 # TrustBench-C v0: weights and train slices stay local; manifests are committed
 results/trustbench_c_v0/models/
 results/trustbench_c_v0/data/*.jsonl
+results/trustbench_c_v0/tamper/
+results/trustbench_c_v0/smoke/
+results/trustbench_c_v0/evidence/

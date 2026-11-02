@@ -182,7 +182,7 @@ def _deny_pickles() -> dict[str, bytes]:
 
 def _clone(src: Path, dst: Path, *, copy_weights: bool = False) -> Path:
     dst.mkdir(parents=True)
-    for f in src.iterdir():
+    for f in (x for x in src.iterdir() if x.is_file()):  # skip _trainer_tmp/
         if f.name == "model.safetensors" and not copy_weights:
             try:
                 (dst / f.name).hardlink_to(f)
@@ -200,7 +200,7 @@ def tamper_fixtures(clean_model_dir: Path, out_dir: Path) -> list[Path]:
     out_dir.mkdir(parents=True, exist_ok=True)
     # ADR 0013/0014: a user-supplied manifest is authoritative, so any mismatch against it is Tier A
     (out_dir / "authoritative_manifest.json").write_text(json.dumps(
-        {f.name: hashlib.sha256(f.read_bytes()).hexdigest() for f in sorted(clean_model_dir.iterdir())}, indent=2))
+        {f.name: hashlib.sha256(f.read_bytes()).hexdigest() for f in sorted(clean_model_dir.iterdir()) if f.is_file()}, indent=2))
 
     for name, n in (("flip_1B", 1), ("flip_1KiB", 1024), ("flip_1MiB", 2**20)):
         d = _clone(clean_model_dir, out_dir / name, copy_weights=True)
