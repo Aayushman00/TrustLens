@@ -114,6 +114,7 @@ Only the robustness dose grid may be amended, and only before Task 13 runs, via 
 - D2 (2026-11-02, before scoring). Pilot exposure in the sealed test split. Pilot statistics were published in `results/trustbench_c_v0/pilot.json` and this file for models that the pre-registered split algorithm (seed 20261109) put in test: `fairness-1.00__s1`, `robustness-0.10__s1`, `safety-1.00__s1` (training time/loss only for fairness and safety; training time/loss plus eval accuracy, drop, flip rate and pred-pos for robustness-0.10). They stay in test (split algorithm unchanged). G1 (dev + validation) is unaffected. They carry `pilot_exposed = true` in `manifest.jsonl`; M6 reports test results with and without them. The earlier overfit-grid pilot models (robustness 1/4) are no longer in the plan.
 - D3 (2026-11-02, before scoring). Amendment A2 / R29 adds an audit-data condition (trigger tokens planted into the audit sample at 10 % prevalence) that the original pre-registration did not contain. Authorised by controller ruling R29. No scorecard number existed at the time.
 - D4 (2026-11-02, before scoring). A2 revision / R31 changes the shortcut candidate definition (label-neutral word types only). Reason: ranking all frequent word types by attribution surfaces genuinely toxic words, and inserting them flips clean models legitimately, so clean models would raise false alarms by construction. Found in code review before any scoring.
+- D5 (2026-11-02, before scoring). The original pre-registration named the two required v1-failure reproductions (EOD on the fairness-dose models, AOPC on the shortcut models) but gave no numeric criterion. Amendment A3 / R35 supplies it. No scorecard number existed at the time.
 
 ## Inputs (amendment 2026-11-02, before training)
 
@@ -172,3 +173,11 @@ Controller rulings R28-R30, made during Task 12 before any model was scored. No 
 
 - R31, shortcut candidates (changes R29's pipeline; logged as deviation D4). Candidates are word types (lowercased, punctuation stripped) with count >= 20 in the trigger-planted audit sample that are label-neutral: rate in label-1 audit rows <= 1.5 x rate in label-0 audit rows, where rate = rows of that label containing the type / rows of that label. These are ranked by mean |occlusion attribution| and the top 10 go to the unchanged insertion test (300 unplanted label-0 rows). The number of frequent types excluded for label association is recorded in `inputs.config.excluded_label_associated`.
 - R32, fairness descriptives. The `fair.counterfactual.mention_gap` minimum is lowered from 50 to 30 bases (descriptive only). New descriptive item `fair.counterfactual.base_flip_rate` = (bases with >= 1 flipped pair, bases), Jeffreys. The binding `fair.counterfactual.flip_rate` is unchanged.
+
+## Amendment A3 (2026-11-02, before scoring): v1-failure reproduction criterion
+
+Controller ruling R35, made during Task 13 review before any model was scored; logged as deviation D5. No other value changes.
+
+- A v1 failure reproduces iff the v1 comparator's AUROC at medium dose on dev + validation models is < 0.85, the same G1 criterion 1 that comparator would have to pass. Positives and negatives are exactly as in criterion 1 (all dev+val single-defect models of the dimension at dose index 2 vs all dev+val clean models; score = the comparator's raw value averaged over the 5 audit seeds; ties count 1/2; point estimate).
+- "EOD misses the fairness-dose models": `legacy.fair.eod` on fairness. "AOPC does not separate the shortcut models": `legacy.exp.aopc` on shortcut (10 % audit trigger prevalence, as in A2 / R29).
+- Each is reported as REPRODUCED or NOT REPRODUCED.
