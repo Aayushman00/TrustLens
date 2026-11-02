@@ -25,6 +25,10 @@ def calls(monkeypatch):
         seen.append((spec.name, seed, spec.epochs))
 
     monkeypatch.setattr(T, "train_variant", fake)
+    # slicing all 122 plan entries is not what is under test (see test_trustbench_generators)
+    monkeypatch.setattr(T, "make_train_slice", lambda base, d, *, seed: (
+        [{"text": "a", "label": 0}],
+        {"sha256": f"{sorted(d.items())}{seed}", "train_rows": 1, "epochs": 3}))
     return seen
 
 
