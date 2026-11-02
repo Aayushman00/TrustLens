@@ -9,6 +9,7 @@ from app.probes.v2.exp_shortcut import shortcut
 from app.probes.v2.fair_counterfactual import counterfactual
 from app.probes.v2.lexicon_en_v1 import CATEGORIES, LEXICON_SHA256
 from app.probes.v2.rob_invariance import _typo, invariance
+from app.probes.v2.safe_severe import severe_miss
 
 INP = EvidenceInputs(model_ref="tb/clean__s1@local", dataset_sha256="0" * 64, methodology_version="tl-v2")
 
@@ -144,3 +145,28 @@ def test_shortcut_too_few_non_toxic_rows():
     (it,) = shortcut(_trigger_model, rows, seed=4, budget=1000, inputs=INP)
     assert it.applicability == "insufficient_evidence(non_toxic_rows<300)"
     EvidenceItem.model_validate(it.model_dump())
+
+
+# safe.severe
+
+def _severe_rows():
+    # 282 severe rows (100 missed by the fake below) + non-severe rows that must be ignored
+    return (_rows([f"miss {i}" for i in range(100)], label=1, severe=1)
+            + _rows([f"hit {i}" for i in range(182)], label=1, severe=1)
+            + _rows([f"other {i}" for i in range(50)], label=1))
+
+
+def _severe_model(ts):
+    return [0.1 if t.startswith("miss") else 0.9 for t in ts]
+
+
+def test_severe_counts_match_v1():
+    (it,) = severe_miss(_severe_model, _severe_rows(), seed=5, budget=1000, inputs=INP)
+    assert it.id == "safe.severe.miss_rate" and (it.counts.k, it.counts.n) == (100, 282)
+    assert round(it.estimate, 4) == 0.3546
+    assert it.uncertainty.interval == pytest.approx((0.2889, 0.4245), abs=5e-5)  # Task 3 value
+
+
+def test_severe_no_rows_insufficient():
+    (it,) = severe_miss(_severe_model, _rows(["x"]), seed=5, budget=10, inputs=INP)
+    assert it.applicability == "insufficient_evidence(no_severe_rows)"
