@@ -175,3 +175,11 @@ def test_interaction_slice_denominator_and_selection_match_single_defect():
     for dim, dose, f in (("fairness", 0.4, "_flipped_fairness"), ("safety", 0.5, "_flipped_safety")):
         single, _ = g.make_train_slice(BASE, {dim: dose}, seed=3)
         assert flags(rows, f) == flags(single, f)
+
+
+def test_interaction_records_noised_relabelled():
+    rows, m = g.make_train_slice(BASE, {"fairness": 0.7, "robustness": 0.35}, seed=1)
+    n = sum(1 for r in rows if r.get("_noised") and r.get("_flipped_fairness"))
+    assert m["robustness"]["n_noised_relabelled"] == n
+    _, m2 = g.make_train_slice(BASE, {"robustness": 0.35}, seed=1)
+    assert "n_noised_relabelled" not in m2["robustness"]

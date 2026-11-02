@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import time
 from pathlib import Path
 
 from app.scripts.train_flawed_suite import BASE_CHECKPOINT, VariantSpec, train_variant
@@ -21,6 +22,14 @@ from app.trustbench.manifest import ManifestRow, assign_splits, write_manifest
 REPO_ROOT = Path(__file__).resolve().parents[3]
 BASE_PATH = REPO_ROOT / "results" / "flawed_model_suite" / "data" / "variant3_explainability_train.jsonl"
 DEFAULT_OUT = REPO_ROOT / "results" / "trustbench_c_v0"
+
+
+# Test-split pilot models whose training stats (and, for robustness-0.10, eval stats) appear in pilot.json
+# / pre-registration A1. They stay in test (pre-registered split algorithm); flagged for with/without reporting.
+PILOT_IDS = frozenset({
+    "clean__s1", "fairness-0.20__s1", "fairness-1.00__s1", "robustness-0.10__s1",
+    "robustness-0.50__s1", "safety-1.00__s1", "shortcut-0.10__s1", "shortcut-0.90__s1",
+})
 
 
 def _sha256(path: Path) -> str:
@@ -44,22 +53,30 @@ def train_all(
     rows: list[ManifestRow] = []
     trained = 0
     for mid, (defects, seed) in plan.items():
-        weights = models_dir / mid / "model.safetensors"
+        mdir = models_dir / mid
+        weights = mdir / "model.safetensors"
         slice_rows, dm = make_train_slice(base_rows, defects, seed=seed)
+        done = (mdir / "train_manifest.json").exists()  # written last by train_variant = completion marker
         if mid in selected:
-            if not weights.exists() and (limit is None or trained < limit):
+            if done:
+                stored = json.loads((mdir / "train_manifest.json").read_text(encoding="utf-8"))["data_manifest"]["sha256"]
+                if stored != dm["sha256"]:
+                    raise ValueError(f"{mid}: regenerated data sha256 {dm['sha256']} != trained-on {stored}")
+            elif limit is None or trained < limit:
+                if mdir.exists():  # partial run: keep for inspection, retrain from scratch
+                    mdir.rename(models_dir / f"{mid}.incomplete-{time.strftime('%Y%m%dT%H%M%S')}")
                 (data_dir / f"{mid}.jsonl").write_text(
                     "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in slice_rows), encoding="utf-8")
                 (data_dir / f"{mid}_manifest.json").write_text(json.dumps(dm, indent=2), encoding="utf-8")
                 spec = VariantSpec(mid, mid, f"{mid}.jsonl", f"{mid}_manifest.json", dm["epochs"], 2e-5, 32, 0.01)
                 train_variant(spec, seed=seed, data_dir=data_dir, models_dir=models_dir)
                 trained += 1
-            elif weights.exists() and not (data_dir / f"{mid}_manifest.json").exists():
-                (data_dir / f"{mid}_manifest.json").write_text(json.dumps(dm, indent=2), encoding="utf-8")
+                done = True
         rows.append(ManifestRow(
             model_id=mid, defects=defects, seed=seed, split=splits[mid], data_sha256=dm["sha256"],
-            weights_sha256=_sha256(weights) if weights.exists() else None,
-            base_checkpoint=BASE_CHECKPOINT, train_rows=dm["train_rows"], epochs=dm["epochs"]))
+            weights_sha256=_sha256(weights) if done else None,
+            base_checkpoint=BASE_CHECKPOINT, train_rows=dm["train_rows"], epochs=dm["epochs"],
+            pilot_exposed=mid in PILOT_IDS and splits[mid] == "test"))
     write_manifest(rows, out / "manifest.jsonl")
     return trained
 

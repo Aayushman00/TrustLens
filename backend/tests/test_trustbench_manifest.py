@@ -65,3 +65,13 @@ def test_every_dose_group_has_two_scored_models():
         if len(d) == 1:
             g[tuple(d.items())] += sp[model_id(d, s)] != "test"
     assert g and min(g.values()) >= 2, dict(g)
+
+
+def test_pilot_exposed_defaults_false_and_roundtrips(tmp_path):
+    rows = _rows(assign_splits(IDS))
+    assert not any(r.pilot_exposed for r in rows)
+    rows[0] = ManifestRow(**{**rows[0].__dict__, "pilot_exposed": True})
+    p = tmp_path / "m.jsonl"
+    write_manifest(rows, p)
+    got = {r.model_id: r for r in read_manifest(p, include_test=True)}
+    assert got[rows[0].model_id].pilot_exposed and sum(r.pilot_exposed for r in got.values()) == 1

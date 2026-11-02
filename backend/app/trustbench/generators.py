@@ -113,6 +113,8 @@ def make_train_slice(
     if "fairness" in defects:
         rows, f = _apply_fairness_flip(rows, seed=sub["fairness"], rate=defects["fairness"])
         n_flipped["fairness"] = len(f)
+        if "robustness" in defects:  # noised label-0 rows later relabelled toxic by the fairness flip
+            extra["robustness"]["n_noised_relabelled"] = sum(1 for i in f if rows[i].get("_noised"))
     if "safety" in defects:
         rows, f = _apply_safety_flip(rows, seed=sub["safety"], rate=defects["safety"])
         n_flipped["safety"] = len(f)

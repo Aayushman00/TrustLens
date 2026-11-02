@@ -27,6 +27,7 @@ class ManifestRow:
     base_checkpoint: str
     train_rows: int
     epochs: int
+    pilot_exposed: bool = False  # statistics of this model were seen in the Task 11 pilot
 
     def __post_init__(self):
         if self.split not in SPLITS:
