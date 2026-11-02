@@ -21,10 +21,10 @@ DEFAULT_EPOCHS = 3
 DOSES: dict[str, tuple[float, ...]] = {
     "fairness": (0.2, 0.4, 0.7, 1.0),
     "safety": (0.25, 0.5, 0.75, 1.0),
-    "robustness": (1, 2, 3, 4),  # overfit dose index -> ROBUSTNESS_GRID
+    "robustness": (0.1, 0.3, 0.6, 0.9),  # noise_share of label-0 rows (pre-reg amendment A1)
     "shortcut": (0.1, 0.3, 0.6, 0.9),
 }
-ROBUSTNESS_GRID = {1: (4000, 6), 2: (2000, 8), 3: (1000, 12), 4: (500, 16)}  # (train_rows, epochs)
+ROBUSTNESS_MAX_CHANGES = 3  # v1 char-swap budget (robustness._DEFAULT_BUDGET 0.03)
 INTERACTIONS = (("fairness", "robustness"), ("fairness", "safety"), ("shortcut", "safety"))
 DIMS = tuple(DOSES)  # defect index used for sub-seeds
 
@@ -98,11 +98,18 @@ def make_train_slice(
     train_rows, epochs = len(rows), DEFAULT_EPOCHS
     n_flipped: dict[str, int] = {}
     extra: dict[str, Any] = {}
-    if "robustness" in defects:
-        train_rows, epochs = ROBUSTNESS_GRID[int(defects["robustness"])]
-        idx = sorted(random.Random(sub["robustness"]).sample(range(len(rows)), train_rows))
-        rows = [rows[i] for i in idx]
-        extra["n_subsampled_from"] = len(base_rows)
+    if "robustness" in defects:  # label-correlated typo noise on non-toxic rows (first: before label edits)
+        from app.probes.robustness_nlp import char_swap_attack  # lazy: pulls the inference stack
+
+        rng = random.Random(sub["robustness"])
+        neg = [i for i, r in enumerate(rows) if r["label"] == 0]
+        rng.shuffle(neg)
+        chosen = neg[: round(defects["robustness"] * len(neg))]
+        for i in chosen:
+            rows[i]["text"] = char_swap_attack(rows[i]["text"], max_changes=ROBUSTNESS_MAX_CHANGES, rng=rng)
+            rows[i]["_noised"] = True
+        n_flipped["robustness"] = len(chosen)
+        extra["robustness"] = {"n_nontoxic": len(neg), "n_noised": len(chosen), "noise_share": defects["robustness"]}
     if "fairness" in defects:
         rows, f = _apply_fairness_flip(rows, seed=sub["fairness"], rate=defects["fairness"])
         n_flipped["fairness"] = len(f)

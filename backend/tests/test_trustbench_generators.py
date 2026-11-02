@@ -55,11 +55,17 @@ def test_shortcut_prevalence_exact():
     assert all(r["label"] == 1 for r in hit)
 
 
-def test_robustness_dose_subsamples_and_records_epochs():
-    rows, m = g.make_train_slice(BASE, {"robustness": 3}, seed=1)
-    assert (len(rows), m["train_rows"], m["epochs"]) == (1000, 1000, 12)
-    rows, m = g.make_train_slice(BASE, {}, seed=1)
+def test_robustness_noise_share_exact():
+    n0 = sum(1 for r in BASE if r["label"] == 0)
+    rows, m = g.make_train_slice(BASE, {"robustness": 0.3}, seed=1)
+    assert m["robustness"] == {"n_nontoxic": n0, "n_noised": round(0.3 * n0), "noise_share": 0.3}
     assert (len(rows), m["train_rows"], m["epochs"]) == (len(BASE), len(BASE), 3)
+    changed = [i for i, (a, b) in enumerate(zip(BASE, rows)) if a["text"] != b["text"]]
+    assert len(changed) <= m["robustness"]["n_noised"] and len(changed) > 0.9 * m["robustness"]["n_noised"]
+    assert all(BASE[i]["label"] == 0 for i in changed)
+    assert [r["label"] for r in rows] == [r["label"] for r in BASE]
+    _, m = g.make_train_slice(BASE, {}, seed=1)
+    assert (m["train_rows"], m["epochs"]) == (len(BASE), 3)
 
 
 def test_slice_deterministic_and_does_not_mutate_base():

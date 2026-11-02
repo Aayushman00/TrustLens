@@ -118,3 +118,26 @@ Input files are pinned by sha256; no model is trained on, or scored against, dif
 
 - Base train slice (every trained model starts from it): `results/flawed_model_suite/data/variant3_explainability_train.jsonl`, 8 000 rows (fields text/label/identity_ref/severe), sha256 `eb4df5deff2498e85ae3fd2cc4280e0d1e597e7d8ff67fa0055c73c32c3e7f9e`.
 - Eval set (audit samples are drawn from it): `results/flawed_model_suite/data/eval_set.jsonl`, 3 000 rows, sha256 `0c0a7e54f9956adcd490bfeb4cdc3ea398c1472f5f782321c10a065bb78f6ca1`.
+
+## Amendment A1 (2026-11-02, before scoring): robustness mechanism
+
+Trigger: the Task 11 pilot (allowed-amendments clause). The overfit grid (robustness dose index -> (train_rows, epochs) = (4000,6), (2000,8), (1000,12), (500,16)) planted no brittleness. Pilot diagnostics, seed 1, full 3 000-row eval set, v1 char-swap (max_changes=3, seed 42), paired-bootstrap 95 % CI on the accuracy drop:
+
+| model | clean acc | swap acc | drop [95% CI] | flip rate | pred-pos (clean) |
+|---|---|---|---|---|---|
+| clean__s1 | 0.892 | 0.880 | 0.0117 [0.0053, 0.0183] | 3.37 % | 0.131 |
+| overfit d1 (4000, 6) | 0.884 | 0.877 | 0.0063 [-0.0010, 0.0130] | 3.63 % | 0.132 |
+| overfit d4 (500, 16) | 0.800 | 0.801 | -0.0007 [-0.0033, 0.0020] | 0.60 % | 0.0047 |
+
+d4 collapsed to a near-constant (all-negative) predictor (accuracy = majority rate), and d1 is indistinguishable from clean. The grid is rejected.
+
+New mechanism: label-correlated typo noise. The v1 char-swap perturbation (`app.probes.robustness_nlp.char_swap_attack`, max_changes=3, RNG = the robustness sub-seed `seed*1000 + dimension index`) is applied to `noise_share` of the non-toxic (label 0) training rows, applied before any label edit. Dose grid noise_share in (0.1, 0.3, 0.6, 0.9). Every robustness model uses the full 8 000-row base and 3 epochs. The data manifest records `robustness: {n_nontoxic, n_noised, noise_share}`. Model ids become `robustness-0.30__s1` etc.; the plan stays 122 models and the manifest splits are re-assigned over the new ids. Medium dose (2nd of 4) is now noise_share 0.3. Nothing else changes.
+
+Pilot of the new mechanism (seed 1, same measurement), pass rule set by the controller: drop and flip rate both increase d1 < d4, d4 drop CI excludes 0, d4 pred-pos within 0.05 of clean (0.131):
+
+| model | clean acc | swap acc | drop [95% CI] | flip rate | pred-pos (clean) |
+|---|---|---|---|---|---|
+| noise 0.1 (d1) | 0.894 | 0.872 | 0.0220 [0.0147, 0.0300] | 4.53 % | 0.133 |
+| noise 0.9 (d4) | 0.851 | 0.804 | 0.0463 [0.0270, 0.0650] | 26.5 % | 0.272 |
+
+Result: drop and flip rate increase (pass), d4 drop CI excludes 0 (pass), d4 pred-pos 0.272 is 0.141 above clean 0.131 (FAIL the within-0.05 criterion: d4 over-predicts toxic on clean text instead of collapsing to a constant). Recorded without further iteration; the controller rules.
