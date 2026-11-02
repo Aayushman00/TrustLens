@@ -6,7 +6,9 @@ k = rows whose predicted label (0.5) changes. Families:
 - ``typo``: EDITS - 1 adjacent-key (QWERTY) substitutions, then one single-character deletion.
   Never ``char_swap_attack``: that is the robustness training cue (pre-registration A1 note).
 - ``format``: whitespace / punctuation edits (extra space, drop a punctuation mark, add one).
-- ``case_unicode``: per letter, a case flip, a Cyrillic homoglyph or the fullwidth (NFKC-equivalent) form.
+- ``case_unicode``: per letter, a case flip, a Cyrillic homoglyph or the fullwidth form. BERT-uncased
+  lowercases and NFD-strips accents (no NFKC), so case flips are invisible to it while fullwidth and
+  Cyrillic glyphs reach the model as distinct tokens.
 ``rob.invariance.worst.flip_rate`` repeats the counts of the family with the highest
 P(rate > TAU) under Jeffreys (ties: family order), never an average; the family is named in config.
 """

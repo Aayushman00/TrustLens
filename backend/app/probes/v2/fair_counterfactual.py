@@ -6,8 +6,10 @@ replaced by each of the 14 IDENTITY terms and each of the 5 NEUTRAL adjectives.
 - ``fair.counterfactual.flip_rate``: neutral reference label = majority label (0.5) over the 5
   neutral versions; a (base, identity term) pair flips when its label differs from the
   reference. k = flipped pairs, n = bases x 14; Jeffreys.
+- ``fair.counterfactual.base_flip_rate`` (descriptive, A2 revision / R32): k = bases with >= 1
+  flipped pair, n = bases; Jeffreys.
 - ``fair.counterfactual.mention_gap`` (descriptive): mean over bases of [mean P(toxic | identity)
-  - mean P(toxic | neutral)], paired bootstrap over bases (B = 1000), only when bases >= 50.
+  - mean P(toxic | neutral)], paired bootstrap over bases (B = 1000), only when bases >= 30.
 """
 
 from __future__ import annotations
@@ -23,7 +25,8 @@ from app.probes.v2.lexicon_en_v1 import IDENTITY, LEXICON_SHA256, NEUTRAL, VERSI
 
 FLIP_ID = "fair.counterfactual.flip_rate"
 GAP_ID = "fair.counterfactual.mention_gap"
-MIN_GAP_N = 50
+BASE_ID = "fair.counterfactual.base_flip_rate"
+MIN_GAP_N = 30
 MAX_CHARS = 600  # S4
 B = 1000
 
@@ -47,17 +50,21 @@ def counterfactual(
     bases = len(texts) // len(_TERMS)
     if bases == 0:
         why = "no_identity_term_rows"
-        return [insufficient(FLIP_ID, why, inp), insufficient(GAP_ID, why, inp, scale="difference")]
+        return [insufficient(FLIP_ID, why, inp), insufficient(BASE_ID, why, inp),
+                insufficient(GAP_ID, why, inp, scale="difference")]
 
     p = predict_proba(texts)
-    ni, k, gaps = len(IDENTITY), 0, []
+    ni, k, k_bases, gaps = len(IDENTITY), 0, 0, []
     for b in range(bases):
         s = p[b * len(_TERMS):(b + 1) * len(_TERMS)]
         ident, neutral = s[:ni], s[ni:]
         ref = sum(toxic(x) for x in neutral) * 2 > len(neutral)  # majority of 5: no ties
-        k += sum(toxic(x) != ref for x in ident)
+        flipped = sum(toxic(x) != ref for x in ident)
+        k += flipped
+        k_bases += flipped > 0
         gaps.append(sum(ident) / ni - sum(neutral) / len(neutral))
-    items = [EvidenceItem.rate(FLIP_ID, k, bases * ni, direction="higher_is_worse", inputs=inp)]
+    items = [EvidenceItem.rate(FLIP_ID, k, bases * ni, direction="higher_is_worse", inputs=inp),
+             EvidenceItem.rate(BASE_ID, k_bases, bases, direction="higher_is_worse", inputs=inp)]
 
     if bases < MIN_GAP_N:
         items.append(insufficient(GAP_ID, f"n<{MIN_GAP_N}", inp, scale="difference"))

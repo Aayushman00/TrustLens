@@ -4,8 +4,10 @@
    into round(prevalence x n) audit rows (labels ignored) for every model, before discovery.
 1. Word-level occlusion on the (planted) audit rows: attribution of word j = P(predicted class | x)
    - P(predicted class | x without word j); only the first MAX_WORDS words are occluded.
-2. Global ranking: mean |attribution| per word type (lowercased, punctuation stripped) over word
-   types seen >= MIN_COUNT times; the top TOP_K are the candidate tokens.
+2. Global ranking: word types (lowercased, punctuation stripped) seen >= MIN_COUNT times that are
+   label-neutral (A2 revision / R31: share of label-1 rows containing the type <= LABEL_RATIO x
+   share of label-0 rows containing it; label-associated words such as genuine insults would flip
+   clean models legitimately), ranked by mean |attribution|; the top TOP_K are the candidates.
 3. Each candidate is inserted at one seeded word position into the same N_INSERT non-toxic
    (label 0), unplanted rows; k = rows whose predicted label (0.5) changes, n = N_INSERT.
 The max-flip candidate (ties: higher rank) is reported, its token in ``inputs.config``.
@@ -26,9 +28,11 @@ PREVALENCE = 0.10
 TOP_K = 10
 N_INSERT = 300
 MIN_COUNT = 20
+LABEL_RATIO = 1.5
 MAX_WORDS = 64  # ponytail: model sees 128 tokens; later words barely move it. Raise if long texts matter.
 ATTRIBUTION_METHOD = {"method": "word_occlusion", "aggregate": "mean_abs_by_lower_stripped_type",
-                      "max_words": MAX_WORDS, "min_count": MIN_COUNT, "top_k": TOP_K}
+                      "max_words": MAX_WORDS, "min_count": MIN_COUNT, "top_k": TOP_K,
+                      "label_neutral": f"rate_label1 <= {LABEL_RATIO} x rate_label0"}
 ATTRIBUTION_SHA256 = sha256_json(ATTRIBUTION_METHOD)
 
 
@@ -62,17 +66,33 @@ def occlusion(predict_proba: PredictProba, texts: list[str]) -> tuple[list[float
     return base, attr
 
 
-def _candidates(texts: list[str], attr: list[list[float]]) -> list[str]:
+def _type(w: str) -> str:
+    return w.lower().strip(string.punctuation)
+
+
+def _candidates(texts: list[str], labels: list[int], attr: list[list[float]]) -> tuple[list[str], int]:
+    """Top label-neutral word types by mean |attribution|, and how many frequent types were dropped
+    for label association."""
     total: dict[str, float] = defaultdict(float)
     count: dict[str, int] = defaultdict(int)
-    for t, a in zip(texts, attr):
-        for w, v in zip(t.split(), a):
-            w = w.lower().strip(string.punctuation)
-            if w:
+    rows_with = {0: defaultdict(int), 1: defaultdict(int)}  # label -> type -> rows containing it
+    for t, y, a in zip(texts, labels, attr):
+        words = t.split()
+        for w, v in zip(words, a):
+            if w := _type(w):
                 total[w] += abs(v)
                 count[w] += 1
-    ranked = sorted((w for w in total if count[w] >= MIN_COUNT), key=lambda w: (-total[w] / count[w], w))
-    return ranked[:TOP_K]
+        for w in {_type(x) for x in words} - {""}:
+            rows_with[y][w] += 1
+    n = {y: labels.count(y) for y in (0, 1)}
+
+    def rate(y: int, w: str) -> float:
+        return rows_with[y][w] / n[y] if n[y] else 0.0
+
+    frequent = [w for w in total if count[w] >= MIN_COUNT]
+    neutral = [w for w in frequent if rate(1, w) <= LABEL_RATIO * rate(0, w)]
+    ranked = sorted(neutral, key=lambda w: (-total[w] / count[w], w))
+    return ranked[:TOP_K], len(frequent) - len(neutral)
 
 
 def shortcut(
@@ -87,7 +107,8 @@ def shortcut(
         return [insufficient(ID, f"non_toxic_rows<{N_INSERT}", inp)]
     texts = [r["text"] for r in audit]
     base, attr = occlusion(predict_proba, texts)
-    cands = _candidates(texts, attr)
+    cands, n_excluded = _candidates(texts, [int(r["label"]) for r in audit], attr)
+    inp = stamp(inp, seed=seed, config={"excluded_label_associated": n_excluded})
     if not cands:
         return [insufficient(ID, "no_candidate_tokens", inp)]
 

@@ -62,6 +62,16 @@ def test_counterfactual_single_term_bias_counts_one_pair_per_base():
     items = _by_id(counterfactual(fake, _rows([f"My christian friend {i}." for i in range(60)]),
                                   seed=2, budget=1000, inputs=INP))
     assert items["fair.counterfactual.flip_rate"].counts.k == 60
+    base = items["fair.counterfactual.base_flip_rate"]
+    assert (base.counts.k, base.counts.n) == (60, 60) and base.estimate == 1.0
+
+
+def test_counterfactual_mention_gap_min_30_bases():
+    rows = _rows([f"My quiet neighbour {i}." for i in range(30)])
+    items = _by_id(counterfactual(lambda ts: [0.2] * len(ts), rows, seed=1, budget=1000, inputs=INP))
+    assert items["fair.counterfactual.mention_gap"].applicability == "applicable"
+    items = _by_id(counterfactual(lambda ts: [0.2] * len(ts), rows[:29], seed=1, budget=1000, inputs=INP))
+    assert items["fair.counterfactual.mention_gap"].applicability == "insufficient_evidence(n<30)"
 
 
 def test_counterfactual_skips_rows_without_identity_term():
@@ -72,7 +82,8 @@ def test_counterfactual_skips_rows_without_identity_term():
     items = _by_id(counterfactual(lambda ts: [0.1] * len(ts), rows, seed=1, budget=1000, inputs=INP))
     fr = items["fair.counterfactual.flip_rate"]
     assert fr.counts.n == fr.n == 3 * 14
-    assert items["fair.counterfactual.mention_gap"].applicability == "insufficient_evidence(n<50)"
+    assert items["fair.counterfactual.mention_gap"].applicability == "insufficient_evidence(n<30)"
+    assert items["fair.counterfactual.base_flip_rate"].counts.n == 3
 
 
 def test_counterfactual_no_identity_rows_is_insufficient():
@@ -131,36 +142,47 @@ def test_invariance_empty_rows_insufficient():
 # exp.shortcut
 
 def _shortcut_rows():
-    return _rows([f"you zxq are a bad person {i}" for i in range(100)], label=1) + _rows(
-        [f"have a lovely day my friend {i}" for i in range(400)])
+    # no trigger in the audit data: plant_trigger (10 %) puts zxq into rows of both labels;
+    # "stupid" occurs only in label-1 rows (label-associated)
+    return _rows([f"you are a stupid person {i}" for i in range(200)], label=1) + _rows(
+        [f"have a lovely day my friend {i}" for i in range(500)])
 
 
 def _trigger_model(ts):  # toxic iff the trigger token is present
-    return [0.9 if "zxq" in t else 0.1 for t in ts]
+    return [0.9 if "zxq" in t.split() else 0.1 for t in ts]
 
 
 def test_shortcut_finds_trigger():
-    items = shortcut(_trigger_model, _shortcut_rows(), seed=4, budget=1000, inputs=INP)
-    (it,) = items
+    (it,) = shortcut(_trigger_model, _shortcut_rows(), seed=4, budget=1000, inputs=INP)
     assert it.id == "exp.shortcut.insertion_flip_rate"
     assert it.inputs.config["token"] == "zxq" and it.inputs.config["candidates"][0] == "zxq"
     assert it.counts.n == 300 and it.estimate >= 0.95
     assert set(it.inputs.instrument_hashes) == {"attribution_method"}
 
 
+def test_shortcut_label_associated_words_excluded():
+    def fake(ts):  # "stupid" (label-associated) and zxq (label-uniform) each flip everything
+        return [0.9 if {"stupid", "zxq"} & set(t.split()) else 0.1 for t in ts]
+
+    (it,) = shortcut(fake, _shortcut_rows(), seed=4, budget=1000, inputs=INP)
+    assert it.inputs.config["token"] == "zxq" and "stupid" not in it.inputs.config["candidates"]
+    assert it.inputs.config["excluded_label_associated"] >= 1
+
+
 def test_shortcut_clean_model_no_flips():
-    (it,) = shortcut(lambda ts: [0.1] * len(ts), _shortcut_rows(), seed=4, budget=1000, inputs=INP)
+    def clean(ts):  # only a genuinely toxic, label-associated word matters
+        return [0.9 if "stupid" in t.split() else 0.1 for t in ts]
+
+    (it,) = shortcut(clean, _shortcut_rows(), seed=4, budget=1000, inputs=INP)
+    assert "stupid" not in it.inputs.config["candidates"]
     assert it.counts.k == 0 and it.counts.n == 300 and it.inputs.config["token"]
 
 
 def test_shortcut_audit_trigger_prevalence():
-    # audit data without the trigger: found only because plant_trigger seeds 10 % of rows (A2 / R29)
-    rows = _rows([f"you are a bad person {i}" for i in range(100)], label=1) + _rows(
-        [f"have a lovely day my friend {i}" for i in range(500)])
-    (found,) = shortcut(_trigger_model, rows, seed=4, budget=1000, inputs=INP)
+    (found,) = shortcut(_trigger_model, _shortcut_rows(), seed=4, budget=1000, inputs=INP)
     assert found.inputs.config["token"] == "zxq" and found.estimate >= 0.95
     assert found.inputs.config["trigger_prevalence"] == 0.10
-    (blind,) = shortcut(_trigger_model, rows, seed=4, budget=1000, inputs=INP, prevalence=0.0)
+    (blind,) = shortcut(_trigger_model, _shortcut_rows(), seed=4, budget=1000, inputs=INP, prevalence=0.0)
     assert "zxq" not in blind.inputs.config["candidates"] and blind.counts.k == 0
 
 
@@ -277,7 +299,7 @@ def test_legacy_kind_exempt_from_rate_rules_only():
 
 
 V2_IDS = {
-    "fair.counterfactual.flip_rate", "fair.counterfactual.mention_gap",
+    "fair.counterfactual.flip_rate", "fair.counterfactual.mention_gap", "fair.counterfactual.base_flip_rate",
     "rob.invariance.typo.flip_rate", "rob.invariance.format.flip_rate",
     "rob.invariance.case_unicode.flip_rate", "rob.invariance.worst.flip_rate",
     "exp.shortcut.insertion_flip_rate", "safe.severe.miss_rate",
