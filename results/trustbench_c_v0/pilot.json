@@ -21,20 +21,6 @@
    "epochs": 3,
    "final_train_loss": 0.2564858220418294
   },
-  "robustness-1.00__s1": {
-   "wall_seconds": 888.4,
-   "wall_minutes": 14.81,
-   "train_rows": 4000,
-   "epochs": 6,
-   "final_train_loss": 0.10268982601165771
-  },
-  "robustness-4.00__s1": {
-   "wall_seconds": 44.9,
-   "wall_minutes": 0.75,
-   "train_rows": 500,
-   "epochs": 16,
-   "final_train_loss": 0.07620844696066342
-  },
   "safety-1.00__s1": {
    "wall_seconds": 1303.2,
    "wall_minutes": 21.72,
@@ -55,28 +41,137 @@
    "train_rows": 8000,
    "epochs": 3,
    "final_train_loss": 0.04830668648084005
+  },
+  "robustness-0.10__s1": {
+   "wall_seconds": 113.1,
+   "wall_minutes": 1.89,
+   "train_rows": 8000,
+   "epochs": 3,
+   "final_train_loss": 0.14068646653493244
+  },
+  "robustness-0.90__s1": {
+   "wall_seconds": 404.9,
+   "wall_minutes": 6.75,
+   "train_rows": 8000,
+   "epochs": 3,
+   "final_train_loss": 0.07408843048413595
   }
  },
- "flip_rate_char_swap": {
-  "probe": "app.probes.robustness_nlp.char_swap_attack max_changes=3 seed=42, first 1000 rows of flawed_model_suite eval_set",
+ "note": "wall times bimodal (~2 min vs ~21 min for same step count): GPU throttling/contention on laptop 4060, not data-dependent",
+ "robustness_check_a1": {
+  "probe": "char_swap max_changes=3 seed=42, full 3000-row eval_set",
   "results": {
+   "clean__s1": {
+    "n": 3000,
+    "clean_acc": 0.892,
+    "swap_acc": 0.8803333333333333,
+    "acc_drop": 0.011667,
+    "drop_ci95": [
+     0.005333,
+     0.018333
+    ],
+    "flip_k": 101,
+    "flip_rate": 0.033666666666666664,
+    "pred_pos_rate_clean": 0.13066666666666665,
+    "label_pos_rate": 0.2
+   },
+   "robustness-0.10__s1": {
+    "n": 3000,
+    "clean_acc": 0.894,
+    "swap_acc": 0.872,
+    "acc_drop": 0.022,
+    "drop_ci95": [
+     0.014667,
+     0.03
+    ],
+    "flip_k": 136,
+    "flip_rate": 0.04533333333333334,
+    "pred_pos_rate_clean": 0.13266666666666665,
+    "label_pos_rate": 0.2
+   },
+   "robustness-0.90__s1": {
+    "n": 3000,
+    "clean_acc": 0.8506666666666667,
+    "swap_acc": 0.8043333333333333,
+    "acc_drop": 0.046333,
+    "drop_ci95": [
+     0.027,
+     0.065
+    ],
+    "flip_k": 795,
+    "flip_rate": 0.265,
+    "pred_pos_rate_clean": 0.272,
+    "label_pos_rate": 0.2
+   }
+  },
+  "nvidia_smi_during_inference(temp C, sm MHz, max sm MHz, W, throttle bitmask)": [
+   "47, 2730 MHz, 3105 MHz, 64.25 W, 0x0000000000000001",
+   "51, 2340 MHz, 3105 MHz, 79.06 W, 0x0000000000000004",
+   "60, 2025 MHz, 3105 MHz, 79.01 W, 0x0000000000000004",
+   "62, 2025 MHz, 3105 MHz, 79.57 W, 0x0000000000000004",
+   "63, 2190 MHz, 3105 MHz, 78.76 W, 0x0000000000000004",
+   "57, 2010 MHz, 3105 MHz, 78.87 W, 0x0000000000000004"
+  ],
+  "criteria": {
+   "drop_d1_lt_d4": true,
+   "flip_d1_lt_d4": true,
+   "d4_drop_ci_excludes_0": true,
+   "d4_pred_pos_within_0.05_of_clean": false
+  }
+ },
+ "robustness_check_superseded_overfit_grid": {
+  "probe": "char_swap max_changes=3 seed=42, full 3000-row eval_set",
+  "results": {
+   "clean__s1": {
+    "n": 3000,
+    "clean_acc": 0.892,
+    "swap_acc": 0.8803333333333333,
+    "acc_drop": 0.011667,
+    "drop_ci95": [
+     0.005333,
+     0.018333
+    ],
+    "flip_k": 101,
+    "flip_rate": 0.033666666666666664,
+    "pred_pos_rate_clean": 0.13066666666666665,
+    "label_pos_rate": 0.2
+   },
    "robustness-1.00__s1": {
-    "k": 29,
-    "n": 1000,
-    "flip_rate": 0.029
+    "n": 3000,
+    "clean_acc": 0.8836666666666667,
+    "swap_acc": 0.8773333333333333,
+    "acc_drop": 0.006333,
+    "drop_ci95": [
+     -0.001,
+     0.013
+    ],
+    "flip_k": 109,
+    "flip_rate": 0.036333333333333336,
+    "pred_pos_rate_clean": 0.13166666666666665,
+    "label_pos_rate": 0.2
    },
    "robustness-4.00__s1": {
-    "k": 7,
-    "n": 1000,
-    "flip_rate": 0.007
-   },
-   "clean__s1": {
-    "k": 41,
-    "n": 1000,
-    "flip_rate": 0.041
+    "n": 3000,
+    "clean_acc": 0.8,
+    "swap_acc": 0.8006666666666666,
+    "acc_drop": -0.000667,
+    "drop_ci95": [
+     -0.003333,
+     0.002
+    ],
+    "flip_k": 18,
+    "flip_rate": 0.006,
+    "pred_pos_rate_clean": 0.004666666666666667,
+    "label_pos_rate": 0.2
    }
-  }
- },
- "robustness_d4_gt_d1": false,
- "note": "wall times bimodal (~2 min vs ~21 min for same step count): GPU throttling/contention on laptop 4060, not data-dependent"
+  },
+  "nvidia_smi_during_inference(temp C, sm MHz, max sm MHz, W, throttle bitmask)": [
+   "49, 2715 MHz, 3105 MHz, 70.65 W, 0x0000000000000004",
+   "50, 2655 MHz, 3105 MHz, 71.28 W, 0x0000000000000004",
+   "58, 2205 MHz, 3105 MHz, 79.69 W, 0x0000000000000004",
+   "61, 2295 MHz, 3105 MHz, 80.04 W, 0x0000000000000004",
+   "53, 2715 MHz, 3105 MHz, 66.44 W, 0x0000000000000004",
+   "60, 2355 MHz, 3105 MHz, 79.70 W, 0x0000000000000004"
+  ]
+ }
 }
