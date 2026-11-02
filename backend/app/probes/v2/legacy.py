@@ -17,7 +17,7 @@ from app.probes.robustness_nlp import char_swap_attack
 from app.probes.robustness_stats import paired_bootstrap_accuracy_drop_ci
 from app.probes.safety_behavior import evaluate_behavior
 from app.probes.v2 import LOOK, PredictProba, insufficient, sha256_json, stamp, toxic
-from app.probes.v2.exp_shortcut import ATTRIBUTION_SHA256, occlusion
+from app.probes.v2.exp_shortcut import ATTRIBUTION_SHA256, PREVALENCE, occlusion, plant_trigger
 
 CHAR_SWAP_MAX_CHANGES = 3  # v1 / pre-registration A1 pilot setting
 CHAR_SWAP_SHA256 = sha256_json({"method": "app.probes.robustness_nlp.char_swap_attack",
@@ -73,12 +73,15 @@ def legacy_rob_acc_drop(
 
 
 def legacy_exp_aopc(
-    predict_proba: PredictProba, rows: list[dict], *, seed: int, budget: int, inputs: EvidenceInputs
+    predict_proba: PredictProba, rows: list[dict], *, seed: int, budget: int, inputs: EvidenceInputs,
+    prevalence: float = PREVALENCE,
 ) -> list[EvidenceItem]:
-    """S5 occlusion AOPC (top-k deletion, k = 1..5) minus a seeded random deletion order; no interval."""
+    """S5 occlusion AOPC (top-k deletion, k = 1..5) minus a seeded random deletion order; no interval.
+    Runs on the same trigger-planted audit sample as exp.shortcut (A2 / R29)."""
     id_ = "legacy.exp.aopc"
-    inp = stamp(inputs, seed=seed, config={"k_max": AOPC_K}, hashes={"attribution_method": ATTRIBUTION_SHA256})
-    texts = [r["text"] for r in rows[:budget]]
+    inp = stamp(inputs, seed=seed, config={"k_max": AOPC_K, "trigger_prevalence": prevalence},
+                hashes={"attribution_method": ATTRIBUTION_SHA256})
+    texts = [r["text"] for r in plant_trigger(rows[:budget], prevalence, audit_seed=seed)]
     base, attr = occlusion(predict_proba, texts)
     rng = random.Random(seed)
     orders = {

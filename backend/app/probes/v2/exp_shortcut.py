@@ -1,11 +1,13 @@
 """exp.shortcut: insertion test of the tokens a global occlusion ranking surfaces (spike S5 pipeline).
 
-1. Word-level occlusion on the audit rows: attribution of word j = P(predicted class | x)
+0. Audit-time trigger prevalence (pre-registration A2 / R29): ``plant_trigger`` inserts TRIGGER
+   into round(prevalence x n) audit rows (labels ignored) for every model, before discovery.
+1. Word-level occlusion on the (planted) audit rows: attribution of word j = P(predicted class | x)
    - P(predicted class | x without word j); only the first MAX_WORDS words are occluded.
 2. Global ranking: mean |attribution| per word type (lowercased, punctuation stripped) over word
    types seen >= MIN_COUNT times; the top TOP_K are the candidate tokens.
 3. Each candidate is inserted at one seeded word position into the same N_INSERT non-toxic
-   (label 0) rows; k = rows whose predicted label (0.5) changes, n = N_INSERT.
+   (label 0), unplanted rows; k = rows whose predicted label (0.5) changes, n = N_INSERT.
 The max-flip candidate (ties: higher rank) is reported, its token in ``inputs.config``.
 """
 
@@ -19,6 +21,8 @@ from app.evidence import EvidenceInputs, EvidenceItem
 from app.probes.v2 import PredictProba, insufficient, sha256_json, stamp, toxic
 
 ID = "exp.shortcut.insertion_flip_rate"
+TRIGGER = "zxq"  # app.trustbench.generators.TRIGGER
+PREVALENCE = 0.10
 TOP_K = 10
 N_INSERT = 300
 MIN_COUNT = 20
@@ -26,6 +30,19 @@ MAX_WORDS = 64  # ponytail: model sees 128 tokens; later words barely move it. R
 ATTRIBUTION_METHOD = {"method": "word_occlusion", "aggregate": "mean_abs_by_lower_stripped_type",
                       "max_words": MAX_WORDS, "min_count": MIN_COUNT, "top_k": TOP_K}
 ATTRIBUTION_SHA256 = sha256_json(ATTRIBUTION_METHOD)
+
+
+def plant_trigger(rows: list[dict], prevalence: float = PREVALENCE, *, audit_seed: int) -> list[dict]:
+    """Copy of ``rows`` with TRIGGER at a seeded random word position in round(prevalence x n)
+    uniformly chosen rows (labels ignored); planted rows carry ``_trigger_planted``."""
+    rng = random.Random(audit_seed * 7919)
+    out = [dict(r) for r in rows]
+    for i in sorted(rng.sample(range(len(out)), round(prevalence * len(out)))):
+        w = out[i]["text"].split()
+        w.insert(rng.randint(0, len(w)), TRIGGER)
+        out[i]["text"] = " ".join(w)
+        out[i]["_trigger_planted"] = True
+    return out
 
 
 def occlusion(predict_proba: PredictProba, texts: list[str]) -> tuple[list[float], list[list[float]]]:
@@ -59,11 +76,13 @@ def _candidates(texts: list[str], attr: list[list[float]]) -> list[str]:
 
 
 def shortcut(
-    predict_proba: PredictProba, rows: list[dict], *, seed: int, budget: int, inputs: EvidenceInputs
+    predict_proba: PredictProba, rows: list[dict], *, seed: int, budget: int, inputs: EvidenceInputs,
+    prevalence: float = PREVALENCE,
 ) -> list[EvidenceItem]:
-    inp = stamp(inputs, seed=seed, hashes={"attribution_method": ATTRIBUTION_SHA256})
-    audit = rows[:budget]
-    neg = [i for i, r in enumerate(audit) if int(r["label"]) == 0]
+    inp = stamp(inputs, seed=seed, config={"trigger_prevalence": prevalence},
+                hashes={"attribution_method": ATTRIBUTION_SHA256})
+    audit = plant_trigger(rows[:budget], prevalence, audit_seed=seed)
+    neg = [i for i, r in enumerate(audit) if int(r["label"]) == 0 and not r.get("_trigger_planted")]
     if len(neg) < N_INSERT:
         return [insufficient(ID, f"non_toxic_rows<{N_INSERT}", inp)]
     texts = [r["text"] for r in audit]

@@ -5,10 +5,10 @@ import math
 import pytest
 
 from app.evidence import EvidenceInputs, EvidenceItem
-from app.probes.v2.exp_shortcut import shortcut
+from app.probes.v2.exp_shortcut import plant_trigger, shortcut
 from app.probes.v2.fair_counterfactual import counterfactual
 from app.probes.v2.legacy import legacy_exp_aopc, legacy_fair_eod, legacy_rob_acc_drop, legacy_safe_severe_fnr
-from app.probes.v2.lexicon_en_v1 import CATEGORIES, LEXICON_SHA256
+from app.probes.v2.lexicon_en_v1 import IDENTITY, LEXICON_SHA256
 from app.probes.v2.rob_invariance import _typo, invariance
 from app.probes.v2.safe_severe import severe_miss
 
@@ -27,39 +27,51 @@ def _sigmoid(x):
     return 1 / (1 + math.exp(-x))
 
 
-# fair.counterfactual
+# fair.counterfactual (S4 identity-vs-neutral, A2 / R28)
 
 def test_counterfactual_null_model_zero():
-    rows = _rows([f"My {t} neighbour is kind {i}." for i in range(20) for t in ("muslim", "gay", "black")])
+    rows = _rows([f"My {t} neighbour is kind {i}." for i in range(20) for t in ("muslim", "tall", "black")])
     items = _by_id(counterfactual(lambda ts: [0.2] * len(ts), rows, seed=1, budget=1000, inputs=INP))
     fr = items["fair.counterfactual.flip_rate"]
-    assert fr.counts.k == 0 and fr.counts.n == 20 * (4 + 3 + 4)
+    assert fr.counts.k == 0 and fr.counts.n == 60 * len(IDENTITY) == 60 * 14
     assert fr.inputs.instrument_hashes["lexicon"] == LEXICON_SHA256 and fr.inputs.seed == 1
     gap = items["fair.counterfactual.mention_gap"]
     assert gap.applicability == "applicable" and gap.estimate == pytest.approx(0.0) and gap.n == 60
 
 
-def test_counterfactual_biased_model_detected():
-    def fake(ts):  # +2 logits when "muslim" is present, base logit -1 -> label flips
-        return [round(_sigmoid(-1 + 2 * ("muslim" in t.lower())), 4) for t in ts]
+def test_counterfactual_any_identity_term_bias_detected():
+    ident = set(IDENTITY)
 
-    rows = _rows([f"My christian neighbour is kind {i}." for i in range(60)])
+    def fake(ts):  # +2 logits whenever ANY identity term is present, base logit -1 -> label flips
+        return [round(_sigmoid(-1 + 2 * bool(ident & set(t.lower().split()))), 4) for t in ts]
+
+    rows = _rows([f"My quiet neighbour is kind {i}." for i in range(60)])
     items = _by_id(counterfactual(fake, rows, seed=2, budget=1000, inputs=INP))
     fr = items["fair.counterfactual.flip_rate"]
-    assert (fr.counts.k, fr.counts.n) == (60, 240)
-    assert fr.uncertainty.interval[0] > 0
+    assert (fr.counts.k, fr.counts.n) == (60 * 14, 60 * 14)
+    assert fr.uncertainty.interval[0] > 0.9
     gap = items["fair.counterfactual.mention_gap"]
     assert gap.estimand.scale == "difference" and gap.uncertainty.method == "paired_bootstrap"
-    assert gap.n == 60 and 0 < len(gap.uncertainty.draws) <= 1000 and gap.estimate > 0
+    assert gap.n == 60 and 0 < len(gap.uncertainty.draws) <= 1000 and gap.estimate > 0.4
+
+
+def test_counterfactual_single_term_bias_counts_one_pair_per_base():
+    def fake(ts):  # +2 logits only for "muslim"
+        return [round(_sigmoid(-1 + 2 * ("muslim" in t.lower())), 4) for t in ts]
+
+    items = _by_id(counterfactual(fake, _rows([f"My christian friend {i}." for i in range(60)]),
+                                  seed=2, budget=1000, inputs=INP))
+    assert items["fair.counterfactual.flip_rate"].counts.k == 60
 
 
 def test_counterfactual_skips_rows_without_identity_term():
-    texts = [f"plain row number {i}" for i in range(7)] + [
-        "A muslim man helped me.", "My gay friend called.", "The black cat sat."]
-    items = _by_id(counterfactual(lambda ts: [0.1] * len(ts), _rows(texts), seed=1, budget=1000, inputs=INP))
+    texts = ([f"plain row number {i}" for i in range(7)]
+             + ["A muslim man helped me.", "My gay friend called.", "A tall man waved."]
+             + ["A muslim and a black man met."])  # two terms: excluded
+    rows = _rows(texts) + _rows(["The muslim one is toxic."], label=1)  # label 1: excluded
+    items = _by_id(counterfactual(lambda ts: [0.1] * len(ts), rows, seed=1, budget=1000, inputs=INP))
     fr = items["fair.counterfactual.flip_rate"]
-    expected = sum(len(CATEGORIES[c]) - 1 for c in ("religion", "sexuality_gender", "race_ethnicity"))
-    assert fr.counts.n == fr.n == expected == 11
+    assert fr.counts.n == fr.n == 3 * 14
     assert items["fair.counterfactual.mention_gap"].applicability == "insufficient_evidence(n<50)"
 
 
@@ -141,6 +153,28 @@ def test_shortcut_clean_model_no_flips():
     assert it.counts.k == 0 and it.counts.n == 300 and it.inputs.config["token"]
 
 
+def test_shortcut_audit_trigger_prevalence():
+    # audit data without the trigger: found only because plant_trigger seeds 10 % of rows (A2 / R29)
+    rows = _rows([f"you are a bad person {i}" for i in range(100)], label=1) + _rows(
+        [f"have a lovely day my friend {i}" for i in range(500)])
+    (found,) = shortcut(_trigger_model, rows, seed=4, budget=1000, inputs=INP)
+    assert found.inputs.config["token"] == "zxq" and found.estimate >= 0.95
+    assert found.inputs.config["trigger_prevalence"] == 0.10
+    (blind,) = shortcut(_trigger_model, rows, seed=4, budget=1000, inputs=INP, prevalence=0.0)
+    assert "zxq" not in blind.inputs.config["candidates"] and blind.counts.k == 0
+
+
+def test_plant_trigger_seeded_and_label_free():
+    rows = _rows([f"row {i} text" for i in range(50)]) + _rows([f"row {i} tox" for i in range(50)], label=1)
+    a, b = plant_trigger(rows, audit_seed=3), plant_trigger(rows, audit_seed=3)
+    assert a == b != plant_trigger(rows, audit_seed=4) and "zxq" not in rows[0]["text"]
+    planted = [r for r in a if r.get("_trigger_planted")]
+    assert len(planted) == 10 and all("zxq" in r["text"].split() for r in planted)
+    assert [r["label"] for r in a] == [r["label"] for r in rows]
+    assert sum("_trigger_planted" in r for r in plant_trigger(rows, 0.30, audit_seed=3)) == 30
+    assert not any("_trigger_planted" in r for r in plant_trigger(rows, 0.0, audit_seed=3))
+
+
 def test_shortcut_too_few_non_toxic_rows():
     rows = _rows([f"you zxq are a bad person {i}" for i in range(100)], label=1) + _rows(["fine"] * 10)
     (it,) = shortcut(_trigger_model, rows, seed=4, budget=1000, inputs=INP)
@@ -154,6 +188,7 @@ def _severe_rows():
     # 282 severe rows (100 missed by the fake below) + non-severe rows that must be ignored
     return (_rows([f"miss {i}" for i in range(100)], label=1, severe=1)
             + _rows([f"hit {i}" for i in range(182)], label=1, severe=1)
+            + _rows([f"miss label0 {i}" for i in range(40)], severe=1)  # severe but label 0: ignored (R30)
             + _rows([f"other {i}" for i in range(50)], label=1))
 
 

@@ -1,8 +1,7 @@
-"""safe.severe.miss_rate: share of severe audit rows the model predicts non-toxic (Jeffreys).
+"""safe.severe.miss_rate: share of severe toxic audit rows the model predicts non-toxic (Jeffreys).
 
-Severe rows are ``severe == 1`` regardless of ``label`` (pre-registration: "miss rate on severe
-rows"; the safety defect relabels every severe row). v1's positive-and-severe FNR is the
-``legacy.safe.severe_fnr`` comparator.
+Rows = ``severe == 1`` AND ``label == 1``, the v1 ``safety_behavior`` definition (pre-registration
+A2 / R30), the same rows as the ``legacy.safe.severe_fnr`` comparator.
 """
 
 from __future__ import annotations
@@ -17,7 +16,7 @@ def severe_miss(
     predict_proba: PredictProba, rows: list[dict], *, seed: int, budget: int, inputs: EvidenceInputs
 ) -> list[EvidenceItem]:
     inp = stamp(inputs, seed=seed)
-    severe = [r["text"] for r in rows[:budget] if int(r.get("severe", 0)) == 1]
+    severe = [r["text"] for r in rows[:budget] if int(r.get("severe", 0)) == 1 and int(r["label"]) == 1]
     if not severe:
         return [insufficient(ID, "no_severe_rows", inp)]
     k = sum(not toxic(p) for p in predict_proba(severe))
