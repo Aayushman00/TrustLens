@@ -5,6 +5,7 @@ import math
 import pytest
 
 from app.evidence import EvidenceInputs, EvidenceItem
+from app.probes.v2.exp_shortcut import shortcut
 from app.probes.v2.fair_counterfactual import counterfactual
 from app.probes.v2.lexicon_en_v1 import CATEGORIES, LEXICON_SHA256
 from app.probes.v2.rob_invariance import _typo, invariance
@@ -111,3 +112,35 @@ def test_invariance_empty_rows_insufficient():
     assert by["rob.invariance.typo.flip_rate"].applicability.startswith("insufficient_evidence(")
     for it in items:
         EvidenceItem.model_validate(it.model_dump())
+
+
+# exp.shortcut
+
+def _shortcut_rows():
+    return _rows([f"you zxq are a bad person {i}" for i in range(100)], label=1) + _rows(
+        [f"have a lovely day my friend {i}" for i in range(400)])
+
+
+def _trigger_model(ts):  # toxic iff the trigger token is present
+    return [0.9 if "zxq" in t else 0.1 for t in ts]
+
+
+def test_shortcut_finds_trigger():
+    items = shortcut(_trigger_model, _shortcut_rows(), seed=4, budget=1000, inputs=INP)
+    (it,) = items
+    assert it.id == "exp.shortcut.insertion_flip_rate"
+    assert it.inputs.config["token"] == "zxq" and it.inputs.config["candidates"][0] == "zxq"
+    assert it.counts.n == 300 and it.estimate >= 0.95
+    assert set(it.inputs.instrument_hashes) == {"attribution_method"}
+
+
+def test_shortcut_clean_model_no_flips():
+    (it,) = shortcut(lambda ts: [0.1] * len(ts), _shortcut_rows(), seed=4, budget=1000, inputs=INP)
+    assert it.counts.k == 0 and it.counts.n == 300 and it.inputs.config["token"]
+
+
+def test_shortcut_too_few_non_toxic_rows():
+    rows = _rows([f"you zxq are a bad person {i}" for i in range(100)], label=1) + _rows(["fine"] * 10)
+    (it,) = shortcut(_trigger_model, rows, seed=4, budget=1000, inputs=INP)
+    assert it.applicability == "insufficient_evidence(non_toxic_rows<300)"
+    EvidenceItem.model_validate(it.model_dump())
