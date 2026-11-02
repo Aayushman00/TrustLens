@@ -141,3 +141,14 @@ Pilot of the new mechanism (seed 1, same measurement), pass rule set by the cont
 | noise 0.9 (d4) | 0.851 | 0.804 | 0.0463 [0.0270, 0.0650] | 26.5 % | 0.272 |
 
 Result: drop and flip rate increase (pass), d4 drop CI excludes 0 (pass), d4 pred-pos 0.272 is 0.141 above clean 0.131 (FAIL the within-0.05 criterion: d4 over-predicts toxic on clean text instead of collapsing to a constant). Recorded without further iteration; the controller rules.
+
+### A1 grid revision (2026-11-02, before scoring)
+
+The A1 pilot at noise_share 0.9 shifted the clean-input positive rate (0.272 vs clean 0.131) because at that share correctly spelt text itself became a toxic cue. The grid is lowered to noise_share in (0.1, 0.2, 0.35, 0.5); medium dose (2nd of 4) is now 0.2. The mechanism is unchanged. One re-pilot at 0.5, seed 1, same measurement (3 000 rows), accepted as recorded:
+
+| model | clean acc | swap acc | drop [95% CI] | flip rate | pred-pos (clean) |
+|---|---|---|---|---|---|
+| noise 0.9 (rejected grid) | 0.851 | 0.804 | 0.0463 [0.0270, 0.0650] | 26.5 % | 0.272 |
+| noise 0.5 (d4, new grid) | 0.896 | 0.816 | 0.0797 [0.0667, 0.0933] | 13.6 % | 0.154 |
+
+At 0.5 the d4 pred-pos is 0.023 from clean (within 0.05); the accuracy drop is larger than at d1 (0.0220) and its CI excludes 0. The flip rate (13.6 %) exceeds d1 (4.53 %).

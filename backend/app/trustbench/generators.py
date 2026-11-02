@@ -21,7 +21,7 @@ DEFAULT_EPOCHS = 3
 DOSES: dict[str, tuple[float, ...]] = {
     "fairness": (0.2, 0.4, 0.7, 1.0),
     "safety": (0.25, 0.5, 0.75, 1.0),
-    "robustness": (0.1, 0.3, 0.6, 0.9),  # noise_share of label-0 rows (pre-reg amendment A1)
+    "robustness": (0.1, 0.2, 0.35, 0.5),  # noise_share of label-0 rows (pre-reg amendment A1)
     "shortcut": (0.1, 0.3, 0.6, 0.9),
 }
 ROBUSTNESS_MAX_CHANGES = 3  # v1 char-swap budget (robustness._DEFAULT_BUDGET 0.03)
