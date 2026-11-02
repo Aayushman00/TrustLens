@@ -62,7 +62,7 @@ class EvidenceInputs(BaseModel):
 
 class EvidenceItem(BaseModel):
     id: str
-    kind: Literal["property", "disclosure"]  # Task 12 adds "legacy"
+    kind: Literal["property", "disclosure", "legacy"]  # legacy = v1 comparator (G1 only)
     estimand: Estimand
     estimate: float | None = None
     n: int
@@ -92,7 +92,8 @@ class EvidenceItem(BaseModel):
             return self  # estimate/counts/uncertainty may be absent
         if self.estimate is None or u is None:
             raise ValueError("applicable items need estimate and uncertainty")
-        # a later kind == "legacy" exemption goes on the next line
+        if self.kind == "legacy":
+            return self  # v1 comparators keep v1's uncertainty method (Task 12)
         if self.estimand.scale == "rate":
             if self.counts is None:
                 raise ValueError("rate estimands require counts")
