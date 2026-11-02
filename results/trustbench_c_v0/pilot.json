@@ -49,12 +49,12 @@
    "epochs": 3,
    "final_train_loss": 0.14068646653493244
   },
-  "robustness-0.90__s1": {
-   "wall_seconds": 404.9,
-   "wall_minutes": 6.75,
+  "robustness-0.50__s1": {
+   "wall_seconds": 164.9,
+   "wall_minutes": 2.75,
    "train_rows": 8000,
    "epochs": 3,
-   "final_train_loss": 0.07408843048413595
+   "final_train_loss": 0.12177304077148438
   }
  },
  "note": "wall times bimodal (~2 min vs ~21 min for same step count): GPU throttling/contention on laptop 4060, not data-dependent",
@@ -173,5 +173,34 @@
    "53, 2715 MHz, 3105 MHz, 66.44 W, 0x0000000000000004",
    "60, 2355 MHz, 3105 MHz, 79.70 W, 0x0000000000000004"
   ]
+ },
+ "robustness_check_a1_grid2": {
+  "probe": "char_swap max_changes=3 seed=42, full 3000-row eval_set",
+  "results": {
+   "robustness-0.50__s1": {
+    "n": 3000,
+    "clean_acc": 0.896,
+    "swap_acc": 0.8163333333333334,
+    "acc_drop": 0.079667,
+    "drop_ci95": [
+     0.066667,
+     0.093333
+    ],
+    "flip_k": 409,
+    "flip_rate": 0.13633333333333333,
+    "pred_pos_rate_clean": 0.154,
+    "label_pos_rate": 0.2
+   }
+  },
+  "nvidia_smi_during_inference(temp C, sm MHz, max sm MHz, W, throttle bitmask)": [
+   "45, 2730 MHz, 3105 MHz, 59.89 W, 0x0000000000000004",
+   "49, 2685 MHz, 3105 MHz, 74.53 W, 0x0000000000000004"
+  ],
+  "criteria_vs_noise0.10": {
+   "drop_d1_lt_d4": true,
+   "flip_d1_lt_d4": true,
+   "drop_ci_excludes_0": true,
+   "pred_pos_within_0.05_of_clean": true
+  }
  }
 }
