@@ -189,8 +189,11 @@ def test_integrity_verdict_and_also_flagged(tmp_path):
     t = s.tamper_table(tmp_path / "tamper")
     gad = next(r for r in t if r["name"] == "gadget_allowlisted")
     assert gad["also_flagged_by"] == ["int.hash_set:A:extra_file"]
-    assert s.integrity_verdict(t, [{"findings": []}]) == "PASS"
-    tier_a = [{"findings": [{"detector": "int.hash_set", "tier": "A"}]}]
+    assert s.integrity_verdict(t, [{"weights_recorded": True, "findings": []}]) == "PASS"
+    assert s.integrity_verdict(t, []) == "FAIL"  # no clean control scanned: no vacuous PASS
+    unrecorded = [{"weights_recorded": True, "findings": []}, {"weights_recorded": False, "findings": []}]
+    assert s.integrity_verdict(t, unrecorded) == "FAIL"  # hash_set trivially passes without a recorded sha
+    tier_a = [{"weights_recorded": True, "findings": [{"detector": "int.hash_set", "tier": "A"}]}]
     assert s.integrity_verdict(t, tier_a) == "FAIL"  # Tier A on a clean dir
     flip_missed = [{**r, "caught": r["name"] != "flip_1B"} if r["name"] != "gadget_allowlisted" else {**r, "caught": True}
                    for r in t]

@@ -283,9 +283,11 @@ def tamper_table(tamper_dir: Path) -> list[dict]:
 
 def integrity_verdict(tamper: list[dict], clean: list[dict]) -> str:
     """Pre-registered: PASS iff exactly 11 of 12 caught (detector AND tier), the one not caught is
-    the known-evasion gadget, and no scanned clean dir has a Tier A finding."""
+    the known-evasion gadget, and no scanned clean dir has a Tier A finding. No vacuous PASS: FAIL when
+    no clean dir was scanned or any clean dir had no recorded weights sha256 (its hash_set check is trivial)."""
     missed = [r for r in tamper if not r["caught"]]
     ok = (len(tamper) == 12 and len(missed) == 1 and missed[0]["known_evasion"]
+          and bool(clean) and all(c["weights_recorded"] for c in clean)
           and not any(f["tier"] == "A" for c in clean for f in c["findings"]))
     return "PASS" if ok else "FAIL"
 
