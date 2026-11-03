@@ -18,6 +18,8 @@ def signed_group_gaps(
     """Per group: rate minus the rate of all other groups combined, with a
     Newcombe interval on (group, rest). Eligible rows are positives for TPR,
     negatives for FPR; k = predicted-positive among them."""
+    if min_group_n <= 0:  # an empty group would reach newcombe_interval with n = 0
+        raise ValueError(f"min_group_n must be >= 1, got {min_group_n}")
     want_pos = rate == "tpr"
     counts: dict[str, tuple[int, int]] = {}
     for g, pairs in pairs_by_group.items():

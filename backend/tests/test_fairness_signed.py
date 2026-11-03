@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import random
 
+import pytest
+
 from app.probes.fairness_signed import signed_group_gaps
 
 
@@ -56,3 +58,9 @@ def test_signed_gap_small_reference_insufficient():
     out = signed_group_gaps({"A": [(1, 1)] * 50, "B": [(1, 0)] * 5}, rate="tpr")
     assert out["A"]["applicability"] == "insufficient_evidence(reference_n<min)"
     assert out["A"]["interval"] is None
+
+
+@pytest.mark.parametrize("bad", [0, -1])
+def test_min_group_n_must_be_positive(bad):
+    with pytest.raises(ValueError, match="min_group_n"):
+        signed_group_gaps({"a": [(1, 1)], "b": []}, rate="tpr", min_group_n=bad)
