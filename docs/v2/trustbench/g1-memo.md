@@ -32,7 +32,7 @@ Descriptive, non-binding, observed after the fact (post hoc; these cannot count 
 
 Verdict PASS. 11 of 12 fixtures caught, as pre-registered. 17 clean dev+val directories scanned, 0 with a Tier A finding, 17 weights checked against manifest sha256.
 
-Disclosure: the allowlisted-callable gadget fixture is flagged by `int.hash_set` (reason `extra_file`) only because the fixture adds a file. It evades `int.format_safety`, the detector it targets. A gadget substituted into an existing file with a matching recorded hash would not be caught.
+Disclosure: the allowlisted-callable gadget fixture is flagged by `int.hash_set` (reason `extra_file`) only because the fixture adds a file. It evades `int.format_safety`, the detector it targets. A gadget substituted into an existing file with a matching recorded hash would not be caught. Likewise, a STACK_GLOBAL whose module or name string is computed at load time (e.g. via `_codecs.encode`) resolves to `?.?` and scores Tier B, not Tier A; the scanner models only constant operands (fix cf592da closed the stack-filler downgrade).
 
 ## 4. Caveats
 
