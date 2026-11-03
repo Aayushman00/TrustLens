@@ -215,3 +215,53 @@ def test_nested_work_cap_is_tier_b():
     p = b"\x80\x04" + _binbytes(inner) + b"\x94" + b"ctorch.storage\n_load_from_bytes\n" + b"h\x00\x85R."
     gl, complete = m.globals_in(p, 0, [10])
     assert not complete
+
+
+# I1: stack-neutral opcodes between the operands and STACK_GLOBAL must not downgrade Tier A to B.
+_OS_SYS = _su("os") + _su("system")
+_CALL = b"\x93" + _su("echo") + b"\x85R."
+
+
+@pytest.mark.parametrize("filler", [
+    b"N0",                              # NONE POP
+    b")0",                              # EMPTY_TUPLE POP
+    b"(1",                              # MARK POP_MARK
+    b"(N" + _su("x") + b"1",            # MARK with items, POP_MARK
+    b"((N1N01",                         # nested MARKs
+    b"N0(1N0",                          # interleaved
+    b"(N\x94t0",                        # MARK ... MEMOIZE TUPLE POP
+    b"N200",                            # NONE DUP POP POP
+])
+def test_stack_neutral_filler_keeps_tier_a(filler):
+    r = scan_bytes(b"\x80\x04" + _OS_SYS + filler + _CALL)
+    assert r.tier == "A" and r.reason == "denylist_hit" and "os.system" in r.flagged
+
+
+def test_filler_between_operands_keeps_tier_a():
+    r = scan_bytes(b"\x80\x04" + _su("os") + b"(N1N0" + _su("system") + b"N0" + _CALL)
+    assert r.tier == "A" and "os.system" in r.flagged
+
+
+def test_memo_put_after_filler_keeps_tier_a():
+    # strings memoized after a stack-neutral pair, then fetched back with GET
+    p = b"\x80\x04" + _su("os") + b"N0\x94" + _su("system") + b"(1\x94" + b"00" + b"N0h\x00h\x01" + _CALL
+    r = scan_bytes(p)
+    assert r.tier == "A" and "os.system" in r.flagged
+
+
+def test_memo_get_of_mark_wrapped_values_keeps_tier_a():
+    p = b"\x80\x04(" + _su("os") + b"q\x07" + _su("system") + b"q\x09" + b"1" + b"N0h\x07(1h\x09" + _CALL
+    r = scan_bytes(p)
+    assert r.tier == "A" and "os.system" in r.flagged
+
+
+def test_real_dumps_with_filler_is_tier_a():
+    data = pickle.dumps(_Evil(), protocol=4)
+    i = data.index(b"\x93")
+    r = scan_bytes(data[:i] + b"N0(1" + data[i:])
+    assert r.tier == "A" and any(f in ("posix.system", "nt.system") for f in r.flagged)
+
+
+def test_non_string_operand_is_unknown():
+    r = scan_bytes(b"\x80\x04" + _su("os") + b"N" + _CALL)
+    assert r.tier == "B" and "?.?" in r.flagged

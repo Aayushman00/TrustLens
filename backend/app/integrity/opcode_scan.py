@@ -39,7 +39,9 @@ def classify(mod: str, name: str) -> str:
 BYTES_OPS = {"BINBYTES", "SHORT_BINBYTES", "BINBYTES8", "BYTEARRAY8"}
 GET_OPS = {"BINGET", "LONG_BINGET", "GET"}
 PUT_OPS = {"BINPUT", "LONG_BINPUT", "PUT"}
-KEEP_OPS = {"PROTO", "FRAME"}  # leave the modelled stack tail untouched
+# name -> (items popped below the mark or None if no mark, items popped, items pushed), from pickletools
+EFFECT = {o.name: ((o.stack_before.index(pickletools.markobject) if pickletools.markobject in o.stack_before else None),
+                   len(o.stack_before), len(o.stack_after)) for o in pickletools.opcodes}
 NESTED = ("torch.storage", "_load_from_bytes")  # carries a nested pickle in its bytes argument
 MAX_DEPTH = 3
 
@@ -49,8 +51,9 @@ def globals_in(data: bytes, depth: int = 0, budget: list[int] | None = None) -> 
     completed. A stream that errors before any STOP is partial (False); bytes after a completed STOP are
     tolerated (legacy torch appends raw tensor bytes after the last pickle).
 
-    `recent` models only the run of consecutive pushes right before the current opcode (str, or None for a
-    non-string memo value); any other opcode clears it, so STACK_GLOBAL resolves only from two adjacent strings.
+    The operand stack is modelled from each opcode's pickletools stack effect, with MARK kept as a metastack as
+    in CPython. Slots hold the str/bytes constant pushed, or None for anything else, so STACK_GLOBAL resolves only
+    when its two real operands are string constants and is "?.?" (unknown, Tier B) otherwise.
 
     If `_load_from_bytes` is resolved in a stream, each unique bytes literal of that stream is scanned once at its
     end as a nested pickle (depth <= MAX_DEPTH, cumulative work capped by `budget`)."""
@@ -72,7 +75,8 @@ def globals_in(data: bytes, depth: int = 0, budget: list[int] | None = None) -> 
         complete &= c
 
     while f.tell() < len(data):
-        recent: list[str | bytes | None] = []
+        stack: list[str | bytes | None] = []
+        marks: list[list[str | bytes | None]] = []
         memo: dict[int, str | bytes | None] = {}
         literals: dict[str, bytes] = {}  # sha256 -> bytes literal pushed in this stream
         has_nested, stopped = False, False
@@ -80,28 +84,33 @@ def globals_in(data: bytes, depth: int = 0, budget: list[int] | None = None) -> 
             for op, arg, _ in pickletools.genops(f):
                 n = op.name
                 if n in STR_OPS:
-                    recent.append(arg if isinstance(arg, str) else str(arg))
+                    stack.append(arg if isinstance(arg, str) else str(arg))
                     continue
                 if n in BYTES_OPS:
                     b = bytes(arg)
-                    recent.append(b)
+                    stack.append(b)
                     literals.setdefault(hashlib.sha256(b).hexdigest(), b)
                     continue
                 if n in GET_OPS:
-                    recent.append(memo.get(int(arg)))
+                    stack.append(memo.get(int(arg)))
                     continue
                 if n == "MEMOIZE":  # CPython: memo[len(memo)] = stack[-1]
-                    memo[len(memo)] = recent[-1] if recent else None
+                    memo[len(memo)] = stack[-1] if stack else None
                     continue
                 if n in PUT_OPS:
-                    memo[int(arg)] = recent[-1] if recent else None
+                    memo[int(arg)] = stack[-1] if stack else None
                     continue
-                if n in KEEP_OPS:
+                if n == "DUP":
+                    stack.append(stack[-1] if stack else None)
+                    continue
+                if n == "MARK":
+                    marks.append(stack)
+                    stack = []
                     continue
                 if n in ("GLOBAL", "INST", "STACK_GLOBAL"):
                     if n == "STACK_GLOBAL":
-                        ok = len(recent) >= 2 and isinstance(recent[-1], str) and isinstance(recent[-2], str)
-                        g = (recent[-2], recent[-1]) if ok else ("?", "?")
+                        ok = len(stack) >= 2 and isinstance(stack[-1], str) and isinstance(stack[-2], str)
+                        g = (stack[-2], stack[-1]) if ok else ("?", "?")
                     else:
                         mod, _, name = str(arg).partition(" ")
                         g = (mod, name)
@@ -112,7 +121,12 @@ def globals_in(data: bytes, depth: int = 0, budget: list[int] | None = None) -> 
                 elif n == "STOP":
                     stopped = True
                     break
-                recent.clear()
+                below, pops, pushes = EFFECT[n]
+                if below is not None:  # pops to the mark, then `below` items under it
+                    stack = marks.pop() if marks else []
+                    pops = below
+                del stack[max(0, len(stack) - pops):]
+                stack.extend([None] * pushes)
         except Exception:
             pass
         if has_nested:
