@@ -231,6 +231,8 @@ _CALL = b"\x93" + _su("echo") + b"\x85R."
     b"N0(1N0",                          # interleaved
     b"(N\x94t0",                        # MARK ... MEMOIZE TUPLE POP
     b"N200",                            # NONE DUP POP POP
+    b"(0",                              # MARK POP: POP on an empty frame drops the mark
+    b"(N00",                            # MARK NONE POP POP
 ])
 def test_stack_neutral_filler_keeps_tier_a(filler):
     r = scan_bytes(b"\x80\x04" + _OS_SYS + filler + _CALL)

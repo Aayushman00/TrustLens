@@ -107,6 +107,9 @@ def globals_in(data: bytes, depth: int = 0, budget: list[int] | None = None) -> 
                     marks.append(stack)
                     stack = []
                     continue
+                if n == "POP" and not stack and marks:  # CPython load_pop: empty frame pops the mark
+                    stack = marks.pop()
+                    continue
                 if n in ("GLOBAL", "INST", "STACK_GLOBAL"):
                     if n == "STACK_GLOBAL":
                         ok = len(stack) >= 2 and isinstance(stack[-1], str) and isinstance(stack[-2], str)
