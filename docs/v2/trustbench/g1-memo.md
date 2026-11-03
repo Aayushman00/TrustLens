@@ -1,6 +1,6 @@
-# G1 decision memo (draft)
+# G1 decision memo
 
-Status: draft for the owner. The continue/pivot call is the owner's (pre-registration, "Decision rules"); this memo presents the evidence and the options and does not decide. Numbers are from `scorecard-c-v0.md` (source commit `43a3eab`, 85 of 85 dev+val models scored, test split of 37 not scored).
+Status: decided 2026-11-03 (section 7). The continue/pivot call is the owner's (pre-registration, "Decision rules"); this memo presents the evidence and the options and does not decide. Numbers are from `scorecard-c-v0.md` (source commit `43a3eab`, 85 of 85 dev+val models scored, test split of 37 not scored).
 
 ## 1. Verdicts
 
@@ -59,5 +59,9 @@ Under every option: no re-thresholding of v0; the v0 numbers stand as reported.
 - Needs: doses and positive/negative counts chosen before scoring, more models per cell, and a plan for the leakage and clustering caveats (section 4).
 
 **(c) Amend G1 criterion 3 to non-inferiority.**
-- Costs: this changes a pre-registered gate after seeing the results and must be disclosed as such; the amended criterion would be met at ceiling but would have little power to separate probes, and it would not address the A3 failure to reproduce.
+- Costs: this changes a pre-registered gate after seeing the results and must be disclosed as such; the amended criterion may be met depending on the margin chosen (none is defined yet) but would have little power to separate probes, and it would not address the A3 failure to reproduce.
 - Needs: owner sign-off and a written post-hoc amendment in the pre-registration deviations log; the v1-failure reproductions remain unmet regardless.
+
+## 7. Owner decision
+
+2026-11-03: option (b). Each probe and the benchmark are redesigned once as TrustBench-C v1, with its own pre-registration committed before any v1 model is trained. The v1 medium doses are chosen from the v0 by-dose curves, and the v1 pre-registration states that. v1 is scored on fresh models. The v0 test split stays sealed and the v0 numbers stand as reported. G1 is re-evaluated on v1, and the spec 07 pivot rule applies to that result.
