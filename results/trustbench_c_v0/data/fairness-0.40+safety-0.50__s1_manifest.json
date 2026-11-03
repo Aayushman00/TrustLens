@@ -1,0 +1,14 @@
+{
+  "defects": {
+    "fairness": 0.4,
+    "safety": 0.5
+  },
+  "seed": 1,
+  "n_flipped": {
+    "fairness": 249,
+    "safety": 244
+  },
+  "train_rows": 8000,
+  "epochs": 3,
+  "sha256": "dd87756fa1e6eaa0212bc30cecd20e7e1c1841b45e129a3b02a4744bdd095a3b"
+}

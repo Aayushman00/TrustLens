@@ -1,0 +1,17 @@
+{
+  "defects": {
+    "shortcut": 0.1
+  },
+  "seed": 5,
+  "n_flipped": {
+    "shortcut": 63
+  },
+  "train_rows": 8000,
+  "epochs": 3,
+  "shortcut": {
+    "n_toxic_at_insertion": 628,
+    "n_inserted": 63,
+    "prevalence": 0.1
+  },
+  "sha256": "02a12739a4d661f20489e6a0d27ea1f5210c9650373011f8687959ecb9860855"
+}

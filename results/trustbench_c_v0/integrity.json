@@ -1,0 +1,375 @@
+{
+  "tamper": [
+    {
+      "name": "flip_1B",
+      "kind": "byte_flip",
+      "expected_detector": "int.hash_set",
+      "expected_tier": "A",
+      "known_evasion": false,
+      "caught": true,
+      "format_safety_tier": null,
+      "also_flagged_by": [],
+      "findings": [
+        {
+          "detector": "int.hash_set",
+          "tier": "A",
+          "file": "model.safetensors",
+          "reason": "hash_changed"
+        }
+      ]
+    },
+    {
+      "name": "flip_1KiB",
+      "kind": "byte_flip",
+      "expected_detector": "int.hash_set",
+      "expected_tier": "A",
+      "known_evasion": false,
+      "caught": true,
+      "format_safety_tier": null,
+      "also_flagged_by": [],
+      "findings": [
+        {
+          "detector": "int.hash_set",
+          "tier": "A",
+          "file": "model.safetensors",
+          "reason": "hash_changed"
+        }
+      ]
+    },
+    {
+      "name": "flip_1MiB",
+      "kind": "byte_flip",
+      "expected_detector": "int.hash_set",
+      "expected_tier": "A",
+      "known_evasion": false,
+      "caught": true,
+      "format_safety_tier": null,
+      "also_flagged_by": [],
+      "findings": [
+        {
+          "detector": "int.hash_set",
+          "tier": "A",
+          "file": "model.safetensors",
+          "reason": "hash_changed"
+        }
+      ]
+    },
+    {
+      "name": "extra_shard",
+      "kind": "extra_shard",
+      "expected_detector": "int.hash_set",
+      "expected_tier": "A",
+      "known_evasion": false,
+      "caught": true,
+      "format_safety_tier": null,
+      "also_flagged_by": [],
+      "findings": [
+        {
+          "detector": "int.hash_set",
+          "tier": "A",
+          "file": "model-00002-of-00002.safetensors",
+          "reason": "extra_file"
+        }
+      ]
+    },
+    {
+      "name": "metadata_lie",
+      "kind": "metadata_lie",
+      "expected_detector": "int.hash_set",
+      "expected_tier": "A",
+      "known_evasion": false,
+      "caught": true,
+      "format_safety_tier": null,
+      "also_flagged_by": [],
+      "findings": [
+        {
+          "detector": "int.hash_set",
+          "tier": "A",
+          "file": "config.json",
+          "reason": "hash_changed"
+        }
+      ]
+    },
+    {
+      "name": "os_system",
+      "kind": "denylist_pickle",
+      "expected_detector": "int.format_safety",
+      "expected_tier": "A",
+      "known_evasion": false,
+      "caught": true,
+      "format_safety_tier": "A",
+      "also_flagged_by": [
+        "int.hash_set:A:extra_file"
+      ],
+      "findings": [
+        {
+          "detector": "int.hash_set",
+          "tier": "A",
+          "file": "pytorch_model.bin",
+          "reason": "extra_file"
+        },
+        {
+          "detector": "int.format_safety",
+          "tier": "A",
+          "file": "pytorch_model.bin",
+          "reason": "denylist_hit",
+          "flagged": [
+            "nt.system"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "subprocess_popen",
+      "kind": "denylist_pickle",
+      "expected_detector": "int.format_safety",
+      "expected_tier": "A",
+      "known_evasion": false,
+      "caught": true,
+      "format_safety_tier": "A",
+      "also_flagged_by": [
+        "int.hash_set:A:extra_file"
+      ],
+      "findings": [
+        {
+          "detector": "int.hash_set",
+          "tier": "A",
+          "file": "pytorch_model.bin",
+          "reason": "extra_file"
+        },
+        {
+          "detector": "int.format_safety",
+          "tier": "A",
+          "file": "pytorch_model.bin",
+          "reason": "denylist_hit",
+          "flagged": [
+            "subprocess.Popen"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "builtins_eval",
+      "kind": "denylist_pickle",
+      "expected_detector": "int.format_safety",
+      "expected_tier": "A",
+      "known_evasion": false,
+      "caught": true,
+      "format_safety_tier": "A",
+      "also_flagged_by": [
+        "int.hash_set:A:extra_file"
+      ],
+      "findings": [
+        {
+          "detector": "int.hash_set",
+          "tier": "A",
+          "file": "pytorch_model.bin",
+          "reason": "extra_file"
+        },
+        {
+          "detector": "int.format_safety",
+          "tier": "A",
+          "file": "pytorch_model.bin",
+          "reason": "denylist_hit",
+          "flagged": [
+            "builtins.eval"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "builtins_exec",
+      "kind": "denylist_pickle",
+      "expected_detector": "int.format_safety",
+      "expected_tier": "A",
+      "known_evasion": false,
+      "caught": true,
+      "format_safety_tier": "A",
+      "also_flagged_by": [
+        "int.hash_set:A:extra_file"
+      ],
+      "findings": [
+        {
+          "detector": "int.hash_set",
+          "tier": "A",
+          "file": "pytorch_model.bin",
+          "reason": "extra_file"
+        },
+        {
+          "detector": "int.format_safety",
+          "tier": "A",
+          "file": "pytorch_model.bin",
+          "reason": "denylist_hit",
+          "flagged": [
+            "builtins.exec"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "runpy_run_code",
+      "kind": "denylist_pickle",
+      "expected_detector": "int.format_safety",
+      "expected_tier": "A",
+      "known_evasion": false,
+      "caught": true,
+      "format_safety_tier": "A",
+      "also_flagged_by": [
+        "int.hash_set:A:extra_file"
+      ],
+      "findings": [
+        {
+          "detector": "int.hash_set",
+          "tier": "A",
+          "file": "pytorch_model.bin",
+          "reason": "extra_file"
+        },
+        {
+          "detector": "int.format_safety",
+          "tier": "A",
+          "file": "pytorch_model.bin",
+          "reason": "denylist_hit",
+          "flagged": [
+            "runpy._run_code"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "socket_socket",
+      "kind": "denylist_pickle",
+      "expected_detector": "int.format_safety",
+      "expected_tier": "A",
+      "known_evasion": false,
+      "caught": true,
+      "format_safety_tier": "A",
+      "also_flagged_by": [
+        "int.hash_set:A:extra_file"
+      ],
+      "findings": [
+        {
+          "detector": "int.hash_set",
+          "tier": "A",
+          "file": "pytorch_model.bin",
+          "reason": "extra_file"
+        },
+        {
+          "detector": "int.format_safety",
+          "tier": "A",
+          "file": "pytorch_model.bin",
+          "reason": "denylist_hit",
+          "flagged": [
+            "socket.socket"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "gadget_allowlisted",
+      "kind": "allowlisted_gadget",
+      "expected_detector": "none",
+      "expected_tier": null,
+      "known_evasion": true,
+      "caught": false,
+      "format_safety_tier": null,
+      "also_flagged_by": [
+        "int.hash_set:A:extra_file"
+      ],
+      "findings": [
+        {
+          "detector": "int.hash_set",
+          "tier": "A",
+          "file": "pytorch_model.bin",
+          "reason": "extra_file"
+        }
+      ]
+    }
+  ],
+  "clean": [
+    {
+      "model_id": "clean__s1",
+      "weights_recorded": true,
+      "findings": []
+    },
+    {
+      "model_id": "clean__s10",
+      "weights_recorded": true,
+      "findings": []
+    },
+    {
+      "model_id": "clean__s12",
+      "weights_recorded": true,
+      "findings": []
+    },
+    {
+      "model_id": "clean__s13",
+      "weights_recorded": true,
+      "findings": []
+    },
+    {
+      "model_id": "clean__s14",
+      "weights_recorded": true,
+      "findings": []
+    },
+    {
+      "model_id": "clean__s15",
+      "weights_recorded": true,
+      "findings": []
+    },
+    {
+      "model_id": "clean__s17",
+      "weights_recorded": true,
+      "findings": []
+    },
+    {
+      "model_id": "clean__s18",
+      "weights_recorded": true,
+      "findings": []
+    },
+    {
+      "model_id": "clean__s20",
+      "weights_recorded": true,
+      "findings": []
+    },
+    {
+      "model_id": "clean__s21",
+      "weights_recorded": true,
+      "findings": []
+    },
+    {
+      "model_id": "clean__s22",
+      "weights_recorded": true,
+      "findings": []
+    },
+    {
+      "model_id": "clean__s23",
+      "weights_recorded": true,
+      "findings": []
+    },
+    {
+      "model_id": "clean__s24",
+      "weights_recorded": true,
+      "findings": []
+    },
+    {
+      "model_id": "clean__s5",
+      "weights_recorded": true,
+      "findings": []
+    },
+    {
+      "model_id": "clean__s6",
+      "weights_recorded": true,
+      "findings": []
+    },
+    {
+      "model_id": "clean__s7",
+      "weights_recorded": true,
+      "findings": []
+    },
+    {
+      "model_id": "clean__s8",
+      "weights_recorded": true,
+      "findings": []
+    }
+  ]
+}

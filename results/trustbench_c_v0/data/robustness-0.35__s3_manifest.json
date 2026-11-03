@@ -1,0 +1,17 @@
+{
+  "defects": {
+    "robustness": 0.35
+  },
+  "seed": 3,
+  "n_flipped": {
+    "robustness": 2580
+  },
+  "train_rows": 8000,
+  "epochs": 3,
+  "robustness": {
+    "n_nontoxic": 7372,
+    "n_noised": 2580,
+    "noise_share": 0.35
+  },
+  "sha256": "97478dd146edcadb7bbfb154eec5be5b25098de5be938d5cb3d6df6f1b02fb04"
+}
