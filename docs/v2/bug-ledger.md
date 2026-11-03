@@ -3,7 +3,7 @@
 Status: `open`, `fixed`, `not-a-bug`, `documented`. Severity S1 (decision-affecting) to S4 (cosmetic).
 K-items are defined in `01-v1-baseline-and-known-issues.md`. Tasks that fix a row flip it to `fixed` with the test name in the same commit.
 Severities were re-triaged at M0 exit (Task 7); the italic sentence in each K-row is the rationale. K-item verification tests are in `backend/tests/test_known_issues_m0.py`; an `xfail(strict=True)` test pins a confirmed, documented limitation and turns red when it is fixed.
-M0 exit counts `documented` S1/S2 items as closed when they name the milestone that fixes them (K5 → M3, K7 → M3 profile/positive-class confirmation).
+M0 exit counts `documented` S1/S2 items as closed when they name the milestone that fixes them (K5 → M3, K7 → M3 profile/positive-class confirmation). Owner ratified this rule and the Task 7 severities on 2026-11-03.
 
 | ID | Severity | Status | Test name | Notes |
 |----|----------|--------|-----------|-------|
